@@ -1,0 +1,2 @@
+﻿round,pool_rows,queries,pool_systems,pool_system_count,mean_pool_size,min_pool_size,median_pool_size,max_pool_size,first_seen_in_this_round
+lexical_v1,61619,548,"['bm25_regex_v1', 'char_tfidf_v1', 'word_tfidf_v1']",3,112.44343065693431,35,105.0,274,61619

@@ -1,0 +1,36 @@
+benchmark_version: storesearch_ko_v1
+dataset_version: stores_v003
+corpus_version: store_corpus_v002
+corpus_path: data/corpus/store_corpus_v002.parquet
+benchmark_dir: benchmark/storesearch_ko_v1
+
+relevance:
+  grades: [0, 1, 2, 3]
+  binary_threshold: 2
+
+pooling:
+  run_depth: 40
+  targeted_per_term: 5
+  random_per_query: 8
+  random_seed: 20260831
+  min_pool_size_warn: 60
+  # dense retrieval pooling 라운드 없이 lexical(BM25+char/word TF-IDF) 3개로 final 확정하기로 결정
+  # (팀 결정, 2026-09-11) — dense round를 추가하면 이 값을 다시 올릴 것.
+  min_pool_systems_final: 3
+
+annotation:
+  double_annotate_splits: [val, test]
+  random_seed: 20260831
+  uncertain_tokens: ["Y", "YES", "TRUE", "1"]
+
+validation:
+  min_total_queries_final: 120
+  min_test_queries_final: 50
+  min_relevant_per_query: 1
+  target_double_annotation_coverage: 1.0
+
+evaluation:
+  primary_metric: nDCG@10
+  binary_relevance_threshold: 2
+  bootstrap_samples: 10000
+  random_seed: 20260831

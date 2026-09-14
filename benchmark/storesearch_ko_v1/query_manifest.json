@@ -1,0 +1,18 @@
+{
+  "benchmark_version": "storesearch_ko_v1",
+  "query_set_version": "query_set_v004",
+  "total_queries": 548,
+  "families": 72,
+  "queries_by_split": {
+    "train": 237,
+    "test": 175,
+    "val": 136
+  },
+  "families_by_split": {
+    "train": 29,
+    "test": 28,
+    "val": 15
+  },
+  "queries_sha256": "bcaf7dce4b8a4e026a9efbc8c0c71db8eadb42be8f0ac5bd0bb0090f5ed1736a",
+  "families_config_sha256": "4656dde7b8ccd7f3d1d818c8b0a0ea6389d39501615e1fc91a53a45e36468e9a"
+}

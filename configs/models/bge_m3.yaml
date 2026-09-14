@@ -1,0 +1,6 @@
+name: bge_m3
+model_id: BAAI/bge-m3
+query_prompt_name: null
+normalize_embeddings: true
+target_dimension: null
+batch_size: 32

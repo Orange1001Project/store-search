@@ -1,0 +1,73 @@
+{
+  "annotation_round": "full_annotation_v1",
+  "benchmark_status": "PROVISIONAL",
+  "purpose": "Human-judged benchmark for zero-shot embedding model selection and subsequent small-scale fine-tuning experiments.",
+  "query_splits": {
+    "train": 237,
+    "val": 136,
+    "test": 175
+  },
+  "annotator_A": {
+    "splits": [
+      "train",
+      "val",
+      "test"
+    ],
+    "queries": 548,
+    "rows": 61619
+  },
+  "annotator_B": {
+    "splits": [
+      "val",
+      "test"
+    ],
+    "queries": 311,
+    "rows": 34857
+  },
+  "split_stats": [
+    {
+      "split": "train",
+      "queries": 237,
+      "judgments": 26762,
+      "mean_candidates_per_query": 112.91983122362869,
+      "min_candidates_per_query": 35,
+      "max_candidates_per_query": 199
+    },
+    {
+      "split": "val",
+      "queries": 136,
+      "judgments": 16230,
+      "mean_candidates_per_query": 119.33823529411765,
+      "min_candidates_per_query": 55,
+      "max_candidates_per_query": 274
+    },
+    {
+      "split": "test",
+      "queries": 175,
+      "judgments": 18627,
+      "mean_candidates_per_query": 106.44,
+      "min_candidates_per_query": 53,
+      "max_candidates_per_query": 220
+    }
+  ],
+  "relevance": {
+    "grades": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "binary_relevance_threshold": 2
+  },
+  "annotation_policy": {
+    "train": "Single human annotation. Used only for training/fine-tuning.",
+    "validation": "Independent double human annotation followed by adjudication.",
+    "test": "Independent double human annotation followed by adjudication."
+  },
+  "data_leakage_policy": {
+    "train": "May be used for fine-tuning, hard-negative mining, and training.",
+    "validation": "May be used for model/template/hyperparameter selection, but never gradient training.",
+    "test": "Strictly held out. Must never be used for model training, hard-negative mining, prompt tuning, template selection, or hyperparameter selection."
+  },
+  "important": "This is a provisional benchmark intended for embedding model selection and initial fine-tuning experiments. Publication-final benchmark freezing may require additional dense pooling and construct-validity review."
+}

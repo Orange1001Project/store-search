@@ -1,0 +1,27 @@
+{
+  "stage": "pilot",
+  "queries": 548,
+  "query_families": 72,
+  "queries_by_split": {
+    "train": 237,
+    "test": 175,
+    "val": 136
+  },
+  "corpus_docs": 214043,
+  "pool_rows": 61619,
+  "pool_size_min": 35,
+  "pool_size_median": 105.0,
+  "pool_size_mean": 112.44343065693431,
+  "pool_size_max": 274,
+  "pool_systems": [
+    "bm25_regex_v1",
+    "char_tfidf_v1",
+    "word_tfidf_v1"
+  ],
+  "pool_system_count": 3,
+  "warnings": [
+    "Some query pool is smaller than 60"
+  ],
+  "errors": [],
+  "valid": true
+}

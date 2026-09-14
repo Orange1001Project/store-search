@@ -1,0 +1,102 @@
+dataset_version: stores_v003
+
+# 전국 단일 시트 데이터. 시트별 고정 source_region 대신 주소에서 지역을 파생한다
+# (region_source: address). 과거처럼 지역별로 시트가 나뉜 파일을 다시 쓰려면
+# 각 시트 아래에 `source_region: <값>`을 직접 적으면 되고, 그러면 그 시트는
+# 주소 파싱 대신 고정값을 그대로 쓴다 (docs/EXTENDING_DATA.md 참고).
+excel:
+  region_source: address
+  sheets:
+    Sheet1: {}
+
+# 주소 첫 토큰(시도) → 표준 시도명. 실제 전국 데이터에서 관측된 정식명/약칭을
+# 모두 등록해 둔다. 여기 없는 첫 토큰은 region=UNKNOWN, region_status=UNMAPPED로
+# 처리되고 파이프라인은 죽지 않는다 (market_type_status와 동일한 원칙).
+region_aliases:
+  서울특별시: 서울특별시
+  서울: 서울특별시
+  부산광역시: 부산광역시
+  부산: 부산광역시
+  부산시: 부산광역시
+  대구광역시: 대구광역시
+  대구: 대구광역시
+  인천광역시: 인천광역시
+  인천: 인천광역시
+  광주광역시: 광주광역시
+  광주: 광주광역시
+  대전광역시: 대전광역시
+  대전: 대전광역시
+  울산광역시: 울산광역시
+  울산: 울산광역시
+  세종특별자치시: 세종특별자치시
+  세종: 세종특별자치시
+  경기도: 경기도
+  경기: 경기도
+  강원특별자치도: 강원특별자치도
+  강원도: 강원특별자치도
+  강원: 강원특별자치도
+  충청북도: 충청북도
+  충북: 충청북도
+  충청남도: 충청남도
+  충남: 충청남도
+  전북특별자치도: 전북특별자치도
+  전라북도: 전북특별자치도
+  전북: 전북특별자치도
+  전라남도: 전라남도
+  전남: 전라남도
+  경상북도: 경상북도
+  경북: 경상북도
+  경상남도: 경상남도
+  경남: 경상남도
+  제주특별자치도: 제주특별자치도
+  제주도: 제주특별자치도
+  제주: 제주특별자치도
+
+column_map:
+  "No.": source_row_no_raw
+  "가맹점명": store_name_raw
+  "사업자번호": business_no_raw
+  "가맹점번호": merchant_no_raw
+  "주소": address_raw
+  "LAT": latitude_raw
+  "LOT": longitude_raw
+  "법정동코드": legal_dong_code_raw
+  "시장분류코드": market_type_raw
+  "시장명": market_name_raw
+  "취급품목": item_raw
+  "카드결제여부": card_payment_raw
+  "모바일결제여부": mobile_payment_raw
+required_raw_columns:
+  - 가맹점명
+  - 사업자번호
+  - 주소
+  - LAT
+  - LOT
+  - 법정동코드
+  - 시장분류코드
+  - 시장명
+  - 취급품목
+  - 카드결제여부
+  - 모바일결제여부
+optional_raw_columns: [가맹점번호, "No."]
+validation:
+  latitude_min: 33.0
+  latitude_max: 39.5
+  longitude_min: 124.0
+  longitude_max: 132.0
+  legal_dong_code_length: 10
+  business_no_length: 10
+search_text_templates:
+  t1_minimal:
+    fields: [store_name, item_text]
+  t2_market:
+    fields: [store_name, market_name, item_text]
+  t3_market_type:
+    fields: [store_name, market_name, market_type, item_text]
+valid_market_types:
+  - 골목형상점가
+  - 전통시장
+  - 자율상권구역
+  - 일반지하상점가
+  - 상권활성화구역
+  - 기타

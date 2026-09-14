@@ -1,0 +1,71 @@
+{
+  "benchmark_version": "storesearch_ko_v1",
+  "dataset_version": "stores_v003",
+  "corpus_version": "store_corpus_v002",
+  "benchmark_status": "PROVISIONAL",
+  "binary_relevance_threshold": 2,
+  "document_representation": "T1: store_name + item_text",
+  "query_count": 548,
+  "splits": {
+    "train": {
+      "queries": 237,
+      "judgments": 26762,
+      "grade_distribution": {
+        "0": 6649,
+        "1": 576,
+        "2": 2410,
+        "3": 17127
+      },
+      "binary_relevant_ge_2": 19537
+    },
+    "val": {
+      "queries": 136,
+      "judgments": 16230,
+      "grade_distribution": {
+        "0": 3919,
+        "1": 56,
+        "2": 500,
+        "3": 11755
+      },
+      "binary_relevant_ge_2": 12255
+    },
+    "test": {
+      "queries": 175,
+      "judgments": 18625,
+      "grade_distribution": {
+        "0": 4758,
+        "1": 92,
+        "2": 640,
+        "3": 13135
+      },
+      "binary_relevant_ge_2": 13775
+    },
+    "all": {
+      "queries": 548,
+      "judgments": 61617,
+      "grade_distribution": {
+        "0": 15326,
+        "1": 724,
+        "2": 3550,
+        "3": 42017
+      },
+      "binary_relevant_ge_2": 45567
+    }
+  },
+  "files": {
+    "queries.csv": "bcaf7dce4b8a4e026a9efbc8c0c71db8eadb42be8f0ac5bd0bb0090f5ed1736a",
+    "qrels_train.csv": "ef33c3ebfe48eef3039d9ca7e32d74c5fbe141d01a44cf4d4e1be783f353e5e5",
+    "qrels_val.csv": "da98071eadc12ded87436864efd6b9f2bf5f1c4bb21ada2aaa5cafdd0c301547",
+    "qrels_test.csv": "ac9ea3343e583416950afdc9fd5b5079d987f94b303e16bd788db43a31dc94d3",
+    "qrels.csv": "eb2a6446671368de69c47c9bbdd7a5f50fa8d3cef84616d09da21fb8b925dfd6",
+    "qrels_train.trec": "a6a39803ad1e3b5dec836c2674bc22a624df3a1152e3927bab520a800f36026f",
+    "qrels_val.trec": "a7cc238261ae60e088bd7239dcab17b67a053bba917ec93f21fc44a70d5e3eac",
+    "qrels_test.trec": "96e66838794494a5fb870d66bf9d54ee47167fafac269d21128da3c61b76aa1a",
+    "qrels.trec": "5bfb31f0fb521c3b846edcff55e2f9e1b045297d64f0e5d7354f64d3612da525"
+  },
+  "source": {
+    "adjudication": "benchmark\\storesearch_ko_v1\\annotations\\full_annotation_v1\\analysis\\adjudication_val_test_full_completed.csv",
+    "train_qrels": "benchmark\\storesearch_ko_v1\\qrels\\provisional_v1\\qrels_train_provisional.csv"
+  },
+  "important": "Train is used for model fine-tuning. Val is used for checkpoint, template and hyperparameter selection. Test remains held out until the final configuration is fixed."
+}

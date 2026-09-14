@@ -1,0 +1,6 @@
+name: qwen3_embedding_0_6b
+model_id: Qwen/Qwen3-Embedding-0.6B
+query_prompt_name: query
+normalize_embeddings: true
+target_dimension: null
+batch_size: 32

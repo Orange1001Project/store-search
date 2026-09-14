@@ -1,0 +1,42 @@
+{
+  "stage": "final",
+  "queries": 548,
+  "query_families": 72,
+  "queries_by_split": {
+    "train": 237,
+    "test": 175,
+    "val": 136
+  },
+  "corpus_docs": 214043,
+  "pool_rows": 61619,
+  "pool_size_min": 35,
+  "pool_size_median": 105.0,
+  "pool_size_mean": 112.44343065693431,
+  "pool_size_max": 274,
+  "pool_systems": [
+    "bm25_regex_v1",
+    "char_tfidf_v1",
+    "word_tfidf_v1"
+  ],
+  "pool_system_count": 3,
+  "judgments": 61617,
+  "judgments_per_query_min": 35,
+  "judgments_per_query_median": 105.0,
+  "binary_relevant_documents": 45567,
+  "agreement": {
+    "human_double_annotation_required_rows": 34857,
+    "human_double_annotation_completed_rows": 34857,
+    "double_annotation_coverage": 1.0,
+    "exact_agreement": 0.7000028688642167,
+    "binary_agreement_rel_ge_threshold": 0.78569584301575,
+    "unweighted_cohen_kappa": 0.4605216952045612,
+    "quadratic_weighted_cohen_kappa": 0.5741576957267239,
+    "rows_needing_adjudication": 10457,
+    "binary_relevance_threshold": 2
+  },
+  "warnings": [
+    "Some query pool is smaller than 60"
+  ],
+  "errors": [],
+  "valid": true
+}

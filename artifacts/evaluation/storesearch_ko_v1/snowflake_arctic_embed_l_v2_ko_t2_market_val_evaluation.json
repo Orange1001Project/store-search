@@ -1,0 +1,97 @@
+{
+  "benchmark": "StoreSearch-KO v1",
+  "tag": "snowflake_arctic_embed_l_v2_ko_t2_market_val",
+  "qrels": "benchmark\\storesearch_ko_v1\\qrels_val.trec",
+  "run": "results\\model_eval\\snowflake_arctic_embed_l_v2_ko\\run_t2_market_val.csv",
+  "primary_metric": "nDCG@10",
+  "binary_relevance_threshold": 2,
+  "metrics": [
+    "nDCG@10",
+    "Precision@10",
+    "MRR@100",
+    "Recall@50",
+    "Recall@100",
+    "Bpref",
+    "Judged@10",
+    "Judged@100"
+  ],
+  "query_count": 136,
+  "run_query_count": 136,
+  "aggregate": {
+    "nDCG@10": 0.3852491388762663,
+    "Precision@10": 0.36838235294117655,
+    "MRR@100": 0.5825050411357543,
+    "Recall@50": 0.16266098877383584,
+    "Recall@100": 0.2574735111777339,
+    "Bpref": 0.2548828450441806,
+    "Judged@10": 0.38161764705882356,
+    "Judged@100": 0.22066176470588228
+  },
+  "query_bootstrap_ci95": {
+    "nDCG@10": {
+      "mean": 0.38524913887626605,
+      "ci95": [
+        0.33316867267631367,
+        0.4358603784343467
+      ]
+    },
+    "Precision@10": {
+      "mean": 0.36838235294117644,
+      "ci95": [
+        0.31911764705882356,
+        0.41691176470588237
+      ]
+    },
+    "MRR@100": {
+      "mean": 0.5825050411357542,
+      "ci95": [
+        0.5130514390172375,
+        0.6508277119529845
+      ]
+    },
+    "Recall@50": {
+      "mean": 0.16266098877383578,
+      "ci95": [
+        0.14114014877791958,
+        0.18457497642107898
+      ]
+    },
+    "Recall@100": {
+      "mean": 0.257473511177734,
+      "ci95": [
+        0.22789651760402563,
+        0.2875507634726166
+      ]
+    },
+    "Bpref": {
+      "mean": 0.2548828450441806,
+      "ci95": [
+        0.22556084531775203,
+        0.28459038353542543
+      ]
+    },
+    "Judged@10": {
+      "mean": 0.3816176470588235,
+      "ci95": [
+        0.33308823529411763,
+        0.4294117647058823
+      ]
+    },
+    "Judged@100": {
+      "mean": 0.22066176470588234,
+      "ci95": [
+        0.19779411764705881,
+        0.2440441176470588
+      ]
+    }
+  },
+  "run_validation": {
+    "rows": 13600,
+    "queries": 136,
+    "expected_queries": 136,
+    "missing_queries": 0,
+    "unknown_queries": 0,
+    "duplicate_query_doc_pairs": 0,
+    "invalid_rank_rows": 0
+  }
+}

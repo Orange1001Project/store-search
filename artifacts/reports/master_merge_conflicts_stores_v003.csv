@@ -1,0 +1,125 @@
+﻿store_id,field,values,source_record_keys
+e302ba26-cccc-4038-9153-3124dcdbdc41,item,"[""정육"", ""육류""]",stores_20260907.xlsx:Sheet1:37062|stores_20260907.xlsx:Sheet1:89
+e302ba26-cccc-4038-9153-3124dcdbdc41,geo,"[{""latitude"": 35.318985, ""longitude"": 128.2613}, {""latitude"": 35.319079721, ""longitude"": 128.26136651}]",stores_20260907.xlsx:Sheet1:37062|stores_20260907.xlsx:Sheet1:89
+4d2568c4-3d42-4ff2-a1c3-636721190654,card_payment,"[np.False_, np.True_]",stores_20260907.xlsx:Sheet1:72442|stores_20260907.xlsx:Sheet1:799
+a0a5915f-4a98-4dc2-92a0-8ae212aee3a7,item,"[""생선(활어)"", ""수산물""]",stores_20260907.xlsx:Sheet1:3434|stores_20260907.xlsx:Sheet1:36462
+2198da68-b2bc-49a5-91bf-d3dc136bdb3d,item,"[""생선, 어패류"", ""어패류""]",stores_20260907.xlsx:Sheet1:14011|stores_20260907.xlsx:Sheet1:6569
+2198da68-b2bc-49a5-91bf-d3dc136bdb3d,geo,"[{""latitude"": 34.9274354161, ""longitude"": 128.0717637904}, {""latitude"": 34.927452, ""longitude"": 128.07048}]",stores_20260907.xlsx:Sheet1:14011|stores_20260907.xlsx:Sheet1:6569
+13d36787-e8cb-4a59-aebe-b9872833f3fb,item,"[""전자제품"", ""전자""]",stores_20260907.xlsx:Sheet1:27861|stores_20260907.xlsx:Sheet1:6865
+943a7862-3b54-4fe7-9dc3-82e70974156c,item,"[""수산물"", ""건어물""]",stores_20260907.xlsx:Sheet1:31118|stores_20260907.xlsx:Sheet1:7489
+943a7862-3b54-4fe7-9dc3-82e70974156c,geo,"[{""latitude"": 36.782413, ""longitude"": 126.45537}, {""latitude"": 36.782003839, ""longitude"": 126.455067646}]",stores_20260907.xlsx:Sheet1:31118|stores_20260907.xlsx:Sheet1:7489
+19f80ad5-7c10-4c16-bff4-8218962d912e,item,"[""채소.야채"", ""채소""]",stores_20260907.xlsx:Sheet1:8428|stores_20260907.xlsx:Sheet1:8599
+61a33604-e456-4575-968d-ea0f5231795a,item,"[""식당"", ""한식""]",stores_20260907.xlsx:Sheet1:41863|stores_20260907.xlsx:Sheet1:8981
+61a33604-e456-4575-968d-ea0f5231795a,geo,"[{""latitude"": 35.98964128, ""longitude"": 129.554460564}, {""latitude"": 35.98963, ""longitude"": 129.55446}]",stores_20260907.xlsx:Sheet1:41863|stores_20260907.xlsx:Sheet1:8981
+62442ff2-7e56-4214-9f99-63428943239b,geo,"[{""latitude"": 37.351852, ""longitude"": 127.9493}, {""latitude"": 37.351858479, ""longitude"": 127.949290539}]",stores_20260907.xlsx:Sheet1:31792|stores_20260907.xlsx:Sheet1:9859
+89f4099e-4a5d-405c-a5b5-3f97d64851ad,item,"[""국수"", ""국수류(건면)""]",stores_20260907.xlsx:Sheet1:10707|stores_20260907.xlsx:Sheet1:20605
+9158e37c-547c-4bff-ae2c-8d0c01bdec47,item,"[""이불,커텐"", ""이불, 커튼""]",stores_20260907.xlsx:Sheet1:10987|stores_20260907.xlsx:Sheet1:42086
+4fa5f01c-8838-4f39-9b24-4916b7743d53,item,"[""과메기"", ""식품""]",stores_20260907.xlsx:Sheet1:11921|stores_20260907.xlsx:Sheet1:30915
+b8f74021-1044-4f0d-9242-98c4c0027572,item,"[""스포츠용품"", ""스포츠""]",stores_20260907.xlsx:Sheet1:11968|stores_20260907.xlsx:Sheet1:39254
+b8f74021-1044-4f0d-9242-98c4c0027572,merchant_no,"[""0546322000"", ""01097019119""]",stores_20260907.xlsx:Sheet1:11968|stores_20260907.xlsx:Sheet1:39254
+b69270ec-e745-47b8-a056-81003f82286e,item,"[""속옷"", ""의류""]",stores_20260907.xlsx:Sheet1:13558|stores_20260907.xlsx:Sheet1:17986
+cd4b5f9f-e59a-4587-b62d-bfb54396df16,geo,"[{""latitude"": 35.101868138, ""longitude"": 129.028302019}, {""latitude"": 35.101948, ""longitude"": 129.02835}]",stores_20260907.xlsx:Sheet1:14720|stores_20260907.xlsx:Sheet1:14721
+bf5e1aad-492e-4d16-bff6-17752c28c564,item,"[""의류"", ""잡화""]",stores_20260907.xlsx:Sheet1:14814|stores_20260907.xlsx:Sheet1:38207
+074f7913-6c5d-4501-8c5d-12e0c405cbde,item,"[""야채,젓갈"", ""반찬""]",stores_20260907.xlsx:Sheet1:15030|stores_20260907.xlsx:Sheet1:54119
+9f67ee41-96c7-4358-8878-00e66553ebcc,item,"[""수선"", ""옷감""]",stores_20260907.xlsx:Sheet1:17008|stores_20260907.xlsx:Sheet1:58496
+26134ba0-eb60-4f9c-a211-6c5c68f0f599,item,"[""농산물도소매"", ""과일야채""]",stores_20260907.xlsx:Sheet1:20766|stores_20260907.xlsx:Sheet1:83211
+dee6754a-92f5-4adb-b8fa-67734291de08,item,"[""고추,참기름"", ""참기름""]",stores_20260907.xlsx:Sheet1:23007|stores_20260907.xlsx:Sheet1:36525
+dee6754a-92f5-4adb-b8fa-67734291de08,geo,"[{""latitude"": 37.60955934, ""longitude"": 127.061832129}, {""latitude"": 37.609535, ""longitude"": 127.06182}]",stores_20260907.xlsx:Sheet1:23007|stores_20260907.xlsx:Sheet1:36525
+baeeb404-d161-4174-a33e-f4b375202a01,item,"[""의류"", ""떡""]",stores_20260907.xlsx:Sheet1:25076|stores_20260907.xlsx:Sheet1:37685
+baeeb404-d161-4174-a33e-f4b375202a01,geo,"[{""latitude"": 35.5425311217, ""longitude"": 129.3095433594}, {""latitude"": 35.54257, ""longitude"": 129.30951}]",stores_20260907.xlsx:Sheet1:25076|stores_20260907.xlsx:Sheet1:37685
+d4b2120e-3de6-4f0b-bfea-d6908ec22149,item,"[""의류,신발,가방"", ""제화""]",stores_20260907.xlsx:Sheet1:26867|stores_20260907.xlsx:Sheet1:50678
+d4b2120e-3de6-4f0b-bfea-d6908ec22149,merchant_no,"[""0546370069"", ""0546380069""]",stores_20260907.xlsx:Sheet1:26867|stores_20260907.xlsx:Sheet1:50678
+318ad335-6927-494d-9764-c9903cd31d30,item,"[""생선"", ""수산물""]",stores_20260907.xlsx:Sheet1:27283|stores_20260907.xlsx:Sheet1:37479
+2eceb185-22d3-4009-9a47-22e6549bcd22,geo,"[{""latitude"": 36.350956, ""longitude"": 126.59364}, {""latitude"": 36.350907081, ""longitude"": 126.593907672}]",stores_20260907.xlsx:Sheet1:30336|stores_20260907.xlsx:Sheet1:43894
+524dce62-29ad-4bdb-b797-2e3946324d82,geo,"[{""latitude"": 37.740563187, ""longitude"": 126.491805876}, {""latitude"": 37.741356, ""longitude"": 126.4926}]",stores_20260907.xlsx:Sheet1:32288|stores_20260907.xlsx:Sheet1:40745
+b5109f4a-42d6-4ef0-af4b-83b28e0b8446,item,"[""음식점"", ""커피""]",stores_20260907.xlsx:Sheet1:32985|stores_20260907.xlsx:Sheet1:52158
+659aa5a0-a5d6-4f35-8635-1e28760dbd5e,item,"[""여성복"", ""여성의류""]",stores_20260907.xlsx:Sheet1:103208|stores_20260907.xlsx:Sheet1:36409
+659aa5a0-a5d6-4f35-8635-1e28760dbd5e,geo,"[{""latitude"": 35.205880468, ""longitude"": 128.57567456}, {""latitude"": 35.20587, ""longitude"": 128.57564}]",stores_20260907.xlsx:Sheet1:103208|stores_20260907.xlsx:Sheet1:36409
+9cd3be08-9472-499e-9f97-0f9ed104d59d,item,"[""낚시,총포"", ""소매(낚시,총포,조립식 앵글)""]",stores_20260907.xlsx:Sheet1:38130|stores_20260907.xlsx:Sheet1:57536
+0666f51e-1d02-47db-ac89-7a671af69091,item,"[""신발"", ""고급신발""]",stores_20260907.xlsx:Sheet1:39342|stores_20260907.xlsx:Sheet1:43064
+524cda4a-432e-4980-9fa7-e5b586110458,geo,"[{""latitude"": 37.61928, ""longitude"": 126.92148}, {""latitude"": 37.6194712263, ""longitude"": 126.9218026541}]",stores_20260907.xlsx:Sheet1:43227|stores_20260907.xlsx:Sheet1:44902
+0792da93-b4ad-4e5d-99c1-f2fc04c43796,card_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:49770|stores_20260907.xlsx:Sheet1:60464
+8019b1e9-c33d-427c-82b9-9ea824cdda4f,item,"[""소매업(의류)"", ""도소매(의류)""]",stores_20260907.xlsx:Sheet1:53883|stores_20260907.xlsx:Sheet1:58968
+7175e07c-3247-42e1-bd6f-23d55b6d3289,item,"[""분식"", ""김밥 등""]",stores_20260907.xlsx:Sheet1:56395|stores_20260907.xlsx:Sheet1:69608
+7175e07c-3247-42e1-bd6f-23d55b6d3289,merchant_no,"[""0418553017"", ""0419608008""]",stores_20260907.xlsx:Sheet1:56395|stores_20260907.xlsx:Sheet1:69608
+7e2cec60-0b00-4de2-ac81-bfdd53f3d364,item,"[""주방용품"", ""주방용품 및 그릇""]",stores_20260907.xlsx:Sheet1:57272|stores_20260907.xlsx:Sheet1:78627
+9d5b4b50-981b-4075-8e7e-3ac7fa942bc0,item,"[""어묵"", ""한식""]",stores_20260907.xlsx:Sheet1:57299|stores_20260907.xlsx:Sheet1:68455
+8b76fd75-d5c2-49ed-9a3c-f550cdc50061,item,"[""레코드,녹음테이프"", ""음반""]",stores_20260907.xlsx:Sheet1:62738|stores_20260907.xlsx:Sheet1:66143
+8b76fd75-d5c2-49ed-9a3c-f550cdc50061,geo,"[{""latitude"": 36.458821776, ""longitude"": 127.124692985}, {""latitude"": 36.458862, ""longitude"": 127.1247}]",stores_20260907.xlsx:Sheet1:62738|stores_20260907.xlsx:Sheet1:66143
+8b76fd75-d5c2-49ed-9a3c-f550cdc50061,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:62738|stores_20260907.xlsx:Sheet1:66143
+de6e19bd-5e17-4be7-8492-899388fdda35,item,"[""수산물"", ""젓갈""]",stores_20260907.xlsx:Sheet1:67237|stores_20260907.xlsx:Sheet1:74007
+de6e19bd-5e17-4be7-8492-899388fdda35,geo,"[{""latitude"": 36.458268192, ""longitude"": 127.123303753}, {""latitude"": 36.458427, ""longitude"": 127.12332}]",stores_20260907.xlsx:Sheet1:67237|stores_20260907.xlsx:Sheet1:74007
+de6e19bd-5e17-4be7-8492-899388fdda35,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:67237|stores_20260907.xlsx:Sheet1:74007
+57d89605-1059-40d3-b3c6-46fb0a6c9cfc,geo,"[{""latitude"": 37.488686023, ""longitude"": 126.763278241}, {""latitude"": 37.48864, ""longitude"": 126.76328}]",stores_20260907.xlsx:Sheet1:68055|stores_20260907.xlsx:Sheet1:82146
+57d89605-1059-40d3-b3c6-46fb0a6c9cfc,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:68055|stores_20260907.xlsx:Sheet1:82146
+84631296-3df0-4405-925b-e631110993bb,geo,"[{""latitude"": 35.172516219, ""longitude"": 126.920827787}, {""latitude"": 35.17252, ""longitude"": 126.92084}]",stores_20260907.xlsx:Sheet1:68338|stores_20260907.xlsx:Sheet1:74964
+39325264-62fd-4eff-9d82-0cb91fe66f06,geo,"[{""latitude"": 37.900052167, ""longitude"": 127.050364872}, {""latitude"": 37.9001, ""longitude"": 127.050446}]",stores_20260907.xlsx:Sheet1:68389|stores_20260907.xlsx:Sheet1:83958
+39325264-62fd-4eff-9d82-0cb91fe66f06,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:68389|stores_20260907.xlsx:Sheet1:83958
+8dd0e3f3-5776-478f-873c-12b565700034,item,"[""명태"", ""한식""]",stores_20260907.xlsx:Sheet1:68628|stores_20260907.xlsx:Sheet1:69843
+65e26170-2d3a-4646-a353-7503deaee097,item,"[""생선"", ""선어""]",stores_20260907.xlsx:Sheet1:69558|stores_20260907.xlsx:Sheet1:77162
+df47157a-7f47-4b20-8109-92b67501909c,geo,"[{""latitude"": 36.602146, ""longitude"": 126.668144}, {""latitude"": 36.602181792, ""longitude"": 126.668024015}]",stores_20260907.xlsx:Sheet1:70060|stores_20260907.xlsx:Sheet1:80695
+239162b7-87ac-4c07-a3cd-b18cb1657714,geo,"[{""latitude"": 35.275420334, ""longitude"": 126.512499195}, {""latitude"": 35.275414, ""longitude"": 126.51253}]",stores_20260907.xlsx:Sheet1:70585|stores_20260907.xlsx:Sheet1:76621
+239162b7-87ac-4c07-a3cd-b18cb1657714,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:70585|stores_20260907.xlsx:Sheet1:76621
+0ac2150d-00bf-4200-9dd4-654651eeb3f9,geo,"[{""latitude"": 36.33577143, ""longitude"": 127.413248899}, {""latitude"": 36.335785, ""longitude"": 127.41328}]",stores_20260907.xlsx:Sheet1:72001|stores_20260907.xlsx:Sheet1:79307
+0ac2150d-00bf-4200-9dd4-654651eeb3f9,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:72001|stores_20260907.xlsx:Sheet1:79307
+6d7d9917-41bf-49a7-96aa-21055517f662,geo,"[{""latitude"": 37.54456, ""longitude"": 127.31956}, {""latitude"": 37.544492197, ""longitude"": 127.319532734}]",stores_20260907.xlsx:Sheet1:72781|stores_20260907.xlsx:Sheet1:82689
+6d7d9917-41bf-49a7-96aa-21055517f662,mobile_payment,"[np.False_, np.True_]",stores_20260907.xlsx:Sheet1:72781|stores_20260907.xlsx:Sheet1:82689
+9a4c0c40-000c-4c0c-a0ba-326719ba4594,item,"[""금,보석,광고"", ""귀금속""]",stores_20260907.xlsx:Sheet1:73421|stores_20260907.xlsx:Sheet1:75473
+7b487060-2b51-4736-ac6c-0bc758931bcc,merchant_no,"[""0448623550"", ""0418623550""]",stores_20260907.xlsx:Sheet1:74614|stores_20260907.xlsx:Sheet1:82183
+4194251c-d9de-4612-8e25-a70ccbe97a98,item,"[""떡류"", ""떡""]",stores_20260907.xlsx:Sheet1:175288|stores_20260907.xlsx:Sheet1:74685
+783b2fa2-3705-45b0-a51a-67f96efd78f0,item,"[""한식"", ""음식(한식)""]",stores_20260907.xlsx:Sheet1:125451|stores_20260907.xlsx:Sheet1:76348
+783b2fa2-3705-45b0-a51a-67f96efd78f0,geo,"[{""latitude"": 37.545390843, ""longitude"": 127.32014998}, {""latitude"": 37.5453908811, ""longitude"": 127.3201499797}]",stores_20260907.xlsx:Sheet1:125451|stores_20260907.xlsx:Sheet1:76348
+e789e5cc-5fab-48ed-b489-5a6ac68d6d07,item,"[""곡물 등"", ""곡물, 농산물""]",stores_20260907.xlsx:Sheet1:107598|stores_20260907.xlsx:Sheet1:77629
+e789e5cc-5fab-48ed-b489-5a6ac68d6d07,geo,"[{""latitude"": 36.502415631, ""longitude"": 126.624917569}, {""latitude"": 36.5024, ""longitude"": 126.6249}]",stores_20260907.xlsx:Sheet1:107598|stores_20260907.xlsx:Sheet1:77629
+e789e5cc-5fab-48ed-b489-5a6ac68d6d07,card_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:107598|stores_20260907.xlsx:Sheet1:77629
+e789e5cc-5fab-48ed-b489-5a6ac68d6d07,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:107598|stores_20260907.xlsx:Sheet1:77629
+d9eeb93e-22de-4a41-9d96-d2d345d16da3,geo,"[{""latitude"": 36.458690157, ""longitude"": 127.12505632}, {""latitude"": 36.458675, ""longitude"": 127.12512}]",stores_20260907.xlsx:Sheet1:77963|stores_20260907.xlsx:Sheet1:83528
+d9eeb93e-22de-4a41-9d96-d2d345d16da3,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:77963|stores_20260907.xlsx:Sheet1:83528
+cbc564b1-c3c0-454c-a12a-002ac626edff,geo,"[{""latitude"": 37.559395, ""longitude"": 126.97796}, {""latitude"": 37.559104147, ""longitude"": 126.977651212}]",stores_20260907.xlsx:Sheet1:78976|stores_20260907.xlsx:Sheet1:85062
+cbc564b1-c3c0-454c-a12a-002ac626edff,mobile_payment,"[np.False_, np.True_]",stores_20260907.xlsx:Sheet1:78976|stores_20260907.xlsx:Sheet1:85062
+0c5daaf1-4cfe-4725-9776-be6cafa40492,merchant_no,"[""0437337352"", ""0437312380""]",stores_20260907.xlsx:Sheet1:80519|stores_20260907.xlsx:Sheet1:82717
+0ee6502a-e684-4b6c-9212-b6ed4e0ae096,item,"[""돼지고기 소고기"", ""한식""]",stores_20260907.xlsx:Sheet1:181215|stores_20260907.xlsx:Sheet1:83314
+0ee6502a-e684-4b6c-9212-b6ed4e0ae096,geo,"[{""latitude"": 37.611990729, ""longitude"": 127.064337714}, {""latitude"": 37.611990767, ""longitude"": 127.0643377137}]",stores_20260907.xlsx:Sheet1:181215|stores_20260907.xlsx:Sheet1:83314
+c27b1a91-f303-4b78-92b3-2ba9b76428ba,item,"[""철물 공구"", ""공구""]",stores_20260907.xlsx:Sheet1:153392|stores_20260907.xlsx:Sheet1:84793
+443c3edf-f900-4929-b414-a7e92960c75e,card_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:108028|stores_20260907.xlsx:Sheet1:85480
+6d644a9e-6b4e-4584-a58b-451ebf8ddc67,item,"[""순대국"", ""음식물판매""]",stores_20260907.xlsx:Sheet1:88343|stores_20260907.xlsx:Sheet1:92827
+e9a43b1e-d1a1-47a8-8683-9571d5d99bea,geo,"[{""latitude"": 35.873425, ""longitude"": 128.59756}, {""latitude"": 35.873459587, ""longitude"": 128.597580845}]",stores_20260907.xlsx:Sheet1:90537|stores_20260907.xlsx:Sheet1:90702
+e9a43b1e-d1a1-47a8-8683-9571d5d99bea,mobile_payment,"[np.False_, np.True_]",stores_20260907.xlsx:Sheet1:90537|stores_20260907.xlsx:Sheet1:90702
+72f39ae3-2758-4504-bfb2-146e8b2984c1,item,"[""고추.참기름"", ""고추가루, 참기름""]",stores_20260907.xlsx:Sheet1:100096|stores_20260907.xlsx:Sheet1:93733
+ec2a5b94-6d2b-475d-94ef-b57d42474c5a,item,"[""화장품"", ""화장품류""]",stores_20260907.xlsx:Sheet1:94272|stores_20260907.xlsx:Sheet1:99500
+ec2a5b94-6d2b-475d-94ef-b57d42474c5a,geo,"[{""latitude"": 36.130411605, ""longitude"": 128.329725216}, {""latitude"": 36.130466, ""longitude"": 128.32976}]",stores_20260907.xlsx:Sheet1:94272|stores_20260907.xlsx:Sheet1:99500
+ec2a5b94-6d2b-475d-94ef-b57d42474c5a,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:94272|stores_20260907.xlsx:Sheet1:99500
+95c1db5e-24b6-4432-b2b5-cc4a3b72460f,item,"[""누룽지"", ""한식""]",stores_20260907.xlsx:Sheet1:109056|stores_20260907.xlsx:Sheet1:96559
+95c1db5e-24b6-4432-b2b5-cc4a3b72460f,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:109056|stores_20260907.xlsx:Sheet1:96559
+1178c126-61e3-4c7a-a000-10d9f4168b22,item,"[""약재"", ""식품, 과채중탕 음식점업""]",stores_20260907.xlsx:Sheet1:100422|stores_20260907.xlsx:Sheet1:97611
+50a1b9a8-e1ec-4758-b734-c391a4a32e29,geo,"[{""latitude"": 36.8680867439, ""longitude"": 128.5342207932}, {""latitude"": 36.867935, ""longitude"": 128.53433}]",stores_20260907.xlsx:Sheet1:201503|stores_20260907.xlsx:Sheet1:99144
+50a1b9a8-e1ec-4758-b734-c391a4a32e29,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:201503|stores_20260907.xlsx:Sheet1:99144
+1d11f469-7b3d-4795-aa5a-963c47cffb3b,item,"[""실리콘,접착제"", ""실리콘""]",stores_20260907.xlsx:Sheet1:99940|stores_20260907.xlsx:Sheet1:99948
+637f0752-1bf6-474e-9dc8-8a21cb96d035,geo,"[{""latitude"": 35.101635, ""longitude"": 129.02682}, {""latitude"": 35.101636471, ""longitude"": 129.026832631}]",stores_20260907.xlsx:Sheet1:100318|stores_20260907.xlsx:Sheet1:100321
+637f0752-1bf6-474e-9dc8-8a21cb96d035,mobile_payment,"[np.False_, np.True_]",stores_20260907.xlsx:Sheet1:100318|stores_20260907.xlsx:Sheet1:100321
+ed3697a3-3ac6-494a-a328-be70d68018e9,item,"[""수산물"", ""활어회""]",stores_20260907.xlsx:Sheet1:100981|stores_20260907.xlsx:Sheet1:202284
+ed3697a3-3ac6-494a-a328-be70d68018e9,mobile_payment,"[np.True_, np.False_]",stores_20260907.xlsx:Sheet1:100981|stores_20260907.xlsx:Sheet1:202284
+2759ee09-637e-4a6a-9488-181aa0b4e1c5,item,"[""육류"", ""축산물""]",stores_20260907.xlsx:Sheet1:101769|stores_20260907.xlsx:Sheet1:193083
+2759ee09-637e-4a6a-9488-181aa0b4e1c5,geo,"[{""latitude"": 37.489388, ""longitude"": 126.86489}, {""latitude"": 37.489401993, ""longitude"": 126.864869185}]",stores_20260907.xlsx:Sheet1:101769|stores_20260907.xlsx:Sheet1:193083
+2759ee09-637e-4a6a-9488-181aa0b4e1c5,mobile_payment,"[np.False_, np.True_]",stores_20260907.xlsx:Sheet1:101769|stores_20260907.xlsx:Sheet1:193083
+fa8363b9-c180-4c04-bbd2-e65f2bad7ff1,item,"[""미용"", ""헤어디자인""]",stores_20260907.xlsx:Sheet1:102264|stores_20260907.xlsx:Sheet1:102265
+81f130a7-2065-4748-9f7e-95d40253d9a2,item,"[""미용실"", ""미용""]",stores_20260907.xlsx:Sheet1:109350|stores_20260907.xlsx:Sheet1:126024
+ad72de96-446d-4c12-acd8-9e05777062b0,item,"[""커피 및 음료"", ""커피""]",stores_20260907.xlsx:Sheet1:114429|stores_20260907.xlsx:Sheet1:181849
+ad72de96-446d-4c12-acd8-9e05777062b0,geo,"[{""latitude"": 35.16706444, ""longitude"": 126.855359054}, {""latitude"": 35.1670644753, ""longitude"": 126.8553590538}]",stores_20260907.xlsx:Sheet1:114429|stores_20260907.xlsx:Sheet1:181849
+f457144a-9013-465a-aafd-a4d83e01c890,geo,"[{""latitude"": 34.885471012, ""longitude"": 128.622919367}, {""latitude"": 34.885551324, ""longitude"": 128.6228727123}]",stores_20260907.xlsx:Sheet1:118637|stores_20260907.xlsx:Sheet1:213447
+fe384390-a0f9-4ae9-8c39-8e2bcdbbd5a9,item,"[""음료 제조 카페 비루공방"", ""카페""]",stores_20260907.xlsx:Sheet1:121082|stores_20260907.xlsx:Sheet1:123361
+a8422171-10f9-4d14-b416-6a7e3abf774e,item,"[""제과점"", ""케이크 커피 과자""]",stores_20260907.xlsx:Sheet1:135340|stores_20260907.xlsx:Sheet1:160544
+17e93e54-299f-4216-ae41-19014eab5028,item,"[""두피미용"", ""이미용서비스업""]",stores_20260907.xlsx:Sheet1:135942|stores_20260907.xlsx:Sheet1:137317
+0b79859e-a533-40da-9a8c-acda129e8875,item,"[""한식"", ""음식점업(한식)""]",stores_20260907.xlsx:Sheet1:137872|stores_20260907.xlsx:Sheet1:210317
+0b79859e-a533-40da-9a8c-acda129e8875,merchant_no,"[""025157743"", ""03180151151""]",stores_20260907.xlsx:Sheet1:137872|stores_20260907.xlsx:Sheet1:210317
+0b79859e-a533-40da-9a8c-acda129e8875,geo,"[{""latitude"": 37.512681097, ""longitude"": 127.018457229}, {""latitude"": 37.5126811342, ""longitude"": 127.0184572287}]",stores_20260907.xlsx:Sheet1:137872|stores_20260907.xlsx:Sheet1:210317
+a8a3c299-3348-470e-b1cc-da3a50cf48af,item,"[""식육"", ""돈육""]",stores_20260907.xlsx:Sheet1:139878|stores_20260907.xlsx:Sheet1:174776
+8b2acecf-0aae-418d-95c7-182341aff5fe,item,"[""축산물"", ""한식""]",stores_20260907.xlsx:Sheet1:157614|stores_20260907.xlsx:Sheet1:170837
+e1ddad9b-9653-4dfa-b531-ed6d1fb0fe2a,item,"[""한식 음식"", ""각종찌개 삼겹살""]",stores_20260907.xlsx:Sheet1:167426|stores_20260907.xlsx:Sheet1:177448
+8c4aa1ed-da08-4335-abe8-15d0849592c2,geo,"[{""latitude"": 37.441417594, ""longitude"": 127.132107457}, {""latitude"": 37.4414176314, ""longitude"": 127.1321074575}]",stores_20260907.xlsx:Sheet1:169835|stores_20260907.xlsx:Sheet1:177853
+57d48af7-beeb-4f06-9a0e-4528948dd2c4,item,"[""서비스"", ""문화예술""]",stores_20260907.xlsx:Sheet1:174007|stores_20260907.xlsx:Sheet1:179855
+0faefc97-e567-4305-97c8-7abb617e7457,item,"[""커피, 와플"", ""와플""]",stores_20260907.xlsx:Sheet1:174009|stores_20260907.xlsx:Sheet1:178882
+249d8bf4-94bd-4abb-b11e-27bbc7bdb483,item,"[""지금 열쇠 시계 도장"", ""지금 열쇠 시계""]",stores_20260907.xlsx:Sheet1:174641|stores_20260907.xlsx:Sheet1:181663
+67d63c91-2536-4d42-9612-88ac5c5e60f5,item,"[""분식"", ""음식점""]",stores_20260907.xlsx:Sheet1:177889|stores_20260907.xlsx:Sheet1:181713
+79cbdad8-8dc8-49ba-a76a-e522e0a0983d,item,"[""한식"", ""음식""]",stores_20260907.xlsx:Sheet1:178992|stores_20260907.xlsx:Sheet1:194360
+07b235a7-143c-4c9b-8274-969b13972da2,merchant_no,"[""01030714957"", ""0535714958""]",stores_20260907.xlsx:Sheet1:196590|stores_20260907.xlsx:Sheet1:204144

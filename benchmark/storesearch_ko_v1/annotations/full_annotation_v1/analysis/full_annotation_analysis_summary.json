@@ -1,0 +1,53 @@
+{
+  "benchmark_status": "PROVISIONAL",
+  "train": {
+    "rows": 26762,
+    "queries": 237,
+    "usable_for_training": 26762,
+    "excluded_uncertain": 0,
+    "grade_distribution": {
+      "0": 6649,
+      "1": 576,
+      "2": 2410,
+      "3": 17127
+    }
+  },
+  "val": {
+    "split": "val",
+    "rows": 16230,
+    "valid_both": 16230,
+    "uncertain_or_missing": 0,
+    "exact_agreement": 0.6856438693776956,
+    "binary_agreement_rel_ge_2": 0.7804066543438077,
+    "unweighted_cohen_kappa": 0.44710654880343126,
+    "quadratic_weighted_cohen_kappa": 0.5745079713957026,
+    "binary_cohen_kappa_rel_ge_2": 0.5550287084183416,
+    "needs_adjudication": 5102,
+    "priority_counts": {
+      "P1_BINARY_THRESHOLD": 3564,
+      "P2_GRADED_ONLY": 1538
+    }
+  },
+  "test": {
+    "split": "test",
+    "rows": 18627,
+    "valid_both": 18627,
+    "uncertain_or_missing": 0,
+    "exact_agreement": 0.7125140924464487,
+    "binary_agreement_rel_ge_2": 0.790304396843292,
+    "unweighted_cohen_kappa": 0.47263915930334155,
+    "quadratic_weighted_cohen_kappa": 0.5732992923183786,
+    "binary_cohen_kappa_rel_ge_2": 0.556278333909841,
+    "needs_adjudication": 5355,
+    "priority_counts": {
+      "P1_BINARY_THRESHOLD": 3906,
+      "P2_GRADED_ONLY": 1449
+    }
+  },
+  "total_adjudication_rows": 10457,
+  "total_priority_counts": {
+    "P1_BINARY_THRESHOLD": 7470,
+    "P2_GRADED_ONLY": 2987
+  },
+  "warning": "Do not average A/B labels. Finalize every needs_adjudication=True row before scoring Val/Test."
+}

@@ -1,0 +1,97 @@
+{
+  "benchmark": "StoreSearch-KO v1",
+  "tag": "qwen3_embedding_0_6b_t1_minimal_val",
+  "qrels": "benchmark\\storesearch_ko_v1\\qrels_val.trec",
+  "run": "results\\model_eval\\qwen3_embedding_0_6b\\run_t1_minimal_val.csv",
+  "primary_metric": "nDCG@10",
+  "binary_relevance_threshold": 2,
+  "metrics": [
+    "nDCG@10",
+    "Precision@10",
+    "MRR@100",
+    "Recall@50",
+    "Recall@100",
+    "Bpref",
+    "Judged@10",
+    "Judged@100"
+  ],
+  "query_count": 136,
+  "run_query_count": 136,
+  "aggregate": {
+    "nDCG@10": 0.33776540672947886,
+    "Precision@10": 0.32426470588235323,
+    "MRR@100": 0.535811648819334,
+    "Recall@50": 0.13996944389853083,
+    "Recall@100": 0.21504247465521176,
+    "Bpref": 0.2140877530797179,
+    "Judged@10": 0.3279411764705885,
+    "Judged@100": 0.1796323529411765
+  },
+  "query_bootstrap_ci95": {
+    "nDCG@10": {
+      "mean": 0.337765406729479,
+      "ci95": [
+        0.28864502368741646,
+        0.38733986911435914
+      ]
+    },
+    "Precision@10": {
+      "mean": 0.3242647058823529,
+      "ci95": [
+        0.2772058823529412,
+        0.3720588235294117
+      ]
+    },
+    "MRR@100": {
+      "mean": 0.5358116488193336,
+      "ci95": [
+        0.4689028782132972,
+        0.6025798756015
+      ]
+    },
+    "Recall@50": {
+      "mean": 0.1399694438985309,
+      "ci95": [
+        0.11968967731826846,
+        0.1602021790586871
+      ]
+    },
+    "Recall@100": {
+      "mean": 0.21504247465521173,
+      "ci95": [
+        0.18739447781349264,
+        0.24268011214513166
+      ]
+    },
+    "Bpref": {
+      "mean": 0.21408775307971784,
+      "ci95": [
+        0.1868297966155723,
+        0.24167606265248567
+      ]
+    },
+    "Judged@10": {
+      "mean": 0.3279411764705882,
+      "ci95": [
+        0.28088235294117647,
+        0.375
+      ]
+    },
+    "Judged@100": {
+      "mean": 0.17963235294117647,
+      "ci95": [
+        0.1597794117647059,
+        0.19941360294117647
+      ]
+    }
+  },
+  "run_validation": {
+    "rows": 13600,
+    "queries": 136,
+    "expected_queries": 136,
+    "missing_queries": 0,
+    "unknown_queries": 0,
+    "duplicate_query_doc_pairs": 0,
+    "invalid_rank_rows": 0
+  }
+}

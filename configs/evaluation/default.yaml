@@ -1,0 +1,15 @@
+benchmark_version: storesearch_ko_v1
+
+primary_metric: nDCG@10
+
+binary_relevance_threshold: 2
+
+metrics:
+  - nDCG@10
+  - Precision@10
+  - MRR@100
+  - Recall@50
+  - Recall@100
+  - Bpref
+  - Judged@10
+  - Judged@100
