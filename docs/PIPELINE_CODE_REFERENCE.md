@@ -556,7 +556,12 @@ Judged@10/Judged@100(상위 k 중 실제 판정된 문서 비율). 계산은 전
   대비 비교 결과 — **14/15번과 model_manifest 갱신 로직이 이 JSON의 `aggregate` 필드를 다시 읽는다**
 
 **사용하는 src/ 코드**
-- 없음(순수 `ir_measures`/`numpy`/`pandas` — src 모듈 의존 없음)
+- `store_search_ai.evaluation.evaluator` — 위 핵심 로직 전체(`load_qrels`, `load_run`,
+  `calculate_metrics`, `bootstrap_ci`, `paired_permutation_pvalue`, `compare_runs`,
+  `validate_run`, `build_evaluation_report`, `save_evaluation_outputs`)가 여기 있다.
+  `13_evaluate_run.py`는 인자 파싱 + 콘솔 출력만 담당하는 얇은 CLI다. 14/15번은 여전히 이
+  스크립트를 **서브프로세스로** 호출하므로(이 모듈을 직접 import하지 않음) CLI 인자/출력 파일
+  경로가 바뀌면 안 된다.
 
 ---
 
