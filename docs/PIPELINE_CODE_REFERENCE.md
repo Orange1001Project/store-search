@@ -483,7 +483,11 @@ train/val/test를 합쳐 `qrels_all`을 만들고 split을 넘나드는 (query_i
   실수로 덮어쓰지 못하게)
 
 **사용하는 src/ 코드**
-- `store_search_ai.pipeline.common.load_config`, `sha256_file`, `write_trec_qrels`
+- `store_search_ai.data.qrels_builder` — 위 핵심 로직 전체(`load_adjudication`,
+  `load_train_qrels`, `build_split_qrels`, `assemble_qrels`, `save_qrels_outputs`,
+  `build_manifest`, `freeze_benchmark`)가 여기 있다. `11_build_qrels.py`는 인자 파싱 +
+  IO 순서 배치만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_config`, `sha256_file`
 
 ---
 
