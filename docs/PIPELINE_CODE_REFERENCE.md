@@ -342,6 +342,10 @@ sha256(query_id|doc_id)[:20]`을 이 단계에서 처음 부여한다(이후 09/
 하이퍼파라미터·템플릿 선택 어디에도 쓰면 안 된다는 leakage 정책 포함)
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.annotation_sheets` — 위 핵심 로직 전체(`validate_pool_and_queries`,
+  `attach_query_metadata`, `add_judgment_ids`, `prepare_pool`, `build_annotator_frame`,
+  `stable_shuffle`, `build_split_stats`, `build_annotation_manifest`)가 여기 있다.
+  `08_make_full_annotation_sheets.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
 - `store_search_ai.pipeline.common.load_config`
 
 ---
