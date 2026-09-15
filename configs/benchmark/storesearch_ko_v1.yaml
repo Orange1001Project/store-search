@@ -4,6 +4,14 @@ corpus_version: store_corpus_v002
 corpus_path: data/corpus/store_corpus_v002.parquet
 benchmark_dir: benchmark/storesearch_ko_v1
 
+# scripts/import_queryset_xlsx.py가 읽는 단일 소스 — 예전에는 이 값과 동일해야 한다는
+# 주석만 달고 스크립트 안에 별도로 하드코딩돼 있어서, 둘이 어긋나도 조용히 통과되는
+# 버그가 있었다. 이제 스크립트는 여기서만 읽는다.
+query_set:
+  version: query_set_v004
+  random_seed: 20260831
+  corrections_path: configs/query/query_corrections_v004.yaml
+
 relevance:
   grades: [0, 1, 2, 3]
   binary_threshold: 2
