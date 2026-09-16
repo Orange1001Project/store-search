@@ -698,6 +698,9 @@ sentence-transformers는 `InputExample(texts=[query, positive, *negatives])`로 
   결정적으로 재생성되는 파생 파일(train qrels가 갱신되면 다시 돌리면 됨)
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.finetune_dataset.{resolve_train_qrels_path, build_training_pairs}` —
+  train qrels 경로 결정 + positive/negative 조립 로직. `prepare_finetune_dataset.py`는 인자
+  파싱 + 파일 IO만 담당.
 - `store_search_ai.pipeline.common.load_active_queries`, `load_config`
 
 ---
