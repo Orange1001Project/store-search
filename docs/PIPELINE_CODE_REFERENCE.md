@@ -242,6 +242,9 @@ split에서 relevance는 사람이 직접 판정).
   sha256(재현성 추적용)
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.benchmark_init` — 위 핵심 로직 전체(`GUIDELINE`, `build_queries_frame`,
+  `build_query_manifest`)가 여기 있다. `05_init_benchmark.py`는 인자 파싱 + 파일 IO + 콘솔
+  출력만 담당하는 얇은 CLI다.
 - `store_search_ai.pipeline.common.load_config`, `sha256_file`
 
 ---
