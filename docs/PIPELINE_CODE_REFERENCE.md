@@ -550,6 +550,9 @@ lexical 3개로 확정, 원래는 dense pooling까지 염두에 둔 6이었음),
   종료(CI/스크립트 체이닝에서 실패로 감지 가능)
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.benchmark_validation` — 위 핵심 로직 전체(쿼리/코퍼스 무결성,
+  pool/qrels 검증, final 단계 최소 기준, `build_validation_report` 오케스트레이터)가 여기
+  있다. `12_validate_benchmark.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
 - `store_search_ai.pipeline.common.load_active_queries`, `load_config`
 
 ---
