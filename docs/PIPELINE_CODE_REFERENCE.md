@@ -392,6 +392,8 @@ train/val/test 3개로, B 파일은 val/test 2개로 쪼갠다.
 이어서 실행하면 된다.
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.annotation_split.{validate_splits_present, split_by_column}` — split
+  존재 검사 + 분리 로직. `split_completed_annotations.py`는 인자 파싱 + 파일 IO만 담당.
 - `store_search_ai.pipeline.common.load_config`
 
 ---
@@ -658,6 +660,8 @@ prompt 차이를 여기서 흡수), `ExactCosineSearch`로 top-k(기본 100) run
 - `--output`(기본 `results/model_eval/leaderboard_{split}.csv`)
 
 **사용하는 src/ 코드**
+- `store_search_ai.models.leaderboard.{find_runs, build_leaderboard}` — run 파일 탐색 + 정렬.
+  `15_score_model_runs.py`는 인자 파싱 + 서브프로세스 호출 + 파일 IO만 담당.
 - `store_search_ai.pipeline.common.load_config`
 
 ---
