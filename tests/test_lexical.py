@@ -5,12 +5,12 @@ import pandas as pd
 from store_search_ai.retrieval.lexical import (
     build_lexical_run_manifest,
     build_pool_document_texts,
+    char_ngrams,
     fit_bm25_scorer,
     fit_char_tfidf_scorer,
     fit_word_tfidf_scorer,
     normalize_text,
     retrieve_run,
-    tokenize,
     write_run_files,
 )
 
@@ -21,8 +21,24 @@ def test_normalize_text_collapses_whitespace_and_handles_none():
     assert normalize_text(float("nan")) == ""
 
 
-def test_tokenize_extracts_alnum_hangul_tokens_casefolded():
-    assert tokenize("Chicken 치킨-집!!") == ["chicken", "치킨", "집"]
+def test_char_ngrams_extracts_boundary_padded_grams_casefolded():
+    grams = char_ngrams("Ab 가", ngram_range=(2, 3))
+    assert grams == [" a", "ab", "b ", " ab", "ab ", " 가", "가 ", " 가 "]
+
+
+def test_char_ngrams_does_not_cross_word_boundaries():
+    grams = char_ngrams("가구 추천", ngram_range=(2, 2))
+    assert "구 " in grams and " 추" in grams
+    assert "구추" not in grams
+
+
+def test_char_ngrams_lets_unspaced_korean_compounds_share_subword_grams():
+    # "가구추천"(공백 없는 복합어)과 "가구"가 부분적으로 겹치는 n-gram을 공유해야
+    # word-level 토큰화의 한국어 복합어 한계(가구추천 전체가 원자 토큰이 되어버리는 문제)를
+    # 피할 수 있다.
+    query_grams = set(char_ngrams("가구추천", ngram_range=(2, 3)))
+    doc_grams = set(char_ngrams("동서가구", ngram_range=(2, 3)))
+    assert query_grams & doc_grams
 
 
 def test_build_pool_document_texts_concatenates_store_name_and_item_text():

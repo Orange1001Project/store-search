@@ -60,7 +60,10 @@ python scripts/06_generate_lexical_runs.py
 python scripts/07_build_annotation_pool.py --round lexical_v1
 ```
 
-- 06: TF-IDF(char/word) + BM25 세 시스템으로 top-40 lexical run을 생성 (`benchmark/storesearch_ko_v1/runs/pooling/`)
+- 06: TF-IDF(char/word) + BM25 세 시스템으로 top-40 lexical run을 생성 (`benchmark/storesearch_ko_v1/runs/pooling/`).
+  세 시스템 모두 토큰화는 **문자 n-gram**으로 통일되어 있다(word/bm25도 이름과 달리 단어 정규식이
+  아니라 char n-gram) — 띄어쓰기 없는 한국어 복합어(예: "가구추천")를 단어 경계 토큰화로는 부분
+  일치시킬 수 없는 문제 때문 (`docs/PIPELINE_CODE_REFERENCE.md` `06_generate_lexical_runs.py` 절 참고)
 - 07: 위 run들을 합쳐 애노테이션 대상 후보 pool을 만듭니다 (`candidate_pool_internal.csv`).
   **이 스크립트는 `--round` 인자로 여러 번 누적 호출 가능**합니다 (예: 나중에 dense retrieval 결과로 pool을
   확장하고 싶다면 `--round dense_round1`로 다시 실행).

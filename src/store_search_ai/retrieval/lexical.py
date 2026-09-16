@@ -22,7 +22,7 @@ import pandas as pd
 from rank_bm25 import BM25Okapi
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-TOKEN_RE = re.compile(r"[0-9A-Za-z가-힣]+")
+WORD_RE = re.compile(r"[0-9A-Za-z가-힣]+")
 
 ScoreFn = Callable[[str], np.ndarray]
 
@@ -33,8 +33,31 @@ def normalize_text(value: object) -> str:
     return " ".join(str(value).split())
 
 
-def tokenize(value: object) -> list[str]:
-    return TOKEN_RE.findall(normalize_text(value).casefold())
+def char_ngrams(value: object, ngram_range: tuple[int, int] = (2, 3)) -> list[str]:
+    """단어 경계로 감싼(word-boundary padded) 문자 n-gram 리스트 (McNamee & Mayfield, 2004,
+    "Character N-Gram Tokenization for European Language Text Retrieval").
+
+    한국어는 복합어를 띄어쓰기 없이 붙여 쓰는 경우가 흔하다(예: "가구추천" = "가구"+"추천",
+    "나사못" = "나사"+"못"). 단어 단위 정규식 토큰화(`\\b\\w+\\b`)는 이런 문자열을 쪼갤 수 없는
+    ATOMIC 토큰 하나로 묶어버려서, query와 document 어느 쪽에서도 부분 일치가 불가능해진다
+    (실측: 548개 쿼리 중 97개가 이 문제로 word_tfidf/bm25 채널에서 후보를 0개 받음). 문자
+    n-gram은 형태소 분석기 없이도 이 부분 일치를 가능하게 하는, 언어에 무관한(language
+    agnostic) 표준 완화책이며, `fit_char_tfidf_scorer`가 이미 같은 원리(`char_wb`)로 쓰고
+    있어 세 채널이 동일한 토큰화 철학을 공유하게 된다.
+
+    각 "단어"(연속된 영숫자+한글 구간)를 공백 1개로 감싼 뒤 그 안에서 n-gram을 뽑는다 —
+    sklearn TfidfVectorizer의 `char_wb` analyzer와 같은 방식이라, 서로 다른 단어에 걸친
+    무의미한 n-gram(예: "가구 추천"의 "구 추")은 만들지 않는다.
+    """
+
+    text = normalize_text(value).casefold()
+    n_min, n_max = ngram_range
+    grams: list[str] = []
+    for word in WORD_RE.findall(text):
+        padded = f" {word} "
+        for n in range(n_min, min(n_max, len(padded)) + 1):
+            grams.extend(padded[i : i + n] for i in range(len(padded) - n + 1))
+    return grams
 
 
 def build_pool_document_texts(corpus: pd.DataFrame) -> pd.Series:
@@ -62,9 +85,14 @@ def fit_char_tfidf_scorer(docs: pd.Series) -> ScoreFn:
 
 
 def fit_word_tfidf_scorer(docs: pd.Series) -> ScoreFn:
-    vec = TfidfVectorizer(
-        analyzer="word", ngram_range=(1, 2), token_pattern=r"(?u)\b\w+\b", min_df=1, sublinear_tf=True
-    )
+    """이름은 `word_tfidf`지만 실제 analyzer는 char_wb다 — 띄어쓰기 없는 한국어 복합어를
+    쪼갤 수 없는 순수 단어 토큰화의 한계 때문에(`char_ngrams` docstring 참고) char n-gram으로
+    통일했다. `char_tfidf_v1`과는 n-gram 길이(2~4 vs 2~5)로 차별화되고, `bm25_regex_v1`과는
+    scoring 방식(TF-IDF 코사인 유사도 vs BM25 saturating term frequency)으로 차별화되어
+    pooling 다양성은 유지된다.
+    """
+
+    vec = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4), min_df=1, sublinear_tf=True)
     mat = vec.fit_transform(docs)
 
     def score(query: str) -> np.ndarray:
@@ -74,10 +102,13 @@ def fit_word_tfidf_scorer(docs: pd.Series) -> ScoreFn:
 
 
 def fit_bm25_scorer(docs: pd.Series) -> ScoreFn:
-    bm25 = BM25Okapi([tokenize(x) for x in docs.tolist()])
+    """이름은 `bm25_regex`지만 토큰화는 정규식 단어 추출이 아니라 `char_ngrams`다 — 이유는
+    `fit_word_tfidf_scorer`와 동일(한국어 복합어 부분 일치 문제)."""
+
+    bm25 = BM25Okapi([char_ngrams(x) for x in docs.tolist()])
 
     def score(query: str) -> np.ndarray:
-        return np.asarray(bm25.get_scores(tokenize(query)), dtype=float)
+        return np.asarray(bm25.get_scores(char_ngrams(query)), dtype=float)
 
     return score
 

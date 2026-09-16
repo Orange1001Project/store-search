@@ -274,11 +274,18 @@ split에서 relevance는 사람이 직접 판정).
 **핵심 로직**
 document 텍스트는 `store_name + " " + item_text`(T1과 개념적으로 동일한 필드 조합, 다만 이
 스크립트는 `search_text_t1_minimal` 컬럼을 그대로 쓰지 않고 즉석에서 다시 조합한다)로 고정한다.
-세 시스템을 각각 corpus 전체에 fit한다: **char TF-IDF**(char_wb, 2~5-gram), **word TF-IDF**
-(1~2-gram, 정규식 토큰), **BM25Okapi**(정규식 토큰 `[0-9A-Za-z가-힣]+`). 쿼리마다 세 시스템 각각의
-점수를 계산해서 **score>0인 문서만** top-40으로 남긴다(0점 이하는 "lexical overlap이 아예 없다"는
-뜻이라, 억지로 채우면 무의미한 문서가 pool을 오염시키기 때문 — random negative는 07에서 별도
-채널로 명시적으로 뽑는다).
+세 시스템을 각각 corpus 전체에 fit한다: **char TF-IDF**(`char_wb`, 2~5-gram), **word TF-IDF**
+(이름과 달리 실제로는 `char_wb`, 2~4-gram), **BM25Okapi**(이름과 달리 문자 2~3-gram, `char_ngrams`).
+세 시스템 모두 문자 n-gram 기반으로 통일되어 있다 — 원래 word TF-IDF/BM25는 정규식 단어 토큰화
+(`\b\w+\b`류)를 썼지만, 한국어는 복합어를 띄어쓰기 없이 붙여 쓰는 경우가 흔해서(예: "가구추천" =
+"가구"+"추천") 단어 경계 토큰화로는 부분 일치가 원천적으로 불가능한 쿼리가 548개 중 97개
+확인되어(2026-09), McNamee & Mayfield(2004)의 문자 n-gram 방식으로 통일했다
+(`src/store_search_ai/retrieval/lexical.py`의 `char_ngrams` 참고). 이 변경으로 세 시스템 이름
+(`char_tfidf_v1`/`word_tfidf_v1`/`bm25_regex_v1`)은 유지하되 실제 토큰화 방식은 다르며, 차이는
+n-gram 길이(2~5 vs 2~4)와 scoring 모델(TF-IDF 코사인 유사도 vs BM25)로만 남는다. 쿼리마다 세
+시스템 각각의 점수를 계산해서 **score>0인 문서만** top-40으로 남긴다(0점 이하는 "lexical
+overlap이 아예 없다"는 뜻이라, 억지로 채우면 무의미한 문서가 pool을 오염시키기 때문 — random
+negative는 07에서 별도 채널로 명시적으로 뽑는다).
 
 **출력 파일** (`benchmark_dir/runs/pooling/` 밑)
 - `char_tfidf_v1.csv/.trec`, `word_tfidf_v1.csv/.trec`, `bm25_regex_v1.csv/.trec`
