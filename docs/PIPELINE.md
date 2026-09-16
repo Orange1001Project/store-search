@@ -13,7 +13,10 @@ pip install -e ".[dev]"
 
 `store_search_ai.evaluation.evaluator`(`scripts/13_evaluate_run.py`가 호출하는 채점 모듈)에
 Python 3.12+ 호환 shim이 들어있어서(구버전 `ir-measures`가 3.12에서 제거된 `ast.Num`을 쓰는 문제
-우회) 3.11 고정은 아니지만, 검증은 3.11 기준으로 이뤄졌습니다.
+우회) 3.11 고정은 아니지만, 검증은 3.11 기준으로 이뤄졌습니다. `pyproject.toml`의
+`requires-python`도 한때 `<3.12`로 막혀 있어서 이 shim의 존재 의미가 없었는데(3.12 이상은 애초에
+설치가 거부됨), 이제 상한을 풀어서 `>=3.11`만 요구합니다 — 파이프라인 전체를 Python 3.14에서
+실행해서 문제없이 동작함을 확인했습니다(2026-09).
 
 ## 1. 데이터 전처리 ~ Corpus 구축 (사람 개입 없음, 전부 재실행 가능)
 
