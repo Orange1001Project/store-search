@@ -623,6 +623,9 @@ prompt 차이를 여기서 흡수), `ExactCosineSearch`로 top-k(기본 100) run
 - (fine-tuned 로컬 모델일 때만) `{model_id}/model_manifest.json`의 `evaluations` 갱신
 
 **사용하는 src/ 코드**
+- `store_search_ai.models.model_eval.{build_encoder, build_evaluate_run_cmd,
+  build_manifest_entry}` — 인코더 선택, 13번 서브프로세스 argv 조립, model_manifest
+  엔트리 조립(이 스크립트 전용 오케스트레이션 조각)
 - `store_search_ai.pipeline.common.load_active_queries`, `load_config`,
   `append_model_manifest_evaluation`
 - `store_search_ai.models.random_encoder.RandomEncoder`(`--dummy`) 또는

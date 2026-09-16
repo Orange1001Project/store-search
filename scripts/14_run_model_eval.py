@@ -35,39 +35,22 @@ import argparse
 import json
 import subprocess
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
 
+from store_search_ai.models.model_eval import (
+    TEMPLATE_COLUMNS,
+    build_encoder,
+    build_evaluate_run_cmd,
+    build_manifest_entry,
+)
 from store_search_ai.pipeline.common import (
     append_model_manifest_evaluation,
     load_active_queries,
     load_config,
 )
 from store_search_ai.retrieval.exact_search import ExactCosineSearch
-
-TEMPLATE_COLUMNS = {
-    "t1_minimal": "search_text_t1_minimal",
-    "t2_market": "search_text_t2_market",
-    "t3_market_type": "search_text_t3_market_type",
-}
-
-
-def build_encoder(args: argparse.Namespace):
-    if args.dummy:
-        from store_search_ai.models.random_encoder import RandomEncoder
-
-        return RandomEncoder()
-
-    if not args.model_config:
-        raise SystemExit("--model-config이 필요합니다 (또는 --dummy로 배관만 검증)")
-
-    from store_search_ai.models.sentence_transformer_encoder import (
-        SentenceTransformerEncoder,
-    )
-
-    return SentenceTransformerEncoder.from_yaml(args.model_config)
 
 
 def main() -> None:
@@ -91,7 +74,7 @@ def main() -> None:
 
     text_col = TEMPLATE_COLUMNS[args.template]
 
-    encoder = build_encoder(args)
+    encoder = build_encoder(dummy=args.dummy, model_config_path=args.model_config)
     tag = args.tag or encoder.name
 
     print(f"[INFO] encoding corpus ({len(corpus)} docs, template={args.template}) ...")
@@ -100,10 +83,7 @@ def main() -> None:
     print(f"[INFO] encoding {len(queries)} {args.split} queries ...")
     query_embeddings = encoder.encode_queries(queries["query"].tolist())
 
-    searcher = ExactCosineSearch(
-        corpus_embeddings=corpus_embeddings,
-        doc_ids=corpus["doc_id"].tolist(),
-    )
+    searcher = ExactCosineSearch(corpus_embeddings=corpus_embeddings, doc_ids=corpus["doc_id"].tolist())
     run = searcher.search(
         query_embeddings=query_embeddings,
         query_ids=queries["query_id"].tolist(),
@@ -122,13 +102,9 @@ def main() -> None:
 
     qrels_path = benchmark_dir / f"qrels_{args.split}.trec"
     eval_tag = f"{tag}_{args.split}"
-    cmd = [
-        sys.executable,
-        str(Path(__file__).with_name("13_evaluate_run.py")),
-        "--qrels", str(qrels_path),
-        "--run", str(run_path),
-        "--tag", eval_tag,
-    ]
+    cmd = build_evaluate_run_cmd(
+        sys.executable, Path(__file__).with_name("13_evaluate_run.py"), qrels_path, run_path, eval_tag
+    )
     print(f"[INFO] 공식 evaluator 호출: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
 
@@ -143,16 +119,11 @@ def main() -> None:
             )
             if eval_json_path.exists():
                 evaluation = json.loads(eval_json_path.read_text(encoding="utf-8"))
-                append_model_manifest_evaluation(
-                    model_dir,
-                    {
-                        "evaluated_at": datetime.now(timezone.utc).isoformat(),
-                        "split": args.split,
-                        "template": args.template,
-                        "tag": eval_tag,
-                        "metrics": evaluation.get("aggregate", {}),
-                    },
+                entry = build_manifest_entry(
+                    split=args.split, template=args.template, eval_tag=eval_tag,
+                    aggregate_metrics=evaluation.get("aggregate", {}),
                 )
+                append_model_manifest_evaluation(model_dir, entry)
                 print(f"[INFO] model_manifest.json 갱신: {model_dir / 'model_manifest.json'}")
 
 
