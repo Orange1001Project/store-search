@@ -11,8 +11,9 @@ source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-`scripts/13_evaluate_run.py`에 Python 3.12+ 호환 shim이 들어있어서(구버전 `ir-measures`가 3.12에서
-제거된 `ast.Num`을 쓰는 문제 우회) 3.11 고정은 아니지만, 검증은 3.11 기준으로 이뤄졌습니다.
+`store_search_ai.evaluation.evaluator`(`scripts/13_evaluate_run.py`가 호출하는 채점 모듈)에
+Python 3.12+ 호환 shim이 들어있어서(구버전 `ir-measures`가 3.12에서 제거된 `ast.Num`을 쓰는 문제
+우회) 3.11 고정은 아니지만, 검증은 3.11 기준으로 이뤄졌습니다.
 
 ## 1. 데이터 전처리 ~ Corpus 구축 (사람 개입 없음, 전부 재실행 가능)
 
