@@ -472,7 +472,9 @@ final_relevance가 여전히 비어있는 행"**(`unresolved_non_excluded`)이 �
   `--adjudication` 기본값과 동일 경로**
 
 **사용하는 src/ 코드**
-- 없음(순수 pandas + argparse)
+- `store_search_ai.data.adjudication_patch` — 위 핵심 로직 전체(`validate_patch`,
+  `apply_adjudication_patch`, `build_patch_report`)가 여기 있다.
+  `10_apply_adjudication_patch.py`는 인자 파싱 + 파일 IO + 콘솔 출력만 담당하는 얇은 CLI다.
 
 ---
 
