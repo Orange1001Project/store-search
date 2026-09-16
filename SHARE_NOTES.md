@@ -12,14 +12,27 @@ docs/, tests/, Makefile, pyproject.toml)는 전부 그대로**입니다. 용량�
 |---|---|---|
 | `data/interim/`, `data/processed/` | 76+82MB | `02_preprocess_data.py --input data/raw/stores_20260907.xlsx` |
 | `data/corpus/store_corpus_v002.parquet` | 88MB | `04_build_corpus.py` (위 processed 산출물 필요) |
-| `benchmark/storesearch_ko_v1/runs/pooling/` | 9MB | `06_generate_lexical_runs.py` |
-| `benchmark/storesearch_ko_v1/candidate_pool_internal.csv` | 17MB | `07_build_annotation_pool.py --round lexical_v1` |
+| `benchmark/storesearch_ko_v1/runs/pooling/` | 9MB | `06_generate_lexical_runs.py` (⚠ 아래 참고 — 바이트 단위 재현 안 됨) |
+| `benchmark/storesearch_ko_v1/candidate_pool_internal.csv` | 17MB | `07_build_annotation_pool.py --round lexical_v1` (⚠ 아래 참고 — 바이트 단위 재현 안 됨) |
 | `artifacts/reports/item_analysis_stores_v003/`의 큰 CSV들 | 7MB | `03_analyze_items.py` (요약본 `item_analysis_summary_*.json`만 남김) |
 | `annotations/full_annotation_v1/`의 split별 파일(`annotation_A_train/val/test*.csv`, `annotation_B_val/test*.csv`, 완료본 포함) | 52MB | **`annotation_A_all(_completed).csv`/`annotation_B_val_test(_completed).csv`(전체 버전)와 완전히 같은 내용을 split별로 나눠놓은 것뿐** — `python scripts/split_completed_annotations.py`로 그 자리에서 다시 만들어짐(사람 입력 불필요, 순수 코드). 전체 버전만 남김 |
 
-전부 `docs/PIPELINE.md` 1~3절 순서대로 실행하면 원본과 바이트 단위로 동일하게 재생성됩니다
-(단, `data/registry/store_registry.parquet`이 이미 이 폴더에 있어야 store_id가 기존 qrels와
-동일하게 재현됩니다 — 아래 참고).
+`docs/PIPELINE.md` 1~3절 순서대로 실행하면 재생성됩니다(`data/registry/store_registry.parquet`이
+이미 이 폴더에 있어야 store_id가 기존 qrels와 동일하게 재현됩니다 — 아래 참고). 단, 이 "바이트
+단위로 동일하게 재생성된다"는 보장은 **1절(전처리~corpus, 01~04번)까지만 실제로 확인됐습니다**
+— `02_preprocess_data.py`/`04_build_corpus.py`를 두 번 별도로 재실행해서 체크인된 산출물과
+정확히 일치함을 검증했습니다(리팩토링 작업 중 golden-file 테스트로 재확인, 2026-09).
+
+**3절(lexical pooling, 06~07번)은 바이트 단위로 재현되지 않는다는 것을 발견했습니다.** 같은
+corpus·같은 config로 `06_generate_lexical_runs.py` → `07_build_annotation_pool.py`를 두 번
+독립적으로 재실행했는데, 둘 다 `candidate_pool_internal.csv`가 55,647행이 나왔습니다 — 이 폴더에
+체크인된 `pool_history.csv`의 원본 기록(61,619행)과 다릅니다. 두 번의 재실행이 서로 다른 값이
+아니라 **매번 똑같이 55,647행**이 나왔다는 점에서, 이건 무작위성이 아니라 **지금 이 환경/코드와
+원본을 만들었던 환경/코드 사이의 결정적인 차이**(예: `scikit-learn`/`rank_bm25` 라이브러리 버전
+차이 등)로 보입니다. 정확한 원인은 아직 찾지 못했습니다. 실무 영향: `candidate_pool_internal.csv`를
+직접 재생성해서 쓰면 안 되고(이미 사람이 그 pool을 보고 판정한 애노테이션 원본과 어긋나게 됨),
+이 공유 폴더에 이미 남아있는 애노테이션 원본·qrels·리더보드 등 "사람 손을 거친" 산출물을
+그대로 써야 합니다.
 
 ## 남긴 것 — 사람 손을 거쳤거나 코드만으로 복원 안 되는 데이터
 
@@ -42,6 +55,9 @@ docs/, tests/, Makefile, pyproject.toml)는 전부 그대로**입니다. 용량�
 ## 처음부터 다시 돌리려면
 
 `docs/PIPELINE.md` 1절부터 순서대로 실행하면 됩니다. raw와 registry가 이미 이 폴더에 있으므로
-`data/interim/`, `data/processed/`, `data/corpus/`, pooling 산출물이 기존과 동일하게 재생성됩니다.
-`09_prepare_full_annotations.py`를 다시 돌리려면(split별 완료 파일이 필요) 먼저
-`python scripts/split_completed_annotations.py`로 남겨둔 전체 버전을 split별로 풀어내면 됩니다.
+`data/interim/`, `data/processed/`, `data/corpus/`는 기존과 바이트 단위로 동일하게 재생성됩니다.
+**pooling 산출물(`runs/pooling/`, `candidate_pool_internal.csv`)은 위 "⚠" 표시 항목에 적은 대로
+기존과 다르게 나올 수 있습니다** — 이미 사람이 판정을 마친 애노테이션이 있다면 pooling을 다시
+돌리지 말고 이 폴더에 남아있는 애노테이션 원본을 그대로 쓰세요. `09_prepare_full_annotations.py`를
+다시 돌리려면(split별 완료 파일이 필요) 먼저 `python scripts/split_completed_annotations.py`로
+남겨둔 전체 버전을 split별로 풀어내면 됩니다.
