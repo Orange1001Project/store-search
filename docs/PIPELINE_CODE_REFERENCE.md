@@ -167,7 +167,9 @@ registry에 추가한다 — 그래서 데이터가 늘어나도 기존 매장�
 - `data/corpus/{corpus_version}_manifest.json` — 문서 수, 결측 item/geo 문서 수, 템플릿 설명
 
 **사용하는 src/ 코드**
-- `store_search_ai.pipeline.common.load_config` — 그 외 로직은 스크립트 안에 직접 구현(pandas만 사용)
+- `store_search_ai.data.corpus` — 위 핵심 로직 전체(`build_corpus`, `build_corpus_manifest`,
+  `text_hash`)가 여기 있다. `04_build_corpus.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_config`
 
 ---
 
@@ -268,8 +270,10 @@ document 텍스트는 `store_name + " " + item_text`(T1과 개념적으로 동�
 - `lexical_run_manifest.json` — 시스템별 통계(결과 있는/없는 쿼리 수, 평균 결과 수 등)
 
 **사용하는 src/ 코드**
-- `store_search_ai.pipeline.common.load_active_queries`, `load_config` — 그 외 TF-IDF/BM25 로직은
-  `sklearn`/`rank_bm25`를 스크립트에서 직접 사용(전용 src 모듈 없음)
+- `store_search_ai.retrieval.lexical` — 위 핵심 로직 전체(문서 텍스트 정규화/토큰화, char
+  TF-IDF/word TF-IDF/BM25 fit+채점, run 조립, manifest 생성)가 여기 있다.
+  `06_generate_lexical_runs.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_active_queries`, `load_config`
 
 ---
 
@@ -310,8 +314,11 @@ corpus에 없는 doc_id가 섞이면 즉시 에러.
 - `pool_history.csv` — 라운드별 통계 누적(같은 라운드로 재실행하면 그 라운드 행만 교체)
 
 **사용하는 src/ 코드**
-- `store_search_ai.pipeline.common.load_active_queries`, `load_config` — 매칭/누적 로직은
-  스크립트 내부 구현(전용 src 모듈 없음)
+- `store_search_ai.data.annotation_pool` — 위 핵심 로직 전체(pooling run 로딩, 기존 pool 이어받기,
+  세 채널 누적(`accumulate_run_candidates`/`accumulate_targeted_candidates`/
+  `accumulate_random_candidates`), pool 조립, 통계/히스토리 병합)가 여기 있다.
+  `07_build_annotation_pool.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_active_queries`, `load_config`
 
 ---
 
