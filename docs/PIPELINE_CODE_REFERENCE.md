@@ -92,8 +92,11 @@ registry에 추가한다 — 그래서 데이터가 늘어나도 기존 매장�
 **사용하는 src/ 코드**
 - `store_search_ai.common.io.load_yaml`, `read_excel_sheets`
 - `store_search_ai.data.preprocess.canonicalize` — 시트 1개 정제(위 핵심 로직 대부분이 여기)
+- `store_search_ai.data.preprocess.combine_sheets` — 여러 시트에 canonicalize를 돌려 하나로
+  합침(스크립트의 시트 순회 루프 본체)
 - `store_search_ai.data.preprocess.find_duplicate_candidates` — 같은 store_id/사업자번호로 묶이는
   행 진단
+- `store_search_ai.data.preprocess.build_preprocess_summary` — `preprocess_summary_*.json` 조립
 - `store_search_ai.data.text_cleaning.{normalize_spaces, clean_address, clean_digits,
   normalize_yn}` — canonicalize 내부에서 사용
 - `store_search_ai.data.ids.build_entity_fingerprint` — fingerprint 계산
@@ -131,8 +134,10 @@ registry에 추가한다 — 그래서 데이터가 늘어나도 기존 매장�
 `low_information_tokens_*.csv`, `item_analysis_summary_*.json`
 
 **사용하는 src/ 코드**
-- `store_search_ai.pipeline.common.load_config` (dataset_version 읽기용) — 그 외에는 pandas/정규식만
-  사용하는 순수 분석 스크립트
+- `store_search_ai.data.item_analysis` — 위 핵심 로직 전체(토큰 explode/집계, 결측/충돌/이상치
+  탐지, long-tail 통계, summary 조립)가 여기 있다. `03_analyze_items.py`는 인자 파싱 + 파일
+  저장 + 콘솔 출력만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_config` (dataset_version 읽기용)
 
 ---
 
@@ -429,6 +434,11 @@ agreement, Cohen's kappa(unweighted/quadratic-weighted)를 다시 한번 계산�
   바로 밑) — `12_validate_benchmark.py --stage final`이 읽는 파일
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.annotation_prep` — 위 핵심 로직 전체(`load_completed`,
+  `validate_expected_splits`, `split_train_qrels`, `pairwise_report`, `build_adjudication_frame`,
+  `build_needed_adjudication`, `build_partial_agreement_qrels`, `build_full_annotation_summary`,
+  `build_agreement_report`)가 여기 있다. `09_prepare_full_annotations.py`는 인자 파싱 + 파일
+  IO만 담당하는 얇은 CLI다.
 - `store_search_ai.pipeline.common.load_config`, `write_trec_qrels`
 
 ---
