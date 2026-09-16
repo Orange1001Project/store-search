@@ -92,7 +92,9 @@ def fit_word_tfidf_scorer(docs: pd.Series) -> ScoreFn:
     pooling 다양성은 유지된다.
     """
 
-    vec = TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 4), min_df=1, sublinear_tf=True)
+    vec = TfidfVectorizer(
+        analyzer="char_wb", ngram_range=(2, 4), min_df=1, sublinear_tf=True, max_features=150000
+    )
     mat = vec.fit_transform(docs)
 
     def score(query: str) -> np.ndarray:
