@@ -191,28 +191,38 @@ registry에 추가한다 — 그래서 데이터가 늘어나도 기존 매장�
   먼저 읽는다.
 
 **핵심 로직**
-`RECLASSIFY_QUERIES` 딕셔너리로 xlsx 병합 과정에서 패밀리가 잘못 배정된 게 확인된 질의를
-정정한다(예: "일본 음식 먹을 곳"이 한식에 잘못 들어간 것을 원본유형 태그로 판단해 일식으로
-재배정, "(미판정)"이던 5행을 기존 family 또는 신설 family `복합`으로 배정 — 이 판단은 자동
-추론이므로 스크립트 실행 로그에 팀 검토를 요청하는 경고를 남긴다). 재배정 후에도 "(미판정)"이
-남아 있으면 즉시 에러(새로 발견된 미분류 행은 `RECLASSIFY_QUERIES`에 추가해야 함).
+`configs/query/query_corrections_v004.yaml`의 `reclassify_queries` 목록으로 xlsx 병합 과정에서
+패밀리가 잘못 배정된 게 확인된 질의를 정정한다(예: "일본 음식 먹을 곳"이 한식에 잘못 들어간 것을
+원본유형 태그로 판단해 일식으로 재배정, "(미판정)"이던 5행을 기존 family 또는 신설 family
+`복합`으로 배정 — 이 판단은 자동 추론이므로 스크립트 실행 로그에 팀 검토를 요청하는 경고를
+남긴다). 재배정 후에도 "(미판정)"이 남아 있으면 즉시 에러(새로 발견된 미분류 행은 이 yaml의
+`reclassify_queries`에 추가해야 함). **이 목록은 더 이상 스크립트 안에 하드코딩돼 있지 않다** —
+데이터셋이 바뀌어 새 query_set 버전을 만들 때는 이 yaml을 복사해 `_v005.yaml` 등으로 새로
+만들고 `configs/benchmark/storesearch_ko_v1.yaml`의 `query_set.corrections_path`를 올리면 된다
+(자세한 이유는 docs/EXTENDING_DATA.md 참고).
 
 **family당 variant 최소 개수 제한이 없다**(팀 결정 — xlsx의 548개 질의를 전부 살림). split은
 두 단계로 정한다: (1) 기존 yaml에 같은 한글 family 이름이 이미 있으면 그 split을 그대로
 물려받고, (2) 없으면 `원본유형`의 영문 slug(예: `chicken`, `fruit`)로 기존 yaml과 대응시켜
 물려받는다(완전히 새 yaml 체계로 갈아탈 때 대비). 그래도 대응이 안 되는 완전 신규 family만
-대분류별로 균형 잡힌 무작위 배정을 한다(seed 고정, 카테고리 쏠림 방지). `positive_terms`는
-그 family의 T1(정확표기)/T2(동의어) 질의 텍스트, `boundary_terms`는 `함정` 컬럼 값에서 뽑는다
-(둘 다 pooling 후보 발굴에만 쓰이고 relevance 판정에는 영향 없음). `intent_definition`은
-"{대분류} 중 '{family}'을(를) 판매·제공하는 매장" 형태로 초안만 자동 생성한다(사람 검토 필요).
+대분류별로 균형 잡힌 무작위 배정을 한다(seed는 `configs/benchmark/storesearch_ko_v1.yaml`의
+`query_set.random_seed`가 유일한 소스 — 예전에는 이 스크립트 안에 별도로 하드코딩된 복사본이
+있어서 두 값이 어긋나도 아무 경고 없이 조용히 틀어지는 버그가 있었다. 지금은 스크립트가 그
+값을 직접 읽으므로 어긋날 수 없다). `positive_terms`는 그 family의 T1(정확표기)/T2(동의어) 질의
+텍스트, `boundary_terms`는 `함정` 컬럼 값에서 뽑는다(둘 다 pooling 후보 발굴에만 쓰이고
+relevance 판정에는 영향 없음). `intent_definition`은 "{대분류} 중 '{family}'을(를) 판매·제공하는
+매장" 형태로 초안만 자동 생성한다(사람 검토 필요).
 
 **출력 파일**
 - `--output`(기본 `configs/benchmark/query_families_v1.yaml`) — **이 파일을 직접 손으로 편집하면
   안 된다.** xlsx를 고치고 이 스크립트를 다시 돌리는 게 유일한 편집 경로다.
 
 **사용하는 src/ 코드**
-- 없음(순수 pandas + PyYAML — 이 스크립트 자체가 `configs/benchmark/query_families_v1.yaml`을
-  만드는 도구라 `store_search_ai.pipeline.common.load_config`도 쓰지 않고 yaml을 직접 읽고 쓴다)
+- `store_search_ai.data.query_import` — 위 핵심 로직 전체(`build_query_families`,
+  `apply_reclassification`, `resolve_splits`, `parse_corrections` 등)가 여기 있다.
+  `import_queryset_xlsx.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_config` — `query_set` 블록(seed/버전/corrections 경로)과
+  corrections yaml을 읽는 데 사용
 
 ---
 
