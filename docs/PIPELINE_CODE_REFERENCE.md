@@ -43,7 +43,9 @@
 - `store_search_ai.common.io.load_yaml` — yaml 로드
 - `store_search_ai.common.io.read_excel_sheets` — 시트 읽기(시트 설정에 `source_region`이 고정돼
   있으면 그 값을, 없으면 `None`을 반환해 호출부가 주소 기반 파생을 하도록 신호를 준다)
-- `store_search_ai.data.profile.profile_frame` — 프로파일링 계산 본체
+- `store_search_ai.data.profile.{profile_frame, build_data_profile_report}` — 프로파일링 계산
+  본체 + 시트별/COMBINED 리포트 조립. `01_profile_data.py`는 인자 파싱 + 파일 IO만 담당하는
+  얇은 CLI다.
 
 ---
 
