@@ -586,7 +586,9 @@ lexical 3개로 확정, 원래는 dense pooling까지 염두에 둔 6이었음),
 - `--compare-run`(선택): baseline run과 페어 비교
 
 **핵심 로직**
-파일 맨 위에 **Python 3.12+ 호환 shim**이 있다: `ir_measures.util.parse_measure()`가 내부적으로
+`store_search_ai/evaluation/evaluator.py` 파일 맨 위에 **Python 3.12+ 호환 shim**이 있다
+(`13_evaluate_run.py` 자체에는 없다 — 로직이 전부 evaluator.py에 있으므로).
+`ir_measures.util.parse_measure()`가 내부적으로
 `isinstance(node, ast.Num)`을 쓰는데 `ast.Num`이 Python 3.12에서 제거됐다(3.8부터 `ast.Constant`로
 통합, deprecated 거쳐 결국 삭제). `hasattr(ast, "Num")`이 거짓이면 `ir_measures.util._ast_to_value`
 를 `ast.Constant` 기반 구현으로 통째로 교체한 뒤에야 `ir_measures`를 import한다 — 프로젝트를
