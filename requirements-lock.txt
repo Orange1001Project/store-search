@@ -1,0 +1,56 @@
+# 팀 전체가 정확히 같은 버전으로 재현 실행하기 위한 잠금 파일 (pip freeze 결과).
+#
+# pyproject.toml의 dependencies/optional-dependencies는 "이 범위면 동작해야 한다"는
+# 느슨한 하한(때로는 상한) 선언이다 — 실제로 pip이 그 범위 안에서 "지금 시점의 최신"을
+# 고르기 때문에, 같은 pyproject.toml로도 설치 시점에 따라 팀원마다 다른 버전이 깔릴 수
+# 있다. 이 파일은 2026-09-17에 Python 3.14.0 + 전체 테스트(207 passed)로 검증된 정확한
+# 버전 조합을 고정한다.
+#
+# 사용법 (팀원 전체가 동일하게):
+#   python -m venv .venv
+#   .venv\Scripts\activate          # Windows, PowerShell
+#   pip install -r requirements-lock.txt
+#   pip install -e . --no-deps      # store-search-ai 자체는 의존성 재해석 없이 추가
+#
+# 갱신 절차 (의도적으로 어떤 패키지를 올릴 때만):
+#   1. pyproject.toml에서 필요한 범위로 올리고 pip install -e ".[dev]" --upgrade
+#   2. pytest 전체 + 06/07 pooling 재실행으로 회귀 확인 (docs/PIPELINE.md, SHARE_NOTES.md 참고)
+#   3. 문제 없으면 pip freeze로 이 파일을 다시 생성해서 커밋
+#      (store-search-ai 자신을 가리키는 "-e git+..." 줄은 빼고 저장할 것 — 팀원은 각자
+#      자기 로컬 클론을 -e .로 설치하므로 이 파일에 넣을 필요도, 넣어서도 안 됨)
+#
+# 왜 이게 필요한가 (실제로 겪은 문제):
+# - pandas는 pyproject.toml에 ">=2.2"(상한 없음)로만 걸려 있었는데, 오늘 새로 설치했더니
+#   pandas 3.0(메이저 버전업)이 깔렸다. pandas 3.0은 빈 문자열 컬럼의 기본 dtype을 바꿔서
+#   (PDEP-14) CSV 왕복 시 dtype이 달라지는 문제를 하나 노출시켰다(값은 항상 정확했고,
+#   golden-file 비교 테스트만 영향받음 - 고쳤음). pyproject.toml만 보고 설치하면 이런
+#   "설치 시점에 따라 다른 버전"이 계속 반복될 수 있다.
+# - pyproject.toml의 requires-python이 한때 "<3.12"로 막혀 있어서 최신 Python으로는 설치
+#   자체가 거부된 적도 있었다(이제 ">=3.11"만 요구하도록 고침).
+# - 이 파일은 "지금 이 조합이 검증됐다"를 팀 전체가 그대로 재현할 수 있게 하기 위한 것.
+
+cloudpickle==3.1.2
+colorama==0.4.6
+et_xmlfile==2.0.0
+iniconfig==2.3.0
+ir_measures==0.4.3
+joblib==1.6.0
+narwhals==2.26.0
+numpy==2.5.3
+openpyxl==3.1.5
+packaging==26.3
+pandas==3.0.5
+pluggy==1.6.0
+pyarrow==25.0.1
+Pygments==2.21.0
+pytest==9.1.1
+python-dateutil==2.9.0.post0
+pytrec_eval-terrier==0.5.10
+PyYAML==6.0.3
+rank-bm25==0.2.2
+ruff==0.16.8
+scikit-learn==1.9.1
+scipy==1.18.1
+six==1.17.0
+threadpoolctl==3.7.0
+tzdata==2026.4

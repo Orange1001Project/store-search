@@ -61,6 +61,14 @@ def test_annotation_sheets_match_checked_in_golden_files():
     golden_a = pd.read_csv(GOLDEN_DIR / "annotation_A_all.csv", encoding="utf-8-sig")
     golden_b = pd.read_csv(GOLDEN_DIR / "annotation_B_val_test.csv", encoding="utf-8-sig")
 
+    # relevance/uncertain/annotator_note는 이 단계에서 전부 빈 문자열("")이다. CSV는 빈
+    # 문자열과 결측치를 구분하지 못해 read_csv가 float64 NaN으로 되돌리는데, pandas
+    # 3.0부터는 메모리상 빈 문자열 컬럼의 기본 dtype이 "str"(PDEP-14)이라 이 왕복
+    # 손실이 dtype mismatch로 드러난다 — 값 자체는 항상 비어 있으므로 여기서만 맞춰준다.
+    for col in ("relevance", "uncertain", "annotator_note"):
+        golden_a[col] = golden_a[col].fillna("").astype("str")
+        golden_b[col] = golden_b[col].fillna("").astype("str")
+
     from store_search_ai.data.annotation_sheets import VISIBLE_COLUMNS
 
     pd.testing.assert_frame_equal(

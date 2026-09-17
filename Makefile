@@ -17,9 +17,17 @@
 #   make pool                # 01~07 전체를 최신화
 #   make validate            # 현재 benchmark 상태 무결성 검증 (pilot)
 #   make clean-derived       # 재실행 가능한 산출물만 삭제 (raw/qrels/completed 애노테이션은 보존)
+#
+# Windows 참고: GNU make가 기본 설치돼 있지 않고(MSYS2/choco 등으로 별도 설치 필요),
+# venv 레이아웃도 .venv/Scripts/python.exe로 달라서 이 Makefile을 그대로 못 쓴다.
+# 이 프로젝트는 Windows(PowerShell)에서 검증되므로, Windows에서는 이 파일 대신
+# docs/PIPELINE.md에 있는 `python scripts\NN_*.py` 명령을 순서대로 직접 실행할 것 -
+# make 타겟은 전부 같은 스크립트를 파일 의존관계에 따라 자동으로 호출해주는 편의
+# wrapper일 뿐, 유일한 실행 경로가 아니다. 아래 PY는 활성화된 venv의 python을
+# 그대로 쓰므로(운영체제 무관), make를 쓸 수 있는 환경이라면 venv만 activate하면 된다.
 # ============================================================
 
-PY := .venv/bin/python
+PY := python
 SCRIPTS := scripts
 CONFIG_DATA := configs/data/default.yaml
 CONFIG_BENCH := configs/benchmark/storesearch_ko_v1.yaml

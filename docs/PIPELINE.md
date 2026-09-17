@@ -5,18 +5,42 @@
 
 ## 0. 환경 준비 (최초 1회)
 
+**팀원과 똑같은 버전으로 맞추려면(권장)** — `requirements-lock.txt`가 2026-09-17에 Python
+3.14.0 + 전체 테스트(207 passed)로 검증된 정확한 버전 조합을 고정해둔 파일이다:
+
 ```bash
 python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
+source .venv/bin/activate      # Windows(PowerShell): .venv\Scripts\activate
+pip install -r requirements-lock.txt
+pip install -e . --no-deps     # store-search-ai 자체만 추가 (의존성 재해석 안 함)
+```
+
+**빠르게만 돌려보고 싶다면** — `pyproject.toml`의 느슨한 범위로 그때그때 최신 버전을 설치한다
+(팀원마다, 설치 시점마다 버전이 달라질 수 있음):
+
+```bash
 pip install -e ".[dev]"
 ```
 
-`store_search_ai.evaluation.evaluator`(`scripts/13_evaluate_run.py`가 호출하는 채점 모듈)에
-Python 3.12+ 호환 shim이 들어있어서(구버전 `ir-measures`가 3.12에서 제거된 `ast.Num`을 쓰는 문제
-우회) 3.11 고정은 아니지만, 검증은 3.11 기준으로 이뤄졌습니다. `pyproject.toml`의
-`requires-python`도 한때 `<3.12`로 막혀 있어서 이 shim의 존재 의미가 없었는데(3.12 이상은 애초에
-설치가 거부됨), 이제 상한을 풀어서 `>=3.11`만 요구합니다 — 파이프라인 전체를 Python 3.14에서
-실행해서 문제없이 동작함을 확인했습니다(2026-09).
+**왜 두 가지 방법이 필요한가 — 실제로 겪은 문제들**:
+- `pandas`가 `pyproject.toml`에 `>=2.2`(상한 없음)로만 걸려 있던 시절, 새로 설치한 팀원에게
+  pandas 3.0(메이저 버전업)이 깔리면서 빈 문자열 컬럼의 기본 dtype이 바뀌어(PDEP-14)
+  golden-file 비교 테스트가 dtype만 다르다는 이유로 깨진 적이 있다(값 자체는 항상 정확했음,
+  2026-09). 지금은 `pyproject.toml`에도 `numpy/pandas/scikit-learn/rank-bm25/ir-measures`
+  상한을 걸어뒀지만(다음 메이저 버전 전까지), 그래도 "설치 시점의 최신"이 사람마다 다를 수
+  있다는 근본 문제는 남아 있어 `requirements-lock.txt`를 따로 둔다.
+- `requires-python`도 한때 `<3.12`로 막혀 있어서(지금은 `>=3.11`만 요구) 최신 Python으로는
+  설치 자체가 거부된 적이 있다. `store_search_ai.evaluation.evaluator`(`13_evaluate_run.py`가
+  호출하는 채점 모듈)에 Python 3.12+ 호환 shim이 있는 이유이기도 하다(구버전 `ir-measures`가
+  3.12에서 제거된 `ast.Num`을 쓰는 문제 우회) — 파이프라인 전체를 Python 3.14에서 실행해서
+  문제없이 동작함을 확인했다.
+- (Windows 전용) `Makefile`은 GNU make가 기본 설치돼 있지 않고 venv 레이아웃도 달라서 그대로
+  못 쓴다 — Windows에서는 이 문서의 `python scripts\NN_*.py` 명령을 직접 실행할 것.
+
+**의존성을 실제로 올려야 할 때**(신규 라이브러리 추가, 보안 패치 등)는 `pyproject.toml`의 범위를
+넓힌 뒤 `pip install -e ".[dev]" --upgrade` → 전체 테스트 + 06/07 pooling 재실행으로 회귀
+확인 → 문제 없으면 `pip freeze`(단, `store-search-ai` 자신을 가리키는 `-e git+...` 줄은 제외)로
+`requirements-lock.txt`를 다시 생성해서 커밋한다.
 
 ## 1. 데이터 전처리 ~ Corpus 구축 (사람 개입 없음, 전부 재실행 가능)
 

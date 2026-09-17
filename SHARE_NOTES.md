@@ -1,7 +1,10 @@
 # 이 폴더에 대해
 
 `store-search-ai-enterprise-new`의 팀 공유용 경량 사본입니다. **코드(scripts/, src/, configs/, colab/,
-docs/, tests/, Makefile, pyproject.toml)는 전부 그대로**입니다. 용량이 큰 데이터 산출물 중
+docs/, tests/, Makefile, pyproject.toml, requirements-lock.txt)는 전부 그대로**입니다.
+`requirements-lock.txt`는 검증된 정확한 패키지 버전 조합을 고정한 파일이니, 환경을 새로 만들 때는
+`pip install -e ".[dev]"`가 아니라 이 파일로 설치할 것(`docs/PIPELINE.md` 0절 참고 — 버전이
+설치 시점마다 달라져서 실제로 문제가 된 적이 있음). 용량이 큰 데이터 산출물 중
 **"코드를 실행하면 그대로 다시 만들어지는 파일"만 뺐습니다.** raw 원본, store_id 발급 대장, 사람이
 직접 채운 relevance 판정(애노테이션 원본/완료 시트, adjudication 기록)처럼 **사람 손을 다시 거쳐야
 하거나 코드만으로는 복원 안 되는 데이터는 전부 남겼습니다**(원본 480MB → 152MB).
