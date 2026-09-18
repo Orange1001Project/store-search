@@ -22,7 +22,7 @@ from store_search_ai.retrieval.lexical import (
     build_pool_document_texts,
     fit_bm25_scorer,
     fit_char_tfidf_scorer,
-    fit_word_tfidf_scorer,
+    fit_word_tfidf_char_scorer,
     retrieve_run,
     write_run_files,
 )
@@ -47,7 +47,7 @@ def main() -> None:
     print("[INFO] fitting char TF-IDF...")
     char_scores = fit_char_tfidf_scorer(docs)
     print("[INFO] fitting word TF-IDF...")
-    word_scores = fit_word_tfidf_scorer(docs)
+    word_scores = fit_word_tfidf_char_scorer(docs)
     print("[INFO] fitting BM25 regex-token baseline...")
     bm25_scores = fit_bm25_scorer(docs)
 
@@ -65,7 +65,7 @@ def main() -> None:
 
     manifest = build_lexical_run_manifest(run_depth, systems, run_stats)
     (output_dir / "lexical_run_manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
     )
     print("========== LEXICAL POOLING RUNS COMPLETE ==========")
     print(json.dumps(manifest, ensure_ascii=False, indent=2))

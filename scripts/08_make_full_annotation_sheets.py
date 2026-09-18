@@ -65,7 +65,7 @@ def main() -> None:
     manifest = build_annotation_manifest(args.round, queries, a, b, split_stats)
 
     manifest_path = output_dir / "annotation_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
 
     print()
     print("========== FULL ANNOTATION SHEETS CREATED ==========")

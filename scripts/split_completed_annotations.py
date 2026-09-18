@@ -42,7 +42,7 @@ def split_and_save(source_path: Path, splits: list[str], out_dir: Path, prefix: 
     parts = split_by_column(df, "split", splits)
     for split in splits:
         out_path = out_dir / f"{prefix}_{split}_completed.csv"
-        parts[split].to_csv(out_path, index=False, encoding="utf-8-sig")
+        parts[split].to_csv(out_path, index=False, encoding="utf-8-sig", lineterminator="\n")
         print(f"[완료] {out_path} ({len(parts[split])}행)")
 
 

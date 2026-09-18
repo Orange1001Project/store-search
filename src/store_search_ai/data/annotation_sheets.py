@@ -65,7 +65,7 @@ def stable_shuffle(frame: pd.DataFrame, seed: int, annotator: str) -> pd.DataFra
 
 
 def write_annotation_file(frame: pd.DataFrame, output_path: Path) -> None:
-    frame[VISIBLE_COLUMNS].to_csv(output_path, index=False, encoding="utf-8-sig")
+    frame[VISIBLE_COLUMNS].to_csv(output_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
 
 # ============================================================

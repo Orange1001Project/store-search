@@ -39,6 +39,6 @@ def test_leaderboard_matches_checked_in_golden_file(tmp_path):
     leaderboard = build_leaderboard(rows)
 
     written_path = tmp_path / "leaderboard_val.csv"
-    leaderboard.to_csv(written_path, index=False, encoding="utf-8-sig")
+    leaderboard.to_csv(written_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
     assert written_path.read_bytes() == GOLDEN_LEADERBOARD_PATH.read_bytes()

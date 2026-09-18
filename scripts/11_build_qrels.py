@@ -83,7 +83,7 @@ def main() -> None:
     )
 
     manifest_path = benchmark_dir / "benchmark_manifest.json"
-    manifest_path.write_text(manifest_json(manifest), encoding="utf-8")
+    manifest_path.write_text(manifest_json(manifest), encoding="utf-8", newline="\n")
 
     if args.freeze:
         frozen_dir = benchmark_dir / "frozen"

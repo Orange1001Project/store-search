@@ -35,6 +35,6 @@ def test_apply_adjudication_patch_matches_checked_in_golden_file(tmp_path):
     result = apply_adjudication_patch(full, patch)
 
     written_path = tmp_path / "adjudication_val_test_full_completed.csv"
-    result.to_csv(written_path, index=False, encoding="utf-8-sig")
+    result.to_csv(written_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
     assert written_path.read_bytes() == GOLDEN_OUTPUT_PATH.read_bytes()

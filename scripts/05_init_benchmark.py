@@ -39,8 +39,8 @@ def main() -> None:
     queries = build_queries_frame(query_cfg)
 
     queries_path = benchmark_dir / "queries.csv"
-    queries.to_csv(queries_path, index=False, encoding="utf-8-sig")
-    (benchmark_dir / "annotation_guideline.md").write_text(GUIDELINE, encoding="utf-8")
+    queries.to_csv(queries_path, index=False, encoding="utf-8-sig", lineterminator="\n")
+    (benchmark_dir / "annotation_guideline.md").write_text(GUIDELINE, encoding="utf-8", newline="\n")
 
     summary = build_query_manifest(
         config=config,
@@ -50,7 +50,7 @@ def main() -> None:
         families_config_sha256=sha256_file(families_path),
     )
     (benchmark_dir / "query_manifest.json").write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
     )
 
     print("========== STORESEARCH-KO QUERY SET INITIALIZED ==========")

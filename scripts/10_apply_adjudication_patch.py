@@ -50,7 +50,7 @@ def main() -> None:
 
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    result.to_csv(output, index=False, encoding="utf-8-sig")
+    result.to_csv(output, index=False, encoding="utf-8-sig", lineterminator="\n")
 
     report = build_patch_report(result, patch)
 

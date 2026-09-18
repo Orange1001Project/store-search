@@ -47,7 +47,8 @@ def _split_and_write(source_path: Path, splits: list[str], out_dir: Path, prefix
     df = pd.read_csv(source_path, encoding="utf-8-sig")
     for split in splits:
         df[df["split"] == split].to_csv(
-            out_dir / f"{prefix}_{split}_completed.csv", index=False, encoding="utf-8-sig"
+            out_dir / f"{prefix}_{split}_completed.csv",
+            index=False, encoding="utf-8-sig", lineterminator="\n",
         )
 
 
@@ -86,7 +87,7 @@ def test_prepare_full_annotations_matches_checked_in_golden_files(tmp_path):
     # 같은 dtype 표현 차이가 노이즈로 끼어들기 때문.
     def _write(frame: pd.DataFrame, name: str) -> Path:
         path = tmp_path / name
-        frame.to_csv(path, index=False, encoding="utf-8-sig")
+        frame.to_csv(path, index=False, encoding="utf-8-sig", lineterminator="\n")
         return path
 
     def _assert_matches_golden(written: Path, golden: Path) -> None:

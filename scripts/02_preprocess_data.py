@@ -88,7 +88,7 @@ def main():
     if not merge_conflicts.empty:
         merge_conflicts.to_csv(
             report_path.parent / f"master_merge_conflicts_{dataset_version}.csv",
-            index=False, encoding="utf-8-sig",
+            index=False, encoding="utf-8-sig", lineterminator="\n",
         )
 
     output_path = Path(args.output)
@@ -104,7 +104,7 @@ def main():
         duplicates=duplicates,
         merge_conflicts=merge_conflicts,
     )
-    report_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    report_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
 
     print()
     print("========== PREPROCESS V002 COMPLETE ==========")

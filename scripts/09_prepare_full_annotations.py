@@ -57,10 +57,12 @@ def main() -> None:
     train = data["A_train"].copy()
     train_qrels, train_usable, train_uncertain_excluded = split_train_qrels(train)
 
-    train_qrels.to_csv(qrels_dir / "qrels_train_provisional.csv", index=False, encoding="utf-8-sig")
+    train_qrels.to_csv(
+        qrels_dir / "qrels_train_provisional.csv", index=False, encoding="utf-8-sig", lineterminator="\n"
+    )
     write_trec_qrels(train_qrels, qrels_dir / "qrels_train_provisional.trec")
     train_uncertain_excluded.to_csv(
-        analysis_dir / "train_uncertain_excluded.csv", index=False, encoding="utf-8-sig"
+        analysis_dir / "train_uncertain_excluded.csv", index=False, encoding="utf-8-sig", lineterminator="\n"
     )
 
     # ----- Val/Test: A/B pairwise comparison -----
@@ -68,28 +70,33 @@ def main() -> None:
     test_merged, test_report = pairwise_report(data["A_test"], data["B_test"], "test")
 
     all_adj_visible = build_adjudication_frame(val_merged, test_merged)
-    all_adj_visible.to_csv(analysis_dir / "adjudication_val_test_full.csv", index=False, encoding="utf-8-sig")
+    all_adj_visible.to_csv(
+        analysis_dir / "adjudication_val_test_full.csv", index=False, encoding="utf-8-sig", lineterminator="\n"
+    )
 
     needed = build_needed_adjudication(all_adj_visible)
-    needed.to_csv(analysis_dir / "adjudication_val_test_needed_only.csv", index=False, encoding="utf-8-sig")
+    needed.to_csv(
+        analysis_dir / "adjudication_val_test_needed_only.csv",
+        index=False, encoding="utf-8-sig", lineterminator="\n",
+    )
 
     # Partial agreement qrels are diagnostic only.
     for split, frame in [("val", val_merged), ("test", test_merged)]:
         agreed = build_partial_agreement_qrels(frame)
         agreed.to_csv(
             analysis_dir / f"qrels_{split}_agreed_partial_DO_NOT_SCORE.csv",
-            index=False, encoding="utf-8-sig",
+            index=False, encoding="utf-8-sig", lineterminator="\n",
         )
 
     summary = build_full_annotation_summary(train, train_usable, val_report, test_report, needed)
     (analysis_dir / "full_annotation_analysis_summary.json").write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
     )
 
     threshold = int(config["relevance"]["binary_threshold"])
     agreement_report = build_agreement_report(val_merged, test_merged, threshold)
     (benchmark_dir / "agreement_report.json").write_text(
-        json.dumps(agreement_report, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(agreement_report, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
     )
 
     print("========== FULL ANNOTATION PREP COMPLETE ==========")

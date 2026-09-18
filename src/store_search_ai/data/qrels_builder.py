@@ -152,7 +152,7 @@ def save_qrels_outputs(
     csv_paths: dict[str, Path] = {}
     for name, frame in qrels_frames.items():
         path = benchmark_dir / (f"qrels_{name}.csv" if name != "all" else "qrels.csv")
-        frame.to_csv(path, index=False, encoding="utf-8-sig")
+        frame.to_csv(path, index=False, encoding="utf-8-sig", lineterminator="\n")
         csv_paths[name] = path
 
     trec_paths: dict[str, Path] = {}

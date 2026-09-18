@@ -54,7 +54,7 @@ def main():
     manifest = build_corpus_manifest(
         corpus, dataset_version=dataset_version, corpus_version=corpus_version, source_dataset=str(input_path)
     )
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
 
     print()
     print("========== CORPUS V001 COMPLETE ==========")

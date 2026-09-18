@@ -66,7 +66,7 @@ def main() -> None:
     leaderboard = build_leaderboard(rows)
 
     output_path = Path(args.output) if args.output else results_dir / f"leaderboard_{args.split}.csv"
-    leaderboard.to_csv(output_path, index=False, encoding="utf-8-sig")
+    leaderboard.to_csv(output_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
     print(f"\n========== MODEL EVAL LEADERBOARD ({args.split}) ==========\n")
     print(leaderboard.to_string(index=False))

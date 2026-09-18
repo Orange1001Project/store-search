@@ -37,7 +37,7 @@ def test_init_benchmark_matches_checked_in_golden_files(tmp_path):
     queries = build_queries_frame(query_cfg)
 
     written_queries_path = tmp_path / "queries.csv"
-    queries.to_csv(written_queries_path, index=False, encoding="utf-8-sig")
+    queries.to_csv(written_queries_path, index=False, encoding="utf-8-sig", lineterminator="\n")
     assert written_queries_path.read_bytes() == GOLDEN_QUERIES_PATH.read_bytes()
 
     assert GUIDELINE == GOLDEN_GUIDELINE_PATH.read_text(encoding="utf-8")

@@ -89,7 +89,7 @@ def main() -> None:
         logger.info("[dry-run] 파일을 쓰지 않았습니다.")
         return
 
-    with open(args.output, "w", encoding="utf-8") as f:
+    with open(args.output, "w", encoding="utf-8", newline="\n") as f:
         yaml.safe_dump(output_doc, f, allow_unicode=True, sort_keys=False, width=100)
 
     total_queries = sum(len(f["queries"]) for f in output_doc["families"])

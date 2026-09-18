@@ -68,7 +68,7 @@ def main() -> None:
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8") as f:
+    with output_path.open("w", encoding="utf-8", newline="\n") as f:
         for record in records:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 

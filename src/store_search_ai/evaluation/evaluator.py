@@ -380,9 +380,9 @@ def save_evaluation_outputs(
     per_query_path = output_dir / f"{tag}_per_query.csv"
     evaluation_path = output_dir / f"{tag}_evaluation.json"
 
-    per_query.to_csv(per_query_path, index=False, encoding="utf-8-sig")
+    per_query.to_csv(per_query_path, index=False, encoding="utf-8-sig", lineterminator="\n")
     evaluation_path.write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
     )
 
     return per_query_path, evaluation_path

@@ -62,17 +62,17 @@ def main() -> None:
     accumulate_random_candidates(candidates, queries, corpus, base_seed, random_per_query, args.round)
 
     pool = build_pool_frame(candidates, queries, corpus, args.round)
-    pool.to_csv(pool_path, index=False, encoding="utf-8-sig")
+    pool.to_csv(pool_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
     stats = build_pool_stats(pool, run_df, args.round)
     (benchmark_dir / "pool_stats.json").write_text(
-        json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
     )
 
     history_path = benchmark_dir / "pool_history.csv"
     existing_history = pd.read_csv(history_path) if history_path.exists() else None
     merge_pool_history(existing_history, stats, args.round).to_csv(
-        history_path, index=False, encoding="utf-8-sig"
+        history_path, index=False, encoding="utf-8-sig", lineterminator="\n"
     )
 
     print("========== INTERNAL POOL BUILT ==========")

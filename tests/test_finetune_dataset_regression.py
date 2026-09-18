@@ -48,7 +48,7 @@ def test_training_pairs_match_checked_in_golden_file(tmp_path):
     records, _stats = build_training_pairs(qrels, queries, doc_text, threshold=threshold, max_negatives=8)
 
     written_path = tmp_path / "train_pairs.jsonl"
-    with written_path.open("w", encoding="utf-8") as f:
+    with written_path.open("w", encoding="utf-8", newline="\n") as f:
         for record in records:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 

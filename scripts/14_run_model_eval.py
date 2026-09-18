@@ -94,7 +94,7 @@ def main() -> None:
     output_dir = Path(args.output_dir) / tag
     output_dir.mkdir(parents=True, exist_ok=True)
     run_path = output_dir / f"run_{args.template}_{args.split}.csv"
-    run.to_csv(run_path, index=False, encoding="utf-8-sig")
+    run.to_csv(run_path, index=False, encoding="utf-8-sig", lineterminator="\n")
     print(f"[INFO] run 저장: {run_path} ({len(run)} rows)")
 
     if args.skip_evaluate:

@@ -48,11 +48,14 @@ def main():
     for table_name, frame in report.items():
         if table_name == "summary" or frame is None:
             continue
-        frame.to_csv(output_dir / f"{table_name}_{dataset_version}.csv", index=False, encoding="utf-8-sig")
+        frame.to_csv(
+            output_dir / f"{table_name}_{dataset_version}.csv",
+            index=False, encoding="utf-8-sig", lineterminator="\n",
+        )
 
     summary = report["summary"]
     summary_path = output_dir / f"item_analysis_summary_{dataset_version}.json"
-    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
 
     print()
     print("========== ITEM ANALYSIS V002 COMPLETE ==========")
