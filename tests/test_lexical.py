@@ -8,7 +8,7 @@ from store_search_ai.retrieval.lexical import (
     char_ngrams,
     fit_bm25_scorer,
     fit_char_tfidf_scorer,
-    fit_word_tfidf_scorer,
+    fit_word_tfidf_char_scorer,
     normalize_text,
     retrieve_run,
     write_run_files,
@@ -95,7 +95,7 @@ def test_fit_scorers_are_deterministic_for_the_same_corpus():
     corpus = _corpus()
     docs = build_pool_document_texts(corpus)
 
-    for fit in (fit_char_tfidf_scorer, fit_word_tfidf_scorer, fit_bm25_scorer):
+    for fit in (fit_char_tfidf_scorer, fit_word_tfidf_char_scorer, fit_bm25_scorer):
         score_fn = fit(docs)
         first = np.asarray(score_fn("치킨"))
         second = np.asarray(score_fn("치킨"))

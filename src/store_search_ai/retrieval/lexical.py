@@ -84,7 +84,7 @@ def fit_char_tfidf_scorer(docs: pd.Series) -> ScoreFn:
     return score
 
 
-def fit_word_tfidf_scorer(docs: pd.Series) -> ScoreFn:
+def fit_word_tfidf_char_scorer(docs: pd.Series) -> ScoreFn:
     """이름은 `word_tfidf`지만 실제 analyzer는 char_wb다 — 띄어쓰기 없는 한국어 복합어를
     쪼갤 수 없는 순수 단어 토큰화의 한계 때문에(`char_ngrams` docstring 참고) char n-gram으로
     통일했다. `char_tfidf_v1`과는 n-gram 길이(2~4 vs 2~5)로 차별화되고, `bm25_regex_v1`과는
@@ -105,7 +105,7 @@ def fit_word_tfidf_scorer(docs: pd.Series) -> ScoreFn:
 
 def fit_bm25_scorer(docs: pd.Series) -> ScoreFn:
     """이름은 `bm25_regex`지만 토큰화는 정규식 단어 추출이 아니라 `char_ngrams`다 — 이유는
-    `fit_word_tfidf_scorer`와 동일(한국어 복합어 부분 일치 문제)."""
+    `fit_word_tfidf_char_scorer`와 동일(한국어 복합어 부분 일치 문제)."""
 
     bm25 = BM25Okapi([char_ngrams(x) for x in docs.tolist()])
 
@@ -181,10 +181,10 @@ def write_run_files(run: pd.DataFrame, system: str, output_dir: Path) -> tuple[P
     """run을 {system}.csv/.trec로 저장하고 (csv_path, trec_path)를 반환한다."""
 
     csv_path = output_dir / f"{system}.csv"
-    run.to_csv(csv_path, index=False, encoding="utf-8-sig")
+    run.to_csv(csv_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
     trec_path = output_dir / f"{system}.trec"
-    with trec_path.open("w", encoding="utf-8") as f:
+    with trec_path.open("w", encoding="utf-8", newline="\n") as f:
         for r in run.itertuples(index=False):
             f.write(f"{r.query_id} Q0 {r.doc_id} {r.rank} {r.score:.12f} {system}\n")
 

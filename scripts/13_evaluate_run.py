@@ -23,6 +23,7 @@ from store_search_ai.evaluation.evaluator import (
     build_evaluation_report,
     save_evaluation_outputs,
 )
+from store_search_ai.pipeline.common import load_config
 
 
 def print_console_summary(report: dict, per_query_path: Path, evaluation_path: Path) -> None:
@@ -74,16 +75,30 @@ def main():
     parser.add_argument("--compare-run", default=None, help="Optional baseline run for paired comparison")
     parser.add_argument("--compare-tag", default="baseline")
     parser.add_argument("--output-dir", default="artifacts/evaluation/storesearch_ko_v1")
-    parser.add_argument("--bootstrap", type=int, default=10000)
-    parser.add_argument("--seed", type=int, default=20260831)
+    parser.add_argument(
+        "--config",
+        default="configs/benchmark/storesearch_ko_v1.yaml",
+        help="--bootstrap/--seed 기본값을 여기 evaluation.* 에서 읽는다 (명시적으로 주면 그 값이 우선)",
+    )
+    parser.add_argument("--bootstrap", type=int, default=None)
+    parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
+
+    # --bootstrap/--seed을 명시하지 않으면 configs/benchmark/storesearch_ko_v1.yaml의
+    # evaluation.bootstrap_samples/evaluation.random_seed를 단일 소스로 쓴다. 예전에는 이
+    # 스크립트가 두 값을 각자 하드코딩된 CLI 기본값(20260831/10000)으로만 갖고 있어서,
+    # yaml의 evaluation.random_seed/bootstrap_samples는 아무도 읽지 않는 죽은 설정값이었다
+    # (query_set.random_seed가 겪었던 것과 같은 종류의 어긋남 위험 — PR #1 리뷰에서 발견).
+    eval_config = load_config(args.config).get("evaluation", {})
+    bootstrap_samples = args.bootstrap if args.bootstrap is not None else int(eval_config.get("bootstrap_samples", 10000))
+    seed = args.seed if args.seed is not None else int(eval_config.get("random_seed", 20260831))
 
     report, per_query = build_evaluation_report(
         qrels_path=Path(args.qrels),
         run_path=Path(args.run),
         tag=args.tag,
-        bootstrap_samples=args.bootstrap,
-        seed=args.seed,
+        bootstrap_samples=bootstrap_samples,
+        seed=seed,
         compare_run_path=Path(args.compare_run) if args.compare_run else None,
         compare_tag=args.compare_tag,
     )
