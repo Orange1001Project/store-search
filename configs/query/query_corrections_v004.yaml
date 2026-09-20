@@ -1,0 +1,47 @@
+# data/query/queryset_final.xlsx를 configs/benchmark/query_families_v1.yaml로 변환할 때
+# (scripts/import_queryset_xlsx.py) 적용하는 수작업 정정 목록.
+#
+# query_set_v004를 만들 때 xlsx 병합 과정에서 발견된 오분류를 바로잡기 위해 작성됐다.
+# 이 파일은 query_set_v004 전용 스냅샷이므로 직접 고치지 않는다 — xlsx가 다시 바뀌어
+# 새 query_set 버전을 만들 때는 이 파일을 복사해 query_corrections_v005.yaml 등으로
+# 새로 만들고, configs/benchmark/storesearch_ko_v1.yaml의 query_set.version/corrections_path를
+# 함께 올린다 (dataset_version/corpus_version과 동일한 버전 관리 원칙,
+# docs/EXTENDING_DATA.md 참고).
+
+# 원본유형 태그로 보아 병합 중 다른 family로 잘못 들어간 것이 명백한 행, 그리고
+# 원래 패밀리가 "(미판정)"이던 5행에 대한 재배정.
+reclassify_queries:
+  - query: "일본 음식 먹을 곳"
+    family: "일식"
+    reason: "원본유형=japanese_food인데 한식에 들어감"
+  - query: "기름 넣는 곳"
+    family: "주유소"
+    reason: "원본유형=gas_station인데 식자재에 들어감"
+  - query: "기름 넣으러 갈 데"
+    family: "주유소"
+    reason: "원본유형=gas_station인데 식자재에 들어감"
+  - query: "차에 기름 넣을 수 있는 곳"
+    family: "주유소"
+    reason: "원본유형=gas_station인데 식자재에 들어감"
+  - query: "배우러 다니는 곳"
+    family: "교육"
+    reason: "원본유형=academy"
+  - query: "금 팔러 가는 곳"
+    family: "귀금속"
+    reason: "함정=액세서리(구분 대상)로 보아 금 매입/귀금속 업종 추정"
+  - query: "김장 재료 사는 곳"
+    family: "야채"
+    reason: "함정=김치 완제품(구분 대상)으로 보아 김장 재료(채소) 구매처 추정"
+  - query: "먹거리"
+    family: "복합"
+    reason: "특정 업종 하나로 안 좁혀지는 포괄 질의"
+  - query: "명절 선물세트"
+    family: "복합"
+    reason: "특정 업종 하나로 안 좁혀지는 포괄 질의(과일/정육/건강식품 등 다양)"
+
+# 원본유형 slug가 둘 이상의 서로 다른 family에 걸쳐 나타나 어느 쪽이 맞는지 자동
+# 판단이 안 되는 경우 — split 상속에 쓰지 않는다.
+# pork_cutlet(돈가스): 양식/일식 둘 다에 실제로 존재 — 병합 오류가 아니라 팀이
+# 의도적으로 두 카테고리 모두에 넣은 것으로 보여 그대로 둔다.
+ambiguous_slugs:
+  - pork_cutlet

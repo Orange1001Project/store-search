@@ -43,7 +43,9 @@
 - `store_search_ai.common.io.load_yaml` — yaml 로드
 - `store_search_ai.common.io.read_excel_sheets` — 시트 읽기(시트 설정에 `source_region`이 고정돼
   있으면 그 값을, 없으면 `None`을 반환해 호출부가 주소 기반 파생을 하도록 신호를 준다)
-- `store_search_ai.data.profile.profile_frame` — 프로파일링 계산 본체
+- `store_search_ai.data.profile.{profile_frame, build_data_profile_report}` — 프로파일링 계산
+  본체 + 시트별/COMBINED 리포트 조립. `01_profile_data.py`는 인자 파싱 + 파일 IO만 담당하는
+  얇은 CLI다.
 
 ---
 
@@ -92,8 +94,11 @@ registry에 추가한다 — 그래서 데이터가 늘어나도 기존 매장�
 **사용하는 src/ 코드**
 - `store_search_ai.common.io.load_yaml`, `read_excel_sheets`
 - `store_search_ai.data.preprocess.canonicalize` — 시트 1개 정제(위 핵심 로직 대부분이 여기)
+- `store_search_ai.data.preprocess.combine_sheets` — 여러 시트에 canonicalize를 돌려 하나로
+  합침(스크립트의 시트 순회 루프 본체)
 - `store_search_ai.data.preprocess.find_duplicate_candidates` — 같은 store_id/사업자번호로 묶이는
   행 진단
+- `store_search_ai.data.preprocess.build_preprocess_summary` — `preprocess_summary_*.json` 조립
 - `store_search_ai.data.text_cleaning.{normalize_spaces, clean_address, clean_digits,
   normalize_yn}` — canonicalize 내부에서 사용
 - `store_search_ai.data.ids.build_entity_fingerprint` — fingerprint 계산
@@ -131,8 +136,10 @@ registry에 추가한다 — 그래서 데이터가 늘어나도 기존 매장�
 `low_information_tokens_*.csv`, `item_analysis_summary_*.json`
 
 **사용하는 src/ 코드**
-- `store_search_ai.pipeline.common.load_config` (dataset_version 읽기용) — 그 외에는 pandas/정규식만
-  사용하는 순수 분석 스크립트
+- `store_search_ai.data.item_analysis` — 위 핵심 로직 전체(토큰 explode/집계, 결측/충돌/이상치
+  탐지, long-tail 통계, summary 조립)가 여기 있다. `03_analyze_items.py`는 인자 파싱 + 파일
+  저장 + 콘솔 출력만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_config` (dataset_version 읽기용)
 
 ---
 
@@ -162,7 +169,9 @@ registry에 추가한다 — 그래서 데이터가 늘어나도 기존 매장�
 - `data/corpus/{corpus_version}_manifest.json` — 문서 수, 결측 item/geo 문서 수, 템플릿 설명
 
 **사용하는 src/ 코드**
-- `store_search_ai.pipeline.common.load_config` — 그 외 로직은 스크립트 안에 직접 구현(pandas만 사용)
+- `store_search_ai.data.corpus` — 위 핵심 로직 전체(`build_corpus`, `build_corpus_manifest`,
+  `text_hash`)가 여기 있다. `04_build_corpus.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_config`
 
 ---
 
@@ -182,28 +191,38 @@ registry에 추가한다 — 그래서 데이터가 늘어나도 기존 매장�
   먼저 읽는다.
 
 **핵심 로직**
-`RECLASSIFY_QUERIES` 딕셔너리로 xlsx 병합 과정에서 패밀리가 잘못 배정된 게 확인된 질의를
-정정한다(예: "일본 음식 먹을 곳"이 한식에 잘못 들어간 것을 원본유형 태그로 판단해 일식으로
-재배정, "(미판정)"이던 5행을 기존 family 또는 신설 family `복합`으로 배정 — 이 판단은 자동
-추론이므로 스크립트 실행 로그에 팀 검토를 요청하는 경고를 남긴다). 재배정 후에도 "(미판정)"이
-남아 있으면 즉시 에러(새로 발견된 미분류 행은 `RECLASSIFY_QUERIES`에 추가해야 함).
+`configs/query/query_corrections_v004.yaml`의 `reclassify_queries` 목록으로 xlsx 병합 과정에서
+패밀리가 잘못 배정된 게 확인된 질의를 정정한다(예: "일본 음식 먹을 곳"이 한식에 잘못 들어간 것을
+원본유형 태그로 판단해 일식으로 재배정, "(미판정)"이던 5행을 기존 family 또는 신설 family
+`복합`으로 배정 — 이 판단은 자동 추론이므로 스크립트 실행 로그에 팀 검토를 요청하는 경고를
+남긴다). 재배정 후에도 "(미판정)"이 남아 있으면 즉시 에러(새로 발견된 미분류 행은 이 yaml의
+`reclassify_queries`에 추가해야 함). **이 목록은 더 이상 스크립트 안에 하드코딩돼 있지 않다** —
+데이터셋이 바뀌어 새 query_set 버전을 만들 때는 이 yaml을 복사해 `_v005.yaml` 등으로 새로
+만들고 `configs/benchmark/storesearch_ko_v1.yaml`의 `query_set.corrections_path`를 올리면 된다
+(자세한 이유는 docs/EXTENDING_DATA.md 참고).
 
 **family당 variant 최소 개수 제한이 없다**(팀 결정 — xlsx의 548개 질의를 전부 살림). split은
 두 단계로 정한다: (1) 기존 yaml에 같은 한글 family 이름이 이미 있으면 그 split을 그대로
 물려받고, (2) 없으면 `원본유형`의 영문 slug(예: `chicken`, `fruit`)로 기존 yaml과 대응시켜
 물려받는다(완전히 새 yaml 체계로 갈아탈 때 대비). 그래도 대응이 안 되는 완전 신규 family만
-대분류별로 균형 잡힌 무작위 배정을 한다(seed 고정, 카테고리 쏠림 방지). `positive_terms`는
-그 family의 T1(정확표기)/T2(동의어) 질의 텍스트, `boundary_terms`는 `함정` 컬럼 값에서 뽑는다
-(둘 다 pooling 후보 발굴에만 쓰이고 relevance 판정에는 영향 없음). `intent_definition`은
-"{대분류} 중 '{family}'을(를) 판매·제공하는 매장" 형태로 초안만 자동 생성한다(사람 검토 필요).
+대분류별로 균형 잡힌 무작위 배정을 한다(seed는 `configs/benchmark/storesearch_ko_v1.yaml`의
+`query_set.random_seed`가 유일한 소스 — 예전에는 이 스크립트 안에 별도로 하드코딩된 복사본이
+있어서 두 값이 어긋나도 아무 경고 없이 조용히 틀어지는 버그가 있었다. 지금은 스크립트가 그
+값을 직접 읽으므로 어긋날 수 없다). `positive_terms`는 그 family의 T1(정확표기)/T2(동의어) 질의
+텍스트, `boundary_terms`는 `함정` 컬럼 값에서 뽑는다(둘 다 pooling 후보 발굴에만 쓰이고
+relevance 판정에는 영향 없음). `intent_definition`은 "{대분류} 중 '{family}'을(를) 판매·제공하는
+매장" 형태로 초안만 자동 생성한다(사람 검토 필요).
 
 **출력 파일**
 - `--output`(기본 `configs/benchmark/query_families_v1.yaml`) — **이 파일을 직접 손으로 편집하면
   안 된다.** xlsx를 고치고 이 스크립트를 다시 돌리는 게 유일한 편집 경로다.
 
 **사용하는 src/ 코드**
-- 없음(순수 pandas + PyYAML — 이 스크립트 자체가 `configs/benchmark/query_families_v1.yaml`을
-  만드는 도구라 `store_search_ai.pipeline.common.load_config`도 쓰지 않고 yaml을 직접 읽고 쓴다)
+- `store_search_ai.data.query_import` — 위 핵심 로직 전체(`build_query_families`,
+  `apply_reclassification`, `resolve_splits`, `parse_corrections` 등)가 여기 있다.
+  `import_queryset_xlsx.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_config` — `query_set` 블록(seed/버전/corrections 경로)과
+  corrections yaml을 읽는 데 사용
 
 ---
 
@@ -235,6 +254,9 @@ split에서 relevance는 사람이 직접 판정).
   sha256(재현성 추적용)
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.benchmark_init` — 위 핵심 로직 전체(`GUIDELINE`, `build_queries_frame`,
+  `build_query_manifest`)가 여기 있다. `05_init_benchmark.py`는 인자 파싱 + 파일 IO + 콘솔
+  출력만 담당하는 얇은 CLI다.
 - `store_search_ai.pipeline.common.load_config`, `sha256_file`
 
 ---
@@ -252,19 +274,28 @@ split에서 relevance는 사람이 직접 판정).
 **핵심 로직**
 document 텍스트는 `store_name + " " + item_text`(T1과 개념적으로 동일한 필드 조합, 다만 이
 스크립트는 `search_text_t1_minimal` 컬럼을 그대로 쓰지 않고 즉석에서 다시 조합한다)로 고정한다.
-세 시스템을 각각 corpus 전체에 fit한다: **char TF-IDF**(char_wb, 2~5-gram), **word TF-IDF**
-(1~2-gram, 정규식 토큰), **BM25Okapi**(정규식 토큰 `[0-9A-Za-z가-힣]+`). 쿼리마다 세 시스템 각각의
-점수를 계산해서 **score>0인 문서만** top-40으로 남긴다(0점 이하는 "lexical overlap이 아예 없다"는
-뜻이라, 억지로 채우면 무의미한 문서가 pool을 오염시키기 때문 — random negative는 07에서 별도
-채널로 명시적으로 뽑는다).
+세 시스템을 각각 corpus 전체에 fit한다: **char TF-IDF**(`char_wb`, 2~5-gram), **word TF-IDF**
+(이름과 달리 실제로는 `char_wb`, 2~4-gram), **BM25Okapi**(이름과 달리 문자 2~3-gram, `char_ngrams`).
+세 시스템 모두 문자 n-gram 기반으로 통일되어 있다 — 원래 word TF-IDF/BM25는 정규식 단어 토큰화
+(`\b\w+\b`류)를 썼지만, 한국어는 복합어를 띄어쓰기 없이 붙여 쓰는 경우가 흔해서(예: "가구추천" =
+"가구"+"추천") 단어 경계 토큰화로는 부분 일치가 원천적으로 불가능한 쿼리가 548개 중 97개
+확인되어(2026-09), McNamee & Mayfield(2004)의 문자 n-gram 방식으로 통일했다
+(`src/store_search_ai/retrieval/lexical.py`의 `char_ngrams` 참고). 이 변경으로 세 시스템 이름
+(`char_tfidf_v1`/`word_tfidf_v1`/`bm25_regex_v1`)은 유지하되 실제 토큰화 방식은 다르며, 차이는
+n-gram 길이(2~5 vs 2~4)와 scoring 모델(TF-IDF 코사인 유사도 vs BM25)로만 남는다. 쿼리마다 세
+시스템 각각의 점수를 계산해서 **score>0인 문서만** top-40으로 남긴다(0점 이하는 "lexical
+overlap이 아예 없다"는 뜻이라, 억지로 채우면 무의미한 문서가 pool을 오염시키기 때문 — random
+negative는 07에서 별도 채널로 명시적으로 뽑는다).
 
 **출력 파일** (`benchmark_dir/runs/pooling/` 밑)
 - `char_tfidf_v1.csv/.trec`, `word_tfidf_v1.csv/.trec`, `bm25_regex_v1.csv/.trec`
 - `lexical_run_manifest.json` — 시스템별 통계(결과 있는/없는 쿼리 수, 평균 결과 수 등)
 
 **사용하는 src/ 코드**
-- `store_search_ai.pipeline.common.load_active_queries`, `load_config` — 그 외 TF-IDF/BM25 로직은
-  `sklearn`/`rank_bm25`를 스크립트에서 직접 사용(전용 src 모듈 없음)
+- `store_search_ai.retrieval.lexical` — 위 핵심 로직 전체(문서 텍스트 정규화/토큰화, char
+  TF-IDF/word TF-IDF/BM25 fit+채점, run 조립, manifest 생성)가 여기 있다.
+  `06_generate_lexical_runs.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_active_queries`, `load_config`
 
 ---
 
@@ -305,8 +336,11 @@ corpus에 없는 doc_id가 섞이면 즉시 에러.
 - `pool_history.csv` — 라운드별 통계 누적(같은 라운드로 재실행하면 그 라운드 행만 교체)
 
 **사용하는 src/ 코드**
-- `store_search_ai.pipeline.common.load_active_queries`, `load_config` — 매칭/누적 로직은
-  스크립트 내부 구현(전용 src 모듈 없음)
+- `store_search_ai.data.annotation_pool` — 위 핵심 로직 전체(pooling run 로딩, 기존 pool 이어받기,
+  세 채널 누적(`accumulate_run_candidates`/`accumulate_targeted_candidates`/
+  `accumulate_random_candidates`), pool 조립, 통계/히스토리 병합)가 여기 있다.
+  `07_build_annotation_pool.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_active_queries`, `load_config`
 
 ---
 
@@ -342,6 +376,10 @@ sha256(query_id|doc_id)[:20]`을 이 단계에서 처음 부여한다(이후 09/
 하이퍼파라미터·템플릿 선택 어디에도 쓰면 안 된다는 leakage 정책 포함)
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.annotation_sheets` — 위 핵심 로직 전체(`validate_pool_and_queries`,
+  `attach_query_metadata`, `add_judgment_ids`, `prepare_pool`, `build_annotator_frame`,
+  `stable_shuffle`, `build_split_stats`, `build_annotation_manifest`)가 여기 있다.
+  `08_make_full_annotation_sheets.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
 - `store_search_ai.pipeline.common.load_config`
 
 ---
@@ -371,6 +409,8 @@ train/val/test 3개로, B 파일은 val/test 2개로 쪼갠다.
 이어서 실행하면 된다.
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.annotation_split.{validate_splits_present, split_by_column}` — split
+  존재 검사 + 분리 로직. `split_completed_annotations.py`는 인자 파싱 + 파일 IO만 담당.
 - `store_search_ai.pipeline.common.load_config`
 
 ---
@@ -425,6 +465,11 @@ agreement, Cohen's kappa(unweighted/quadratic-weighted)를 다시 한번 계산�
   바로 밑) — `12_validate_benchmark.py --stage final`이 읽는 파일
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.annotation_prep` — 위 핵심 로직 전체(`load_completed`,
+  `validate_expected_splits`, `split_train_qrels`, `pairwise_report`, `build_adjudication_frame`,
+  `build_needed_adjudication`, `build_partial_agreement_qrels`, `build_full_annotation_summary`,
+  `build_agreement_report`)가 여기 있다. `09_prepare_full_annotations.py`는 인자 파싱 + 파일
+  IO만 담당하는 얇은 CLI다.
 - `store_search_ai.pipeline.common.load_config`, `write_trec_qrels`
 
 ---
@@ -451,7 +496,9 @@ final_relevance가 여전히 비어있는 행"**(`unresolved_non_excluded`)이 �
   `--adjudication` 기본값과 동일 경로**
 
 **사용하는 src/ 코드**
-- 없음(순수 pandas + argparse)
+- `store_search_ai.data.adjudication_patch` — 위 핵심 로직 전체(`validate_patch`,
+  `apply_adjudication_patch`, `build_patch_report`)가 여기 있다.
+  `10_apply_adjudication_patch.py`는 인자 파싱 + 파일 IO + 콘솔 출력만 담당하는 얇은 CLI다.
 
 ---
 
@@ -483,7 +530,11 @@ train/val/test를 합쳐 `qrels_all`을 만들고 split을 넘나드는 (query_i
   실수로 덮어쓰지 못하게)
 
 **사용하는 src/ 코드**
-- `store_search_ai.pipeline.common.load_config`, `sha256_file`, `write_trec_qrels`
+- `store_search_ai.data.qrels_builder` — 위 핵심 로직 전체(`load_adjudication`,
+  `load_train_qrels`, `build_split_qrels`, `assemble_qrels`, `save_qrels_outputs`,
+  `build_manifest`, `freeze_benchmark`)가 여기 있다. `11_build_qrels.py`는 인자 파싱 +
+  IO 순서 배치만 담당하는 얇은 CLI다.
+- `store_search_ai.pipeline.common.load_config`, `sha256_file`
 
 ---
 
@@ -516,6 +567,9 @@ lexical 3개로 확정, 원래는 dense pooling까지 염두에 둔 6이었음),
   종료(CI/스크립트 체이닝에서 실패로 감지 가능)
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.benchmark_validation` — 위 핵심 로직 전체(쿼리/코퍼스 무결성,
+  pool/qrels 검증, final 단계 최소 기준, `build_validation_report` 오케스트레이터)가 여기
+  있다. `12_validate_benchmark.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
 - `store_search_ai.pipeline.common.load_active_queries`, `load_config`
 
 ---
@@ -532,7 +586,9 @@ lexical 3개로 확정, 원래는 dense pooling까지 염두에 둔 6이었음),
 - `--compare-run`(선택): baseline run과 페어 비교
 
 **핵심 로직**
-파일 맨 위에 **Python 3.12+ 호환 shim**이 있다: `ir_measures.util.parse_measure()`가 내부적으로
+`store_search_ai/evaluation/evaluator.py` 파일 맨 위에 **Python 3.12+ 호환 shim**이 있다
+(`13_evaluate_run.py` 자체에는 없다 — 로직이 전부 evaluator.py에 있으므로).
+`ir_measures.util.parse_measure()`가 내부적으로
 `isinstance(node, ast.Num)`을 쓰는데 `ast.Num`이 Python 3.12에서 제거됐다(3.8부터 `ast.Constant`로
 통합, deprecated 거쳐 결국 삭제). `hasattr(ast, "Num")`이 거짓이면 `ir_measures.util._ast_to_value`
 를 `ast.Constant` 기반 구현으로 통째로 교체한 뒤에야 `ir_measures`를 import한다 — 프로젝트를
@@ -556,7 +612,12 @@ Judged@10/Judged@100(상위 k 중 실제 판정된 문서 비율). 계산은 전
   대비 비교 결과 — **14/15번과 model_manifest 갱신 로직이 이 JSON의 `aggregate` 필드를 다시 읽는다**
 
 **사용하는 src/ 코드**
-- 없음(순수 `ir_measures`/`numpy`/`pandas` — src 모듈 의존 없음)
+- `store_search_ai.evaluation.evaluator` — 위 핵심 로직 전체(`load_qrels`, `load_run`,
+  `calculate_metrics`, `bootstrap_ci`, `paired_permutation_pvalue`, `compare_runs`,
+  `validate_run`, `build_evaluation_report`, `save_evaluation_outputs`)가 여기 있다.
+  `13_evaluate_run.py`는 인자 파싱 + 콘솔 출력만 담당하는 얇은 CLI다. 14/15번은 여전히 이
+  스크립트를 **서브프로세스로** 호출하므로(이 모듈을 직접 import하지 않음) CLI 인자/출력 파일
+  경로가 바뀌면 안 된다.
 
 ---
 
@@ -591,6 +652,9 @@ prompt 차이를 여기서 흡수), `ExactCosineSearch`로 top-k(기본 100) run
 - (fine-tuned 로컬 모델일 때만) `{model_id}/model_manifest.json`의 `evaluations` 갱신
 
 **사용하는 src/ 코드**
+- `store_search_ai.models.model_eval.{build_encoder, build_evaluate_run_cmd,
+  build_manifest_entry}` — 인코더 선택, 13번 서브프로세스 argv 조립, model_manifest
+  엔트리 조립(이 스크립트 전용 오케스트레이션 조각)
 - `store_search_ai.pipeline.common.load_active_queries`, `load_config`,
   `append_model_manifest_evaluation`
 - `store_search_ai.models.random_encoder.RandomEncoder`(`--dummy`) 또는
@@ -618,6 +682,8 @@ prompt 차이를 여기서 흡수), `ExactCosineSearch`로 top-k(기본 100) run
 - `--output`(기본 `results/model_eval/leaderboard_{split}.csv`)
 
 **사용하는 src/ 코드**
+- `store_search_ai.models.leaderboard.{find_runs, build_leaderboard}` — run 파일 탐색 + 정렬.
+  `15_score_model_runs.py`는 인자 파싱 + 서브프로세스 호출 + 파일 IO만 담당.
 - `store_search_ai.pipeline.common.load_config`
 
 ---
@@ -654,6 +720,9 @@ sentence-transformers는 `InputExample(texts=[query, positive, *negatives])`로 
   결정적으로 재생성되는 파생 파일(train qrels가 갱신되면 다시 돌리면 됨)
 
 **사용하는 src/ 코드**
+- `store_search_ai.data.finetune_dataset.{resolve_train_qrels_path, build_training_pairs}` —
+  train qrels 경로 결정 + positive/negative 조립 로직. `prepare_finetune_dataset.py`는 인자
+  파싱 + 파일 IO만 담당.
 - `store_search_ai.pipeline.common.load_active_queries`, `load_config`
 
 ---

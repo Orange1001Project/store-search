@@ -4,3 +4,26 @@ __pycache__/
 *.egg-info/
 /models/
 .pytest_cache/
+
+# 코드 재실행으로 그대로 재생성되는 중간 산출물 (SHARE_NOTES.md 참고) — 로컬에서
+# 파이프라인을 직접 돌려봐도 실수로 커밋되지 않도록 막는다. 주의: pool_history.csv,
+# pool_stats.json, annotation_A_all.csv, annotation_B_val_test.csv,
+# annotation_manifest.json, validation_final.json은 여기 없다 — 이건 재생성 산출물이
+# 아니라 실제 지켜야 할 결과물이라 계속 추적된다(로컬에서 06~15를 재실행해 값이
+# 달라졌다면 `git checkout --`로 되돌릴 것).
+/data/interim/
+/data/processed/
+/data/corpus/
+/benchmark/storesearch_ko_v1/runs/
+/benchmark/storesearch_ko_v1/candidate_pool_internal.csv
+/benchmark/storesearch_ko_v1/annotations/full_annotation_v1/annotation_A_train.csv
+/benchmark/storesearch_ko_v1/annotations/full_annotation_v1/annotation_A_val.csv
+/benchmark/storesearch_ko_v1/annotations/full_annotation_v1/annotation_A_test.csv
+/benchmark/storesearch_ko_v1/annotations/full_annotation_v1/annotation_B_val.csv
+/benchmark/storesearch_ko_v1/annotations/full_annotation_v1/annotation_B_test.csv
+/benchmark/storesearch_ko_v1/annotations/full_annotation_v1/completed/annotation_A_train_completed.csv
+/benchmark/storesearch_ko_v1/annotations/full_annotation_v1/completed/annotation_A_val_completed.csv
+/benchmark/storesearch_ko_v1/annotations/full_annotation_v1/completed/annotation_A_test_completed.csv
+/benchmark/storesearch_ko_v1/annotations/full_annotation_v1/completed/annotation_B_val_completed.csv
+/benchmark/storesearch_ko_v1/annotations/full_annotation_v1/completed/annotation_B_test_completed.csv
+/artifacts/reports/item_analysis_stores_v003/*_stores_v003.csv

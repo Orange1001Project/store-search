@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -70,7 +70,7 @@ def write_trec_qrels(frame: pd.DataFrame, path: str | Path) -> None:
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
+    with path.open("w", encoding="utf-8", newline="\n") as f:
         for row in frame.itertuples(index=False):
             f.write(f"{row.query_id} 0 {row.doc_id} {int(row.relevance)}\n")
 
@@ -88,12 +88,12 @@ def write_model_manifest(model_dir: str | Path, manifest: dict) -> Path:
 
     manifest = {
         **manifest,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "evaluations": manifest.get("evaluations", []),
     }
     path = Path(model_dir) / "model_manifest.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     return path
 
 
@@ -110,4 +110,4 @@ def append_model_manifest_evaluation(model_dir: str | Path, entry: dict) -> None
 
     manifest = json.loads(path.read_text(encoding="utf-8"))
     manifest.setdefault("evaluations", []).append(entry)
-    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")

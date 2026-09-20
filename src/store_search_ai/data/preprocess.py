@@ -1,26 +1,27 @@
 from __future__ import annotations
 
-import pandas as pd
+import logging
 
-from .text_cleaning import (
-    normalize_spaces,
-    clean_address,
-    clean_digits,
-    normalize_yn,
-)
+import pandas as pd
 
 from .ids import (
     build_entity_fingerprint,
 )
-
 from .items import (
-    parse_item_tokens,
     has_ambiguous_suffix,
+    parse_item_tokens,
 )
-
 from .region import (
     derive_region_series,
 )
+from .text_cleaning import (
+    clean_address,
+    clean_digits,
+    normalize_spaces,
+    normalize_yn,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def canonicalize(
@@ -514,3 +515,66 @@ def find_duplicate_candidates(
             na_position="last",
         )
     )
+
+
+def combine_sheets(
+    sheets: list[tuple[str, str | None, pd.DataFrame]],
+    config: dict,
+    source_file: str,
+) -> pd.DataFrame:
+    """읽어들인 시트들을 각각 canonicalize()한 뒤 하나의 DataFrame으로 합친다.
+
+    `sheets`는 `store_search_ai.common.io.read_excel_sheets()`가 반환하는
+    (sheet_name, source_region, raw_df) 튜플 리스트다.
+    """
+
+    frames = []
+    for sheet_name, source_region, raw_df in sheets:
+        logger.info(
+            "preprocessing sheet=%s, region=%s, rows=%d", sheet_name, source_region, len(raw_df)
+        )
+        frames.append(
+            canonicalize(
+                raw_df,
+                config,
+                source_file=source_file,
+                source_sheet=sheet_name,
+                source_region=source_region,
+            )
+        )
+    return pd.concat(frames, ignore_index=True)
+
+
+def build_preprocess_summary(
+    config: dict,
+    source_file: str,
+    df: pd.DataFrame,
+    master: pd.DataFrame,
+    registry: pd.DataFrame,
+    duplicates: pd.DataFrame,
+    merge_conflicts: pd.DataFrame,
+) -> dict:
+    """artifacts/reports/preprocess_summary_{dataset_version}.json 스키마의 dict를 만든다."""
+
+    return {
+        "dataset_version": config["dataset_version"],
+        "source_record_rows": len(df),
+        "master_store_rows": len(master),
+        "rows_by_region": df["source_region"].value_counts().to_dict(),
+        "unique_store_ids": int(master["store_id"].nunique()),
+        "registry_rows": len(registry),
+        "unique_business_nos": int(df["business_no"].nunique(dropna=True)),
+        "missing_merchant_no_rows": int(df["merchant_no"].isna().sum()),
+        "missing_item_rows": int((~df["has_item"]).sum()),
+        "missing_item_rate": float((~df["has_item"]).mean()),
+        "geo_missing_zero_rows": int((df["geo_status"] == "MISSING_ZERO").sum()),
+        "geo_invalid_rows": int((df["geo_status"] == "INVALID").sum()),
+        "market_type_unmapped_rows": int((df["market_type_status"] == "UNMAPPED").sum()),
+        "duplicate_candidate_rows": len(duplicates),
+        "master_merge_conflict_rows": len(merge_conflicts),
+        "master_item_conflicts": int(master["item_conflict"].sum()),
+        "master_merchant_no_conflicts": int(master["merchant_no_conflict"].sum()),
+        "master_geo_conflicts": int(master["geo_conflict"].sum()),
+        "master_mobile_payment_conflicts": int(master["mobile_payment_conflict"].sum()),
+        "source_file": source_file,
+    }

@@ -4,6 +4,25 @@ corpus_version: store_corpus_v002
 corpus_path: data/corpus/store_corpus_v002.parquet
 benchmark_dir: benchmark/storesearch_ko_v1
 
+# 아래 네 random_seed는 전부 20260831로 같지만, 하나로 묶여야 하는 값이 아니라 서로 완전히
+# 독립적인 4개의 무작위성이다(PR #1 리뷰에서 "우연히 같은 값인지" 질문 나옴 — 확인 결과
+# 우연이다, YAML anchor로 묶으면 오히려 잘못된 결합을 만든다). 각자 바뀌었을 때 영향받는
+# 범위가 다르므로 독립적으로 유지한다:
+#   - query_set.random_seed  : family를 train/val/test로 배정 — 바뀌면 split 자체가 재배정됨
+#     (이미 애노테이션이 진행된 뒤라면 절대 바꾸면 안 됨)
+#   - pooling.random_seed    : random negative 후보 샘플링 — 바뀌면 pool 내용이 달라짐
+#   - annotation.random_seed : 애노테이터가 보는 후보 순서 셔플 — 바뀌어도 데이터엔 영향 없음
+#   - evaluation.random_seed : bootstrap CI/순열검정 리샘플링 — 다른 셋과 전혀 무관, 평가만
+#     다시 돌리면 언제든 바꿔도 안전
+#
+# scripts/import_queryset_xlsx.py가 읽는 단일 소스 — 예전에는 이 값과 동일해야 한다는
+# 주석만 달고 스크립트 안에 별도로 하드코딩돼 있어서, 둘이 어긋나도 조용히 통과되는
+# 버그가 있었다. 이제 스크립트는 여기서만 읽는다.
+query_set:
+  version: query_set_v004
+  random_seed: 20260831
+  corrections_path: configs/query/query_corrections_v004.yaml
+
 relevance:
   grades: [0, 1, 2, 3]
   binary_threshold: 2
@@ -32,5 +51,8 @@ validation:
 evaluation:
   primary_metric: nDCG@10
   binary_relevance_threshold: 2
+  # scripts/13_evaluate_run.py가 --bootstrap/--seed을 명시하지 않을 때 이 두 값을 단일
+  # 소스로 읽는다(PR #1 리뷰 전까지는 스크립트 안에 독립적으로 하드코딩된 CLI 기본값이라
+  # 이 두 값을 실제로는 아무도 안 읽는 죽은 설정이었음 — 이제는 고쳐서 실제로 연결됨).
   bootstrap_samples: 10000
   random_seed: 20260831

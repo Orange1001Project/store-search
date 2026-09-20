@@ -80,8 +80,13 @@ python scripts/12_validate_benchmark.py --stage pilot
   애노테이터에게 실제로 보여줄 문구이므로 **사람이 검토·수정해야 함**
 - `positive_terms`/`boundary_terms`는 통합질의 시트의 T1/T2 질의 텍스트와 `함정` 컬럼에서 뽑음(둘 다
   pooling 후보 발굴에만 쓰이고 relevance 판정에는 영향 없음)
-- xlsx 병합 과정에서 패밀리가 잘못 배정된 게 확인된 행은 `RECLASSIFY_QUERIES` 딕셔너리에서 정정함
-  (원본유형 태그 기반 판단 — 새로 발견되는 오분류가 있으면 이 딕셔너리에 추가)
+- xlsx 병합 과정에서 패밀리가 잘못 배정된 게 확인된 행은 `configs/query/query_corrections_v004.yaml`의
+  `reclassify_queries` 목록에서 정정함(원본유형 태그 기반 판단 — 새로 발견되는 오분류가 있으면 이
+  yaml에 항목을 추가). seed·query_set 버전은 `configs/benchmark/storesearch_ko_v1.yaml`의 `query_set`
+  블록이 유일한 소스이며, 다른 곳에 따로 하드코딩하지 않는다. xlsx가 크게 바뀌어 새 `query_set` 버전을
+  만들 때는 `query_corrections_v004.yaml`을 복사해 `_v005.yaml` 등으로 새로 만들고
+  `storesearch_ko_v1.yaml`의 `query_set.version`/`corrections_path`를 함께 올린다(dataset_version/
+  corpus_version과 동일한 버전 관리 원칙)
 
 yaml이 생성하는 각 family의 구조는 다음과 같습니다(참고용 — 직접 쓸 필요는 없음):
 

@@ -7,6 +7,8 @@ Colab에서 여러 모델 x 여러 template(t1/t2/t3)로 run을 만들어 오면
 채점 로직은 재구현하지 않고 `13_evaluate_run.py`를 서브프로세스로 그대로 호출한다
 (docs/MODELING.md의 "왜 이렇게 나눴는가" 원칙과 동일).
 
+핵심 로직(run 탐색, 리더보드 정렬)은 src/store_search_ai/models/leaderboard.py에 있다.
+
 사용 예:
     python scripts/15_score_model_runs.py --split val
     python scripts/15_score_model_runs.py --split val --results-dir results/model_eval
@@ -16,26 +18,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import subprocess
 import sys
 from pathlib import Path
 
-import pandas as pd
-
+from store_search_ai.models.leaderboard import build_leaderboard, find_runs
 from store_search_ai.pipeline.common import load_config
-
-RUN_NAME_RE = re.compile(r"^run_(?P<template>.+)_(?P<split>train|val|test)\.csv$")
-
-
-def find_runs(results_dir: Path, split: str):
-    for tag_dir in sorted(results_dir.iterdir()):
-        if not tag_dir.is_dir():
-            continue
-        for run_path in sorted(tag_dir.glob(f"run_*_{split}.csv")):
-            match = RUN_NAME_RE.match(run_path.name)
-            template = match.group("template") if match else "unknown"
-            yield tag_dir.name, template, run_path
 
 
 def main() -> None:
@@ -43,11 +31,7 @@ def main() -> None:
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument("--results-dir", default="results/model_eval")
     parser.add_argument("--split", choices=["train", "val", "test"], default="val")
-    parser.add_argument(
-        "--output",
-        default=None,
-        help="기본값: <results-dir>/leaderboard_<split>.csv",
-    )
+    parser.add_argument("--output", default=None, help="기본값: <results-dir>/leaderboard_<split>.csv")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -69,30 +53,20 @@ def main() -> None:
         eval_tag = f"{tag}_{template}_{args.split}"
         print(f"[INFO] evaluating {tag}/{template} ...")
         subprocess.run(
-            [
-                sys.executable, str(evaluate_script),
-                "--qrels", str(qrels_path),
-                "--run", str(run_path),
-                "--tag", eval_tag,
-            ],
-            check=True,
-            capture_output=True,
+            [sys.executable, str(evaluate_script), "--qrels", str(qrels_path), "--run", str(run_path), "--tag", eval_tag],
+            check=True, capture_output=True,
         )
 
-        eval_json = Path(
-            f"artifacts/evaluation/{config['benchmark_version']}/{eval_tag}_evaluation.json"
-        )
+        eval_json = Path(f"artifacts/evaluation/{config['benchmark_version']}/{eval_tag}_evaluation.json")
         report = json.loads(eval_json.read_text(encoding="utf-8"))
         row = {"tag": tag, "template": template}
         row.update(report["aggregate"])
         rows.append(row)
 
-    leaderboard = pd.DataFrame(rows)
-    sort_col = "nDCG@10" if "nDCG@10" in leaderboard.columns else leaderboard.columns[-1]
-    leaderboard = leaderboard.sort_values(sort_col, ascending=False).reset_index(drop=True)
+    leaderboard = build_leaderboard(rows)
 
     output_path = Path(args.output) if args.output else results_dir / f"leaderboard_{args.split}.csv"
-    leaderboard.to_csv(output_path, index=False, encoding="utf-8-sig")
+    leaderboard.to_csv(output_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
     print(f"\n========== MODEL EVAL LEADERBOARD ({args.split}) ==========\n")
     print(leaderboard.to_string(index=False))

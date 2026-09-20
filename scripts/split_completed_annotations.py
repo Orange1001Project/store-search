@@ -10,6 +10,8 @@
 독립적으로 검증하기 위함). 이 스크립트가 그 변환을 대신한다 — "split" 컬럼 값으로 행을 나눠서
 저장하기만 하므로 애노테이터가 채운 relevance/uncertain 값은 그대로 보존된다.
 
+핵심 로직은 src/store_search_ai/data/annotation_split.py에 있다.
+
 사용법:
     python scripts/split_completed_annotations.py \
         --a-all path/to/annotation_A_all_completed.csv \
@@ -26,22 +28,22 @@ from pathlib import Path
 
 import pandas as pd
 
+from store_search_ai.data.annotation_split import (
+    split_by_column,
+    validate_splits_present,
+)
 from store_search_ai.pipeline.common import load_config
 
 
 def split_and_save(source_path: Path, splits: list[str], out_dir: Path, prefix: str) -> None:
     df = pd.read_csv(source_path, encoding="utf-8-sig")
+    validate_splits_present(df, splits, source_label=str(source_path))
 
-    found = set(df["split"].astype(str).unique())
-    missing = set(splits) - found
-    if missing:
-        raise ValueError(f"{source_path}: split {sorted(missing)}에 해당하는 행이 없습니다")
-
+    parts = split_by_column(df, "split", splits)
     for split in splits:
-        sub = df[df["split"] == split]
         out_path = out_dir / f"{prefix}_{split}_completed.csv"
-        sub.to_csv(out_path, index=False, encoding="utf-8-sig")
-        print(f"[완료] {out_path} ({len(sub)}행)")
+        parts[split].to_csv(out_path, index=False, encoding="utf-8-sig", lineterminator="\n")
+        print(f"[완료] {out_path} ({len(parts[split])}행)")
 
 
 def main() -> None:
