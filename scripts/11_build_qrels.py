@@ -5,6 +5,8 @@ src/store_search_ai/data/qrels_builder.py에 있다 — 이 스크립트는 인�
 배치, 콘솔 출력만 담당한다.
 
 사용법:
+    python scripts/11_build_qrels.py
+    python scripts/11_build_qrels.py --round full_annotation_v2
     python scripts/11_build_qrels.py \
         --adjudication benchmark/storesearch_ko_v1/annotations/full_annotation_v1/analysis/adjudication_val_test_full_completed.csv
     python scripts/11_build_qrels.py --freeze   # 산출물을 benchmark_dir/frozen/에 불변 스냅샷으로 복사
@@ -27,22 +29,31 @@ from store_search_ai.data.qrels_builder import (
     manifest_json,
     save_qrels_outputs,
 )
-from store_search_ai.pipeline.common import load_config, sha256_file
+from store_search_ai.pipeline.common import (
+    DEFAULT_ANNOTATION_ROUND,
+    get_annotation_round_dirs,
+    load_config,
+    sha256_file,
+)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument(
+        "--round",
+        default=DEFAULT_ANNOTATION_ROUND,
+        help="09/10번과 동일한 --round 값. --adjudication/--train-qrels를 명시하지 않을 때만 쓰인다.",
+    )
+    parser.add_argument(
         "--adjudication",
-        default=(
-            "benchmark/storesearch_ko_v1/annotations/full_annotation_v1/"
-            "analysis/adjudication_val_test_full_completed.csv"
-        ),
+        default=None,
+        help="기본값: annotations/{round}/analysis/adjudication_val_test_full_completed.csv",
     )
     parser.add_argument(
         "--train-qrels",
-        default="benchmark/storesearch_ko_v1/qrels/provisional_v1/qrels_train_provisional.csv",
+        default=None,
+        help="기본값: qrels/{round}/qrels_train_provisional.csv",
     )
     parser.add_argument("--freeze", action="store_true")
     args = parser.parse_args()
@@ -52,18 +63,26 @@ def main() -> None:
     benchmark_dir = Path(config["benchmark_dir"])
     benchmark_dir.mkdir(parents=True, exist_ok=True)
 
+    annotations_dir, provisional_qrels_dir = get_annotation_round_dirs(benchmark_dir, args.round)
+
     queries_path = benchmark_dir / "queries.csv"
     queries = pd.read_csv(queries_path, encoding="utf-8-sig")
     active_queries = queries[queries["status"].astype(str).str.lower().eq("active")].copy()
     active_query_ids = set(active_queries["query_id"].astype(str))
 
-    adjudication_path = Path(args.adjudication)
+    adjudication_path = (
+        Path(args.adjudication)
+        if args.adjudication
+        else annotations_dir / "analysis" / "adjudication_val_test_full_completed.csv"
+    )
     adj = load_adjudication(adjudication_path)
 
     qrels_val = build_split_qrels(adj, "val")
     qrels_test = build_split_qrels(adj, "test")
 
-    train_path = Path(args.train_qrels)
+    train_path = (
+        Path(args.train_qrels) if args.train_qrels else provisional_qrels_dir / "qrels_train_provisional.csv"
+    )
     qrels_train = load_train_qrels(train_path)
 
     qrels_frames = assemble_qrels(qrels_train, qrels_val, qrels_test, active_query_ids)

@@ -23,11 +23,11 @@ TEMPLATE_COLUMNS = {
 }
 
 
-def resolve_train_qrels_path(benchmark_dir: Path) -> Path:
+def resolve_train_qrels_path(benchmark_dir: Path, round_name: str) -> Path:
     final_path = benchmark_dir / "qrels_train.csv"
     if final_path.exists():
         return final_path
-    provisional_path = benchmark_dir / "qrels" / "provisional_v1" / "qrels_train_provisional.csv"
+    provisional_path = benchmark_dir / "qrels" / round_name / "qrels_train_provisional.csv"
     if provisional_path.exists():
         return provisional_path
     raise SystemExit(

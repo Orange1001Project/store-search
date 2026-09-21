@@ -98,6 +98,14 @@ python scripts/07_build_annotation_pool.py --round lexical_v1
 python scripts/08_make_full_annotation_sheets.py
 ```
 
+08~11번, `split_completed_annotations.py`, `prepare_finetune_dataset.py`는 전부 `--round`(기본
+`full_annotation_v1`)를 받는다 — 같은 라운드 이름을 쓰는 스크립트끼리는 자동으로 같은
+`annotations/{round}/`, `qrels/{round}/` 디렉터리를 참조하므로 명시적으로 넘길 필요는 거의
+없지만, **이전 애노테이션 라운드를 보존한 채 완전히 새 라운드를 시작하려면** 08번부터
+`--round full_annotation_v2`처럼 새 이름을 주고 09~11번에도 동일한 이름을 넘기면 된다(자세한
+경로 계산은 `docs/PIPELINE_CODE_REFERENCE.md` 08~11절, `store_search_ai.pipeline.common.
+get_annotation_round_dirs` 참고).
+
 - train: 애노테이터 A만 단일 라벨링 — training signal이므로 모델 성능을 "보고"하는 데는 쓰지
   않아 시간 절약을 위해 단일 라벨링으로 처리
 - val/test: 애노테이터 A, B 모두 독립적으로 라벨링

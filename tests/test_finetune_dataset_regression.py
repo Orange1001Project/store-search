@@ -1,9 +1,10 @@
 """리팩터링 전후로 prepare_finetune_dataset.py의 산출물이 동일한지 확인하는 golden-file
 회귀 테스트.
 
-qrels_train.csv, queries.csv는 체크인돼 있고, data/corpus/*.parquet만 재생성 가능한 중간
-산출물(SHARE_NOTES.md)이라 로컬에 없으면 스킵된다 - 02_preprocess_data.py + 04_build_corpus.py로
-재생성하면 실행된다.
+qrels_train.csv, queries.csv, data/corpus/*.parquet 중 하나라도 로컬에 없으면 스킵된다 —
+data/corpus는 02_preprocess_data.py + 04_build_corpus.py로, qrels_train.csv는 실제 애노테이션
+라운드를 끝까지 돌려야(08~11) 재생성되는 산출물이라 항상 로컬에 있다고 가정할 수 없다
+(SHARE_NOTES.md).
 """
 
 import json
@@ -25,9 +26,17 @@ def _corpus_path() -> Path:
     return REPO_ROOT / config["corpus_path"]
 
 
+def _qrels_train_path() -> Path:
+    config = load_config(CONFIG_PATH)
+    return REPO_ROOT / config["benchmark_dir"] / "qrels_train.csv"
+
+
 pytestmark = pytest.mark.skipif(
-    not _corpus_path().exists(),
-    reason="data/corpus/*.parquet 없음 (재생성 가능한 중간 산출물 - 02+04로 재생성 후 다시 실행)",
+    not _corpus_path().exists() or not _qrels_train_path().exists(),
+    reason=(
+        "data/corpus/*.parquet 또는 qrels_train.csv 없음 (둘 다 재생성 가능한 산출물 - "
+        "02+04, 08~11로 재생성 후 다시 실행)"
+    ),
 )
 
 

@@ -2,7 +2,7 @@
 
 파이프라인 번호가 없는 이유: 01~15 실행 순서와 무관하게, train qrels가 준비된 뒤
 (`docs/PIPELINE.md` 4절, `09_prepare_full_annotations.py`가 만드는
-`qrels/provisional_v1/qrels_train_provisional.csv` 또는 `11_build_qrels.py`가 만드는
+`qrels/{round}/qrels_train_provisional.csv` 또는 `11_build_qrels.py`가 만드는
 최종 `qrels_train.csv`) 필요할 때마다 로컬(GPU 불필요)에서 실행하는 데이터 준비 도구다.
 결과 jsonl을 Colab으로 올려서 `colab/run_finetune_*.py`가 그대로 읽는다.
 
@@ -31,14 +31,23 @@ from store_search_ai.data.finetune_dataset import (
     build_training_pairs,
     resolve_train_qrels_path,
 )
-from store_search_ai.pipeline.common import load_active_queries, load_config
+from store_search_ai.pipeline.common import (
+    DEFAULT_ANNOTATION_ROUND,
+    load_active_queries,
+    load_config,
+)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument(
-        "--qrels", default=None, help="기본값: qrels_train.csv(최종)가 있으면 그것, 없으면 provisional_v1 사용"
+        "--qrels", default=None, help="기본값: qrels_train.csv(최종)가 있으면 그것, 없으면 qrels/{round}/ 밑 provisional 사용"
+    )
+    parser.add_argument(
+        "--round",
+        default=DEFAULT_ANNOTATION_ROUND,
+        help="--qrels를 안 줬을 때 provisional qrels를 찾을 애노테이션 라운드(09번과 동일 값)",
     )
     parser.add_argument("--template", choices=list(TEMPLATE_COLUMNS), default="t1_minimal")
     parser.add_argument("--max-negatives", type=int, default=8)
@@ -49,7 +58,7 @@ def main() -> None:
     benchmark_dir = Path(config["benchmark_dir"])
     threshold = int(config["evaluation"]["binary_relevance_threshold"])
 
-    qrels_path = Path(args.qrels) if args.qrels else resolve_train_qrels_path(benchmark_dir)
+    qrels_path = Path(args.qrels) if args.qrels else resolve_train_qrels_path(benchmark_dir, args.round)
     print(f"[INFO] train qrels: {qrels_path}")
 
     qrels = pd.read_csv(qrels_path, encoding="utf-8-sig")

@@ -8,7 +8,6 @@ from store_search_ai.retrieval.lexical import (
     char_ngrams,
     fit_bm25_scorer,
     fit_char_tfidf_scorer,
-    fit_word_tfidf_char_scorer,
     normalize_text,
     retrieve_run,
     write_run_files,
@@ -68,7 +67,7 @@ def test_retrieve_run_excludes_zero_score_documents():
     score_fn = fit_bm25_scorer(docs)
     queries = _queries(["치킨", "존재하지않는단어xyz123"])
 
-    run, stats = retrieve_run("bm25_regex_v1", queries, corpus, score_fn, top_k=10)
+    run, stats = retrieve_run("char_bm25_v1", queries, corpus, score_fn, top_k=10)
 
     assert set(run[run["query_id"] == "q0"]["doc_id"]) == {"d1"}
     assert "q1" not in set(run["query_id"])
@@ -95,7 +94,12 @@ def test_fit_scorers_are_deterministic_for_the_same_corpus():
     corpus = _corpus()
     docs = build_pool_document_texts(corpus)
 
-    for fit in (fit_char_tfidf_scorer, fit_word_tfidf_char_scorer, fit_bm25_scorer):
+    fits = [
+        lambda d: fit_char_tfidf_scorer(d, ngram_range=(2, 5)),
+        lambda d: fit_char_tfidf_scorer(d, ngram_range=(2, 4)),
+        fit_bm25_scorer,
+    ]
+    for fit in fits:
         score_fn = fit(docs)
         first = np.asarray(score_fn("치킨"))
         second = np.asarray(score_fn("치킨"))

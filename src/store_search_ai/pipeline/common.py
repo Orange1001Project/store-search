@@ -15,6 +15,30 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
+DEFAULT_ANNOTATION_ROUND = "full_annotation_v1"
+"""08~11번 스크립트(애노테이션 시트~최종 qrels 직전의 provisional qrels)가 공유하는 기본
+라운드 이름. 예전에는 이 문자열이 각 스크립트에 따로 하드코딩돼 있어서 새 라운드를 시작해도
+전부 같은 디렉터리(annotations/full_annotation_v1/, qrels/provisional_v1/)에 덮어써졌다 —
+`--round`로 라운드마다 별도 디렉터리를 쓰게 바꾼 뒤에도 기본값 하나는 여기서만 관리한다."""
+
+
+def get_annotation_round_dirs(benchmark_dir: str | Path, round_name: str) -> tuple[Path, Path]:
+    """애노테이션 라운드 하나의 표준 디렉터리 레이아웃을 반환한다: (시트/조정 디렉터리,
+    provisional qrels 디렉터리).
+
+    08(시트 생성)부터 11(최종 qrels 조립)까지 전부 이 함수로만 라운드 경로를 얻는다 — 라운드
+    이름이 다르면 완전히 다른 디렉터리에 쌓이므로, 새 라운드로 다시 돌려도 이전 라운드의
+    시트/조정/판정 결과를 덮어쓰지 않는다(TREC 스타일 벤치마크에서 pooling/annotation
+    라운드를 버전 디렉터리로 분리 보관하는 것과 같은 관례). 최종 qrels(11번 출력)는 라운드와
+    무관하게 `benchmark_dir` 바로 밑에 만들어진다 — "지금 gold로 쓰는 유일한 버전"이라는
+    의미이며, 과거 버전을 남기고 싶으면 `11_build_qrels.py --freeze`로 `frozen/`에 스냅샷을 뜬다.
+    """
+
+    benchmark_dir = Path(benchmark_dir)
+    annotations_dir = benchmark_dir / "annotations" / round_name
+    provisional_qrels_dir = benchmark_dir / "qrels" / round_name
+    return annotations_dir, provisional_qrels_dir
+
 
 def load_config(path: str | Path) -> dict:
     """벤치마크/데이터 설정 yaml을 로드한다.

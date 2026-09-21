@@ -26,21 +26,31 @@ from store_search_ai.data.annotation_prep import (
     split_train_qrels,
     validate_expected_splits,
 )
-from store_search_ai.pipeline.common import load_config, write_trec_qrels
+from store_search_ai.pipeline.common import (
+    DEFAULT_ANNOTATION_ROUND,
+    get_annotation_round_dirs,
+    load_config,
+    write_trec_qrels,
+)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
+    parser.add_argument(
+        "--round",
+        default=DEFAULT_ANNOTATION_ROUND,
+        help="08번과 동일한 --round 값. annotations/{round}/completed/ 밑 5개 완료 파일을 읽고,"
+        " qrels/{round}/에 provisional train qrels를 만든다.",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
     benchmark_dir = Path(config["benchmark_dir"])
 
-    base = benchmark_dir / "annotations" / "full_annotation_v1"
+    base, qrels_dir = get_annotation_round_dirs(benchmark_dir, args.round)
     completed_dir = base / "completed"
     analysis_dir = base / "analysis"
-    qrels_dir = benchmark_dir / "qrels" / "provisional_v1"
 
     analysis_dir.mkdir(parents=True, exist_ok=True)
     qrels_dir.mkdir(parents=True, exist_ok=True)

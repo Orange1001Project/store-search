@@ -82,21 +82,24 @@ def test_build_training_pairs_uses_first_positive_when_multiple():
 
 def test_resolve_train_qrels_path_prefers_final_over_provisional(tmp_path):
     (tmp_path / "qrels_train.csv").write_text("data", encoding="utf-8")
-    provisional_dir = tmp_path / "qrels" / "provisional_v1"
+    provisional_dir = tmp_path / "qrels" / "full_annotation_v1"
     provisional_dir.mkdir(parents=True)
     (provisional_dir / "qrels_train_provisional.csv").write_text("data", encoding="utf-8")
 
-    assert resolve_train_qrels_path(tmp_path) == tmp_path / "qrels_train.csv"
+    assert resolve_train_qrels_path(tmp_path, "full_annotation_v1") == tmp_path / "qrels_train.csv"
 
 
 def test_resolve_train_qrels_path_falls_back_to_provisional(tmp_path):
-    provisional_dir = tmp_path / "qrels" / "provisional_v1"
+    provisional_dir = tmp_path / "qrels" / "full_annotation_v1"
     provisional_dir.mkdir(parents=True)
     (provisional_dir / "qrels_train_provisional.csv").write_text("data", encoding="utf-8")
 
-    assert resolve_train_qrels_path(tmp_path) == provisional_dir / "qrels_train_provisional.csv"
+    assert (
+        resolve_train_qrels_path(tmp_path, "full_annotation_v1")
+        == provisional_dir / "qrels_train_provisional.csv"
+    )
 
 
 def test_resolve_train_qrels_path_raises_when_neither_exists(tmp_path):
     with pytest.raises(SystemExit, match="train qrels를 찾을 수 없습니다"):
-        resolve_train_qrels_path(tmp_path)
+        resolve_train_qrels_path(tmp_path, "full_annotation_v1")

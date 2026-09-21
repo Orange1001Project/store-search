@@ -23,13 +23,22 @@ from store_search_ai.data.annotation_sheets import (
     prepare_pool,
     write_annotation_file,
 )
-from store_search_ai.pipeline.common import load_config
+from store_search_ai.pipeline.common import (
+    DEFAULT_ANNOTATION_ROUND,
+    get_annotation_round_dirs,
+    load_config,
+)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
-    parser.add_argument("--round", default="full_annotation_v1")
+    parser.add_argument(
+        "--round",
+        default=DEFAULT_ANNOTATION_ROUND,
+        help="애노테이션 라운드 이름 — annotations/{round}/ 밑에 시트를 만든다. 이전 라운드를"
+        " 보존한 채 새로 시작하려면 다른 이름(예: full_annotation_v2)을 준다.",
+    )
     args = parser.parse_args()
 
     config_path = Path(args.config)
@@ -46,7 +55,7 @@ def main() -> None:
     pool = prepare_pool(pool, queries, args.round)
     seed = int(config["annotation"]["random_seed"])
 
-    output_dir = benchmark_dir / "annotations" / "full_annotation_v1"
+    output_dir, _ = get_annotation_round_dirs(benchmark_dir, args.round)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ----- Human A: train + val + test 전체 판정 -----
