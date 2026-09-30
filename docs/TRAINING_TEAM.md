@@ -128,9 +128,22 @@ Drive 화면에서는 빈 파일을 만들 수 없으니 Colab에서 이 한 줄
 (DRIVE_ROOT / "runs" / "finetune" / "bge_m3_ft_jisu_20260930_0512" / "KEEP").touch()
 ```
 
-KEEP 할 run: 공유 시트에 올린 run, 서비스 후보, 발표에 쓸 run.
+**KEEP은 자동으로 생기지 않습니다 — 직접 표시합니다.** KEEP 하는 기준:
+
+1. 모델별 **baseline run**(기본값으로 학습한 것) — 다른 실험의 비교 기준이라 지워지면 안 됩니다.
+2. **공유 시트에 올린 run** — 시트에 적었는데 모델이 지워지면 나중에 쓸 수 없습니다.
+3. **서비스 후보·발표에 쓸 run**
+
+그 외(이것저것 바꿔 본 run)는 KEEP 하지 않고 자동 정리에 맡깁니다.
 
 ## 8. 공유 시트 (2단계, 남길 run만 한 줄)
+
+**만드는 법**: 팀 공유 Google Drive 폴더에 Google Sheets를 하나 만들고(한 명이 만들어 링크 공유), 첫 줄에 아래를
+그대로 붙여넣습니다(탭으로 구분돼 있어 칸이 자동으로 나뉨). run 하나당 한 줄씩 아래로 추가합니다.
+
+```
+TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision	nDCG@10	Judged@10	Recall@100	zero-shot대비	p-value	KEEP
+```
 
 | 칸 | 어디서 복사하나 |
 |---|---|
@@ -140,7 +153,7 @@ KEEP 할 run: 공유 시트에 올린 run, 서비스 후보, 발표에 쓸 run.
 | 코드 커밋 | 시트에 올리면서 커밋·push한 번호(`git log -1 --format=%h`). 기본 코드면 "기본" |
 | 학습 데이터 해시 앞 8자리 | manifest `training_data.sha256` |
 | GPU / precision | manifest `environment.gpu` / `precision` |
-| val nDCG@10, Judged@10, Recall@100 | 평가 결과 json(10절) |
+| val nDCG@10, Judged@10, Recall@100 | 평가 결과 json의 `aggregate`(10절 끝 "결과 파일") |
 | zero-shot 대비 차이, p-value | 10절 `--compare-run` 결과 |
 
 **숫자 읽는 법**
@@ -167,13 +180,24 @@ KEEP 할 run: 공유 시트에 올린 run, 서비스 후보, 발표에 쓸 run.
   2. 그 안의 `eval_config.yaml`을 `configs/models/<TAG>.yaml`로 복사합니다.
   3. `python scripts/14_run_model_eval.py --model-config configs/models/<TAG>.yaml --split val`을 실행합니다.
      결과는 `artifacts/evaluation/storesearch_ko_v1/<TAG>_val_evaluation.json`에 저장되고, manifest에도 자동으로 추가됩니다.
+     여러 모델을 한 표로 보려면 이어서 `python scripts/15_score_model_runs.py --split val`.
 - **GPU가 없을 때**
   1. Drive `runs/finetune/<TAG>/eval_config.yaml`을 로컬 `configs/models/<TAG>.yaml`로 복사합니다(모델 자체는 안 받아도 됨).
   2. `python scripts/pack_for_colab.py --with-eval-data`로 올립니다(corpus 포함).
-  3. `colab/run_model_eval_encoding.py`에서 `MODEL_CONFIG_NAMES = ["<TAG>.yaml"]`로 지정하고 실행합니다
-     (`model_id: models/<TAG>`는 Drive의 `runs/finetune/<TAG>`로 자동으로 바뀌어 읽힙니다).
-  4. Drive `runs/model_eval/<TAG>/`를 로컬 `results/model_eval/<TAG>/`로 받아 `python scripts/15_score_model_runs.py --split val`로 채점합니다.
+  3. `colab/run_model_eval_encoding.py`를 Colab에 붙여넣고, 그 안의 `MODEL_CONFIG_NAMES = None` 줄을
+     `MODEL_CONFIG_NAMES = ["<TAG>.yaml"]`로 바꿔 실행합니다(비워 두면 모든 모델을 다 평가해서 오래 걸림).
+     `SPLIT = "val"`, `TEMPLATES = ["t1_minimal"]`은 기본값 그대로. `model_id: models/<TAG>`는 Drive의
+     `runs/finetune/<TAG>`로 자동으로 바뀌어 읽힙니다. → Drive `runs/model_eval/<TAG>/run_t1_minimal_val.csv` 생성
+  4. Drive `runs/model_eval/<TAG>/` 폴더를 로컬 `results/model_eval/<TAG>/`로 받아 `python scripts/15_score_model_runs.py --split val`로 채점합니다.
      이 경로는 manifest에 평가가 자동으로 안 쌓이므로 **공유 시트가 유일한 기록**입니다.
+
+  ```
+  ① Drive → 로컬   runs/finetune/<TAG>/eval_config.yaml → configs/models/<TAG>.yaml   (yaml 하나만)
+  ② 로컬 → Drive   pack_for_colab.py --with-eval-data 결과 project/ 업로드
+  ③ Colab          run_model_eval_encoding.py (MODEL_CONFIG_NAMES 지정) → runs/model_eval/<TAG>/run_t1_minimal_val.csv
+  ④ Drive → 로컬   runs/model_eval/<TAG>/ → results/model_eval/<TAG>/
+  ⑤ 로컬           python scripts/15_score_model_runs.py --split val
+  ```
 - **zero-shot 대비 p-value**
   ```
   python scripts/13_evaluate_run.py --qrels benchmark/storesearch_ko_v1/qrels_val.trec \
@@ -182,6 +206,47 @@ KEEP 할 run: 공유 시트에 올린 run, 서비스 후보, 발표에 쓸 run.
   ```
   `<베이스모델>`은 yaml의 `name`입니다(`bge_m3`, `snowflake_arctic_embed_l_v2_ko`). zero-shot run도
   **같은 val 정답으로 다시 채점한 것**을 씁니다.
+
+**결과 파일** (어느 경로로 평가했는지에 따라 json 이름이 조금 다릅니다)
+
+| 파일 | 내용 | 언제 보나 |
+|---|---|---|
+| `results/model_eval/<TAG>/run_t1_minimal_val.csv` | 검색 결과: 쿼리마다 상위 100개 문서(`query_id,doc_id,rank,score,system`) | 직접 볼 일은 거의 없음(채점 입력) |
+| `results/model_eval/leaderboard_val.csv` | 15번이 만든 모델별 지표 표, nDCG@10 순 정렬 | **여러 모델 비교할 때** |
+| `artifacts/evaluation/storesearch_ko_v1/<TAG>_val_evaluation.json` (14번) 또는 `…/<TAG>_t1_minimal_val_evaluation.json` (15번) | `aggregate`(전체 평균 지표) + `query_bootstrap_ci95`(95% 신뢰구간) | **시트에 적는 숫자는 여기 `aggregate`** |
+| 같은 폴더의 `…_per_query.csv` | 쿼리별 지표 | 어떤 쿼리가 좋아지고 나빠졌는지 볼 때 |
+
+---
+
+## 11. 자주 묻는 질문
+
+**Q. Colab "설정 셀"이 어디예요?**
+`colab/run_finetune_simple.py` 중간의 `"""## 설정` 바로 아래, `OWNER = ""`부터 `cfg = FinetuneConfig(...)`까지입니다.
+이 `.py` 파일은 `"""## 제목"""`이 셀 구분 위치입니다. Colab에서 그 위치마다 셀을 나눠 붙여도 되고, 파일 전체를 셀 하나에 붙여도 됩니다.
+
+**Q. `run_finetune_simple.py`를 계속 고치면 되나요?**
+**설정값만** 이 파일에서 바꿉니다. 로직은 `src/`에서 고칩니다.
+
+| 바꾸려는 것 | 어디를 고치나 |
+|---|---|
+| epoch, batch, lr, loss, negative 개수 등 | `run_finetune_simple.py`의 `cfg = FinetuneConfig(...)` 안의 값 |
+| 학습 방식(새 loss, 학습 루프, 저장 방식) | `src/store_search_ai/training/st_finetune.py` |
+| 학습 데이터를 행으로 펼치는 방식 | `src/store_search_ai/training/finetune.py` |
+| positive/negative 뽑는 방식 | `src/store_search_ai/data/finetune_dataset.py` (데이터 담당과 상의) |
+
+**Colab 셀 안에 로직 코드를 직접 추가하면 기록에 안 남습니다.** 자동 저장되는 코드 사본은 `src/store_search_ai`만 담기
+때문입니다. 설정값은 manifest에 남지만 셀에 쓴 로직은 사라집니다. 로직은 반드시 `src/`에 넣고 `pack_for_colab.py`로 올리세요.
+
+**Q. 공유 시트는 어디에 있나요?**
+처음에 한 명이 팀 공유 Drive에 만듭니다(8절의 헤더를 첫 줄에 붙여넣기). 기록은 2단계(val 정답 배포 후)부터 합니다.
+
+**Q. KEEP은 자동인가요?**
+아니요, 직접 표시합니다. 학습 스크립트 맨 아래 셀의 주석을 풀고 TAG를 바꿔 실행하면 그 run 폴더에 빈 `KEEP` 파일이 생깁니다.
+기준은 7절(baseline / 시트에 올린 run / 서비스 후보·발표용).
+
+**Q. GPU 없이 평가하려면 무슨 파일을 옮기나요?**
+옮기는 건 두 번뿐입니다: 처음에 `eval_config.yaml` 하나(Drive → 로컬), 마지막에 `runs/model_eval/<TAG>/` 폴더(Drive → 로컬).
+순서는 10절 그림.
 
 ---
 
