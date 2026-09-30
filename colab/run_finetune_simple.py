@@ -1,27 +1,33 @@
 # -*- coding: utf-8 -*-
 """store_search_ai_colab_finetune_simple.ipynb
 
-Colab에서 sentence-transformers 표준 `.fit()`으로 임베딩 모델을 fine-tuning한다.
-Snowflake Arctic(`arctic_ko.yaml`), BGE-M3(`bge_m3.yaml`) 등 **Qwen3가 아닌 모델을 간단히**
-돌려볼 때 쓴다(ms-swift 없이, sentence-transformers만으로 어떤 HF 인코더 모델에도 적용 가능).
-Qwen3-Embedding 본 학습은 `colab/run_finetune_qwen3.py`(ms-swift, LoRA) 참고.
+Colab(무료 T4 포함)에서 Snowflake Arctic(`arctic_ko.yaml`), BGE-M3(`bge_m3.yaml`) 등 Qwen3가 아닌
+임베딩 모델을 full fine-tuning한다. Qwen3-Embedding은 `colab/run_finetune_qwen3.py`(LoRA) 참고 —
+두 스크립트는 설정값만 다르고 학습 코드는 `store_search_ai.training.st_finetune.run_finetune()`
+하나를 같이 쓴다(팀원마다 학습 코드가 달라서 결과를 비교할 수 없게 되는 일을 막기 위함).
 
-MultipleNegativesRankingLoss를 쓴다: in-batch negative + `train_pairs.jsonl`의 명시적 hard
-negative를 InputExample(texts=[query, positive, *negatives])로 그대로 넣을 수 있다(같은 배치
-안의 다른 샘플들도 자동으로 추가 negative가 된다) — GPL/E5/BGE류가 흔히 쓰는 대조학습 방식과 동일.
+무엇이 자동으로 처리되나 (docs/TRAINING.md 2절):
+- T4는 bf16 미지원 → fp16 AMP 자동 선택(L4/A100이면 bf16). loss가 NaN이 되면 저장 없이 중단.
+- (query, positive)마다 한 행 + hard negative 고정 개수 + 같은 텍스트가 한 배치에 두 번 안 들어가게
+  NO_DUPLICATES 배치 + GISTEmbedLoss(같은 family query끼리 서로의 정답을 오답으로 배우는 문제 완화).
+- 학습 절반 지점에서 **체크포인트를 딱 한 번** Drive `runs/finetune/<TAG>.ckpt/`에 저장 — Colab 연결이
+  끊기면 RESUME_TAG에 그 TAG를 넣고 같은 설정으로 다시 실행하면 거기서부터 이어서 학습한다.
+  최종 모델 저장이 성공하면 이 체크포인트는 자동으로 지운다.
+- **Drive에 남는 건 최종 모델 하나**(fp16). 저장 후 다시 로드해서 임베딩이 같은지 검증하고, 내 run 중
+  최신 3개만 남기고 오래된 건 지운다(KEEP 파일 있는 run 제외, 다른 팀원의 run은 절대 안 건드림).
 
 사용 전 준비 (한 번만):
-  1. 로컬에서 `python scripts/prepare_finetune_dataset.py`로 data/finetune/train_pairs.jsonl 생성
-  2. Drive에 아래 업로드:
-       project/src/store_search_ai/   (model_manifest.json 기록용, 그대로 폴더째)
-       project/data/finetune/train_pairs.jsonl
-       project/configs/models/<베이스모델>.yaml   (예: arctic_ko.yaml, bge_m3.yaml)
-  3. 이 스크립트를 Colab에서 실행 (MODEL_CONFIG_PATH만 바꾸면 됨) — 끝나면 OUTPUT_DIR에
-     `model_manifest.json`도 같이 저장된다(base 모델, 하이퍼파라미터, 학습 데이터 sha256 등).
-  4. 끝나면 Drive의 runs/finetune/<태그>/ 를 로컬 models/ 밑으로 내려받고(manifest 포함),
-     configs/models/<태그>.yaml을 새로 만들어 model_id를 그 로컬 경로로 지정한 뒤
-     scripts/14_run_model_eval.py --model-config configs/models/<태그>.yaml --split val 로 평가
-     (평가 결과가 자동으로 model_manifest.json의 evaluations 목록에 추가된다)
+  1. 학습 데이터(data/finetune/train_pairs.jsonl + train_pairs.meta.json) 준비 — 데이터 담당이 git으로
+     배포한 것을 `git pull`로 받는다(직접 만들 때만 `python scripts/prepare_finetune_dataset.py`)
+  2. 로컬에서 `python scripts/pack_for_colab.py` → `colab_upload/project/` 폴더가 생긴다
+     (코드 + configs/models + 학습 데이터 + git 커밋 정보 code_version.json).
+     Drive `내 드라이브/store-search-ai/`의 기존 `project` 폴더를 지우고 이 `project` 폴더를 올린다.
+  3. 아래 "설정" 셀의 OWNER(필수)와 NOTE(바꾼 게 있으면)를 적고 전체 실행
+  4. 끝나면 Drive `runs/finetune/<TAG>/`를 로컬 `models/<TAG>/`로 내려받고,
+     그 안의 `eval_config.yaml`을 `configs/models/<TAG>.yaml`로 복사해서
+     `python scripts/14_run_model_eval.py --model-config configs/models/<TAG>.yaml --split val`
+     (평가 결과는 자동으로 models/<TAG>/model_manifest.json에 쌓인다)
+  5. 서비스 후보로 남길 run은 맨 아래 셀의 한 줄로 그 폴더에 빈 파일 `KEEP`을 만들어 자동 정리에서 보호
 """
 
 import torch
@@ -29,8 +35,16 @@ import torch
 print("CUDA:", torch.cuda.is_available())
 if torch.cuda.is_available():
     print(torch.cuda.get_device_name(0))
+    print(round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 2), "GB")
+else:
+    print("[경고] GPU가 없습니다 — 런타임 > 런타임 유형 변경 > T4 GPU")
 
-get_ipython().system('pip -q install -U "sentence-transformers>=2.7.0" accelerate')
+# 팀 전체가 같은 버전으로 학습해야 결과를 비교할 수 있다 — 버전을 바꾸려면 팀과 합의 후
+# 이 줄과 colab/run_finetune_qwen3.py, pyproject.toml의 train extra를 같이 바꿀 것.
+get_ipython().system(
+    'pip -q install "sentence-transformers==3.4.1" "transformers==4.51.3" "peft==0.15.2" '
+    '"datasets==3.5.0" "accelerate==1.6.0"'
+)
 
 from google.colab import drive
 
@@ -41,90 +55,51 @@ from pathlib import Path
 
 DRIVE_ROOT = Path("/content/drive/MyDrive/store-search-ai")
 PROJECT_DIR = DRIVE_ROOT / "project"
-FINETUNE_RUN_DIR = DRIVE_ROOT / "runs" / "finetune"
-FINETUNE_RUN_DIR.mkdir(parents=True, exist_ok=True)
-
 sys.path.insert(0, str(PROJECT_DIR / "src"))
 
-from store_search_ai.pipeline.common import load_config, sha256_file, write_model_manifest
+from store_search_ai.training.st_finetune import FinetuneConfig, run_finetune
 
-TRAIN_PAIRS_PATH = PROJECT_DIR / "data" / "finetune" / "train_pairs.jsonl"
+"""## 설정
 
-"""## 모델/설정 선택
-
-이 셀만 바꾸면 다른 베이스 모델로 전환할 수 있다.
+**OWNER만 필수로 바꾸면 된다.** 나머지는 팀 공통 기본값 — 결과를 서로 비교하려면 합의 없이 바꾸지
+말 것(바꾼 값은 전부 model_manifest.json에 자동으로 남는다).
 """
 
-MODEL_CONFIG_PATH = PROJECT_DIR / "configs" / "models" / "arctic_ko.yaml"   # 또는 bge_m3.yaml 등
-NUM_EPOCHS = 3
-BATCH_SIZE = 16
-WARMUP_RATIO = 0.1
+OWNER = ""                              # 필수: 본인 이름(영문 소문자, 예: "jisu") — run 이름/정리 범위에 쓰임
+MODEL_CONFIG = "arctic_ko.yaml"         # 또는 "bge_m3.yaml"
+RESUME_TAG = None                       # 연결이 끊긴 run을 이어서 학습할 때만: 그 run의 TAG
+                                        # (Drive runs/finetune/<TAG>.ckpt/ 의 <TAG>, 나머지 설정은 처음과 같게)
+SAVE_MID_CHECKPOINT = True              # 절반 지점에 한 번 Drive 저장(약 7GB, 끝나면 자동 삭제). 공간이 없으면 False
+NOTE = ""                               # 이 run에서 바꾼 것 한 줄(예: "negative 5개", "쿼리 공백 제거 전처리 추가")
 
-model_config = load_config(MODEL_CONFIG_PATH)
-TAG = f"{model_config['name']}_ft_v1"
-OUTPUT_DIR = FINETUNE_RUN_DIR / TAG
+cfg = FinetuneConfig(
+    model_config_path=PROJECT_DIR / "configs" / "models" / MODEL_CONFIG,
+    train_pairs_path=PROJECT_DIR / "data" / "finetune" / "train_pairs.jsonl",
+    run_root=DRIVE_ROOT / "runs" / "finetune",
+    owner=OWNER,
+    num_epochs=2,
+    batch_size=32,              # T4에서 OOM이 나면 16으로(manifest에 기록됨)
+    learning_rate=2e-5,
+    num_hard_negatives=3,
+    max_positives_per_query=32,
+    loss="gist",                # OOM이 나면 "mnrl"(guide 모델을 안 올림)
+    save_mid_checkpoint=SAVE_MID_CHECKPOINT,
+    resume_tag=RESUME_TAG,
+    keep_last_runs=3,           # 내 run 중 최신 3개만 Drive에 남김(KEEP 파일 있는 run은 별도 보존)
+    note=NOTE,
+)
 
-print(f"[INFO] base model: {model_config['model_id']}  ->  tag: {TAG}")
+final_dir = run_finetune(cfg)
 
-"""## 학습쌍 로드 -> InputExample
+print("\n다음 단계:")
+print(f"  1. Drive {final_dir} 폴더를 로컬 models/{final_dir.name}/ 로 내려받기")
+print(f"  2. models/{final_dir.name}/eval_config.yaml 을 configs/models/{final_dir.name}.yaml 로 복사")
+print(f"  3. python scripts/14_run_model_eval.py --model-config configs/models/{final_dir.name}.yaml --split val")
 
-같은 query 안에서 positive/negative를 한 번에 넣는다 — MultipleNegativesRankingLoss가
-positive는 대각선(정답)으로, 나머지(다른 샘플의 positive/negative 전부 포함)는 자동으로
-negative로 취급한다.
+"""## (평가 후) 좋은 run을 KEEP으로 남기기
+
+Drive는 내 run 중 최신 3개만 남기고 자동으로 지운다. 서비스 후보·공유할 run은 아래 한 줄로 표시하면
+절대 지워지지 않는다(Drive 화면에서는 빈 파일을 만들 수 없어서 이렇게 한다). TAG만 바꿔서 실행.
 """
 
-import json
-
-from sentence_transformers import InputExample, SentenceTransformer, losses
-from torch.utils.data import DataLoader
-
-train_examples = []
-with TRAIN_PAIRS_PATH.open(encoding="utf-8") as f:
-    for line in f:
-        row = json.loads(line)
-        texts = [row["query"], row["positive"], *row["negatives"]]
-        train_examples.append(InputExample(texts=texts))
-
-print(f"[INFO] 학습 쌍 {len(train_examples)}개 로드")
-
-"""## Fine-tuning"""
-
-model = SentenceTransformer(model_config["model_id"])
-train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=BATCH_SIZE)
-train_loss = losses.MultipleNegativesRankingLoss(model)
-
-warmup_steps = int(len(train_dataloader) * NUM_EPOCHS * WARMUP_RATIO)
-
-model.fit(
-    train_objectives=[(train_dataloader, train_loss)],
-    epochs=NUM_EPOCHS,
-    warmup_steps=warmup_steps,
-    show_progress_bar=True,
-    output_path=str(OUTPUT_DIR),
-)
-
-manifest_path = write_model_manifest(
-    OUTPUT_DIR,
-    {
-        "tag": TAG,
-        "base_model_id": model_config["model_id"],
-        "framework": "sentence-transformers",
-        "hyperparameters": {
-            "loss": "MultipleNegativesRankingLoss",
-            "num_epochs": NUM_EPOCHS,
-            "batch_size": BATCH_SIZE,
-            "warmup_ratio": WARMUP_RATIO,
-        },
-        "training_data": {
-            "source": str(TRAIN_PAIRS_PATH),
-            "sha256": sha256_file(TRAIN_PAIRS_PATH),
-            "num_examples": len(train_examples),
-        },
-    },
-)
-
-print(f"\n[완료] fine-tuned 모델 저장: {OUTPUT_DIR}")
-print(f"[완료] model_manifest.json: {manifest_path}")
-print("이 폴더를 로컬 models/<태그>/로 내려받은 뒤(model_manifest.json 포함),")
-print("configs/models/<태그>.yaml에서 model_id를 그 로컬 경로로 지정하고")
-print("scripts/14_run_model_eval.py로 평가하세요 (평가 결과가 자동으로 manifest에 추가됩니다).")
+# (DRIVE_ROOT / "runs" / "finetune" / "여기에_TAG" / "KEEP").touch()

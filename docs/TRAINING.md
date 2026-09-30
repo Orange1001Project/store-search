@@ -5,22 +5,36 @@
 `configs/models/*.yaml`에 등록해서 기존 `14_run_model_eval.py`/`15_score_model_runs.py`로
 그대로 채점합니다("run을 채점하는 evaluator는 하나만 둔다", `docs/MODELING.md` 참고).
 
+> **학습만 맡은 팀원은 `docs/TRAINING_TEAM.md`부터 보세요** — 배포된 학습 데이터로 Colab 학습 → 평가 →
+> 공유 시트 기록까지의 절차와 팀 규칙만 모아 둔 문서입니다. 이 문서는 그 배경(설계 이유·설정 의미)입니다.
+
 ## 사전 조건
 
 train qrels(`benchmark/storesearch_ko_v1/qrels_train.csv`, 없으면
-`qrels/provisional_v1/qrels_train_provisional.csv`)가 있어야 합니다. `docs/PIPELINE.md` 4절
+`qrels/full_annotation_v1/qrels_train_provisional.csv`)가 있어야 합니다. `docs/PIPELINE.md` 4절
 (`08_make_full_annotation_sheets.py` → 사람이 train 시트 채움 → `09_prepare_full_annotations.py`)
 까지 끝나면 준비됩니다 — val/test의 adjudication을 기다릴 필요는 없습니다(train은 애노테이터
 1명의 단일 라벨링이라 더 빨리 끝납니다).
 
-## 프레임워크를 두 갈래로 나눈 이유
+## 학습 코드는 하나, Colab 스크립트는 둘
 
-| 트랙 | 대상 모델 | 스크립트 | 왜 |
-|---|---|---|---|
-| **Qwen3 (메인)** | `qwen3_0_6b`/`4b`/`8b` | `colab/run_finetune_qwen3.py` | `ms-swift`는 Qwen 계열(ModelScope/Alibaba)의 공식 학습 도구라 Qwen3-Embedding 지원이 가장 빠르고 탄탄함. LoRA + 4bit 양자화(QLoRA)로 무료 Colab GPU(T4, ~15GB)에서도 4B/8B까지 시도 가능 |
-| **Snowflake/BGE (간단 비교용)** | `arctic_ko`, `bge_m3` 등 | `colab/run_finetune_simple.py` | sentence-transformers 표준 `.fit()` — 어떤 HF 인코더에도 통하는 범용 방식. ms-swift보다 API가 안정적이라 빠르게 결과만 확인할 때 적합 |
+| 스크립트 | 대상 모델 | 방식 |
+|---|---|---|
+| `colab/run_finetune_simple.py` | `arctic_ko`, `bge_m3` 등 | full fine-tuning |
+| `colab/run_finetune_qwen3.py` | `qwen3_0_6b` (`4b`는 조건부) | LoRA → 베이스에 merge |
 
-`pyproject.toml`의 `train = ["ms-swift"]`는 이미 선언돼 있던 의도를 그대로 따른 것입니다.
+두 스크립트는 **설정 셀만 다르고** 학습 코드는 `store_search_ai.training.st_finetune.run_finetune()`
+하나를 같이 씁니다(sentence-transformers Trainer + peft). 팀원마다 학습 코드가 달라서 결과를 비교할
+수 없게 되는 일을 막기 위해서입니다. 라이브러리 버전도 두 스크립트가 같은 값으로 고정돼 있습니다
+(`sentence-transformers==3.4.1`, `transformers==4.51.3`, `peft==0.15.2`, `datasets==3.5.0`,
+`accelerate==1.6.0` — 바꾸려면 팀 합의 후 두 스크립트와 `pyproject.toml`의 `train` extra를 같이).
+
+**예전 버전(ms-swift)을 버린 이유**: T4는 ms-swift 예제가 전제하는 bf16/flash-attention을 지원하지
+않고, ms-swift가 저장하는 LoRA adapter는 merge해도 sentence-transformers 설정(Qwen3의 last-token
+pooling, query prompt)이 빠져서 `SentenceTransformer(path)`로 로드하면 **에러 없이 mean pooling으로
+로드돼 임베딩이 틀어집니다**. 우리 평가(14번)와 서빙이 전부 sentence-transformers 기준이라 치명적입니다.
+또 버전마다 데이터 포맷과 플래그가 바뀌었습니다(`query/response` → `messages/positive_messages`,
+`--train_type` → `--tuner_type`).
 
 ## 1. 학습 데이터 준비 (로컬, GPU 불필요)
 
@@ -28,88 +42,129 @@ train qrels(`benchmark/storesearch_ko_v1/qrels_train.csv`, 없으면
 python scripts/prepare_finetune_dataset.py
 ```
 
-- train qrels + `queries.csv` + corpus로부터 `data/finetune/train_pairs.jsonl`을 만듭니다.
-- 각 줄: `{"query_id", "query", "positive", "negatives": [...]}`
-- **positive**: 그 query의 candidate pool에서 `relevance >= binary_relevance_threshold`(기본 2)인 문서
-- **negatives**: 같은 query의 같은 pool에서 relevance가 그 미만인 문서(최대 `--max-negatives`개,
-  relevance=1인 경계 사례를 relevance=0보다 우선 — 무작위 negative보다 훨씬 어려운/유용한 negative).
-  pooling(06~07) 단계가 이미 BM25/TF-IDF로 모아둔 후보이고 train qrels가 그 전체에 대한 사람 판정이라
-  추가 검색 없이 바로 재사용됩니다.
-- positive가 하나도 없는 query(=pool 전체가 낮은 relevance)는 제외되고 로그에 개수가 찍힙니다.
+- train qrels + `queries.csv` + corpus로부터 `data/finetune/train_pairs.jsonl`과
+  `train_pairs.meta.json`(어떤 qrels·설정·커밋으로 만들었는지)을 만듭니다. **Colab에는 둘 다 올립니다.**
+- 각 줄: `{"query_id", "query", "positives": [...], "negatives": [...]}`
+- **positives**: 그 query의 pool에서 `relevance >= binary_relevance_threshold`(기본 2)인 문서 **전부**
+  (relevance 높은 순). 예전에는 첫 번째 하나만 써서 학습 예시가 query 수(237개)밖에 안 됐습니다.
+- **negatives**: 같은 pool에서 relevance가 그 미만인 문서(최대 `--max-negatives`개, relevance=1인 경계
+  사례 우선 — 무작위 negative보다 훨씬 어려운/유용한 negative).
+- 텍스트가 완전히 같은 문서(체인점 등)는 한 번만 쓰고, positive와 텍스트가 같은 문서는 negative에서 뺍니다.
+- positive가 하나도 없는 query는 제외되고 로그에 개수가 찍힙니다.
 
-## 2-A. Qwen3 fine-tuning (ms-swift, LoRA)
+학습 쪽(`store_search_ai.training.finetune.expand_training_rows`)에서 (query, positive)마다 한 행으로
+펼칩니다. query당 positive는 `max_positives_per_query`(기본 32)개까지 — "한식"처럼 positive가 수백 개인
+넓은 query가 학습을 독점하지 않게 하기 위해서입니다. hard negative는 모든 행이
+`num_hard_negatives`(기본 3)개로 같아야 해서, 그보다 적은 query는 제외됩니다(개수는 로그와 manifest에 남음).
 
-Drive에 `project/src/store_search_ai/`(model_manifest.json 기록용) + `project/data/finetune/train_pairs.jsonl`을
-올리면 됩니다(모델 자체는 HF Hub에서 바로 받음). `colab/run_finetune_qwen3.py`를 Colab에서 실행:
+## 2. Colab에서 학습 (T4 기준)
 
-- `MODEL_ID`/`TAG`만 바꾸면 0.6B/4B/8B 전환 (`Qwen/Qwen3-Embedding-{0.6B,4B,8B}`)
-- 4B/8B는 `USE_4BIT = True` 권장(무료 T4 메모리 제약), `BATCH_SIZE`도 4~8로 낮출 것
-- **주의**: `swift sft` 플래그명은 스크립트에 best-effort로 적어뒀지만 ms-swift는 빠르게 바뀌는
-  라이브러리라 실행 전 Colab에서 `!swift sft --help`로 실제 플래그를 반드시 확인하세요
-  (`--task_type`, `--loss_type`, 4bit 양자화 관련 플래그가 버전별로 다를 수 있음).
-- LoRA adapter만 저장되므로, 평가 전에 베이스 모델과 merge가 필요할 수 있습니다
-  (`swift export --adapters ... --merge_lora true` 등 — 역시 `--help`로 확인).
+로컬에서 `python scripts/pack_for_colab.py`로 `colab_upload/project/`(코드 + `configs/models` + 학습 데이터 +
+git 정보 `code_version.json`)를 만들어 Drive `내 드라이브/store-search-ai/project`로 올리고(기존 폴더는 지우고),
+스크립트의 **`OWNER`를 본인 이름(영문 소문자)으로 바꿔서** 실행합니다. 나머지 값은 팀 공통 기본값입니다 — 바꾼 값은 전부
+manifest에 자동으로 남지만, 결과를 서로 비교하려면 합의 없이 바꾸지 마세요.
 
-## 2-B. Snowflake/BGE 간단 fine-tuning (sentence-transformers)
+자동으로 처리되는 것:
 
-Drive에 `project/src/store_search_ai/` + `project/data/finetune/train_pairs.jsonl` +
-`project/configs/models/<베이스모델>.yaml`을 올리고 `colab/run_finetune_simple.py`에서
-`MODEL_CONFIG_PATH`만 바꿔 실행합니다. `arctic_ko.yaml`, `bge_m3.yaml` 등 `configs/models/*.yaml`에
-있는 어떤 모델에도 그대로 씁니다.
+- **precision**: GPU가 bf16을 지원하면 bf16, T4처럼 안 되면 fp16 AMP(가중치는 fp32, 연산만 fp16).
+  loss가 NaN/inf가 되면 학습을 멈추고 **Drive에 아무것도 저장하지 않습니다** → lr을 낮추거나 L4/A100 사용.
+- **배치**: `NO_DUPLICATES` — 같은 텍스트(같은 query의 다른 positive 행, 공유 negative)가 한 배치에
+  두 번 들어가 서로를 오답으로 배우는 일을 막습니다.
+- **loss**: 기본 `gist`(GISTEmbedLoss, 베이스 모델이 guide) — 같은 family의 query가 한 배치에 섞이면
+  서로의 정답을 오답으로 배우는데("국밥"과 "순대국"), guide가 정답보다 더 비슷하다고 보는 in-batch
+  negative를 걸러줍니다. 메모리가 부족하면 `mnrl`. yaml에 `target_dimension`이 있으면(qwen3_4b) 그
+  차원에서도 성능이 유지되도록 Matryoshka로 감쌉니다.
+- **query prompt**: yaml의 `query_prompt_name` prompt를 학습 때도 그대로 붙입니다 → 평가/서빙에서도
+  `prompt_name`만 맞으면 학습 때와 같은 문자열이 붙습니다. Qwen3에서 `QUERY_PROMPT_OVERRIDE`를 주면 그
+  문자열로 학습하고, 저장되는 모델의 prompt도 그 문자열로 바뀝니다.
 
-## 3. 결과 회수 + 평가
+T4(15GB)에서 모델별 설정:
 
-1. Drive의 `runs/finetune/<태그>/`를 통째로 내려받아 로컬 `models/<태그>/`에 둡니다
-   (`models/`는 `.gitignore`에 등록돼 있어 git에는 안 올라갑니다 — 용량이 크기 때문).
-   이 폴더 안에 가중치와 함께 `model_manifest.json`도 들어있습니다(4절 참고).
-2. `configs/models/<태그>.yaml`을 새로 만듭니다:
-   ```yaml
-   name: <태그>
-   model_id: models/<태그>          # 로컬 경로 — SentenceTransformer()가 HF Hub ID처럼 그대로 로드함
-   query_prompt_name: null          # 베이스 모델이 쓰던 값을 그대로 유지(예: qwen3 계열은 "query")
-   normalize_embeddings: true
-   target_dimension: null
-   batch_size: 32
-   ```
-3. 기존 zero-shot harness로 그대로 평가:
-   ```bash
-   python scripts/14_run_model_eval.py --model-config configs/models/<태그>.yaml --split val
-   python scripts/15_score_model_runs.py --split val
-   ```
-   zero-shot 때 만든 `leaderboard_val.csv`에 fine-tuned 모델도 같은 표에 나란히 비교됩니다.
-   **`14_run_model_eval.py`가 이 평가 결과를 `model_manifest.json`의 `evaluations`에도 자동으로
-   추가합니다** — 별도 조치 필요 없음.
+| 모델 | 설정 |
+|---|---|
+| arctic_ko / bge_m3 | 기본값(batch 32). OOM이면 batch 16 또는 `loss="mnrl"` |
+| qwen3 0.6B | 기본값(LoRA r=16, lr 1e-4, fp32 베이스) |
+| qwen3 4B | `BASE_DTYPE="float16"`, `BATCH_SIZE=8`, `LOSS="mnrl"`. fp16 overflow로 NaN이 나면 L4/A100 필요 |
+| qwen3 8B | T4 불가 |
 
-## 4. model_manifest.json — 나중에 서비스에 가져다 쓸 체크포인트 추적
+### 중간 체크포인트 (한 번만) + 이어서 학습
 
-가중치 파일만 있으면 몇 달 뒤엔 "이 폴더에 있는 모델이 정확히 무엇으로, 어떤 데이터로, 어떤
-설정으로 학습됐고 성능이 어땠는지" 알 방법이 없어집니다. 그래서 `write_model_manifest()`/
-`append_model_manifest_evaluation()`(`src/store_search_ai/pipeline/common.py`)이 학습 스크립트가
-끝날 때 자동으로 `models/<태그>/model_manifest.json`을 만들고, 평가할 때마다 결과를 추가합니다.
-서비스에 어떤 체크포인트를 배포할지 고를 때 이 파일 하나만 보면 됩니다:
+학습 step의 **절반 지점에서 딱 한 번** Drive `runs/finetune/<TAG>.ckpt/checkpoint-N/`에 체크포인트(모델 +
+optimizer/scheduler 상태)를 저장합니다. 매 epoch마다 쌓지 않는 이유는 Drive 용량 때문입니다.
 
-```json
-{
-  "tag": "qwen3_embedding_0_6b_ft_v1",
-  "base_model_id": "Qwen/Qwen3-Embedding-0.6B",
-  "framework": "ms-swift+lora",
-  "created_at": "2026-09-14T12:34:56+00:00",
-  "hyperparameters": { "lora_rank": 16, "num_train_epochs": 3, "...": "..." },
-  "training_data": { "source": "...", "sha256": "...", "num_examples": 237 },
-  "evaluations": [
-    { "evaluated_at": "...", "split": "val", "template": "t1_minimal",
-      "tag": "qwen3_embedding_0_6b_ft_v1_val", "metrics": { "nDCG@10": 0.51, "...": "..." } }
-  ]
-}
+- **Colab 연결이 끊기면**: 스크립트의 `RESUME_TAG`에 그 run의 TAG(`.ckpt` 앞부분)를 넣고, **나머지 설정은
+  처음과 똑같이** 둔 채 다시 실행하면 checkpoint-N부터 이어서 학습합니다. 설정이나 `train_pairs.jsonl`이
+  처음과 다르면(`.ckpt/finetune_config.json`과 비교) 이어 붙이지 않고 거부합니다 — 다른 설정의 학습이 섞인
+  모델이 나오면 manifest를 믿을 수 없게 되기 때문입니다(`note`, `keep_last_runs`만 달라도 됨).
+- **절반 지점 전에 끊기면** 체크포인트가 없으니 처음부터 다시 돌립니다(`.ckpt` 폴더는 지워도 됨).
+- **최종 모델 저장이 성공하면 `.ckpt` 폴더는 자동으로 지웁니다.** 끝나지 않은 run의 `.ckpt`는 자동 정리
+  대상이 아니라서, 이어서 학습할 게 아니면 직접 지우세요(학습 끝에 경고로 목록이 찍힘).
+- **크기**: LoRA(Qwen3)는 수십 MB, full fine-tuning(Arctic/BGE)은 fp32 가중치 + Adam 상태라 **약 7GB**입니다.
+  학습 도중에는 Drive에 그만큼 여유가 필요합니다. 여유가 없으면 `SAVE_MID_CHECKPOINT = False`
+  (끊기면 처음부터 다시).
+
+## 3. 저장 규칙 — Drive에 남는 건 최종 모델만
+
+`runs/finetune/<TAG>/` 하나에 전부 들어갑니다(`TAG` = `{베이스모델}_ft_{OWNER}_{YYYYMMDD_HHMM}`, UTC):
+
+```
+runs/finetune/bge_m3_ft_jisu_20260928_0307/
+  model.safetensors ...        # merge된 전체 모델, fp16 (fp32의 절반 용량)
+  modules.json, 1_Pooling/ ... # sentence-transformers 설정(pooling/prompt/normalize) — 그대로 로드 가능
+  model_manifest.json          # 5절
+  eval_config.yaml             # configs/models/<TAG>.yaml로 복사해서 쓰는 평가 설정
+  code_snapshot.zip            # 학습에 실제로 쓴 store_search_ai 코드 사본
 ```
 
-이 파일은 `models/`와 함께 `.gitignore` 대상이라(가중치와 같은 폴더에 있으므로) git에는 안
-올라갑니다 — 팀과 공유하려면 체크포인트 폴더(가중치+manifest)를 통째로 공유 스토리지에 두세요.
-서빙 인프라(API, ANN 인덱스 등)는 아직 이 저장소 범위 밖입니다 — 이 매니페스트는 "어떤 체크포인트를
-배포할지" 결정하는 데 필요한 최소한의 추적 정보만 제공합니다.
+- 저장은 `<TAG>.partial/`에 먼저 하고, **다시 로드해서 임베딩이 메모리의 모델과 같은지 검증**하고
+  manifest까지 쓴 뒤에야 `<TAG>/`로 이름을 바꿉니다. `.partial`이 남아 있으면 중간에 끊긴 것이니 지웁니다.
+- 저장이 끝나면 **같은 OWNER·같은 베이스 모델의 run은 최신 3개(`keep_last_runs`)만 남기고 지웁니다.**
+  다른 팀원의 run, 다른 베이스 모델의 run, `.partial`/`.ckpt` 폴더는 건드리지 않습니다.
+- **서비스 후보로 남길 run은 그 폴더에 빈 파일 `KEEP`을 만듭니다**(Drive 화면에서는 빈 파일을 못 만들어서,
+  Colab 학습 스크립트 맨 아래 셀의 `(... / "<TAG>" / "KEEP").touch()` 한 줄로). KEEP이 있는 run은 지우지 않고
+  3개 개수에도 세지 않습니다. 로컬에서 val 점수를 보고 고른 run에 KEEP을 붙이는 게 기본 흐름입니다.
+- Drive에서 지운 폴더는 Drive 휴지통으로 갑니다. 용량을 바로 확보하려면 휴지통도 비우세요.
+
+## 4. 결과 회수 + 평가 (로컬)
+
+1. Drive의 `runs/finetune/<TAG>/`를 통째로 로컬 `models/<TAG>/`로 내려받습니다(`models/`는 `.gitignore` 대상).
+2. `models/<TAG>/eval_config.yaml`을 `configs/models/<TAG>.yaml`로 복사합니다(`model_id: models/<TAG>`,
+   `query_prompt_name`/`target_dimension`은 베이스 모델 값이 그대로 들어가 있습니다).
+3. 기존 harness로 그대로 평가합니다:
+   ```bash
+   python scripts/14_run_model_eval.py --model-config configs/models/<TAG>.yaml --split val
+   python scripts/15_score_model_runs.py --split val
+   ```
+   `14_run_model_eval.py`가 평가 결과를 `models/<TAG>/model_manifest.json`의 `evaluations`에 자동으로 추가합니다.
+   로컬에 GPU가 없으면 `colab/run_model_eval_encoding.py`로 run.csv만 Colab에서 만들고 채점은 로컬에서 합니다
+   (`colab/README.md`). 이 스크립트는 `model_id: models/<TAG>`를 Drive `runs/finetune/<TAG>`로 자동으로 바꿔 읽으므로
+   yaml을 Colab용으로 따로 고칠 필요가 없습니다. 이 경로로 평가하면 manifest의 `evaluations`는 자동으로 안 쌓입니다.
+
+## 5. model_manifest.json — 서비스에 가져다 쓸 체크포인트 추적
+
+가중치만 있으면 몇 달 뒤엔 "이 모델이 정확히 무엇으로, 어떤 데이터로, 어떤 설정으로 학습됐고 성능이
+어땠는지" 알 방법이 없습니다. `run_finetune()`이 학습 직후 아래를 기록하고, 평가할 때마다 `evaluations`가 쌓입니다:
+
+| 키 | 내용 |
+|---|---|
+| `tag`, `owner`, `base_model_id`, `base_model_config`, `framework`, `precision` | 무엇을 누가 어떻게 |
+| `hyperparameters` | `FinetuneConfig` 전체(epoch, batch, lr, loss, LoRA, seed, max_seq_length, note …) |
+| `training_data` | jsonl 경로·sha256, 펼친 행 통계, `prepare_meta`(qrels 경로·sha256·final/provisional, template, threshold, 데이터를 만든 git commit) |
+| `training_result` | 학습 시간, step 수, loss 기록, 중간 체크포인트 step, 이어서 학습했는지(`resumed_from`) |
+| `serving` | **서빙이 그대로 따라야 할 값**: document template, query prompt 이름·원문, 임베딩 차원, normalize, cosine, max_seq_length, 저장 dtype |
+| `environment` | 라이브러리 버전·GPU |
+| `code` | `scripts/pack_for_colab.py`가 적은 git 브랜치·커밋·커밋 안 된 파일 목록 + 학습에 실제로 쓴 코드 사본(모델 폴더의 `code_snapshot.zip`)과 그 해시 — Colab엔 .git이 없어서 사람이 커밋 번호를 적지 않아도 되게 |
+| `evaluations` | 14번이 추가하는 split별 지표 |
+
+체크포인트 폴더(가중치+manifest)는 `.gitignore` 대상이라 git에는 안 올라갑니다 — 팀과 공유하려면
+폴더를 통째로 공유 스토리지에 두고, 공유 시트에는 TAG와 val 지표를 적습니다.
+서빙 인프라(API, ANN 인덱스 등)는 아직 이 저장소 범위 밖입니다 — 이 매니페스트의 `serving`이
+"서빙이 학습·평가와 똑같이 인코딩하려면 무엇을 맞춰야 하는지"의 단일 기준입니다.
 
 ## 재현성 메모
 
 `data/finetune/train_pairs.jsonl`은 qrels_train + corpus + queries.csv로부터 결정적으로
 재생성되는 파생 파일입니다. train qrels가 갱신되면(추가 애노테이션 등)
-`prepare_finetune_dataset.py`를 다시 돌리고 Colab 학습도 다시 하면 됩니다.
+`prepare_finetune_dataset.py`를 다시 돌리고 jsonl과 meta.json을 같이 다시 올린 뒤 Colab 학습도 다시 하면 됩니다.
+seed는 고정(20260831)이지만 GPU 종류·precision(fp16/bf16)이 다르면 결과가 조금 달라질 수 있으므로,
+비교는 manifest의 `precision`/`environment.gpu`가 같은 run끼리 하는 것이 원칙입니다.

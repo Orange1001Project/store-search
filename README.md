@@ -54,6 +54,7 @@ src/store_search_ai/
 scripts/01_*.py ~ scripts/15_*.py   파이프라인 본체 (docs/PIPELINE.md 참고)
 scripts/import_queryset_xlsx.py    data/query/queryset_final.xlsx → query_families_v1.yaml 변환기(번호 없음, 05 이전에 1회성 실행)
 scripts/prepare_finetune_dataset.py  train qrels+corpus → fine-tuning용 jsonl (번호 없음, docs/TRAINING.md 참고)
+scripts/pack_for_colab.py            Colab(Drive)에 올릴 project/ 폴더 생성 + git 정보 기록 (docs/TRAINING_TEAM.md 참고)
 data/
   raw/stores_20260907.xlsx       원본 전국 데이터 (수정 금지)
   query/queryset_final.xlsx      팀이 작성한 최종 query family/질의 원본 (수정 금지, import_queryset_xlsx.py가 읽음)
@@ -70,7 +71,8 @@ docs/
   PIPELINE.md                    15단계 실행 순서·인자·사람 개입 지점 (필독)
   EXTENDING_DATA.md               raw 데이터 확장 / query family 재정의 방법
   MODELING.md                    임베딩 모델 zero-shot 비교 구조 (BEIR 스타일)
-  TRAINING.md                    Colab에서 fine-tuning 하는 방법 (Qwen3=ms-swift/LoRA, 나머지=sentence-transformers)
+  TRAINING.md                    Colab fine-tuning 설계·설정 (sentence-transformers; Qwen3=LoRA, 나머지=full)
+  TRAINING_TEAM.md               팀 학습 절차 — 배포된 데이터로 학습 → 평가 → 공유 시트 기록 (학습 담당 필독)
 ```
 
 ## 빠른 시작

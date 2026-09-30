@@ -77,8 +77,11 @@ Colab 결과와 로컬 결과를 구분 없이 함께 채점합니다.
 ## Zero-shot 다음 단계: Fine-tuning
 
 zero-shot 비교로 후보 모델을 추린 뒤에는 실제로 학습을 시켜봅니다 — `docs/TRAINING.md` 참고.
-`colab/run_finetune_qwen3.py`(Qwen3-Embedding, ms-swift+LoRA), `colab/run_finetune_simple.py`
-(Snowflake Arctic/BGE 등, sentence-transformers) 두 스크립트가 있고, 학습 데이터는 로컬에서
-`python scripts/prepare_finetune_dataset.py`로 미리 만들어 Drive에 올립니다. Fine-tuned 모델도
+`colab/run_finetune_qwen3.py`(Qwen3-Embedding, LoRA), `colab/run_finetune_simple.py`
+(Snowflake Arctic/BGE 등, full fine-tuning) 두 스크립트가 있고 학습 코드는
+`store_search_ai.training.st_finetune` 하나를 같이 씁니다(T4에서 동작, Drive에는 최종 모델만 저장).
+학습 데이터는 로컬에서 `python scripts/prepare_finetune_dataset.py`로 미리 만들어
+`train_pairs.jsonl` + `train_pairs.meta.json`을 Drive에 올립니다. 여러 명이 나눠 학습할 때의
+절차·규칙은 `docs/TRAINING_TEAM.md`. Fine-tuned 모델도
 `run_model_eval_encoding.py`/`14_run_model_eval.py`로 zero-shot 모델과 완전히 동일하게 평가됩니다
 (그래서 이 문서/스크립트들 이름에 "zero_shot"을 쓰지 않습니다).

@@ -18,7 +18,9 @@ dependencies=["numpy>=1.26,<3","pandas>=2.2,<4","pyarrow>=16","PyYAML>=6.0","ope
 
 [project.optional-dependencies]
 embedding=["torch>=2.2","transformers>=4.51.0","sentence-transformers>=2.7.0"]
-train=["ms-swift"]
+# Colab 학습(colab/run_finetune_*.py)과 같은 버전 — 바꾸면 두 스크립트의 pip install 줄도 같이 바꿀 것
+train=["sentence-transformers==3.4.1","transformers==4.51.3","peft==0.15.2","datasets==3.5.0",
+"accelerate==1.6.0",]
 dev=["pytest>=8","ruff>=0.6","scikit-learn>=1.5,<2","rank-bm25>=0.2.2,<0.3",
 "ir-measures>=0.4,<0.5",]
 

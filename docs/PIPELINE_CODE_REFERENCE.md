@@ -742,22 +742,25 @@ negatives) 학습쌍 jsonl을 만든다. Colab 학습(`colab/run_finetune_*.py`)
 - `queries.csv`(train split만), corpus의 `--template`(기본 `t1_minimal`) 컬럼
 
 **핵심 로직**
-쿼리별로 qrels를 그룹핑해서: **positive** = `relevance >= binary_relevance_threshold`(기본 2)인
-문서 중 첫 번째, **negatives** = 같은 쿼리의 같은 pool에서 그 미만인 문서를 최대
+쿼리별로 qrels를 그룹핑해서: **positives** = `relevance >= binary_relevance_threshold`(기본 2)인
+문서 전부(relevance 높은 순), **negatives** = 같은 쿼리의 같은 pool에서 그 미만인 문서를 최대
 `--max-negatives`(기본 8)개. negative를 고를 때 `relevance=1`(경계 사례)을 `relevance=0`보다
 먼저 정렬해서 우선 채운다 — 무작위 negative보다 "어휘적으로는 비슷해 보이지만 실제로는 관련
 없는" 진짜 어려운 negative를 우선하는 것으로, GPL/E5/BGE 계열 논문의 hard negative mining과
 같은 발상이다. pooling(06~07)이 이미 그런 후보를 모아 놨고 train qrels가 그 전체 pool에 대한
 사람 판정이므로 추가 검색 없이 바로 재사용된다. positive가 하나도 없는 쿼리(=pool 전체가 낮은
-relevance)는 학습쌍을 만들 수 없으므로 제외하고 개수를 로그에 남긴다.
+relevance)는 학습쌍을 만들 수 없으므로 제외하고 개수를 로그에 남긴다. 텍스트가 완전히 같은
+문서(체인점 등)는 한 번만 쓰고, positive와 텍스트가 같은 문서는 negative에서 뺀다.
 
-출력 스키마는 프레임워크 중립적이다(`{"query_id","query","positive","negatives":[...]}"`) —
-ms-swift는 `positive→response`, `negatives→rejected_response`로 매핑해서 쓰고,
-sentence-transformers는 `InputExample(texts=[query, positive, *negatives])`로 그대로 쓴다.
+출력 스키마는 `{"query_id","query","positives":[...],"negatives":[...]}`이다. (query, positive)
+행으로 펼치고 query당 positive 수를 자르는 건 학습 쪽(`store_search_ai.training.finetune.
+expand_training_rows`, `docs/TRAINING.md` 1절)이 한다.
 
 **출력 파일**
 - `--output`(기본 `data/finetune/train_pairs.jsonl`) — qrels_train + corpus + queries.csv로부터
   결정적으로 재생성되는 파생 파일(train qrels가 갱신되면 다시 돌리면 됨)
+- 같은 위치의 `train_pairs.meta.json` — 사용한 qrels 경로·sha256·final/provisional 여부, template,
+  threshold, git commit. Colab 학습이 이 내용을 model_manifest.json에 그대로 복사한다
 
 **사용하는 src/ 코드**
 - `store_search_ai.data.finetune_dataset.{resolve_train_qrels_path, build_training_pairs}` —
@@ -817,10 +820,11 @@ zero-shot 리더보드에서도(`14_run_model_eval.py`로 여러 모델 비교) 
 
 **Q8. fine-tuning한 모델을 나중에 서비스에 연결할 때 뭘 봐야 하나요?**
 → 14번 절 + `store_search_ai.pipeline.common.write_model_manifest`/
-`append_model_manifest_evaluation`. 학습 스크립트(`colab/run_finetune_*.py`)가 체크포인트 폴더에
-`model_manifest.json`(base 모델, 학습 데이터 sha256, 하이퍼파라미터)을 남기고,
-`14_run_model_eval.py`로 평가할 때마다 그 안의 `evaluations` 리스트에 val/test 점수가 자동으로
-쌓인다. 어떤 체크포인트를 배포할지 고를 때 이 파일 하나만 보면 된다(`docs/TRAINING.md` 4절).
+`append_model_manifest_evaluation`. 학습 코드(`store_search_ai.training.st_finetune`, Colab의
+`colab/run_finetune_*.py`가 호출)가 체크포인트 폴더에 `model_manifest.json`(base 모델, 학습 데이터 sha256,
+하이퍼파라미터, 코드 버전·사본, 서빙이 따라야 할 값)을 남기고, `14_run_model_eval.py`로 평가할 때마다 그 안의
+`evaluations` 리스트에 val/test 점수가 자동으로 쌓인다. 어떤 체크포인트를 배포할지 고를 때 이 파일 하나만 보면
+된다(`docs/TRAINING.md` 5절, 팀 규칙은 `docs/TRAINING_TEAM.md`).
 
 **Q9. 쿼리 원본은 어디서 오고, fine-tuning 데이터는 어떻게 만드나요?**
 → `import_queryset_xlsx.py` 절 + `prepare_finetune_dataset.py` 절. 둘 다 01~15 실행 순서에

@@ -10,7 +10,11 @@
 파일 IO, 콘솔 출력만 담당한다.
 
 출력 스키마(jsonl, 한 줄 = 쿼리 하나):
-  {"query_id": "...", "query": "...", "positive": "...", "negatives": ["...", ...]}
+  {"query_id": "...", "query": "...", "positives": ["...", ...], "negatives": ["...", ...]}
+
+jsonl 옆에 `<이름>.meta.json`도 함께 쓴다(어떤 qrels/설정/커밋으로 만든 학습 데이터인지).
+Colab 학습 스크립트가 이 파일을 그대로 model_manifest.json의 training_data에 복사한다 —
+jsonl만으로는 provisional qrels로 만든 건지 final로 만든 건지 나중에 구분할 수 없기 때문.
 
 사용법:
     python scripts/prepare_finetune_dataset.py
@@ -22,6 +26,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -35,7 +41,18 @@ from store_search_ai.pipeline.common import (
     DEFAULT_ANNOTATION_ROUND,
     load_active_queries,
     load_config,
+    sha256_file,
 )
+
+
+def _git_commit() -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return result.stdout.strip()
 
 
 def main() -> None:
@@ -81,11 +98,30 @@ def main() -> None:
         for record in records:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
+    meta_path = output_path.with_suffix(".meta.json")
+    meta = {
+        "created_at": datetime.now(UTC).isoformat(),
+        "git_commit": _git_commit(),
+        "benchmark_version": config["benchmark_version"],
+        "corpus_version": config["corpus_version"],
+        "qrels_path": qrels_path.as_posix(),
+        "qrels_sha256": sha256_file(qrels_path),
+        "qrels_kind": "final" if qrels_path.name == "qrels_train.csv" else "provisional",
+        "template": args.template,
+        "binary_relevance_threshold": threshold,
+        "max_negatives": args.max_negatives,
+        "train_pairs_sha256": sha256_file(output_path),
+        "stats": stats,
+    }
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+
     n_written = stats["n_written"]
     print(
         f"[완료] {output_path}: query {n_written}개 "
-        f"(평균 negative {stats['total_negatives'] / max(n_written, 1):.1f}개/query)"
+        f"(평균 positive {stats['total_positives'] / max(n_written, 1):.1f}개, "
+        f"negative {stats['total_negatives'] / max(n_written, 1):.1f}개/query)"
     )
+    print(f"[완료] {meta_path} (Colab에 jsonl과 같이 올릴 것)")
     print(f"[제외] positive 없는 query {stats['n_skipped_no_positive']}개 (pool 전체가 relevance<{threshold})")
 
 

@@ -135,9 +135,16 @@ retrieval 로직을 Colab에 다시 구현하지 않는다.
 import gc
 
 
+FINETUNE_RUN_DIR = DRIVE_ROOT / "runs" / "finetune"
+
+
 def run_one_model(model_config_path, templates, split_queries, corpus, split):
     config = load_config(model_config_path)
     tag = config["name"]
+    # fine-tuned 모델의 eval_config.yaml은 로컬 경로(models/<TAG>)를 가리킨다 — Colab에서는 같은 모델이
+    # Drive runs/finetune/<TAG>/에 있으므로 그쪽으로 바꿔서 읽는다(yaml을 Colab용으로 따로 고칠 필요 없음).
+    if str(config["model_id"]).startswith("models/"):
+        config = {**config, "model_id": str(FINETUNE_RUN_DIR / Path(config["model_id"]).name)}
     print(f"\n===== {tag} ({config['model_id']}) =====")
 
     encoder = SentenceTransformerEncoder(config)
