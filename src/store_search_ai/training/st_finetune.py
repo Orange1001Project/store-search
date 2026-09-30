@@ -45,9 +45,11 @@ from store_search_ai.training.finetune import (
     PARTIAL_SUFFIX,
     config_mismatches,
     expand_training_rows,
+    iter_package_files,
     latest_checkpoint,
     load_jsonl,
     make_run_tag,
+    package_tree_sha256,
     prune_finetune_runs,
     run_tag_prefix,
     validate_resume_tag,
@@ -170,18 +172,27 @@ def _save_code_snapshot(model_dir: Path) -> dict:
 
     snapshot_path = model_dir / "code_snapshot.zip"
     with zipfile.ZipFile(snapshot_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for path in sorted(_PACKAGE_DIR.rglob("*")):
-            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc":
-                zf.write(path, Path("store_search_ai") / path.relative_to(_PACKAGE_DIR))
+        for path in iter_package_files(_PACKAGE_DIR):
+            zf.write(path, Path("store_search_ai") / path.relative_to(_PACKAGE_DIR))
 
+    tree_sha256 = package_tree_sha256(_PACKAGE_DIR)
     version_path = _PACKAGE_DIR.parents[1] / "code_version.json"
+    edited_after_pack = None
     if version_path.exists():
         version = json.loads(version_path.read_text(encoding="utf-8"))
+        edited_after_pack = version.get("src_tree_sha256") != tree_sha256
+        if edited_after_pack:
+            print(
+                "[안내] Drive에 올린 뒤 Colab에서 고친 코드로 학습했습니다 — 정확한 코드는 모델 폴더의 "
+                "code_snapshot.zip에 있습니다(좋은 결과면 이걸 로컬에 풀어서 커밋, docs/TRAINING_TEAM.md 3절)."
+            )
     else:
         version = None
         print("[안내] code_version.json 없음 — scripts/pack_for_colab.py로 올리면 git 커밋 정보도 자동으로 남습니다.")
     return {
         "version": version,
+        "edited_after_pack": edited_after_pack,
+        "src_tree_sha256": tree_sha256,
         "snapshot": snapshot_path.name,
         "snapshot_sha256": sha256_file(snapshot_path),
     }

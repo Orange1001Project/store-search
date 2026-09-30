@@ -153,7 +153,7 @@ runs/finetune/bge_m3_ft_jisu_20260928_0307/
 | `training_result` | 학습 시간, step 수, loss 기록, 중간 체크포인트 step, 이어서 학습했는지(`resumed_from`) |
 | `serving` | **서빙이 그대로 따라야 할 값**: document template, query prompt 이름·원문, 임베딩 차원, normalize, cosine, max_seq_length, 저장 dtype |
 | `environment` | 라이브러리 버전·GPU |
-| `code` | `scripts/pack_for_colab.py`가 적은 git 브랜치·커밋·커밋 안 된 파일 목록 + 학습에 실제로 쓴 코드 사본(모델 폴더의 `code_snapshot.zip`)과 그 해시 — Colab엔 .git이 없어서 사람이 커밋 번호를 적지 않아도 되게 |
+| `code` | `scripts/pack_for_colab.py`가 적은 git 브랜치·커밋·커밋 안 된 파일 목록 + 학습에 실제로 쓴 코드 사본(모델 폴더의 `code_snapshot.zip`)과 그 해시. `edited_after_pack: true`면 올린 뒤 Colab 편집기에서 고친 코드로 학습했다는 뜻(정확한 코드는 사본) — Colab엔 .git이 없어서 사람이 커밋 번호를 적지 않아도 되게 |
 | `evaluations` | 14번이 추가하는 split별 지표 |
 
 체크포인트 폴더(가중치+manifest)는 `.gitignore` 대상이라 git에는 안 올라갑니다 — 팀과 공유하려면

@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -82,6 +83,31 @@ def config_mismatches(saved: dict, current: dict, ignore: frozenset[str] = RESUM
 
     keys = (set(saved) | set(current)) - ignore
     return sorted(key for key in keys if saved.get(key) != current.get(key))
+
+
+def iter_package_files(package_dir: str | Path) -> list[Path]:
+    """코드 사본·해시에 넣을 파일 목록(캐시 파일 제외, 정렬 — 순서가 같아야 해시가 같다)."""
+
+    return sorted(
+        path
+        for path in Path(package_dir).rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+    )
+
+
+def package_tree_sha256(package_dir: str | Path) -> str:
+    """패키지 폴더 전체(파일 경로 + 내용)의 해시.
+
+    `scripts/pack_for_colab.py`가 올릴 때 한 번, 학습할 때 한 번 계산해서 비교한다 — 다르면 Drive에 올린 뒤
+    Colab 편집기에서 코드를 고쳐서 학습했다는 뜻이다(이때 정확한 코드 기록은 모델 폴더의 code_snapshot.zip).
+    """
+
+    package_dir = Path(package_dir)
+    digest = hashlib.sha256()
+    for path in iter_package_files(package_dir):
+        digest.update(path.relative_to(package_dir).as_posix().encode("utf-8") + b"\0")
+        digest.update(path.read_bytes() + b"\0")
+    return digest.hexdigest()
 
 
 def load_jsonl(path: str | Path) -> list[dict]:

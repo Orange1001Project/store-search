@@ -42,6 +42,12 @@ DRIVE_ROOT = Path("/content/drive/MyDrive/store-search-ai")
 PROJECT_DIR = DRIVE_ROOT / "project"
 sys.path.insert(0, str(PROJECT_DIR / "src"))
 
+# Colab 편집기에서 Drive의 src/ 코드를 고치면(왼쪽 파일 탐색기 → drive/MyDrive/store-search-ai/project/src/...
+# 더블클릭) 세션을 다시 시작하지 않아도 다음 셀 실행 때 고친 코드가 자동으로 다시 import된다.
+# 고친 코드는 학습 때 모델 폴더의 code_snapshot.zip에 그대로 저장된다(docs/TRAINING_TEAM.md 3절).
+get_ipython().run_line_magic("load_ext", "autoreload")
+get_ipython().run_line_magic("autoreload", "2")
+
 from store_search_ai.training.st_finetune import FinetuneConfig, run_finetune
 
 SMOKE_ROOT = DRIVE_ROOT / "runs" / "finetune_smoke"

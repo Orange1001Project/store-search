@@ -131,3 +131,24 @@ def test_config_mismatches_ignores_resume_only_keys():
     assert config_mismatches(saved, same) == []
     changed = {**same, "batch_size": 16, "train_pairs_sha256": "y"}
     assert config_mismatches(saved, changed) == ["batch_size", "train_pairs_sha256"]
+
+
+def test_package_tree_sha256_changes_on_edit_and_ignores_cache(tmp_path):
+    from store_search_ai.training.finetune import (
+        iter_package_files,
+        package_tree_sha256,
+    )
+
+    pkg = tmp_path / "store_search_ai"
+    (pkg / "training").mkdir(parents=True)
+    (pkg / "training" / "st_finetune.py").write_text("lr = 1\n", encoding="utf-8")
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    before = package_tree_sha256(pkg)
+
+    (pkg / "__pycache__").mkdir()
+    (pkg / "__pycache__" / "x.cpython-312.pyc").write_bytes(b"cache")
+    assert package_tree_sha256(pkg) == before
+    assert [p.name for p in iter_package_files(pkg)] == ["__init__.py", "st_finetune.py"]
+
+    (pkg / "training" / "st_finetune.py").write_text("lr = 2\n", encoding="utf-8")
+    assert package_tree_sha256(pkg) != before

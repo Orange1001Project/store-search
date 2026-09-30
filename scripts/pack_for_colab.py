@@ -25,6 +25,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from store_search_ai.pipeline.common import load_config
+from store_search_ai.training.finetune import package_tree_sha256
 
 
 def _git(*args: str, strip: bool = True) -> str | None:
@@ -77,6 +78,8 @@ def main() -> None:
         "git_commit": _git("rev-parse", "HEAD"),
         "uncommitted_changes": bool(changed_files),
         "uncommitted_files": changed_files,
+        # 학습 때 다시 계산해서 비교 — 다르면 Colab 편집기에서 고친 코드로 학습했다는 뜻
+        "src_tree_sha256": package_tree_sha256(project_dir / "src" / "store_search_ai"),
     }
     (project_dir / "code_version.json").write_text(
         json.dumps(code_version, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"

@@ -4,7 +4,7 @@ Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하�
 검색 서비스·벡터DB에 바로 연결**할 수 있게 하기 위한 최소 규칙입니다. 설계 배경은 `docs/TRAINING.md`에 있습니다.
 
 > **요약**
-> - 코드·설정은 마음대로 바꿔도 됩니다. 커밋·push도 학습 전에 안 해도 됩니다.
+> - 코드·설정은 마음대로 바꿔도 됩니다. 실험 중 코드는 **Colab 편집기에서 바로** 고치고(다시 올릴 필요 없음), 커밋·push는 좋은 결과가 나온 뒤에 합니다.
 > - 사람이 적는 건 **Colab의 `NOTE` 한 줄**과, 나중에 좋은 결과가 나왔을 때 **공유 시트 한 줄**뿐입니다. 나머지는 자동으로 기록됩니다.
 > - 평가 기준(정답 파일·채점 코드)만은 아무도 바꾸지 않습니다.
 
@@ -48,10 +48,14 @@ Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하�
 
 ---
 
-## 3. 매번 하는 순서 (VS Code → Drive → Colab)
+## 3. 작업 순서
+
+올리는 건 **처음 한 번(또는 git에서 새 코드를 받았을 때)** 만 하고, 실험하면서 코드를 고치는 건 **Colab에서 바로** 합니다.
+
+### 3-1. 처음 한 번: VS Code → Drive
 
 ```
-[VS Code]  코드·설정 수정 (커밋 안 해도 됨)
+[VS Code]  git pull (또는 코드·설정 수정 — 커밋 안 해도 됨)
     ↓      터미널에서:  python scripts/pack_for_colab.py
 [로컬]     colab_upload/project/ 폴더가 생김 (코드 + 모델 설정 + 학습 데이터 + git 커밋 정보)
     ↓
@@ -65,8 +69,32 @@ Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하�
 - **push는 학습에 필요 없습니다.** `pack_for_colab.py`가 "어느 커밋에서, 어떤 파일을 커밋 안 한 채로 올렸는지"를 자동으로
   적고(`code_version.json`), 학습할 때 **실제로 쓴 코드 사본이 모델 폴더에 함께 저장**됩니다. 그래서 커밋을 안 했어도
   나중에 그 모델이 어떤 코드로 학습됐는지 그대로 확인할 수 있습니다.
-- Colab을 **이미 쓰던 세션**에서 코드를 새로 올렸다면 **런타임 > 세션 다시 시작** 후 실행하세요(예전 코드가 메모리에 남아 있음).
 - 처음 한 번은 `colab/smoke_test_finetune.py`(가짜 데이터, 몇 분)로 마지막에 `통과`가 나오는지 확인하세요.
+
+### 3-2. 실험 중: Colab에서 바로 코드 고치기 (다시 올릴 필요 없음)
+
+1. Colab 왼쪽 **파일 아이콘(📁)** → `drive/MyDrive/store-search-ai/project/src/store_search_ai/training/st_finetune.py`
+   (또는 고칠 파일)을 **더블클릭** → 오른쪽에 편집기가 열립니다. 고치면 Drive 파일에 바로 저장됩니다.
+2. 학습 셀(`final_dir = run_finetune(cfg)`)을 **다시 실행**합니다. 학습 스크립트가 `autoreload`를 켜 두어서 고친 코드가
+   자동으로 다시 불러와집니다(세션 재시작 불필요). 이상하게 예전 코드가 도는 것 같으면 그때만 **런타임 > 세션 다시 시작**.
+3. 기록은 자동입니다: 학습할 때 그 순간의 코드가 모델 폴더의 `code_snapshot.zip`에 저장되고, manifest의
+   `code.edited_after_pack`이 `true`로 남습니다(올린 뒤 Colab에서 고쳤다는 표시). **`NOTE`에 무엇을 고쳤는지 한 줄**은 적어 주세요.
+
+**주의 — 고친 코드는 Drive에만 있습니다.**
+- 3-1을 다시 하면(기존 `project` 폴더 삭제 후 업로드) **Colab에서 고친 내용이 사라집니다.** 다시 올리기 전에 3-3으로 먼저 가져오세요.
+- 로컬 VS Code와 Drive 양쪽에서 같은 파일을 동시에 고치지 마세요. 실험 중에는 Drive(Colab) 쪽만 고칩니다.
+
+### 3-3. 좋은 결과가 나왔을 때: 그 코드를 git으로 가져오기
+
+그 run 폴더의 `code_snapshot.zip`이 **학습에 쓴 코드 그대로**입니다. 이걸 로컬에 풀어서 커밋합니다.
+
+1. Drive `runs/finetune/<TAG>/code_snapshot.zip`을 내려받습니다.
+2. 로컬 저장소 루트에서 `src/`에 덮어써 풉니다(PowerShell):
+   ```powershell
+   Expand-Archive -Force code_snapshot.zip src/
+   ```
+3. `git diff`로 바뀐 내용을 확인한 뒤, 개인 실험 브랜치(예: `exp/jisu-bge-negmining`)에 커밋·push합니다.
+4. 공유 시트의 "코드커밋" 칸에 그 커밋 번호를 적습니다.
 
 ---
 
@@ -225,17 +253,18 @@ TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision
 이 `.py` 파일은 `"""## 제목"""`이 셀 구분 위치입니다. Colab에서 그 위치마다 셀을 나눠 붙여도 되고, 파일 전체를 셀 하나에 붙여도 됩니다.
 
 **Q. `run_finetune_simple.py`를 계속 고치면 되나요?**
-**설정값만** 이 파일에서 바꿉니다. 로직은 `src/`에서 고칩니다.
+**설정값만** 이 파일(노트북 셀)에서 바꿉니다. 로직은 Drive의 `src/` 파일을 **Colab 편집기에서 바로** 고칩니다(3-2절 —
+다시 올릴 필요 없음).
 
 | 바꾸려는 것 | 어디를 고치나 |
 |---|---|
-| epoch, batch, lr, loss, negative 개수 등 | `run_finetune_simple.py`의 `cfg = FinetuneConfig(...)` 안의 값 |
-| 학습 방식(새 loss, 학습 루프, 저장 방식) | `src/store_search_ai/training/st_finetune.py` |
-| 학습 데이터를 행으로 펼치는 방식 | `src/store_search_ai/training/finetune.py` |
-| positive/negative 뽑는 방식 | `src/store_search_ai/data/finetune_dataset.py` (데이터 담당과 상의) |
+| epoch, batch, lr, loss, negative 개수 등 | 노트북 설정 셀의 `cfg = FinetuneConfig(...)` 안의 값 |
+| 학습 방식(새 loss, 학습 루프, 저장 방식) | Drive `project/src/store_search_ai/training/st_finetune.py` |
+| 학습 데이터를 행으로 펼치는 방식 | Drive `project/src/store_search_ai/training/finetune.py` |
+| positive/negative 뽑는 방식 | `src/store_search_ai/data/finetune_dataset.py` (학습 데이터를 다시 만드는 일이라 데이터 담당과 상의) |
 
-**Colab 셀 안에 로직 코드를 직접 추가하면 기록에 안 남습니다.** 자동 저장되는 코드 사본은 `src/store_search_ai`만 담기
-때문입니다. 설정값은 manifest에 남지만 셀에 쓴 로직은 사라집니다. 로직은 반드시 `src/`에 넣고 `pack_for_colab.py`로 올리세요.
+**노트북 셀 안에 로직 코드를 직접 쓰면 기록에 안 남습니다.** 자동 저장되는 코드 사본은 `src/store_search_ai`만 담기 때문입니다.
+셀 안에서 잠깐 시험해 보는 건 괜찮지만, 결과를 남길 학습은 그 로직을 Drive의 `src/` 파일로 옮긴 뒤 돌리세요.
 
 **Q. 공유 시트는 어디에 있나요?**
 처음에 한 명이 팀 공유 Drive에 만듭니다(8절의 헤더를 첫 줄에 붙여넣기). 기록은 2단계(val 정답 배포 후)부터 합니다.
