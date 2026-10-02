@@ -16,6 +16,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pandas as pd
 
 from store_search_ai.data.annotation_sheets import (
@@ -23,6 +26,25 @@ from store_search_ai.data.annotation_sheets import (
     add_judgment_ids,
     attach_query_metadata,
 )
+
+
+def supplemental_round_names(annotations_root: Path) -> set[str]:
+    """`annotations/*/supplemental_manifest.json`이 있는 보충 라운드 이름 전체."""
+
+    return {
+        json.loads(path.read_text(encoding="utf-8"))["round"]
+        for path in Path(annotations_root).glob("*/supplemental_manifest.json")
+    }
+
+
+def exclude_supplemental_rows(pool: pd.DataFrame, annotations_root: Path) -> pd.DataFrame:
+    """본 라운드(08번) 시트를 만들 때 보충 라운드에서 들어온 후보를 뺀다 — 보충 후보는 16번이 따로 판정한다.
+
+    이게 없으면 보충 라운드 뒤에 08번을 다시 돌렸을 때 본 라운드 시트에 보충 후보가 섞인다.
+    """
+
+    rounds = supplemental_round_names(annotations_root)
+    return pool[~pool["first_seen_round"].isin(rounds)] if rounds else pool
 
 
 def target_queries_with_terms(queries: pd.DataFrame, query_ids: list[str], terms: list[str]) -> pd.DataFrame:

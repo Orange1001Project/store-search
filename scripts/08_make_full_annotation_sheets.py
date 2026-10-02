@@ -23,6 +23,7 @@ from store_search_ai.data.annotation_sheets import (
     prepare_pool,
     write_annotation_file,
 )
+from store_search_ai.data.supplemental_round import exclude_supplemental_rows
 from store_search_ai.pipeline.common import (
     DEFAULT_ANNOTATION_ROUND,
     get_annotation_round_dirs,
@@ -49,6 +50,7 @@ def main() -> None:
     queries_path = benchmark_dir / "queries.csv"
 
     pool = pd.read_csv(pool_path)
+    pool = exclude_supplemental_rows(pool, benchmark_dir / "annotations")  # 보충 후보는 16번이 따로 판정
     queries = pd.read_csv(queries_path)
     queries = queries[queries["status"] == "active"].copy()
 

@@ -76,3 +76,16 @@ def test_merge_appends_new_rows_replaces_same_round_and_protects_base():
     clash = pd.DataFrame({"judgment_id": ["a"], "final_relevance": [1], "supplemental_round": ["supplement_v1"]})
     with pytest.raises(ValueError, match="겹칩니다"):
         merge_into_base_adjudication(base, clash)
+
+
+def test_exclude_supplemental_rows_drops_rounds_with_manifest(tmp_path):
+    import json
+
+    from store_search_ai.data.supplemental_round import exclude_supplemental_rows
+
+    pool = pd.DataFrame({"query_id": ["q1", "q1"], "doc_id": ["a", "b"], "first_seen_round": ["lexical_v1", "supplement_v1"]})
+    assert len(exclude_supplemental_rows(pool, tmp_path)) == 2  # 보충 라운드 없으면 그대로
+
+    (tmp_path / "supplement_v1").mkdir()
+    (tmp_path / "supplement_v1" / "supplemental_manifest.json").write_text(json.dumps({"round": "supplement_v1"}), encoding="utf-8")
+    assert exclude_supplemental_rows(pool, tmp_path)["doc_id"].tolist() == ["a"]
