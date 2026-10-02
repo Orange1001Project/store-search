@@ -47,6 +47,36 @@ def exclude_supplemental_rows(pool: pd.DataFrame, annotations_root: Path) -> pd.
     return pool[~pool["first_seen_round"].isin(rounds)] if rounds else pool
 
 
+SUPPLEMENTAL_ADJUDICATION_NAME = "adjudication_full_completed.csv"
+"""16번 merge가 보충 라운드 폴더(`annotations/{round}/analysis/`)에 남기는 최종 판정 파일."""
+
+
+def supplemental_adjudication_paths(annotations_root: Path, base_round: str) -> tuple[list[Path], list[str]]:
+    """`base_round`에 덧붙일 보충 라운드들의 최종 판정 파일 목록과, 아직 merge 전인 라운드 이름 목록.
+
+    11번(qrels)·12번(검증)이 본 라운드 판정과 이 파일들을 합쳐서 읽는다 — 보충 판정을 본 라운드 파일(10번 출력)에
+    직접 쓰지 않으므로, 10번을 다시 돌려도 보충 판정이 사라지지 않는다.
+    """
+
+    paths, pending = [], []
+    for manifest_path in sorted(Path(annotations_root).glob("*/supplemental_manifest.json")):
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("base_round") != base_round:
+            continue
+        adjudication = manifest_path.parent / "analysis" / SUPPLEMENTAL_ADJUDICATION_NAME
+        (paths.append(adjudication) if adjudication.exists() else pending.append(manifest["round"]))
+    return paths, pending
+
+
+def combine_with_supplemental(base: pd.DataFrame, supplements: list[pd.DataFrame]) -> pd.DataFrame:
+    """본 라운드 판정 + 보충 라운드 판정(judgment_id가 겹치면 에러 — 기존 판정은 바꾸지 않음)."""
+
+    combined = base
+    for supplement in supplements:
+        combined = merge_into_base_adjudication(combined, supplement)
+    return combined
+
+
 def target_queries_with_terms(queries: pd.DataFrame, query_ids: list[str], terms: list[str]) -> pd.DataFrame:
     """보충할 쿼리만 골라 targeted 채널용 positive 용어를 이번 라운드 용어로 바꾼 사본.
 

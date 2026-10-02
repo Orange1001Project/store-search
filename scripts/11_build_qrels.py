@@ -29,6 +29,10 @@ from store_search_ai.data.qrels_builder import (
     manifest_json,
     save_qrels_outputs,
 )
+from store_search_ai.data.supplemental_round import (
+    combine_with_supplemental,
+    supplemental_adjudication_paths,
+)
 from store_search_ai.pipeline.common import (
     DEFAULT_ANNOTATION_ROUND,
     get_annotation_round_dirs,
@@ -77,6 +81,16 @@ def main() -> None:
     )
     adj = load_adjudication(adjudication_path)
 
+    # 보충 pooling 라운드(16번)의 판정을 합친다 — 본 라운드 파일에는 쓰지 않으므로 여기서 매번 합친다.
+    supplemental_paths, pending_rounds = supplemental_adjudication_paths(
+        benchmark_dir / "annotations", args.round
+    )
+    if pending_rounds:
+        print(f"[경고] merge 전인 보충 라운드(이번 qrels에 안 들어감): {pending_rounds}")
+    adj = combine_with_supplemental(adj, [load_adjudication(p) for p in supplemental_paths])
+    for path in supplemental_paths:
+        print(f"[INFO] 보충 라운드 판정 포함: {path}")
+
     qrels_val = build_split_qrels(adj, "val")
     qrels_test = build_split_qrels(adj, "test")
 
@@ -100,6 +114,8 @@ def main() -> None:
         train_path=train_path,
         sha256_file=sha256_file,
     )
+
+    manifest.setdefault("source", {})["supplemental_adjudication"] = [p.as_posix() for p in supplemental_paths]
 
     manifest_path = benchmark_dir / "benchmark_manifest.json"
     manifest_path.write_text(manifest_json(manifest), encoding="utf-8", newline="\n")

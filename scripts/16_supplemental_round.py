@@ -1,5 +1,5 @@
 """보충 pooling 라운드: 특정 쿼리의 pool을 추가 용어로 넓히고, 새 후보만 A/B 판정 → adjudication →
-기존 gold에 덧붙인다. 핵심 로직은 src/store_search_ai/data/supplemental_round.py(+ 07/09/10번과 같은
+보충 라운드 폴더에 최종 판정을 남긴다(11·12번이 본 라운드 판정과 합쳐서 읽는다). 핵심 로직은 src/store_search_ai/data/supplemental_round.py(+ 07/09/10번과 같은
 함수)에 있고, 이 스크립트는 인자 파싱·파일 IO·콘솔 출력만 담당한다.
 
 번호가 16인 이유: 01~15를 한 번 다 돈 뒤(최종 qrels까지 나온 뒤) 빠진 정답이 발견됐을 때 쓰는 후속 단계다.
@@ -8,7 +8,7 @@
 
   1) 후보 추가 + 판정 시트 생성
      python scripts/16_supplemental_round.py make --round supplement_v1 \
-         --query q_수선_01 --terms "수선|옷수선|의류수선|의복수선|옷수리|수선실|세탁" --per-term 10
+         --query q_수선_01 --terms "수선|옷수선|의복수선|수선실|리폼|세탁" --per-term 15
      → annotations/supplement_v1/annotation_A.csv, annotation_B.csv (val/test 쿼리면 B도)
 
   2) A, B가 각자 시트를 채워 annotations/supplement_v1/completed/annotation_A_completed.csv,
@@ -18,9 +18,11 @@
      python scripts/16_supplemental_round.py merge --round supplement_v1
      → A·B 불일치가 있으면 annotations/supplement_v1/analysis/adjudication_needed_only.csv를 만들고 멈춘다.
        adjudication 후 같은 폴더에 adjudication_needed_only_completed.csv로 저장하고 merge를 다시 실행.
-     → 다 확정되면 기존 라운드의 analysis/adjudication_val_test_full_completed.csv에 덧붙인다.
+     → 다 확정되면 annotations/supplement_v1/analysis/adjudication_full_completed.csv에 저장한다.
+       본 라운드 파일(10번 출력)은 건드리지 않는다 — 그래서 10번을 다시 돌려도 보충 판정이 사라지지 않는다.
 
-  4) python scripts/11_build_qrels.py --adjudication <위 파일>  →  python scripts/12_validate_benchmark.py --stage final
+  4) python scripts/11_build_qrels.py  →  python scripts/12_validate_benchmark.py --stage final
+     (11·12번이 annotations/*/supplemental_manifest.json으로 보충 라운드를 찾아 자동으로 합친다)
 """
 
 from __future__ import annotations
@@ -56,6 +58,7 @@ from store_search_ai.data.annotation_sheets import (
     write_annotation_file,
 )
 from store_search_ai.data.supplemental_round import (
+    SUPPLEMENTAL_ADJUDICATION_NAME,
     build_supplemental_sheet_rows,
     empty_like,
     merge_into_base_adjudication,
@@ -160,8 +163,12 @@ def merge(args, config: dict, benchmark_dir: Path) -> None:
     needed = build_needed_adjudication(frame)
     patch_path = analysis_dir / "adjudication_needed_only_completed.csv"
     if len(needed):
-        needed.to_csv(analysis_dir / "adjudication_needed_only.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
         if not patch_path.exists():
+            # adjudication 시트는 완료본이 없을 때만 쓴다 — 이미 adjudication이 끝났으면 그 시트(제안·메모가 채워졌을 수
+            # 있음)를 빈 시트로 덮어쓰지 않는다.
+            needed.to_csv(
+                analysis_dir / "adjudication_needed_only.csv", index=False, encoding="utf-8-sig", lineterminator="\n"
+            )
             raise SystemExit(
                 f"A·B 불일치 {len(needed)}행 → {analysis_dir / 'adjudication_needed_only.csv'}를 adjudication한 뒤 "
                 f"{patch_path.name}로 저장하고 merge를 다시 실행하세요."
@@ -173,17 +180,17 @@ def merge(args, config: dict, benchmark_dir: Path) -> None:
             raise SystemExit(f"아직 확정 안 된 행이 있습니다: {report['unresolved_rows']}")
 
     frame["supplemental_round"] = args.round
-    frame.to_csv(analysis_dir / "adjudication_full_completed.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    output_path = analysis_dir / SUPPLEMENTAL_ADJUDICATION_NAME
+    frame.to_csv(output_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
+    # 기존 판정과 겹치지 않는지 지금 확인(실제 합치기는 11/12번이 매번 한다 — 본 라운드 파일은 건드리지 않음)
     base_dir, _ = get_annotation_round_dirs(benchmark_dir, args.base_round)
-    base_path = base_dir / "analysis" / "adjudication_val_test_full_completed.csv"
-    base = pd.read_csv(base_path, encoding="utf-8-sig")
+    base = pd.read_csv(base_dir / "analysis" / "adjudication_val_test_full_completed.csv", encoding="utf-8-sig")
     combined = merge_into_base_adjudication(base, frame)
-    combined.to_csv(base_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
     print("========== SUPPLEMENTAL ROUND MERGED ==========")
-    print(f"추가된 판정 {len(frame)}행 → {base_path} (전체 {len(combined)}행)")
-    print(f"다음: python scripts/11_build_qrels.py --adjudication {base_path.as_posix()}")
+    print(f"보충 판정 {len(frame)}행 → {output_path} (본 라운드와 합치면 {len(combined)}행)")
+    print("다음: python scripts/11_build_qrels.py   (보충 라운드 판정을 자동으로 합쳐서 qrels를 만든다)")
     print("      python scripts/12_validate_benchmark.py --stage final")
 
 

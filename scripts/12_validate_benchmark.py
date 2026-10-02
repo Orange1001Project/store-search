@@ -21,6 +21,10 @@ from store_search_ai.data.benchmark_validation import (
     adjudication_resolution,
     build_validation_report,
 )
+from store_search_ai.data.supplemental_round import (
+    combine_with_supplemental,
+    supplemental_adjudication_paths,
+)
 from store_search_ai.pipeline.common import (
     DEFAULT_ANNOTATION_ROUND,
     get_annotation_round_dirs,
@@ -59,6 +63,10 @@ def main() -> None:
     adjudication_path = annotations_dir / "analysis" / "adjudication_val_test_full_completed.csv"
     if agreement is not None and adjudication_path.exists():
         adjudication = pd.read_csv(adjudication_path, encoding="utf-8-sig")
+        supplemental_paths, _ = supplemental_adjudication_paths(benchmark_dir / "annotations", args.round)
+        adjudication = combine_with_supplemental(
+            adjudication, [pd.read_csv(p, encoding="utf-8-sig") for p in supplemental_paths]
+        )
         agreement = {**agreement, **adjudication_resolution(adjudication)}
 
     report = build_validation_report(

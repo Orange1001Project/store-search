@@ -89,3 +89,40 @@ def test_exclude_supplemental_rows_drops_rounds_with_manifest(tmp_path):
     (tmp_path / "supplement_v1").mkdir()
     (tmp_path / "supplement_v1" / "supplemental_manifest.json").write_text(json.dumps({"round": "supplement_v1"}), encoding="utf-8")
     assert exclude_supplemental_rows(pool, tmp_path)["doc_id"].tolist() == ["a"]
+
+
+def test_supplemental_adjudication_paths_finds_merged_and_pending_rounds(tmp_path):
+    import json
+
+    from store_search_ai.data.supplemental_round import (
+        SUPPLEMENTAL_ADJUDICATION_NAME,
+        supplemental_adjudication_paths,
+    )
+
+    for name, merged in (("supplement_v1", True), ("supplement_v2", False)):
+        (tmp_path / name / "analysis").mkdir(parents=True)
+        manifest = {"round": name, "base_round": "full_annotation_v1"}
+        (tmp_path / name / "supplemental_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        if merged:
+            (tmp_path / name / "analysis" / SUPPLEMENTAL_ADJUDICATION_NAME).write_text("x", encoding="utf-8")
+    (tmp_path / "other").mkdir()
+    (tmp_path / "other" / "supplemental_manifest.json").write_text(
+        json.dumps({"round": "other", "base_round": "full_annotation_v2"}), encoding="utf-8"
+    )
+
+    paths, pending = supplemental_adjudication_paths(tmp_path, "full_annotation_v1")
+    assert [p.parent.parent.name for p in paths] == ["supplement_v1"]
+    assert pending == ["supplement_v2"]
+
+
+def test_combine_with_supplemental_keeps_base_and_rejects_overlap():
+    from store_search_ai.data.supplemental_round import combine_with_supplemental
+
+    base = pd.DataFrame({"judgment_id": ["a"], "final_relevance": [3]})
+    s1 = pd.DataFrame({"judgment_id": ["b"], "final_relevance": [2], "supplemental_round": ["s1"]})
+    s2 = pd.DataFrame({"judgment_id": ["c"], "final_relevance": [0], "supplemental_round": ["s2"]})
+    combined = combine_with_supplemental(base, [s1, s2])
+    assert combined["judgment_id"].tolist() == ["a", "b", "c"]
+    assert base["judgment_id"].tolist() == ["a"]  # 원본은 그대로
+    with pytest.raises(ValueError):
+        combine_with_supplemental(base, [pd.DataFrame({"judgment_id": ["a"], "supplemental_round": ["s3"]})])

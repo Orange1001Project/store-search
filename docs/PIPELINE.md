@@ -184,8 +184,10 @@ python scripts/13_evaluate_run.py --run <모델_run.csv> --tag <실험명>
 ## 6-1. 보충 pooling (16번) — 최종 qrels 뒤에 빠진 정답이 발견됐을 때
 
 12번 final에서 `queries have no relevance>=2 document`가 나오면(pool이 그 쿼리의 실제 정답을 하나도 못 찾음),
-그 쿼리만 추가 용어로 pool을 넓히고 **새 후보만** 판정해서 기존 gold에 덧붙인다. 기존 판정(A/B,
-adjudication 결과)은 바꾸지 않는다.
+그 쿼리만 추가 용어로 pool을 넓히고 **새 후보만** 판정한다. 기존 판정(A/B, adjudication 결과)은 바꾸지
+않는다. 보충 판정은 보충 라운드 폴더(`annotations/{round}/analysis/adjudication_full_completed.csv`)에만 남고,
+11번·12번이 `annotations/*/supplemental_manifest.json`으로 보충 라운드를 찾아 본 라운드 판정과 **매번 합쳐서**
+읽는다 — 본 라운드 파일(10번 출력)에 쓰지 않으므로 10번을 다시 돌려도 보충 판정이 사라지지 않는다.
 
 ```bash
 python scripts/16_supplemental_round.py make --round supplement_v1 \
@@ -194,7 +196,7 @@ python scripts/16_supplemental_round.py make --round supplement_v1 \
 # A/B가 채워서 annotations/supplement_v1/completed/annotation_A_completed.csv, annotation_B_completed.csv로 저장
 python scripts/16_supplemental_round.py merge --round supplement_v1
 # A·B 불일치가 있으면 analysis/adjudication_needed_only.csv → adjudication 후 _completed.csv로 저장 → merge 재실행
-python scripts/11_build_qrels.py --adjudication benchmark/storesearch_ko_v1/annotations/full_annotation_v1/analysis/adjudication_val_test_full_completed.csv
+python scripts/11_build_qrels.py          # 보충 라운드 판정을 자동으로 합침([INFO] 보충 라운드 판정 포함: ...)
 python scripts/12_validate_benchmark.py --stage final
 ```
 
