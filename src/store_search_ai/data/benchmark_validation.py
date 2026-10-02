@@ -112,6 +112,29 @@ def validate_qrels(
     return updates, errors
 
 
+_TRUE_VALUES = {"Y", "YES", "TRUE", "1"}
+
+
+def adjudication_resolution(adjudication: pd.DataFrame) -> dict:
+    """val/test 판정 전체(10번 결과 `adjudication_val_test_full_completed.csv`) 중 최종 확정된 비율.
+
+    확정 = A·B 일치로 자동 확정됐거나, adjudication에서 점수를 정했거나, adjudication에서 gold 제외로
+    정한 행. 한쪽 애노테이터가 uncertain으로 둔 행도 adjudication에서 결론이 났으면 확정으로 센다
+    (팀 원칙: "adjudication에서 확정한 건 확정") — 순수 이중 라벨링 커버리지(`double_annotation_coverage`)는
+    그와 별개로 보고만 한다.
+    """
+
+    final = pd.to_numeric(adjudication["final_relevance"], errors="coerce")
+    excluded = adjudication["exclude_from_gold"].fillna("").astype(str).str.strip().str.upper().isin(_TRUE_VALUES)
+    resolved = final.notna() | excluded
+    return {
+        "adjudication_rows": len(adjudication),
+        "adjudication_resolved_rows": int(resolved.sum()),
+        "adjudication_excluded_rows": int(excluded.sum()),
+        "resolution_coverage": float(resolved.mean()) if len(adjudication) else 1.0,
+    }
+
+
 def validate_final_stage(report: dict, queries: pd.DataFrame, config: dict) -> list[str]:
     errors = []
     if len(queries) < int(config["validation"]["min_total_queries_final"]):
@@ -122,11 +145,14 @@ def validate_final_stage(report: dict, queries: pd.DataFrame, config: dict) -> l
         errors.append("Pooling systems are not diverse enough for final freeze")
 
     agreement = report.get("agreement")
+    target = float(config["validation"]["target_double_annotation_coverage"])
     if not agreement:
         errors.append("Missing human agreement report")
-    elif float(agreement.get("double_annotation_coverage", 0)) < float(
-        config["validation"]["target_double_annotation_coverage"]
-    ):
+    elif "resolution_coverage" in agreement:
+        # adjudication 결과가 있으면 "최종 확정됐는가"로 판단한다(adjudication_resolution 참고)
+        if float(agreement["resolution_coverage"]) < target:
+            errors.append("Unresolved val/test judgments after adjudication")
+    elif float(agreement.get("double_annotation_coverage", 0)) < target:
         errors.append("Incomplete val/test double annotation")
 
     return errors

@@ -17,14 +17,27 @@ from pathlib import Path
 
 import pandas as pd
 
-from store_search_ai.data.benchmark_validation import build_validation_report
-from store_search_ai.pipeline.common import load_active_queries, load_config
+from store_search_ai.data.benchmark_validation import (
+    adjudication_resolution,
+    build_validation_report,
+)
+from store_search_ai.pipeline.common import (
+    DEFAULT_ANNOTATION_ROUND,
+    get_annotation_round_dirs,
+    load_active_queries,
+    load_config,
+)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument("--stage", choices=["pilot", "final"], default="pilot")
+    parser.add_argument(
+        "--round",
+        default=DEFAULT_ANNOTATION_ROUND,
+        help="adjudication 결과(annotations/{round}/analysis/adjudication_val_test_full_completed.csv)를 읽을 라운드",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -42,6 +55,11 @@ def main() -> None:
     agreement = (
         json.loads(agreement_path.read_text(encoding="utf-8")) if agreement_path.exists() else None
     )
+    annotations_dir, _ = get_annotation_round_dirs(benchmark_dir, args.round)
+    adjudication_path = annotations_dir / "analysis" / "adjudication_val_test_full_completed.csv"
+    if agreement is not None and adjudication_path.exists():
+        adjudication = pd.read_csv(adjudication_path, encoding="utf-8-sig")
+        agreement = {**agreement, **adjudication_resolution(adjudication)}
 
     report = build_validation_report(
         config, args.stage, queries, corpus, pool=pool, qrels=qrels, agreement=agreement

@@ -181,6 +181,30 @@ python scripts/13_evaluate_run.py --run <모델_run.csv> --tag <실험명>
 - 13: 공식 evaluator. `--qrels`(기본값 `qrels_val.trec`), `--run`, `--tag` 필요. Primary metric은
   `nDCG@10`, bootstrap 95% CI 포함.
 
+## 6-1. 보충 pooling (16번) — 최종 qrels 뒤에 빠진 정답이 발견됐을 때
+
+12번 final에서 `queries have no relevance>=2 document`가 나오면(pool이 그 쿼리의 실제 정답을 하나도 못 찾음),
+그 쿼리만 추가 용어로 pool을 넓히고 **새 후보만** 판정해서 기존 gold에 덧붙인다. 기존 판정(A/B,
+adjudication 결과)은 바꾸지 않는다.
+
+```bash
+python scripts/16_supplemental_round.py make --round supplement_v1 \
+    --query q_수선_01 --terms "수선|옷수선|의복수선|수선실|리폼|세탁" --per-term 15 --reason "..."
+# → annotations/supplement_v1/annotation_A.csv, annotation_B.csv (+ supplemental_manifest.json)
+# A/B가 채워서 annotations/supplement_v1/completed/annotation_A_completed.csv, annotation_B_completed.csv로 저장
+python scripts/16_supplemental_round.py merge --round supplement_v1
+# A·B 불일치가 있으면 analysis/adjudication_needed_only.csv → adjudication 후 _completed.csv로 저장 → merge 재실행
+python scripts/11_build_qrels.py --adjudication benchmark/storesearch_ko_v1/annotations/full_annotation_v1/analysis/adjudication_val_test_full_completed.csv
+python scripts/12_validate_benchmark.py --stage final
+```
+
+- 판정 절차는 본 라운드와 같다(val/test: A·B 독립 → 일치 자동 확정 → 불일치 adjudication).
+- 추가 용어는 `supplemental_manifest.json`에만 남기고 `queries.csv`/`query_families_v1.yaml`은 건드리지 않는다
+  (이미 확정된 다른 쿼리의 pool이 바뀌지 않게). `candidate_pool_internal.csv`는 재생성 산출물이라, 06~07번을
+  처음부터 다시 돌렸다면 16번 make도 같은 인자로 다시 실행해야 같은 pool이 된다.
+- 12번 final의 이중 판정 검사는 "adjudication에서 확정(점수 또는 gold 제외)된 행"을 완료로 센다
+  (`resolution_coverage`). 한쪽 애노테이터가 uncertain으로 둔 행도 adjudication에서 결론이 났으면 확정이다.
+
 ## 7. 모델 평가 — zero-shot 비교, 이후 fine-tuning 평가에도 재사용 (선택)
 
 ```bash
