@@ -36,9 +36,9 @@ Colab에서 실행하는 파일은 전부 **`colab/*.ipynb`** 입니다. 같은 
 | GPU 확인 | `CUDA: True`, `Tesla T4` 등이 찍히는지 | 아니오 |
 | 라이브러리 설치 | 채점용 `ir-measures`·`pytrec-eval-terrier`만 설치(HF 계열은 Colab 기본 버전 그대로 — 다운그레이드 안 함) | 아니오 |
 | Drive 연결 | `drive.mount(...)` — 처음엔 권한 허용 창이 뜸 | 아니오 |
-| 경로·import | Drive의 `project/src`를 불러오고 `autoreload`를 켬 + `check_environment()`가 라이브러리 버전 출력·점검 | 아니오 |
-| **`## 설정`** | `OWNER`, `MODEL_CONFIG`, `NOTE`, `RESUME_TAG`, `cfg = FinetuneConfig(...)` | **예 — 여기만** |
-| **실행** | `final_dir = run_finetune(cfg)` — 학습 → 저장 → 검증 → 기록 | 아니오(코드를 고친 뒤 **여기부터 다시 실행**) |
+| 경로·import | Drive의 `project/src`를 불러옴 + `check_environment()`가 라이브러리 버전 출력·점검 | 아니오 |
+| **`## 설정`** | 맨 앞의 `reload_project()`가 Drive의 최신 `src/` 코드를 다시 불러옴 + `OWNER`, `MODEL_CONFIG`, `NOTE`, `RESUME_TAG`, `cfg = FinetuneConfig(...)` | **예 — 여기만**(코드를 고친 뒤에는 **이 셀부터 다시 실행**) |
+| **실행** | `final_dir = run_finetune(cfg)` — 학습 → 저장 → 검증 → 기록 | 아니오 |
 | `## 평가 (val)` (셀 2개) | 기준 zero-shot 모델(처음 한 번만 자동) + 방금 학습한 모델을 **공식 evaluator로 채점**, 기준 대비 Δ·p-value 출력 | 학습 없이 기존 run만 평가할 때 `EVAL_RUN_TAG`만 |
 | `## 리더보드 (val)` | Drive에 쌓인 모든 평가를 nDCG@10 순으로 | 아니오 |
 | `## (평가 후) 좋은 run을 KEEP으로 남기기` | 남길 run 표시 한 줄(주석 처리돼 있음) | 필요할 때 주석을 풀고 TAG만 바꿔 실행(7절) |
@@ -129,8 +129,10 @@ Colab에서 실행하는 파일은 전부 **`colab/*.ipynb`** 입니다. 같은 
 
 1. Colab 왼쪽 **파일 아이콘(📁)** → `drive/MyDrive/store-search-ai/project/src/store_search_ai/training/st_finetune.py`
    (또는 고칠 파일)을 **더블클릭** → 오른쪽에 편집기가 열립니다. 고치면 Drive 파일에 바로 저장됩니다.
-2. 학습 노트북의 실행 셀(`final_dir = run_finetune(cfg)`)부터 **다시 실행**합니다(이어서 평가 셀까지 돌리면 점수가 바로 나옴). 노트북의 import 셀이 `autoreload`를 켜 두어서 고친 코드가
-   자동으로 다시 불러와집니다(세션 재시작 불필요). 이상하게 예전 코드가 도는 것 같으면 그때만 **런타임 > 세션 다시 시작**.
+2. 학습 노트북의 **설정 셀부터 다시 실행**합니다(이어서 실행·평가 셀까지 돌리면 점수가 바로 나옴). 설정 셀 맨 앞의
+   `reload_project()`가 고친 코드를 다시 불러옵니다(세션 재시작 불필요). 평가 코드만 고쳤으면 평가 셀부터 다시 실행해도 됩니다(평가 셀에도
+   같은 줄이 있음). 이상하게 예전 코드가 도는 것 같으면 그때만 **런타임 > 세션 다시 시작**.
+   (IPython `%autoreload`는 쓰지 않습니다 — Colab이 Python 3.13 + IPython 7.34라 `No module named 'imp'` 오류가 납니다.)
 3. 기록은 자동입니다: 학습할 때 그 순간의 코드가 모델 폴더의 `code_snapshot.zip`에 저장되고, manifest의
    `code.edited_after_pack`이 `true`로 남습니다(올린 뒤 Colab에서 고쳤다는 표시). **`NOTE`에 무엇을 고쳤는지 한 줄**은 적어 주세요.
 

@@ -68,7 +68,7 @@ python scripts/prepare_finetune_dataset.py
 로컬에서 `python scripts/pack_for_colab.py`로 `colab_upload/project/`(코드 + `configs/models` + 학습 데이터 +
 git 정보 `code_version.json`)를 만들어 Drive `내 드라이브/store-search-ai/project`로 올리고(기존 폴더는 지우고),
 스크립트의 **`OWNER`를 본인 이름(영문 소문자)으로 바꿔서** 실행합니다. 한 번 올린 뒤 실험하면서 코드를 고칠 때는 다시 올리지 않고
-Colab 편집기에서 Drive의 `src/` 파일을 바로 고칩니다(스크립트가 `autoreload`를 켜 둠, 절차는 `docs/TRAINING_TEAM.md` 3-2·3-3절). 나머지 값은 팀 공통 기본값입니다 — 바꾼 값은 전부
+Colab 편집기에서 Drive의 `src/` 파일을 바로 고칩니다(설정 셀 맨 앞의 `reload_project()`가 고친 코드를 다시 불러옴, 절차는 `docs/TRAINING_TEAM.md` 3-2·3-3절). 나머지 값은 팀 공통 기본값입니다 — 바꾼 값은 전부
 manifest에 자동으로 남지만, 결과를 서로 비교하려면 합의 없이 바꾸지 마세요.
 
 자동으로 처리되는 것:

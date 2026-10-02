@@ -47,8 +47,8 @@ EVAL_ROOT = DRIVE_ROOT / "runs" / "evaluation"      # 지표 json / per-query cs
 FINETUNE_RUN_DIR = DRIVE_ROOT / "runs" / "finetune"
 sys.path.insert(0, str(PROJECT_DIR / "src"))
 
-get_ipython().run_line_magic("load_ext", "autoreload")
-get_ipython().run_line_magic("autoreload", "2")
+# Drive의 src/ 코드를 Colab 편집기에서 고쳤으면 아래 "설정" 셀부터 다시 실행 — reload_project()가 고친 코드를 다시
+# 불러온다(세션 재시작 불필요). IPython autoreload는 Colab(Python 3.13 + IPython 7.34)에서 `imp` 모듈 오류가 나서 안 쓴다.
 
 from store_search_ai.evaluation.model_evaluation import (
     collect_leaderboard,
@@ -74,6 +74,17 @@ print("corpus:", eval_inputs["corpus"].shape, " queries:", eval_inputs["queries"
 """
 
 # %%
+# 평가 코드(src/store_search_ai/evaluation/)를 고쳤으면 이 셀부터 다시 실행 — 고친 코드를 다시 불러온다
+from store_search_ai.common.dev_reload import reload_project
+
+reload_project()
+from store_search_ai.evaluation.model_evaluation import (
+    collect_leaderboard,
+    evaluate_model,
+    format_report,
+)
+from store_search_ai.pipeline.common import load_config
+
 MODEL_CONFIG_NAMES = None      # 예: ["bge_m3.yaml", "qwen3_0_6b.yaml", "qwen3_0_6b_store.yaml"]
 BASELINE_TAG = None            # 예: "qwen3_embedding_0_6b"
 SPLIT = "val"

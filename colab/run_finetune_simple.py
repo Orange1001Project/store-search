@@ -57,11 +57,8 @@ DRIVE_ROOT = Path("/content/drive/MyDrive/store-search-ai")
 PROJECT_DIR = DRIVE_ROOT / "project"
 sys.path.insert(0, str(PROJECT_DIR / "src"))
 
-# Colab 편집기에서 Drive의 src/ 코드를 고치면(왼쪽 파일 탐색기 → drive/MyDrive/store-search-ai/project/src/...
-# 더블클릭) 세션을 다시 시작하지 않아도 다음 셀 실행 때 고친 코드가 자동으로 다시 import된다.
-# 고친 코드는 학습 때 모델 폴더의 code_snapshot.zip에 그대로 저장된다(docs/TRAINING_TEAM.md 3절).
-get_ipython().run_line_magic("load_ext", "autoreload")
-get_ipython().run_line_magic("autoreload", "2")
+# Drive의 src/ 코드를 Colab 편집기에서 고쳤으면 아래 "설정" 셀부터 다시 실행 — reload_project()가 고친 코드를 다시
+# 불러온다(세션 재시작 불필요). IPython autoreload는 Colab(Python 3.13 + IPython 7.34)에서 `imp` 모듈 오류가 나서 안 쓴다.
 
 from store_search_ai.training.st_finetune import FinetuneConfig, run_finetune
 
@@ -74,6 +71,12 @@ check_environment()  # 버전 출력 + 최소 버전 미달·채점 패키지 �
 **OWNER만 필수로 바꾸면 된다.** 나머지는 팀 공통 기본값 — 결과를 서로 비교하려면 합의 없이 바꾸지
 말 것(바꾼 값은 전부 model_manifest.json에 자동으로 남는다).
 """
+
+# Drive에서 src/ 코드를 고쳤으면 이 셀부터 다시 실행 — 고친 코드를 다시 불러온다(세션 재시작 불필요)
+from store_search_ai.common.dev_reload import reload_project
+
+reload_project()
+from store_search_ai.training.st_finetune import FinetuneConfig, run_finetune
 
 OWNER = ""                              # 필수: 본인 이름(영문 소문자, 예: "jisu") — run 이름/정리 범위에 쓰임
 MODEL_CONFIG = "arctic_ko.yaml"         # 또는 "bge_m3.yaml"
@@ -114,6 +117,10 @@ final_dir = run_finetune(cfg)
 # %%
 import gc
 
+# 평가 코드(src/store_search_ai/evaluation/)를 고쳤으면 이 셀부터 다시 실행 — 고친 코드를 다시 불러온다
+from store_search_ai.common.dev_reload import reload_project
+
+reload_project()
 from store_search_ai.evaluation.model_evaluation import (
     collect_leaderboard,
     evaluate_model,

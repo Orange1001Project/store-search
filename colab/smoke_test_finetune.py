@@ -46,11 +46,8 @@ DRIVE_ROOT = Path("/content/drive/MyDrive/store-search-ai")
 PROJECT_DIR = DRIVE_ROOT / "project"
 sys.path.insert(0, str(PROJECT_DIR / "src"))
 
-# Colab 편집기에서 Drive의 src/ 코드를 고치면(왼쪽 파일 탐색기 → drive/MyDrive/store-search-ai/project/src/...
-# 더블클릭) 세션을 다시 시작하지 않아도 다음 셀 실행 때 고친 코드가 자동으로 다시 import된다.
-# 고친 코드는 학습 때 모델 폴더의 code_snapshot.zip에 그대로 저장된다(docs/TRAINING_TEAM.md 3절).
-get_ipython().run_line_magic("load_ext", "autoreload")
-get_ipython().run_line_magic("autoreload", "2")
+# Drive의 src/ 코드를 Colab 편집기에서 고쳤으면 아래 "설정" 셀부터 다시 실행 — reload_project()가 고친 코드를 다시
+# 불러온다(세션 재시작 불필요). IPython autoreload는 Colab(Python 3.13 + IPython 7.34)에서 `imp` 모듈 오류가 나서 안 쓴다.
 
 from store_search_ai.training.st_finetune import FinetuneConfig, run_finetune
 
@@ -87,6 +84,12 @@ print(f"[INFO] 가짜 데이터: {pairs_path}  (meta.json이 없다는 [경고]�
 - `"qwen"`  : Qwen3-Embedding-0.6B LoRA → merge (LoRA 전용 재개 로직을 검증)
 push 전에는 **두 개 다** 한 번씩 돌려보는 것을 권장.
 """
+
+# Drive에서 src/ 코드를 고쳤으면 이 셀부터 다시 실행 — 고친 코드를 다시 불러온다(세션 재시작 불필요)
+from store_search_ai.common.dev_reload import reload_project
+
+reload_project()
+from store_search_ai.training.st_finetune import FinetuneConfig, run_finetune
 
 TARGET = "qwen"          # "qwen" 또는 "arctic"
 RESUME_TAG = None        # 2단계에서만: 1단계 [체크포인트] 로그에 나온 TAG
