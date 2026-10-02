@@ -9,8 +9,11 @@
 파이프라인 번호가 없는 이유: 01~15 실행 순서와 무관하게, Colab에 코드를 올릴 때마다 실행하는 도구다.
 
 사용법:
-    python scripts/pack_for_colab.py                    # 학습용: src + configs/models + 학습 데이터
-    python scripts/pack_for_colab.py --with-eval-data   # + corpus/queries.csv (Colab에서 평가 인코딩까지 할 때)
+    python scripts/pack_for_colab.py                  # 학습 + Colab 안에서 평가(채점)까지 할 수 있는 전부
+    python scripts/pack_for_colab.py --no-eval-data   # 코드·학습 데이터만(평가 안 할 때, 업로드 용량 ↓)
+
+기본으로 들어가는 것: src/store_search_ai, configs/models, configs/benchmark(채점 설정), 학습 데이터,
+corpus parquet, queries.csv, qrels_val.trec, qrels_test.trec(최종 test 평가용 — 노트북에서 기본으로 막혀 있음).
 
 결과: `colab_upload/project/` → Drive `내 드라이브/store-search-ai/`에 있던 `project` 폴더를 지우고 이 폴더를 올린다.
 """
@@ -49,7 +52,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument("--output", default="colab_upload")
-    parser.add_argument("--with-eval-data", action="store_true", help="corpus parquet + queries.csv도 포함")
+    parser.add_argument(
+        "--no-eval-data", action="store_true", help="corpus·queries·qrels를 빼고 코드·학습 데이터만 올린다"
+    )
+    parser.add_argument("--with-eval-data", action="store_true", help=argparse.SUPPRESS)  # 예전 옵션(이제 기본값)
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -57,15 +63,22 @@ def main() -> None:
     if project_dir.exists():
         shutil.rmtree(project_dir)
 
-    items = [Path("src/store_search_ai"), Path("configs/models")]
+    items = [Path("src/store_search_ai"), Path("configs/models"), Path(args.config)]
     for name in ("train_pairs.jsonl", "train_pairs.meta.json"):
         path = Path("data/finetune") / name
         if path.exists():
             items.append(path)
         else:
             print(f"[안내] {path} 없음 — 학습 데이터 없이 코드만 올립니다(smoke test는 가능)")
-    if args.with_eval_data:
-        items += [Path(config["corpus_path"]), Path(config["benchmark_dir"]) / "queries.csv"]
+    if not args.no_eval_data:
+        benchmark_dir = Path(config["benchmark_dir"])
+        items += [Path(config["corpus_path"]), benchmark_dir / "queries.csv"]
+        for split in ("val", "test"):
+            qrels = benchmark_dir / f"qrels_{split}.trec"
+            if qrels.exists():
+                items.append(qrels)
+            else:
+                print(f"[안내] {qrels} 없음 — Colab에서 {split} 채점은 못 합니다(11_build_qrels.py 이후 다시 pack)")
 
     for item in items:
         _copy(item, project_dir / item)

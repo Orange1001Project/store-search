@@ -6,7 +6,8 @@ Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실
 > **요약**
 > - 코드·설정은 마음대로 바꿔도 됩니다. 실험 중 코드는 **Colab 편집기에서 바로** 고치고(다시 올릴 필요 없음), 커밋·push는 좋은 결과가 나온 뒤에 합니다.
 > - 사람이 적는 건 **Colab의 `NOTE` 한 줄**과, 나중에 좋은 결과가 나왔을 때 **공유 시트 한 줄**뿐입니다. 나머지는 자동으로 기록됩니다.
-> - 평가 기준(정답 파일·채점 코드)만은 아무도 바꾸지 않습니다.
+> - **학습 → 평가 → 수정 → 다시 학습은 전부 Colab 안에서** 합니다(학습 노트북이 바로 공식 채점까지 함). VS Code에는 실험이 끝난 뒤 결과만 가져와 저장합니다(3-4절).
+> - 평가 기준(정답 파일·채점 코드)만은 아무도 바꾸지 않습니다. 반복 평가는 **val**로만, test는 최종 후보를 정한 뒤 한 번만.
 
 ---
 
@@ -16,10 +17,10 @@ Colab에서 실행하는 파일은 전부 **`colab/*.ipynb`** 입니다. 같은 
 
 | 노트북 | 언제 | 설정 셀에서 바꾸는 것 |
 |---|---|---|
-| `colab/smoke_test_finetune.ipynb` | **처음 한 번**(또는 Colab 환경이 바뀐 것 같을 때) — 가짜 데이터로 학습 전체가 도는지 확인, 마지막에 `통과` | `TARGET`(`"qwen"`/`"arctic"`), 재개 테스트 때만 `RESUME_TAG` |
-| `colab/run_finetune_simple.ipynb` | **Arctic / BGE-M3 학습** (full fine-tuning) | `OWNER`, `MODEL_CONFIG`(`arctic_ko.yaml` / `arctic_ko_query.yaml` / `bge_m3.yaml`), `NOTE`, `cfg = FinetuneConfig(...)` 안의 값 |
-| `colab/run_finetune_qwen3.ipynb` | **Qwen3-Embedding 학습** (LoRA) | 위와 같음 + `MODEL_CONFIG`(`qwen3_0_6b.yaml` / `qwen3_0_6b_store.yaml` / `qwen3_4b.yaml` …), 4B면 `BASE_DTYPE`·`BATCH_SIZE`·`LOSS` |
-| `colab/run_model_eval_encoding.ipynb` | **평가** (zero-shot·학습한 모델 공통) — run.csv 생성, 채점은 로컬 | "모델 목록" 셀의 `MODEL_CONFIG_NAMES` (`None`이면 `configs/models/` 전부) |
+| `colab/smoke_test_finetune.ipynb` | **처음 한 번**(또는 Colab 환경이 바뀐 것 같을 때) — 가짜 데이터로 **학습 → 평가 → 리더보드** 전체가 도는지 확인, 마지막에 `통과` | `TARGET`(`"qwen"`/`"arctic"`), 재개 테스트 때만 `RESUME_TAG` |
+| `colab/run_finetune_simple.ipynb` | **Arctic / BGE-M3: 학습 + 바로 val 채점 + 리더보드** (full fine-tuning) | `OWNER`, `MODEL_CONFIG`(`arctic_ko.yaml` / `arctic_ko_query.yaml` / `bge_m3.yaml`), `NOTE`, `cfg = FinetuneConfig(...)` 안의 값 |
+| `colab/run_finetune_qwen3.ipynb` | **Qwen3: 학습 + 바로 val 채점 + 리더보드** (LoRA) | 위와 같음 + `MODEL_CONFIG`(`qwen3_0_6b.yaml` / `qwen3_0_6b_store.yaml` / `qwen3_4b.yaml` …), 4B면 `BASE_DTYPE`·`BATCH_SIZE`·`LOSS` |
+| `colab/run_model_eval_encoding.ipynb` | **여러 모델 한꺼번에 평가** — zero-shot 비교표, 이미 학습한 run 여러 개 재평가. 채점까지 Colab에서 | `MODEL_CONFIG_NAMES`(`None`이면 `configs/models/` 전부), `BASELINE_TAG` |
 
 **여는 법**
 - Colab 메뉴 **파일 > 노트북 업로드** → 로컬 저장소의 `colab/*.ipynb` 선택. 또는 같은 메뉴의 **GitHub** 탭에서 저장소·브랜치를
@@ -37,8 +38,11 @@ Colab에서 실행하는 파일은 전부 **`colab/*.ipynb`** 입니다. 같은 
 | Drive 연결 | `drive.mount(...)` — 처음엔 권한 허용 창이 뜸 | 아니오 |
 | 경로·import | Drive의 `project/src`를 불러오고 `autoreload`를 켬 | 아니오 |
 | **`## 설정`** | `OWNER`, `MODEL_CONFIG`, `NOTE`, `RESUME_TAG`, `cfg = FinetuneConfig(...)` | **예 — 여기만** |
-| **실행** | `final_dir = run_finetune(cfg)` — 학습 → 저장 → 검증 → 기록 | 아니오(코드를 고친 뒤 **이 셀만 다시 실행**) |
+| **실행** | `final_dir = run_finetune(cfg)` — 학습 → 저장 → 검증 → 기록 | 아니오(코드를 고친 뒤 **여기부터 다시 실행**) |
+| `## 평가 (val)` (셀 2개) | 기준 zero-shot 모델(처음 한 번만 자동) + 방금 학습한 모델을 **공식 evaluator로 채점**, 기준 대비 Δ·p-value 출력 | 학습 없이 기존 run만 평가할 때 `EVAL_RUN_TAG`만 |
+| `## 리더보드 (val)` | Drive에 쌓인 모든 평가를 nDCG@10 순으로 | 아니오 |
 | `## (평가 후) 좋은 run을 KEEP으로 남기기` | 남길 run 표시 한 줄(주석 처리돼 있음) | 필요할 때 주석을 풀고 TAG만 바꿔 실행(7절) |
+| `## (최종 후보 확정 후 한 번만) test 평가` | test 채점 — 기본값 `FINAL_TEST = False`로 꺼져 있음 | 팀이 최종 후보를 정한 뒤에만 `True` |
 
 **지킬 것**
 - 노트북에서 바꾸는 건 **설정 셀의 값뿐**입니다. 로직(학습 방식·데이터 처리)은 Drive의 `src/` 파일에서 고칩니다(3-2절) —
@@ -77,7 +81,7 @@ Colab에서 실행하는 파일은 전부 **`colab/*.ipynb`** 입니다. 같은 
 |---|---|---|
 | 언제 | val 정답(qrels) 배포 전 | 데이터 담당이 val 정답을 배포한 뒤 — **2026-10-02 val/test gold 확정, 지금은 2단계** |
 | 목적 | 학습이 끝까지 도는지, 시간·메모리, 어떤 설정이 T4에 맞는지 파악 | 점수로 비교해서 서비스 후보를 고름 |
-| 평가 | 불가(정답이 아직 없음) | 공식 채점으로 val 평가(10절) |
+| 평가 | 불가(정답이 아직 없음) | 학습 노트북에서 바로 val 채점(10절) |
 | 기록 | manifest(자동)만. `NOTE`는 적으면 좋음 | 남길 run만 **공유 시트 + KEEP** |
 | 코드 | 커밋 안 해도 됨 | 시트에 올릴 run의 코드는 **그때 커밋·push**(시트에 커밋 번호 적음) |
 
@@ -88,21 +92,30 @@ Colab에서 실행하는 파일은 전부 **`colab/*.ipynb`** 입니다. 같은 
 
 ## 3. 작업 순서
 
-올리는 건 **처음 한 번(또는 git에서 새 코드를 받았을 때)** 만 하고, 실험하면서 코드를 고치는 건 **Colab에서 바로** 합니다.
+```
+[처음 한 번]      VS Code: git pull → pack_for_colab.py → Drive에 project 업로드          (3-1)
+[반복 — Colab만]  설정·코드 수정 → 학습 셀 → 평가 셀(val 공식 채점, 기준 대비 Δ·p) → 리더보드 확인
+                  → 좋으면 KEEP, 아니면 설정·코드 고쳐서 학습 셀부터 다시                     (3-2, 10)
+[마지막 한 번]    Drive의 store-search-ai 폴더 내려받기 → import_colab_results.py --verify
+                  → 저장소에 결과·KEEP 모델 정리 → 커밋                                      (3-3, 3-4)
+```
+
+올리는 건 **처음 한 번(또는 git에서 새 코드를 받았을 때)** 만 하고, 실험하면서 코드를 고치고 점수를 보는 건 **전부 Colab에서** 합니다.
 
 ### 3-1. 처음 한 번: VS Code → Drive
 
 ```
 [VS Code]  git pull (또는 코드·설정 수정 — 커밋 안 해도 됨)
     ↓      터미널에서:  python scripts/pack_for_colab.py
-[로컬]     colab_upload/project/ 폴더가 생김 (코드 + 모델 설정 + 학습 데이터 + git 커밋 정보)
+[로컬]     colab_upload/project/ 폴더가 생김 (코드 + 설정 + 학습 데이터 + 평가용 corpus·queries·정답 + git 커밋 정보)
     ↓
 [Drive]    내 드라이브/store-search-ai/ 의 기존 project 폴더를 지우고, 새 project 폴더를 업로드
     ↓
 [Colab]    학습 노트북 열기 (Arctic/BGE: run_finetune_simple.ipynb, Qwen3: run_finetune_qwen3.ipynb)
-           → 설정 셀에 OWNER, MODEL_CONFIG, NOTE 적고 위에서부터 실행 (0절)
+           → 설정 셀에 OWNER, MODEL_CONFIG, NOTE 적고 위에서부터 실행 (0절) → 학습 후 바로 val 채점·리더보드
     ↓
-[Drive]    runs/finetune/<TAG>/ 에 모델 + model_manifest.json 저장됨
+[Drive]    runs/finetune/<TAG>/   모델 + model_manifest.json (평가 결과도 manifest에 기록)
+           runs/model_eval/<tag>/ run.csv,  runs/evaluation/  지표 json
 ```
 
 - **push는 학습에 필요 없습니다.** `pack_for_colab.py`가 "어느 커밋에서, 어떤 파일을 커밋 안 한 채로 올렸는지"를 자동으로
@@ -116,7 +129,7 @@ Colab에서 실행하는 파일은 전부 **`colab/*.ipynb`** 입니다. 같은 
 
 1. Colab 왼쪽 **파일 아이콘(📁)** → `drive/MyDrive/store-search-ai/project/src/store_search_ai/training/st_finetune.py`
    (또는 고칠 파일)을 **더블클릭** → 오른쪽에 편집기가 열립니다. 고치면 Drive 파일에 바로 저장됩니다.
-2. 학습 노트북의 실행 셀(`final_dir = run_finetune(cfg)`)을 **다시 실행**합니다. 노트북의 import 셀이 `autoreload`를 켜 두어서 고친 코드가
+2. 학습 노트북의 실행 셀(`final_dir = run_finetune(cfg)`)부터 **다시 실행**합니다(이어서 평가 셀까지 돌리면 점수가 바로 나옴). 노트북의 import 셀이 `autoreload`를 켜 두어서 고친 코드가
    자동으로 다시 불러와집니다(세션 재시작 불필요). 이상하게 예전 코드가 도는 것 같으면 그때만 **런타임 > 세션 다시 시작**.
 3. 기록은 자동입니다: 학습할 때 그 순간의 코드가 모델 폴더의 `code_snapshot.zip`에 저장되고, manifest의
    `code.edited_after_pack`이 `true`로 남습니다(올린 뒤 Colab에서 고쳤다는 표시). **`NOTE`에 무엇을 고쳤는지 한 줄**은 적어 주세요.
@@ -136,6 +149,21 @@ Colab에서 실행하는 파일은 전부 **`colab/*.ipynb`** 입니다. 같은 
    ```
 3. `git diff`로 바뀐 내용을 확인한 뒤, 개인 실험 브랜치(예: `exp/jisu-bge-negmining`)에 커밋·push합니다.
 4. 공유 시트의 "코드커밋" 칸에 그 커밋 번호를 적습니다.
+
+### 3-4. 실험이 다 끝나면: 결과를 VS Code로 가져와 저장
+
+1. 웹 Google Drive에서 `내 드라이브/store-search-ai` 폴더를 **다운로드** → 압축 해제(예: `C:/Users/me/Downloads/store-search-ai`).
+   `project/`는 필요 없으니 `runs/`만 받아도 됩니다.
+2. 로컬 저장소 루트에서:
+   ```bash
+   python scripts/import_colab_results.py --drive-dir "C:/Users/me/Downloads/store-search-ai" --dry-run   # 무엇을 옮길지 확인
+   python scripts/import_colab_results.py --drive-dir "C:/Users/me/Downloads/store-search-ai" --verify
+   ```
+   - `runs/model_eval/` → `results/model_eval/`, `runs/evaluation/` → `artifacts/evaluation/storesearch_ko_v1/`
+     (smoke test 같은 **비공식 평가는 자동으로 빠짐**)
+   - **KEEP 표시한 run**만 `models/<TAG>/` + `configs/models/<TAG>.yaml`로 복사(특정 run만: `--models <TAG> ...`)
+   - `--verify`: 가져온 평가마다 로컬 공식 evaluator로 **다시 채점**해 Colab 점수와 같은지 확인(다르면 종료코드 1 — 정답 파일 버전이 다른 것)
+3. `git add results/ artifacts/ configs/models/` 후 커밋(`models/`는 용량 때문에 .gitignore — 서비스 후보 모델은 팀 공유 스토리지에 따로 보관).
 
 ---
 
@@ -162,7 +190,7 @@ NOTE = "서비스도 필요: 쿼리 특수문자 제거 (store_search_ai/data/te
 | 하이퍼파라미터, loss | 예 | `NOTE`에 이유 |
 | 학습 코드 수정 | 예(코드 사본 + 커밋 정보) | `NOTE`에 무엇을 고쳤는지 |
 | 학습 데이터 가공(negative 추출 방식 등) | 예(데이터 해시) | `NOTE` + jsonl과 meta.json을 **같이** 다시 만들어 올리기 |
-| 문서 텍스트 template(T2 등) | 예(`serving.document_template`) | 평가도 같은 template으로(`14_run_model_eval.py --template`) |
+| 문서 텍스트 template(T2 등) | 예(`serving.document_template`) | 평가도 같은 template으로(평가 노트북 `TEMPLATE`, 또는 `evaluate_model(template=...)`) |
 | **쿼리/문서 전처리 추가** | **아니오** | **`NOTE`에 `서비스도 필요:` + 파일·함수 이름** |
 | **BM25 hybrid, reranker 등 후처리** | **아니오** | **`NOTE`에 `서비스도 필요:`** + 평가 run 이름에 표시 |
 
@@ -222,8 +250,8 @@ TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision
 | 코드 커밋 | 시트에 올리면서 커밋·push한 번호(`git log -1 --format=%h`). 기본 코드면 "기본" |
 | 학습 데이터 해시 앞 8자리 | manifest `training_data.sha256` |
 | GPU / precision | manifest `environment.gpu` / `precision` |
-| val nDCG@10, Judged@10, Recall@100 | 평가 결과 json의 `aggregate`(10절 끝 "결과 파일") |
-| zero-shot 대비 차이, p-value | 10절 `--compare-run` 결과 |
+| val nDCG@10, Judged@10, Recall@100 | 학습 노트북 "평가" 셀 출력(또는 리더보드 셀) |
+| zero-shot 대비 차이, p-value | 리더보드의 `ΔnDCG@10` / `p(nDCG@10)` |
 
 **숫자 읽는 법**
 - val은 136개 쿼리라 nDCG@10에 ±0.05 정도 오차가 있습니다. **차이가 0.03보다 작으면 p-value 없이 "좋아졌다"고 하지 않습니다.**
@@ -241,49 +269,41 @@ TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision
 | `처음 실행과 설정/데이터가 다릅니다` | 이어서 학습하려면 메시지에 나온 값을 처음 값으로 되돌리기 |
 | `sha256이 meta.json과 다릅니다` 경고 | 학습 데이터 두 파일을 같이 다시 올리기(`pack_for_colab.py`를 쓰면 자동으로 같이 들어감) |
 | Drive 용량 부족 | 휴지통 비우기. Arctic/BGE는 학습 중 체크포인트로 약 7GB가 잠깐 필요 → 부족하면 `SAVE_MID_CHECKPOINT = False` |
+| 평가 셀에서 `No such file ... qrels_val.trec` / corpus 없음 | `--no-eval-data` 없이 `pack_for_colab.py`로 다시 올리기 |
+| 평가 셀 `ModuleNotFoundError: ir_measures` | 설치 셀을 다시 실행(세션을 새로 열면 설치부터 다시) |
+| 평가가 오래 걸림 | 문서 21만 개를 인코딩하는 정상 시간(모델당 수 분~수십 분). 기준 zero-shot 모델은 처음 한 번만 평가되고 그다음부터는 건너뜀 |
+| `test split은 최종 후보를 정한 뒤 한 번만` 에러 | 정상 — 반복 실험은 val로. 최종 평가 때만 `FINAL_TEST = True`(학습 노트북) 또는 `ALLOW_TEST = True`(평가 노트북) |
 
-## 10. 평가 (2단계)
+## 10. 평가 — Colab 안에서 바로 (2단계)
 
-- **로컬에 GPU가 있을 때**
-  1. Drive `runs/finetune/<TAG>/`를 로컬 `models/<TAG>/`로 내려받습니다.
-  2. 그 안의 `eval_config.yaml`을 `configs/models/<TAG>.yaml`로 복사합니다.
-  3. `python scripts/14_run_model_eval.py --model-config configs/models/<TAG>.yaml --split val`을 실행합니다.
-     결과는 `artifacts/evaluation/storesearch_ko_v1/<TAG>_val_evaluation.json`에 저장되고, manifest에도 자동으로 추가됩니다.
-     여러 모델을 한 표로 보려면 이어서 `python scripts/15_score_model_runs.py --split val`.
-- **GPU가 없을 때**
-  1. Drive `runs/finetune/<TAG>/eval_config.yaml`을 로컬 `configs/models/<TAG>.yaml`로 복사합니다(모델 자체는 안 받아도 됨).
-  2. `python scripts/pack_for_colab.py --with-eval-data`로 올립니다(corpus 포함).
-  3. `colab/run_model_eval_encoding.ipynb`를 Colab에서 열고, "모델 목록" 셀의 `MODEL_CONFIG_NAMES = None` 줄을
-     `MODEL_CONFIG_NAMES = ["<TAG>.yaml"]`로 바꿔 실행합니다(비워 두면 모든 모델을 다 평가해서 오래 걸림).
-     `SPLIT = "val"`, `TEMPLATES = ["t1_minimal"]`은 기본값 그대로. `model_id: models/<TAG>`는 Drive의
-     `runs/finetune/<TAG>`로 자동으로 바뀌어 읽힙니다. → Drive `runs/model_eval/<TAG>/run_t1_minimal_val.csv` 생성
-  4. Drive `runs/model_eval/<TAG>/` 폴더를 로컬 `results/model_eval/<TAG>/`로 받아 `python scripts/15_score_model_runs.py --split val`로 채점합니다.
-     이 경로는 manifest에 평가가 자동으로 안 쌓이므로 **공유 시트가 유일한 기록**입니다.
+채점은 로컬 `scripts/13_evaluate_run.py`와 **같은 공식 evaluator 함수**로 Colab에서 합니다. 그래서 Colab에서 본 점수가 그대로
+공식 점수입니다(마지막에 `import_colab_results.py --verify`가 로컬에서 다시 채점해 같은지 확인).
 
-  ```
-  ① Drive → 로컬   runs/finetune/<TAG>/eval_config.yaml → configs/models/<TAG>.yaml   (yaml 하나만)
-  ② 로컬 → Drive   pack_for_colab.py --with-eval-data 결과 project/ 업로드
-  ③ Colab          run_model_eval_encoding.ipynb (MODEL_CONFIG_NAMES 지정) → runs/model_eval/<TAG>/run_t1_minimal_val.csv
-  ④ Drive → 로컬   runs/model_eval/<TAG>/ → results/model_eval/<TAG>/
-  ⑤ 로컬           python scripts/15_score_model_runs.py --split val
-  ```
-- **zero-shot 대비 p-value**
-  ```
-  python scripts/13_evaluate_run.py --qrels benchmark/storesearch_ko_v1/qrels_val.trec \
-      --run results/model_eval/<TAG>/run_t1_minimal_val.csv --tag <TAG>_val \
-      --compare-run results/model_eval/<베이스모델>/run_t1_minimal_val.csv
-  ```
-  `<베이스모델>`은 yaml의 `name`입니다(`bge_m3`, `snowflake_arctic_embed_l_v2_ko`). zero-shot run도
-  **같은 val 정답으로 다시 채점한 것**을 씁니다.
+**학습한 모델 평가 — 학습 노트북의 `## 평가 (val)` 셀** (학습 셀 다음에 이어서 실행)
+1. 비교 기준인 **zero-shot 베이스 모델**(`MODEL_CONFIG`의 원래 모델)이 아직 평가 안 됐으면 먼저 자동으로 평가합니다(처음 한 번만).
+2. 방금 학습한 모델을 val로 채점하고 지표·95% 신뢰구간·**기준 대비 Δ와 p-value**를 출력합니다.
+3. 학습 없이 이미 있는 run을 다시 평가하려면 학습 셀은 건너뛰고 `EVAL_RUN_TAG = "<TAG>"`를 넣고 평가 셀만 실행합니다.
+4. 결과는 모델 폴더의 `model_manifest.json` `evaluations`에도 자동으로 기록됩니다.
 
-**결과 파일** (어느 경로로 평가했는지에 따라 json 이름이 조금 다릅니다)
+**전체 비교 — `## 리더보드 (val)` 셀**: Drive에 쌓인 모든 평가(팀원 것 포함, 같은 Drive를 쓸 때)를 nDCG@10 순으로 보여 줍니다.
 
-| 파일 | 내용 | 언제 보나 |
+**zero-shot 비교표·여러 run 재평가 — `colab/run_model_eval_encoding.ipynb`**: `MODEL_CONFIG_NAMES`로 고른 모델(또는 전부)을 한 번에
+평가하고 리더보드까지 냅니다. prompt만 다른 변형(`arctic_ko_query`, `qwen3_*_store`)은 문서 임베딩을 재사용해 빠릅니다.
+
+**최종 test 평가** — 팀이 최종 후보를 정한 뒤 **한 번만**: 학습 노트북 맨 아래 셀에서 `FINAL_TEST = True`, 또는 평가 노트북에서
+`SPLIT = "test"`, `ALLOW_TEST = True`. 그 외에는 test 채점이 코드에서 막혀 있습니다.
+
+**결과 파일** (Colab에서는 Drive `store-search-ai/runs/` 밑, 가져온 뒤에는 저장소 안)
+
+| Drive (Colab) | 로컬로 가져온 뒤 | 내용 |
 |---|---|---|
-| `results/model_eval/<TAG>/run_t1_minimal_val.csv` | 검색 결과: 쿼리마다 상위 100개 문서(`query_id,doc_id,rank,score,system`) | 직접 볼 일은 거의 없음(채점 입력) |
-| `results/model_eval/leaderboard_val.csv` | 15번이 만든 모델별 지표 표, nDCG@10 순 정렬 | **여러 모델 비교할 때** |
-| `artifacts/evaluation/storesearch_ko_v1/<TAG>_val_evaluation.json` (14번) 또는 `…/<TAG>_t1_minimal_val_evaluation.json` (15번) | `aggregate`(전체 평균 지표) + `query_bootstrap_ci95`(95% 신뢰구간) | **시트에 적는 숫자는 여기 `aggregate`** |
-| 같은 폴더의 `…_per_query.csv` | 쿼리별 지표 | 어떤 쿼리가 좋아지고 나빠졌는지 볼 때 |
+| `runs/model_eval/<tag>/run_t1_minimal_val.csv` | `results/model_eval/<tag>/` | 검색 결과: 쿼리마다 상위 100개 문서 |
+| `runs/evaluation/<tag>_t1_minimal_val_evaluation.json` | `artifacts/evaluation/storesearch_ko_v1/` | `aggregate`(지표) + `query_bootstrap_ci95` + `comparison`(기준 대비) — **시트에 적는 숫자** |
+| `runs/evaluation/<tag>_t1_minimal_val_per_query.csv` | 위와 같은 폴더 | 쿼리별 지표(어떤 쿼리가 좋아지고 나빠졌는지) |
+| `runs/finetune/<TAG>/model_manifest.json` | `models/<TAG>/` (KEEP한 run) | 학습 기록 + `evaluations` |
+
+**로컬에서 평가하는 방법도 그대로 있습니다**(로컬 GPU가 있을 때): `python scripts/14_run_model_eval.py --model-config configs/models/<TAG>.yaml --split val`
+→ `python scripts/15_score_model_runs.py --split val`. 같은 evaluator라 결과가 같습니다.
 
 ---
 
@@ -315,9 +335,12 @@ TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision
 아니요, 직접 표시합니다. 학습 노트북 맨 아래 `## (평가 후) 좋은 run을 KEEP으로 남기기` 셀의 주석을 풀고 TAG를 바꿔 실행하면 그 run 폴더에 빈 `KEEP` 파일이 생깁니다.
 기준은 7절(baseline / 시트에 올린 run / 서비스 후보·발표용).
 
-**Q. GPU 없이 평가하려면 무슨 파일을 옮기나요?**
-옮기는 건 두 번뿐입니다: 처음에 `eval_config.yaml` 하나(Drive → 로컬), 마지막에 `runs/model_eval/<TAG>/` 폴더(Drive → 로컬).
-그 사이에 Colab에서 `colab/run_model_eval_encoding.ipynb`를 실행합니다. 순서는 10절 그림.
+**Q. 평가하려면 파일을 VS Code로 옮겨야 하나요?**
+아니요. 학습 노트북의 평가 셀이 Colab에서 바로 공식 채점까지 합니다(10절). 파일을 옮기는 건 실험이 다 끝난 뒤
+`import_colab_results.py`로 한 번뿐입니다(3-4절).
+
+**Q. Colab 점수를 믿어도 되나요?**
+로컬 13번과 같은 evaluator 함수로 채점합니다. 가져올 때 `--verify`가 로컬에서 다시 채점해 같은지 확인하고, 다르면 실패로 알려 줍니다.
 
 **Q. `.py`랑 `.ipynb`가 둘 다 있는데 뭘 열어요?**
 Colab에서는 항상 `.ipynb`를 엽니다. `.py`는 git에서 코드 리뷰·diff를 보기 위한 원본이고, `.ipynb`는 그걸로 자동 생성됩니다(0절 "지킬 것").

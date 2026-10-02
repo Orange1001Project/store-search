@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """store_search_ai_colab_finetune_smoke_test.ipynb
 
-실제 학습 데이터 없이 **가짜 데이터로 학습 코드 전체를 Colab GPU에서 한 번 검증**한다.
-push 전, 또는 라이브러리 버전/Colab 환경이 바뀌었을 때 돌려서 "학습 → 중간 체크포인트 → 이어서 학습 →
-merge/저장 → 재로드 검증 → manifest → 체크포인트 삭제"가 끝까지 되는지 확인하는 용도다.
-나오는 모델 자체는 쓸모없다(가짜 데이터).
+실제 학습 데이터 없이 **가짜 데이터로 Colab 파이프라인 전체를 GPU에서 한 번 검증**한다.
+push 전, 또는 라이브러리 버전/Colab 환경이 바뀌었을 때 돌려서
+"학습 → 중간 체크포인트 → 이어서 학습 → merge/저장 → 재로드 검증 → manifest → 체크포인트 삭제
+ → **평가(공식 evaluator 채점) → 기준 모델 대비 비교 → manifest에 평가 기록 → 리더보드 → test 차단**"
+이 끝까지 되는지 확인한다. 나오는 모델·점수 자체는 쓸모없다(가짜 데이터, 축소 코퍼스).
 
 - 결과는 `runs/finetune_smoke/`(실제 run과 다른 폴더)에만 저장되고, OWNER는 "smoke"로 고정 —
   실제 run의 자동 정리와 절대 섞이지 않는다.
@@ -14,7 +15,8 @@ merge/저장 → 재로드 검증 → manifest → 체크포인트 삭제"가 �
   (중단 없이 끝까지 가게 두면 재개 테스트만 빠지고 나머지는 전부 검증된다.)
 
 Drive 준비: 로컬에서 `python scripts/pack_for_colab.py` → `colab_upload/project/`를 Drive `store-search-ai/project`로
-올리기(학습 데이터는 없어도 됨 — 이 스크립트가 가짜 데이터를 만든다)
+올리기(학습 데이터는 없어도 됨 — 이 노트북이 가짜 데이터를 만든다. 평가 확인에 corpus·qrels가 필요하므로
+`--no-eval-data`로 pack하면 안 됨)
 """
 
 import torch
@@ -28,7 +30,7 @@ if torch.cuda.is_available():
 # colab/run_finetune_*.py와 같은 버전 (여기서 설치가 되는지 확인하는 것도 테스트의 일부)
 get_ipython().system(
     'pip -q install "sentence-transformers==3.4.1" "transformers==4.51.3" "peft==0.15.2" '
-    '"datasets==3.5.0" "accelerate==1.6.0"'
+    '"datasets==3.5.0" "accelerate==1.6.0" "ir-measures==0.4.3" "pytrec-eval-terrier==0.5.10"'
 )
 
 # %%
@@ -157,5 +159,68 @@ if prompt_name:
 del trained, base
 torch.cuda.empty_cache()
 
+"""## 평가 파이프라인 확인 — 학습한 모델을 채점까지 (축소 코퍼스, 비공식)
+
+실제 평가는 문서 21만 개를 인코딩하지만, 여기서는 배관 확인용으로 **val 정답에 나온 문서 + 무작위 2,000개**만 쓴다.
+점수는 의미가 없고, `official=False`로 저장돼 리더보드·로컬 가져오기(`import_colab_results.py`)에서 자동으로 빠진다.
+결과는 `runs/finetune_smoke/` 밑에만 쌓인다(실제 평가 폴더와 섞이지 않음).
+"""
+
+# %%
+import pandas as pd
+
+from store_search_ai.evaluation.model_evaluation import (
+    collect_leaderboard,
+    evaluate_model,
+    format_report,
+    load_eval_inputs,
+)
+
+eval_inputs = load_eval_inputs(PROJECT_DIR)
+qrels_path = eval_inputs["benchmark_dir"] / "qrels_val.trec"
+judged = {line.split()[2] for line in qrels_path.read_text(encoding="utf-8").splitlines() if line.strip()}
+corpus = eval_inputs["corpus"]
+small_corpus = pd.concat(
+    [corpus[corpus["doc_id"].isin(judged)], corpus[~corpus["doc_id"].isin(judged)].sample(2000, random_state=0)]
+).reset_index(drop=True)
+small_inputs = {**eval_inputs, "corpus": small_corpus}
+print(f"[INFO] 축소 코퍼스 {len(small_corpus):,}개 (전체 {len(corpus):,}개)")
+
+SMOKE_RUN_ROOT = SMOKE_ROOT / "model_eval"
+SMOKE_EVAL_ROOT = SMOKE_ROOT / "evaluation"
+base_eval = evaluate_model(base_config, small_inputs, run_root=SMOKE_RUN_ROOT, eval_root=SMOKE_EVAL_ROOT, official=False)
+print(format_report(base_eval["report"]))
+del base_eval
+torch.cuda.empty_cache()
+
+eval_config = {**load_config(final_dir / "eval_config.yaml"), "model_id": str(final_dir)}
+ft_eval = evaluate_model(eval_config, small_inputs, run_root=SMOKE_RUN_ROOT, eval_root=SMOKE_EVAL_ROOT,
+                         baseline_tag=base_config["name"], official=False)
+report = ft_eval["report"]
+print(format_report(report))
+
+check("평가: run.csv 생성", ft_eval["run_path"].exists(), str(ft_eval["run_path"]))
+validation = report["run_validation"]
+check("평가: val 쿼리 전부 채점(누락·중복 0)",
+      validation["missing_queries"] == 0 and validation["duplicate_query_doc_pairs"] == 0,
+      f"{validation['queries']}/{validation['expected_queries']}")
+check("평가: 기준 모델 대비 비교(p-value) 계산", "comparison" in report)
+manifest = json.loads((final_dir / "model_manifest.json").read_text(encoding="utf-8"))
+check("평가: 모델 manifest에 평가 기록", any(e["tag"] == report["tag"] for e in manifest["evaluations"]))
+board = collect_leaderboard(SMOKE_EVAL_ROOT, "val", include_unofficial=True)
+check("리더보드에 기준·학습 모델 둘 다", len(board) >= 2, board["tag"].tolist())
+check("비공식 평가는 기본 리더보드에서 빠짐", collect_leaderboard(SMOKE_EVAL_ROOT, "val").empty)
+try:
+    evaluate_model(eval_config, small_inputs, run_root=SMOKE_RUN_ROOT, eval_root=SMOKE_EVAL_ROOT, split="test",
+                   encoder=ft_eval["encoder"], doc_embeddings=ft_eval["doc_embeddings"], official=False)
+    check("test split은 allow_test 없이 차단", False)
+except ValueError:
+    check("test split은 allow_test 없이 차단", True)
+del ft_eval
+torch.cuda.empty_cache()
+
+"""## 최종 결과"""
+
+# %%
 print("\n통과" if all(checks) else "\n실패 항목이 있습니다 — 위 로그 전체를 공유해 주세요")
 print(f"테스트가 끝나면 Drive {SMOKE_ROOT} 폴더는 통째로 지워도 됩니다.")

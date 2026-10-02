@@ -126,20 +126,22 @@ runs/finetune/bge_m3_ft_jisu_20260928_0307/
   3개 개수에도 세지 않습니다. 로컬에서 val 점수를 보고 고른 run에 KEEP을 붙이는 게 기본 흐름입니다.
 - Drive에서 지운 폴더는 Drive 휴지통으로 갑니다. 용량을 바로 확보하려면 휴지통도 비우세요.
 
-## 4. 결과 회수 + 평가 (로컬)
+## 4. 평가 — Colab에서 바로, 마지막에 로컬로 가져오기
 
-1. Drive의 `runs/finetune/<TAG>/`를 통째로 로컬 `models/<TAG>/`로 내려받습니다(`models/`는 `.gitignore` 대상).
-2. `models/<TAG>/eval_config.yaml`을 `configs/models/<TAG>.yaml`로 복사합니다(`model_id: models/<TAG>`,
-   `query_prompt_name`/`target_dimension`은 베이스 모델 값이 그대로 들어가 있습니다).
-3. 기존 harness로 그대로 평가합니다:
-   ```bash
-   python scripts/14_run_model_eval.py --model-config configs/models/<TAG>.yaml --split val
-   python scripts/15_score_model_runs.py --split val
-   ```
-   `14_run_model_eval.py`가 평가 결과를 `models/<TAG>/model_manifest.json`의 `evaluations`에 자동으로 추가합니다.
-   로컬에 GPU가 없으면 `colab/run_model_eval_encoding.ipynb`로 run.csv만 Colab에서 만들고 채점은 로컬에서 합니다
-   (`colab/README.md`). 이 스크립트는 `model_id: models/<TAG>`를 Drive `runs/finetune/<TAG>`로 자동으로 바꿔 읽으므로
-   yaml을 Colab용으로 따로 고칠 필요가 없습니다. 이 경로로 평가하면 manifest의 `evaluations`는 자동으로 안 쌓입니다.
+학습 노트북은 학습 셀 다음에 **평가 셀**이 있어서, 학습이 끝나면 같은 노트북에서 val을 공식 evaluator로 채점하고
+기준 zero-shot 모델 대비 Δ·p-value와 리더보드를 바로 보여 줍니다(`store_search_ai.evaluation.model_evaluation.evaluate_model`
+— 로컬 13번과 같은 `build_evaluation_report`를 호출). 결과는 Drive `runs/model_eval/`·`runs/evaluation/`에 쌓이고 모델 폴더의
+`model_manifest.json` `evaluations`에도 기록됩니다. 그래서 **학습 → 평가 → 수정 → 다시 학습을 Colab 안에서 반복**합니다.
+
+실험이 다 끝나면 Drive의 `store-search-ai` 폴더를 내려받아:
+```bash
+python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai> --verify
+```
+→ `results/model_eval/`, `artifacts/evaluation/storesearch_ko_v1/`, KEEP한 run의 `models/<TAG>/` + `configs/models/<TAG>.yaml`로
+정리하고, `--verify`가 로컬에서 다시 채점해 Colab 점수와 같은지 확인합니다. 절차는 `docs/TRAINING_TEAM.md` 3-4·10절.
+
+로컬 GPU로 평가하는 기존 방법(`14_run_model_eval.py --model-config configs/models/<TAG>.yaml` → `15_score_model_runs.py`)도
+그대로 쓸 수 있습니다(같은 evaluator).
 
 ## 5. model_manifest.json — 서비스에 가져다 쓸 체크포인트 추적
 

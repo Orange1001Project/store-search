@@ -31,7 +31,8 @@ T4(15GB) 기준 모델별 설정:
   8B  : T4에서는 불가(L4/A100 필요).
 
 사용 전 준비는 `colab/run_finetune_simple.ipynb` 맨 위 설명과 동일(로컬에서 `python scripts/pack_for_colab.py` →
-`colab_upload/project/`를 Drive `store-search-ai/project`로 올리기).
+`colab_upload/project/`를 Drive `store-search-ai/project`로 올리기). 학습이 끝나면 **같은 노트북에서 바로 val 채점**
+(기준 zero-shot 모델 대비) → 리더보드까지 본다 — 로컬로 옮길 필요 없음.
 """
 
 import torch
@@ -47,7 +48,7 @@ else:
 # colab/run_finetune_simple.py와 반드시 같은 버전 (팀 합의 없이 바꾸지 말 것)
 get_ipython().system(
     'pip -q install "sentence-transformers==3.4.1" "transformers==4.51.3" "peft==0.15.2" '
-    '"datasets==3.5.0" "accelerate==1.6.0"'
+    '"datasets==3.5.0" "accelerate==1.6.0" "ir-measures==0.4.3" "pytrec-eval-terrier==0.5.10"'
 )
 
 # %%
@@ -111,10 +112,67 @@ cfg = FinetuneConfig(
 # %%
 final_dir = run_finetune(cfg)
 
-print("\n다음 단계:")
-print(f"  1. Drive {final_dir} 폴더를 로컬 models/{final_dir.name}/ 로 내려받기")
-print(f"  2. models/{final_dir.name}/eval_config.yaml 을 configs/models/{final_dir.name}.yaml 로 복사")
-print(f"  3. python scripts/14_run_model_eval.py --model-config configs/models/{final_dir.name}.yaml --split val")
+"""## 평가 (val) — 학습한 모델을 바로 채점
+
+로컬 `scripts/13_evaluate_run.py`와 **같은 공식 evaluator 함수**로 채점한다(Colab 점수 = 로컬 점수).
+처음 한 번은 비교 기준인 **zero-shot 베이스 모델**도 자동으로 평가한다(문서 21만 개 인코딩이라 모델당 수 분~수십 분).
+결과는 Drive `runs/model_eval/`(run.csv), `runs/evaluation/`(지표 json)에 쌓이고, 모델 폴더의 manifest에도 기록된다.
+
+학습 없이 이미 있는 run을 다시 평가하려면 학습 셀은 건너뛰고 `EVAL_RUN_TAG`에 그 run의 TAG를 넣는다.
+"""
+
+# %%
+import gc
+
+from store_search_ai.evaluation.model_evaluation import (
+    collect_leaderboard,
+    evaluate_model,
+    format_report,
+    load_eval_inputs,
+)
+from store_search_ai.pipeline.common import load_config
+
+EVAL_RUN_TAG = None                     # 학습 없이 평가만: Drive runs/finetune/ 의 TAG (None이면 방금 학습한 모델)
+RUN_ROOT = DRIVE_ROOT / "runs" / "model_eval"
+EVAL_ROOT = DRIVE_ROOT / "runs" / "evaluation"
+
+eval_inputs = load_eval_inputs(PROJECT_DIR)  # corpus·queries·벤치마크 설정(이 세션에서 한 번 읽으면 재사용)
+base_config = load_config(PROJECT_DIR / "configs" / "models" / MODEL_CONFIG)
+
+# %%
+if not (RUN_ROOT / base_config["name"] / "run_t1_minimal_val.csv").exists():
+    print(f"[기준 모델] {base_config['name']} zero-shot 평가 (처음 한 번만)")
+    baseline = evaluate_model(base_config, eval_inputs, run_root=RUN_ROOT, eval_root=EVAL_ROOT)
+    print(format_report(baseline["report"]))
+    del baseline
+    gc.collect()
+    torch.cuda.empty_cache()
+
+if EVAL_RUN_TAG:
+    run_dir = DRIVE_ROOT / "runs" / "finetune" / EVAL_RUN_TAG
+elif "final_dir" in globals():
+    run_dir = final_dir
+else:
+    raise SystemExit("학습 셀을 실행하거나 EVAL_RUN_TAG에 평가할 run의 TAG를 넣으세요.")
+
+eval_config = {**load_config(run_dir / "eval_config.yaml"), "model_id": str(run_dir)}
+result = evaluate_model(eval_config, eval_inputs, run_root=RUN_ROOT, eval_root=EVAL_ROOT,
+                        baseline_tag=base_config["name"])
+print(format_report(result["report"]))
+del result
+gc.collect()
+torch.cuda.empty_cache()
+
+"""## 리더보드 (val) — Drive에 쌓인 평가 전부
+
+nDCG@10 순. `ΔnDCG@10`/`p(nDCG@10)`은 각 run의 기준(zero-shot 베이스 모델) 대비 차이와 paired 검정 p-value.
+**차이가 0.03보다 작거나 p가 크면 "개선"이라고 하지 않는다.** Judged@10이 낮으면 점수가 실제보다 낮게 나왔을 수 있다.
+"""
+
+# %%
+leaderboard = collect_leaderboard(EVAL_ROOT, "val")
+cols = ["tag", "nDCG@10", "ΔnDCG@10", "p(nDCG@10)", "Judged@10", "Recall@100", "MRR@100"]
+print(leaderboard[[c for c in cols if c in leaderboard.columns]].to_string(index=False))
 
 """## (평가 후) 좋은 run을 KEEP으로 남기기
 
@@ -123,3 +181,18 @@ Drive는 내 run 중 최신 3개만 남기고 자동으로 지운다. 서비스 
 """
 
 # (DRIVE_ROOT / "runs" / "finetune" / "여기에_TAG" / "KEEP").touch()
+
+"""## (팀이 최종 후보를 정한 뒤 한 번만) test 평가
+
+모델·설정 선택은 전부 val로 한다. test는 최종 후보가 확정된 뒤 **한 번만** 본다 — 그래서 기본값은 꺼져 있다.
+"""
+
+# %%
+FINAL_TEST = False                      # 최종 후보 확정 후에만 True
+
+if FINAL_TEST:
+    if not (RUN_ROOT / base_config["name"] / "run_t1_minimal_test.csv").exists():
+        evaluate_model(base_config, eval_inputs, run_root=RUN_ROOT, eval_root=EVAL_ROOT, split="test", allow_test=True)
+    test_result = evaluate_model(eval_config, eval_inputs, run_root=RUN_ROOT, eval_root=EVAL_ROOT, split="test",
+                                 allow_test=True, baseline_tag=base_config["name"])
+    print(format_report(test_result["report"]))

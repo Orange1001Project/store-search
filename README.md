@@ -55,6 +55,7 @@ scripts/01_*.py ~ scripts/15_*.py   파이프라인 본체 (docs/PIPELINE.md 참
 scripts/import_queryset_xlsx.py    data/query/queryset_final.xlsx → query_families_v1.yaml 변환기(번호 없음, 05 이전에 1회성 실행)
 scripts/prepare_finetune_dataset.py  train qrels+corpus → fine-tuning용 jsonl (번호 없음, docs/TRAINING.md 참고)
 scripts/pack_for_colab.py            Colab(Drive)에 올릴 project/ 폴더 생성 + git 정보 기록 (docs/TRAINING_TEAM.md 참고)
+scripts/import_colab_results.py      Colab 실험 결과(Drive runs/)를 저장소로 가져오기 + 로컬 재채점 검증(--verify)
 data/
   raw/stores_20260907.xlsx       원본 전국 데이터 (수정 금지)
   query/queryset_final.xlsx      팀이 작성한 최종 query family/질의 원본 (수정 금지, import_queryset_xlsx.py가 읽음)

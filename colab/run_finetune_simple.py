@@ -20,14 +20,13 @@ Colab(무료 T4 포함)에서 Snowflake Arctic(`arctic_ko.yaml`), BGE-M3(`bge_m3
   1. 학습 데이터(data/finetune/train_pairs.jsonl + train_pairs.meta.json) 준비 — 데이터 담당이 git으로
      배포한 것을 `git pull`로 받는다(직접 만들 때만 `python scripts/prepare_finetune_dataset.py`)
   2. 로컬에서 `python scripts/pack_for_colab.py` → `colab_upload/project/` 폴더가 생긴다
-     (코드 + configs/models + 학습 데이터 + git 커밋 정보 code_version.json).
+     (코드 + configs + 학습 데이터 + 평가용 corpus·queries·val/test 정답 + git 커밋 정보 code_version.json).
      Drive `내 드라이브/store-search-ai/`의 기존 `project` 폴더를 지우고 이 `project` 폴더를 올린다.
-  3. 아래 "설정" 셀의 OWNER(필수)와 NOTE(바꾼 게 있으면)를 적고 전체 실행
-  4. 끝나면 Drive `runs/finetune/<TAG>/`를 로컬 `models/<TAG>/`로 내려받고,
-     그 안의 `eval_config.yaml`을 `configs/models/<TAG>.yaml`로 복사해서
-     `python scripts/14_run_model_eval.py --model-config configs/models/<TAG>.yaml --split val`
-     (평가 결과는 자동으로 models/<TAG>/model_manifest.json에 쌓인다)
-  5. 서비스 후보로 남길 run은 맨 아래 셀의 한 줄로 그 폴더에 빈 파일 `KEEP`을 만들어 자동 정리에서 보호
+  3. 아래 "설정" 셀의 OWNER(필수)와 NOTE(바꾼 게 있으면)를 적고 위에서부터 실행
+     → 학습 → **바로 val 채점**(기준 zero-shot 모델 대비) → 리더보드까지 이 노트북 안에서 끝난다.
+  4. 코드를 고치고 싶으면 Drive의 src/ 파일을 Colab 편집기에서 고친 뒤 학습 셀부터 다시 실행(docs/TRAINING_TEAM.md 3-2절)
+  5. 남길 run은 맨 아래 셀로 KEEP 표시. 실험이 다 끝나면 Drive 결과를 로컬로 내려받아
+     `python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai 폴더> --verify`로 저장소에 정리
 """
 
 import torch
@@ -44,7 +43,7 @@ else:
 # 이 줄과 colab/run_finetune_qwen3.py, pyproject.toml의 train extra를 같이 바꿀 것.
 get_ipython().system(
     'pip -q install "sentence-transformers==3.4.1" "transformers==4.51.3" "peft==0.15.2" '
-    '"datasets==3.5.0" "accelerate==1.6.0"'
+    '"datasets==3.5.0" "accelerate==1.6.0" "ir-measures==0.4.3" "pytrec-eval-terrier==0.5.10"'
 )
 
 # %%
@@ -101,10 +100,67 @@ cfg = FinetuneConfig(
 # %%
 final_dir = run_finetune(cfg)
 
-print("\n다음 단계:")
-print(f"  1. Drive {final_dir} 폴더를 로컬 models/{final_dir.name}/ 로 내려받기")
-print(f"  2. models/{final_dir.name}/eval_config.yaml 을 configs/models/{final_dir.name}.yaml 로 복사")
-print(f"  3. python scripts/14_run_model_eval.py --model-config configs/models/{final_dir.name}.yaml --split val")
+"""## 평가 (val) — 학습한 모델을 바로 채점
+
+로컬 `scripts/13_evaluate_run.py`와 **같은 공식 evaluator 함수**로 채점한다(Colab 점수 = 로컬 점수).
+처음 한 번은 비교 기준인 **zero-shot 베이스 모델**도 자동으로 평가한다(문서 21만 개 인코딩이라 모델당 수 분~수십 분).
+결과는 Drive `runs/model_eval/`(run.csv), `runs/evaluation/`(지표 json)에 쌓이고, 모델 폴더의 manifest에도 기록된다.
+
+학습 없이 이미 있는 run을 다시 평가하려면 학습 셀은 건너뛰고 `EVAL_RUN_TAG`에 그 run의 TAG를 넣는다.
+"""
+
+# %%
+import gc
+
+from store_search_ai.evaluation.model_evaluation import (
+    collect_leaderboard,
+    evaluate_model,
+    format_report,
+    load_eval_inputs,
+)
+from store_search_ai.pipeline.common import load_config
+
+EVAL_RUN_TAG = None                     # 학습 없이 평가만: Drive runs/finetune/ 의 TAG (None이면 방금 학습한 모델)
+RUN_ROOT = DRIVE_ROOT / "runs" / "model_eval"
+EVAL_ROOT = DRIVE_ROOT / "runs" / "evaluation"
+
+eval_inputs = load_eval_inputs(PROJECT_DIR)  # corpus·queries·벤치마크 설정(이 세션에서 한 번 읽으면 재사용)
+base_config = load_config(PROJECT_DIR / "configs" / "models" / MODEL_CONFIG)
+
+# %%
+if not (RUN_ROOT / base_config["name"] / "run_t1_minimal_val.csv").exists():
+    print(f"[기준 모델] {base_config['name']} zero-shot 평가 (처음 한 번만)")
+    baseline = evaluate_model(base_config, eval_inputs, run_root=RUN_ROOT, eval_root=EVAL_ROOT)
+    print(format_report(baseline["report"]))
+    del baseline
+    gc.collect()
+    torch.cuda.empty_cache()
+
+if EVAL_RUN_TAG:
+    run_dir = DRIVE_ROOT / "runs" / "finetune" / EVAL_RUN_TAG
+elif "final_dir" in globals():
+    run_dir = final_dir
+else:
+    raise SystemExit("학습 셀을 실행하거나 EVAL_RUN_TAG에 평가할 run의 TAG를 넣으세요.")
+
+eval_config = {**load_config(run_dir / "eval_config.yaml"), "model_id": str(run_dir)}
+result = evaluate_model(eval_config, eval_inputs, run_root=RUN_ROOT, eval_root=EVAL_ROOT,
+                        baseline_tag=base_config["name"])
+print(format_report(result["report"]))
+del result
+gc.collect()
+torch.cuda.empty_cache()
+
+"""## 리더보드 (val) — Drive에 쌓인 평가 전부
+
+nDCG@10 순. `ΔnDCG@10`/`p(nDCG@10)`은 각 run의 기준(zero-shot 베이스 모델) 대비 차이와 paired 검정 p-value.
+**차이가 0.03보다 작거나 p가 크면 "개선"이라고 하지 않는다.** Judged@10이 낮으면 점수가 실제보다 낮게 나왔을 수 있다.
+"""
+
+# %%
+leaderboard = collect_leaderboard(EVAL_ROOT, "val")
+cols = ["tag", "nDCG@10", "ΔnDCG@10", "p(nDCG@10)", "Judged@10", "Recall@100", "MRR@100"]
+print(leaderboard[[c for c in cols if c in leaderboard.columns]].to_string(index=False))
 
 """## (평가 후) 좋은 run을 KEEP으로 남기기
 
@@ -113,3 +169,18 @@ Drive는 내 run 중 최신 3개만 남기고 자동으로 지운다. 서비스 
 """
 
 # (DRIVE_ROOT / "runs" / "finetune" / "여기에_TAG" / "KEEP").touch()
+
+"""## (팀이 최종 후보를 정한 뒤 한 번만) test 평가
+
+모델·설정 선택은 전부 val로 한다. test는 최종 후보가 확정된 뒤 **한 번만** 본다 — 그래서 기본값은 꺼져 있다.
+"""
+
+# %%
+FINAL_TEST = False                      # 최종 후보 확정 후에만 True
+
+if FINAL_TEST:
+    if not (RUN_ROOT / base_config["name"] / "run_t1_minimal_test.csv").exists():
+        evaluate_model(base_config, eval_inputs, run_root=RUN_ROOT, eval_root=EVAL_ROOT, split="test", allow_test=True)
+    test_result = evaluate_model(eval_config, eval_inputs, run_root=RUN_ROOT, eval_root=EVAL_ROOT, split="test",
+                                 allow_test=True, baseline_tag=base_config["name"])
+    print(format_report(test_result["report"]))

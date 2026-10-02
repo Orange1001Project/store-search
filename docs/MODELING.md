@@ -20,6 +20,9 @@ nDCG/Recall/Precision/MRR을 여러 곳에서 각자 재구현하면 언젠가 �
 "어느 숫자가 맞는 숫자인지" 아무도 확신할 수 없게 됩니다. 그래서 이 구조에서는 metric 계산을
 `scripts/13_evaluate_run.py` 한 곳에만 두고:
 
+- Colab 노트북(학습 직후 평가)은 `store_search_ai.evaluation.model_evaluation.evaluate_model`로 채점하는데, 이 함수도
+  13번과 **같은 `evaluator.build_evaluation_report`**를 호출합니다(채점 로직을 다시 구현하지 않음). 가져올 때
+  `scripts/import_colab_results.py --verify`가 로컬 13번 경로로 다시 채점해 같은지 확인합니다.
 - `scripts/14_run_model_eval.py`가 run.csv를 만든 뒤, **`scripts/13_evaluate_run.py`를 그대로
   서브프로세스로 호출**해서 채점합니다. 코드를 복사하지 않고 같은 프로세스를 그대로 재사용하므로,
   숫자가 어긋날 여지 자체가 없습니다.
