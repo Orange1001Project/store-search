@@ -39,12 +39,10 @@ else:
     print("[경고] GPU가 없습니다 — 런타임 > 런타임 유형 변경 > T4 GPU")
 
 # %%
-# 팀 전체가 같은 버전으로 학습해야 결과를 비교할 수 있다 — 버전을 바꾸려면 팀과 합의 후
-# 이 줄과 colab/run_finetune_qwen3.py, pyproject.toml의 train extra를 같이 바꿀 것.
-get_ipython().system(
-    'pip -q install "sentence-transformers==3.4.1" "transformers==4.51.3" "peft==0.15.2" '
-    '"datasets==3.5.0" "accelerate==1.6.0" "ir-measures==0.4.3" "pytrec-eval-terrier==0.5.10"'
-)
+# Colab에 미리 깔린 torch/transformers/sentence-transformers/peft/datasets/accelerate를 **그대로** 쓴다.
+# (예전처럼 옛 버전을 강제로 설치하면 huggingface_hub·fsspec까지 내려가 Colab 기본 패키지와 충돌한다 —
+#  버전마다 달라진 API는 store_search_ai.common.hf_compat이 맞춘다.) 채점용 두 개만 설치 — 둘 다 HF 패키지를 건드리지 않음.
+get_ipython().system('pip -q install "ir-measures==0.4.3" "pytrec-eval-terrier==0.5.10"')
 
 # %%
 from google.colab import drive
@@ -66,6 +64,10 @@ get_ipython().run_line_magic("load_ext", "autoreload")
 get_ipython().run_line_magic("autoreload", "2")
 
 from store_search_ai.training.st_finetune import FinetuneConfig, run_finetune
+
+from store_search_ai.common.hf_compat import check_environment
+
+check_environment()  # 버전 출력 + 최소 버전 미달·채점 패키지 누락이면 여기서 바로 알려 줌(실제 버전은 기록에도 남음)
 
 """## 설정
 
@@ -159,7 +161,7 @@ nDCG@10 순. `ΔnDCG@10`/`p(nDCG@10)`은 각 run의 기준(zero-shot 베이스 �
 
 # %%
 leaderboard = collect_leaderboard(EVAL_ROOT, "val")
-cols = ["tag", "nDCG@10", "ΔnDCG@10", "p(nDCG@10)", "Judged@10", "Recall@100", "MRR@100"]
+cols = ["tag", "nDCG@10", "ΔnDCG@10", "p(nDCG@10)", "Judged@10", "Recall@100", "MRR@100", "libs"]
 print(leaderboard[[c for c in cols if c in leaderboard.columns]].to_string(index=False))
 
 """## (평가 후) 좋은 run을 KEEP으로 남기기

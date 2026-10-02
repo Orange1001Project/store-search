@@ -25,9 +25,15 @@ train qrels(`benchmark/storesearch_ko_v1/qrels_train.csv`, 없으면
 
 두 스크립트는 **설정 셀만 다르고** 학습 코드는 `store_search_ai.training.st_finetune.run_finetune()`
 하나를 같이 씁니다(sentence-transformers Trainer + peft). 팀원마다 학습 코드가 달라서 결과를 비교할
-수 없게 되는 일을 막기 위해서입니다. 라이브러리 버전도 두 스크립트가 같은 값으로 고정돼 있습니다
-(`sentence-transformers==3.4.1`, `transformers==4.51.3`, `peft==0.15.2`, `datasets==3.5.0`,
-`accelerate==1.6.0` — 바꾸려면 팀 합의 후 두 스크립트와 `pyproject.toml`의 `train` extra를 같이).
+수 없게 되는 일을 막기 위해서입니다.
+
+**라이브러리 버전**: Colab에 미리 깔린 torch·transformers·sentence-transformers·peft·datasets·accelerate를 **그대로** 씁니다
+(2026-10 기준 Python 3.13, transformers 5.18, sentence-transformers 5.7, peft 0.21). 예전에는 옛 버전(transformers 4.51,
+sentence-transformers 3.4)을 노트북에서 강제로 설치했는데, 그러면 Colab의 huggingface_hub·fsspec까지 내려가 gradio·diffusers·
+gcsfs와 충돌하고 Colab이 업데이트될수록 더 어긋났습니다. 노트북이 추가로 설치하는 건 채점용 `ir-measures`·`pytrec-eval-terrier`
+뿐입니다. 버전마다 바뀐 API(transformers 5의 `dtype`·`warmup_steps`, sentence-transformers 5의 읽기 전용 `auto_model` 등)는
+`store_search_ai.common.hf_compat`이 맞추고, 노트북의 `check_environment()`가 시작할 때 버전을 출력·점검합니다. 실제로 쓴 버전은
+manifest `environment`와 평가 json `library_versions`에 남고 리더보드에도 표시됩니다 — **비교는 같은 버전끼리** 합니다.
 
 **예전 버전(ms-swift)을 버린 이유**: T4는 ms-swift 예제가 전제하는 bf16/flash-attention을 지원하지
 않고, ms-swift가 저장하는 LoRA adapter는 merge해도 sentence-transformers 설정(Qwen3의 last-token

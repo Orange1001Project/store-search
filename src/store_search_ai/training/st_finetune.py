@@ -30,11 +30,19 @@ import shutil
 import time
 import zipfile
 from dataclasses import asdict, dataclass, field
-from importlib import metadata
 from pathlib import Path
 
 import yaml
 
+from store_search_ai.common.hf_compat import (
+    batch_samplers,
+    dtype_kwargs,
+    embedding_dimension,
+    library_versions,
+    losses_module,
+    set_transformer_model,
+    warmup_kwargs,
+)
 from store_search_ai.pipeline.common import (
     load_config,
     sha256_file,
@@ -54,8 +62,6 @@ from store_search_ai.training.finetune import (
     run_tag_prefix,
     validate_resume_tag,
 )
-
-_ENV_PACKAGES = ["torch", "transformers", "sentence-transformers", "peft", "datasets", "accelerate"]
 
 
 @dataclass
@@ -119,12 +125,7 @@ class _NonFiniteLossError(RuntimeError):
 
 
 def _environment(torch) -> dict:
-    packages = {}
-    for name in _ENV_PACKAGES:
-        try:
-            packages[name] = metadata.version(name)
-        except metadata.PackageNotFoundError:
-            packages[name] = None
+    packages = library_versions()
     return {
         "python": platform.python_version(),
         "packages": packages,
@@ -214,9 +215,9 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
         SentenceTransformer,
         SentenceTransformerTrainer,
         SentenceTransformerTrainingArguments,
-        losses,
     )
-    from sentence_transformers.training_args import BatchSamplers
+    losses = losses_module()
+    BatchSamplers = batch_samplers()
     from transformers import TrainerCallback, set_seed
 
     set_seed(cfg.seed)
@@ -275,7 +276,7 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
     # ---------------- 모델 ----------------
     base_dtype = getattr(torch, cfg.base_dtype)
     model = SentenceTransformer(
-        model_config["model_id"], device=device, model_kwargs={"torch_dtype": base_dtype}
+        model_config["model_id"], device=device, model_kwargs=dtype_kwargs(base_dtype)
     )
     model.max_seq_length = cfg.max_seq_length
 
@@ -298,7 +299,8 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
         from peft import LoraConfig, TaskType, get_peft_model
 
         transformer = model[0]
-        transformer.auto_model = get_peft_model(
+        # sentence-transformers 5에서는 auto_model이 읽기 전용이라 set_transformer_model로 교체(hf_compat)
+        set_transformer_model(transformer, get_peft_model(
             transformer.auto_model,
             LoraConfig(
                 task_type=TaskType.FEATURE_EXTRACTION,
@@ -307,7 +309,7 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
                 lora_dropout=cfg.lora_dropout,
                 target_modules="all-linear",
             ),
-        )
+        ))
         # fp16 베이스에 붙은 LoRA 파라미터도 fp16이 되는데, fp16 파라미터는 AMP GradScaler가
         # unscale할 수 없어 에러가 난다 → 학습되는 파라미터만 fp32로 올린다.
         for param in transformer.auto_model.parameters():
@@ -321,7 +323,7 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
         guide = SentenceTransformer(
             model_config["model_id"],
             device=device,
-            model_kwargs={"torch_dtype": torch.float16 if device == "cuda" else torch.float32},
+            model_kwargs=dtype_kwargs(torch.float16 if device == "cuda" else torch.float32),
         )
         guide.max_seq_length = cfg.max_seq_length
         guide.eval()
@@ -332,7 +334,7 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
         raise ValueError(f"loss는 'gist' 또는 'mnrl': {cfg.loss!r}")
 
     target_dim = model_config.get("target_dimension")
-    full_dim = model.get_sentence_embedding_dimension()
+    full_dim = embedding_dimension(model)
     if target_dim and target_dim < full_dim:
         # 평가/서빙은 앞 target_dim 차원만 쓰므로(configs/models의 target_dimension), 그 차원에서도
         # 성능이 유지되도록 Matryoshka로 두 차원을 함께 학습한다.
@@ -387,7 +389,7 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
         num_train_epochs=cfg.num_epochs,
         per_device_train_batch_size=cfg.batch_size,
         learning_rate=cfg.learning_rate,
-        warmup_ratio=cfg.warmup_ratio,
+        **warmup_kwargs(SentenceTransformerTrainingArguments, cfg.warmup_ratio),  # transformers 5는 warmup_ratio 없음
         weight_decay=cfg.weight_decay,
         fp16=precision == "fp16",
         bf16=precision == "bf16",
@@ -438,7 +440,7 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
 
     # ---------------- 저장 (partial → 검증 → 최종 이름) ----------------
     if cfg.lora_rank is not None:
-        model[0].auto_model = model[0].auto_model.merge_and_unload()
+        set_transformer_model(model[0], model[0].auto_model.merge_and_unload())
     model.to(getattr(torch, cfg.save_dtype))
     model.save(str(partial_dir), safe_serialization=True)
 

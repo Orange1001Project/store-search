@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from store_search_ai.common.hf_compat import library_versions
 from store_search_ai.evaluation.evaluator import (
     METRIC_SPECS,
     build_evaluation_report,
@@ -128,6 +129,7 @@ def evaluate_model(
     report["corpus_docs"] = len(corpus)
     report["model_id"] = str(model_config["model_id"])
     report["evaluated_at"] = datetime.now(UTC).isoformat()
+    report["library_versions"] = library_versions()  # 비교는 같은 라이브러리 버전끼리(hf_compat 참고)
     _, evaluation_path = save_evaluation_outputs(report, per_query, Path(eval_root), etag)
 
     model_dir = Path(str(model_config["model_id"]))
@@ -187,6 +189,10 @@ def collect_leaderboard(eval_root: str | Path, split: str = "val", include_unoff
         if not include_unofficial and not report.get("official", True):
             continue
         row = {"tag": report["tag"], **{m: report["aggregate"].get(m) for m in METRIC_SPECS}}
+        libs = report.get("library_versions") or {}
+        if libs:
+            # 비교는 같은 라이브러리 버전끼리 — Colab 기본 패키지가 바뀌면 이 칸이 달라진다
+            row["libs"] = f"st{libs.get('sentence-transformers')}/tf{libs.get('transformers')}"
         comparison = report.get("comparison")
         if comparison:
             ndcg = comparison["metrics"].get("nDCG@10", {})

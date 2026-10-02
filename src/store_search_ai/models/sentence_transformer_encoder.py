@@ -28,13 +28,15 @@ class SentenceTransformerEncoder(BaseEncoder):
         self.config = config
         # yaml의 torch_dtype(예: float16)으로 가중치를 올린다 — Qwen3-4B는 fp32면 약 16GB라 T4(15GB)에서 OOM.
         # 없으면 예전과 같은 기본값(fp32).
+        from store_search_ai.common.hf_compat import dtype_kwargs
+
         model_kwargs = {}
         if config.get("torch_dtype"):
-            model_kwargs["torch_dtype"] = getattr(torch, config["torch_dtype"])
+            model_kwargs = dtype_kwargs(getattr(torch, config["torch_dtype"]))
         self.model = SentenceTransformer(config["model_id"], model_kwargs=model_kwargs or None)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "SentenceTransformerEncoder":
+    def from_yaml(cls, path: str | Path) -> SentenceTransformerEncoder:
         return cls(load_config(path))
 
     @property

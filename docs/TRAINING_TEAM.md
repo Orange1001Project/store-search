@@ -34,9 +34,9 @@ Colab에서 실행하는 파일은 전부 **`colab/*.ipynb`** 입니다. 같은 
 |---|---|---|
 | 안내 + 설명 | 이 노트북이 무엇을 하는지 | — |
 | GPU 확인 | `CUDA: True`, `Tesla T4` 등이 찍히는지 | 아니오 |
-| 라이브러리 설치 | `!pip -q install ...` (버전 고정) | **아니오** — 팀 전체가 같은 버전이어야 비교 가능 |
+| 라이브러리 설치 | 채점용 `ir-measures`·`pytrec-eval-terrier`만 설치(HF 계열은 Colab 기본 버전 그대로 — 다운그레이드 안 함) | 아니오 |
 | Drive 연결 | `drive.mount(...)` — 처음엔 권한 허용 창이 뜸 | 아니오 |
-| 경로·import | Drive의 `project/src`를 불러오고 `autoreload`를 켬 | 아니오 |
+| 경로·import | Drive의 `project/src`를 불러오고 `autoreload`를 켬 + `check_environment()`가 라이브러리 버전 출력·점검 | 아니오 |
 | **`## 설정`** | `OWNER`, `MODEL_CONFIG`, `NOTE`, `RESUME_TAG`, `cfg = FinetuneConfig(...)` | **예 — 여기만** |
 | **실행** | `final_dir = run_finetune(cfg)` — 학습 → 저장 → 검증 → 기록 | 아니오(코드를 고친 뒤 **여기부터 다시 실행**) |
 | `## 평가 (val)` (셀 2개) | 기준 zero-shot 모델(처음 한 번만 자동) + 방금 학습한 모델을 **공식 evaluator로 채점**, 기준 대비 Δ·p-value 출력 | 학습 없이 기존 run만 평가할 때 `EVAL_RUN_TAG`만 |
@@ -257,7 +257,8 @@ TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision
 - val은 136개 쿼리라 nDCG@10에 ±0.05 정도 오차가 있습니다. **차이가 0.03보다 작으면 p-value 없이 "좋아졌다"고 하지 않습니다.**
 - **Judged@10**(상위 10개 중 정답 판정이 있는 비율)이 낮으면 점수가 실제보다 낮게 나왔을 수 있습니다. 지금 정답은 키워드
   검색 결과로만 만들어서, 모델이 새로 찾아낸 문서는 판정이 없어 오답으로 계산되기 때문입니다.
-- **같은 학습 데이터 해시 + 같은 precision**(T4=fp16, L4/A100=bf16)인 run끼리 비교합니다.
+- **같은 학습 데이터 해시 + 같은 precision**(T4=fp16, L4/A100=bf16) **+ 같은 라이브러리 버전**(리더보드 `libs` 칸)인 run끼리 비교합니다.
+  Colab은 기본 패키지를 자주 올리므로, 버전이 바뀌었으면 기준 zero-shot 모델도 그 버전으로 다시 평가해서 비교합니다.
 
 ## 9. 자주 막히는 것
 
