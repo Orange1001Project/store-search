@@ -61,7 +61,7 @@ Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하�
     ↓
 [Drive]    내 드라이브/store-search-ai/ 의 기존 project 폴더를 지우고, 새 project 폴더를 업로드
     ↓
-[Colab]    colab/run_finetune_simple.py 를 셀에 붙여넣기 → OWNER, MODEL_CONFIG, NOTE 적고 실행
+[Colab]    colab/run_finetune_simple.ipynb 열기 → 설정 셀에 OWNER, MODEL_CONFIG, NOTE 적고 위에서부터 실행
     ↓
 [Drive]    runs/finetune/<TAG>/ 에 모델 + model_manifest.json 저장됨
 ```
@@ -69,7 +69,14 @@ Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하�
 - **push는 학습에 필요 없습니다.** `pack_for_colab.py`가 "어느 커밋에서, 어떤 파일을 커밋 안 한 채로 올렸는지"를 자동으로
   적고(`code_version.json`), 학습할 때 **실제로 쓴 코드 사본이 모델 폴더에 함께 저장**됩니다. 그래서 커밋을 안 했어도
   나중에 그 모델이 어떤 코드로 학습됐는지 그대로 확인할 수 있습니다.
-- 처음 한 번은 `colab/smoke_test_finetune.py`(가짜 데이터, 몇 분)로 마지막에 `통과`가 나오는지 확인하세요.
+- 처음 한 번은 `colab/smoke_test_finetune.ipynb`(가짜 데이터, 몇 분)로 마지막에 `통과`가 나오는지 확인하세요.
+
+**Colab에서 노트북 여는 법** — Colab에서 실행하는 파일은 전부 `colab/*.ipynb`입니다(같은 이름의 `.py`는 git용 원본).
+- Colab 메뉴 **파일 > 노트북 업로드** → 로컬 저장소의 `colab/run_finetune_simple.ipynb` 등을 선택. 또는
+- 같은 메뉴의 **GitHub** 탭에서 저장소·브랜치를 골라 열기(private 저장소면 GitHub 권한 허용 필요).
+- 노트북은 T4 GPU 런타임으로 열리도록 설정돼 있습니다. 위에서부터 셀을 순서대로 실행하면 됩니다.
+- 노트북 안에서 바꾸는 건 **설정 셀의 값뿐**입니다(로직은 3-2절대로 Drive의 `src/`에서). 노트북 자체를 고쳐서 팀과
+  공유하고 싶으면 `.py`를 고친 뒤 `python scripts/build_colab_notebooks.py`로 다시 생성해서 둘 다 커밋합니다.
 
 ### 3-2. 실험 중: Colab에서 바로 코드 고치기 (다시 올릴 필요 없음)
 
@@ -212,7 +219,7 @@ TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision
 - **GPU가 없을 때**
   1. Drive `runs/finetune/<TAG>/eval_config.yaml`을 로컬 `configs/models/<TAG>.yaml`로 복사합니다(모델 자체는 안 받아도 됨).
   2. `python scripts/pack_for_colab.py --with-eval-data`로 올립니다(corpus 포함).
-  3. `colab/run_model_eval_encoding.py`를 Colab에 붙여넣고, 그 안의 `MODEL_CONFIG_NAMES = None` 줄을
+  3. `colab/run_model_eval_encoding.ipynb`를 Colab에서 열고, "모델 목록" 셀의 `MODEL_CONFIG_NAMES = None` 줄을
      `MODEL_CONFIG_NAMES = ["<TAG>.yaml"]`로 바꿔 실행합니다(비워 두면 모든 모델을 다 평가해서 오래 걸림).
      `SPLIT = "val"`, `TEMPLATES = ["t1_minimal"]`은 기본값 그대로. `model_id: models/<TAG>`는 Drive의
      `runs/finetune/<TAG>`로 자동으로 바뀌어 읽힙니다. → Drive `runs/model_eval/<TAG>/run_t1_minimal_val.csv` 생성
@@ -249,11 +256,11 @@ TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision
 ## 11. 자주 묻는 질문
 
 **Q. Colab "설정 셀"이 어디예요?**
-`colab/run_finetune_simple.py` 중간의 `"""## 설정` 바로 아래, `OWNER = ""`부터 `cfg = FinetuneConfig(...)`까지입니다.
-이 `.py` 파일은 `"""## 제목"""`이 셀 구분 위치입니다. Colab에서 그 위치마다 셀을 나눠 붙여도 되고, 파일 전체를 셀 하나에 붙여도 됩니다.
+`colab/run_finetune_simple.ipynb`의 **"## 설정"** 제목 바로 아래 코드 셀(`OWNER = ""`부터 `cfg = FinetuneConfig(...)`까지)입니다.
+그 다음 셀(`final_dir = run_finetune(cfg)`)이 학습 실행 셀이라, 코드를 고친 뒤 다시 돌릴 때는 이 셀만 다시 실행하면 됩니다.
 
-**Q. `run_finetune_simple.py`를 계속 고치면 되나요?**
-**설정값만** 이 파일(노트북 셀)에서 바꿉니다. 로직은 Drive의 `src/` 파일을 **Colab 편집기에서 바로** 고칩니다(3-2절 —
+**Q. `run_finetune_simple` 노트북을 계속 고치면 되나요?**
+**설정값만** 노트북 설정 셀에서 바꿉니다. 로직은 Drive의 `src/` 파일을 **Colab 편집기에서 바로** 고칩니다(3-2절 —
 다시 올릴 필요 없음).
 
 | 바꾸려는 것 | 어디를 고치나 |

@@ -35,8 +35,9 @@ project/
 
 ## 2. Colab에서 실행
 
-`colab/run_model_eval_encoding.py`를 Colab 노트북 셀로 복사해서 실행하세요 (또는 그대로 `.py`로
-업로드해서 `%run`으로 실행해도 됩니다). 이 스크립트는:
+`colab/run_model_eval_encoding.ipynb`를 Colab에서 열어(**파일 > 노트북 업로드**, 또는 **GitHub** 탭) 위에서부터
+실행하세요. 이 폴더의 `.ipynb`는 같은 이름의 `.py`(git·리뷰용 원본)에서 `python scripts/build_colab_notebooks.py`로
+생성됩니다 — `.py`를 고쳤으면 다시 생성해서 둘 다 커밋하세요(어긋나면 `tests/test_colab_notebooks.py`가 실패). 이 노트북은:
 
 - Drive에 올려둔 `src/store_search_ai`를 `sys.path`로 그대로 가져다 씁니다 — 즉 로컬에서 쓰는
   `SentenceTransformerEncoder`, `ExactCosineSearch`와 **완전히 같은 코드**로 인코딩·검색합니다.

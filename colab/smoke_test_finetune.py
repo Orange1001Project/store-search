@@ -24,16 +24,19 @@ if torch.cuda.is_available():
     print(torch.cuda.get_device_name(0))
     print(round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 2), "GB")
 
+# %%
 # colab/run_finetune_*.py와 같은 버전 (여기서 설치가 되는지 확인하는 것도 테스트의 일부)
 get_ipython().system(
     'pip -q install "sentence-transformers==3.4.1" "transformers==4.51.3" "peft==0.15.2" '
     '"datasets==3.5.0" "accelerate==1.6.0"'
 )
 
+# %%
 from google.colab import drive
 
 drive.mount("/content/drive")
 
+# %%
 import json
 import sys
 from pathlib import Path
@@ -103,6 +106,7 @@ else:
         learning_rate=2e-5, **common,
     )
 
+# %%
 final_dir = run_finetune(cfg)
 
 """## 결과 확인 — 아래가 전부 [OK]면 통과"""

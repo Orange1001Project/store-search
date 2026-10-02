@@ -20,8 +20,8 @@ train qrels(`benchmark/storesearch_ko_v1/qrels_train.csv`, 없으면
 
 | 스크립트 | 대상 모델 | 방식 |
 |---|---|---|
-| `colab/run_finetune_simple.py` | `arctic_ko`, `bge_m3` 등 | full fine-tuning |
-| `colab/run_finetune_qwen3.py` | `qwen3_0_6b` (`4b`는 조건부) | LoRA → 베이스에 merge |
+| `colab/run_finetune_simple.ipynb` | `arctic_ko`, `bge_m3` 등 | full fine-tuning |
+| `colab/run_finetune_qwen3.ipynb` | `qwen3_0_6b` (`4b`는 조건부) | LoRA → 베이스에 merge |
 
 두 스크립트는 **설정 셀만 다르고** 학습 코드는 `store_search_ai.training.st_finetune.run_finetune()`
 하나를 같이 씁니다(sentence-transformers Trainer + peft). 팀원마다 학습 코드가 달라서 결과를 비교할
@@ -137,7 +137,7 @@ runs/finetune/bge_m3_ft_jisu_20260928_0307/
    python scripts/15_score_model_runs.py --split val
    ```
    `14_run_model_eval.py`가 평가 결과를 `models/<TAG>/model_manifest.json`의 `evaluations`에 자동으로 추가합니다.
-   로컬에 GPU가 없으면 `colab/run_model_eval_encoding.py`로 run.csv만 Colab에서 만들고 채점은 로컬에서 합니다
+   로컬에 GPU가 없으면 `colab/run_model_eval_encoding.ipynb`로 run.csv만 Colab에서 만들고 채점은 로컬에서 합니다
    (`colab/README.md`). 이 스크립트는 `model_id: models/<TAG>`를 Drive `runs/finetune/<TAG>`로 자동으로 바꿔 읽으므로
    yaml을 Colab용으로 따로 고칠 필요가 없습니다. 이 경로로 평가하면 manifest의 `evaluations`는 자동으로 안 쌓입니다.
 

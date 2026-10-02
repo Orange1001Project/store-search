@@ -16,7 +16,7 @@ docs/MODELING.md의 "왜 이렇게 나눴는가" 참고: metric 계산은 한 �
        내_드라이브/store-search-ai/project/data/corpus/store_corpus_v002.parquet
        내_드라이브/store-search-ai/project/benchmark/storesearch_ko_v1/queries.csv
      (즉 VSCode 프로젝트 폴더를 그대로 zip해서 Drive에 올리고 압축만 풀어도 된다.)
-  2. 이 스크립트를 Colab에서 실행한다.
+  2. 이 노트북(colab/run_model_eval_encoding.ipynb)을 Colab에서 위에서부터 실행한다.
   3. 끝나면 내_드라이브/store-search-ai/runs/model_eval/ 를 통째로 내려받아
      로컬 프로젝트의 results/model_eval/ 밑에 그대로 덮어쓴다.
 """
@@ -28,6 +28,7 @@ if torch.cuda.is_available():
     print(torch.cuda.get_device_name(0))
     print(round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 2), "GB")
 
+# %%
 # 라이브러리 설치 (store_search_ai 자체는 numpy/pandas/pyyaml만 있으면 되므로 별도 설치 불필요 —
 # 아래 sys.path.insert로 VSCode 프로젝트의 src/를 그대로 가져다 쓴다)
 get_ipython().system(
@@ -36,10 +37,12 @@ get_ipython().system(
     '"datasets==3.5.0" "accelerate==1.6.0"'
 )
 
+# %%
 from google.colab import drive
 
 drive.mount("/content/drive")
 
+# %%
 import sys
 from pathlib import Path
 
@@ -86,6 +89,7 @@ TEXT_COLUMNS = {
     "t3_market_type": "search_text_t3_market_type",
 }
 
+# %%
 # ==========================================================
 # 여기 세 개만 바꾸면 된다: 어떤 split을 평가할지, 어떤 template들을 시도할지,
 # (val은 모델 선정용, test는 최종 후보 확정 후 딱 한 번만 — docs/PIPELINE.md 참고)
@@ -217,5 +221,5 @@ print(RUN_DIR)
 예전에는 여기에 custom instruction을 즉흥적으로 시험하는 셀이 있었다. 지금은 prompt 문자열을 yaml의
 `query_prompt`에 적은 변형 yaml을 두는 방식으로 바꿨다(예: `configs/models/qwen3_0_6b_store.yaml`) —
 기록이 남고, 위 루프에서 같은 모델의 문서 임베딩을 재사용하므로 추가 비용이 query 인코딩뿐이며, 좋은 쪽을
-그대로 학습(`colab/run_finetune_qwen3.py`의 MODEL_CONFIG)에 쓸 수 있다.
+그대로 학습(`colab/run_finetune_qwen3.ipynb`의 MODEL_CONFIG)에 쓸 수 있다.
 """

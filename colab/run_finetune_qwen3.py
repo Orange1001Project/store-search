@@ -3,7 +3,7 @@
 
 Colab(무료 T4 포함)에서 Qwen3-Embedding을 LoRA로 fine-tuning한 뒤 베이스 모델에 merge해서
 sentence-transformers 포맷의 전체 모델 하나로 저장한다. 학습 코드는
-`colab/run_finetune_simple.py`와 같은 `store_search_ai.training.st_finetune.run_finetune()`이다 —
+`colab/run_finetune_simple.ipynb`와 같은 `store_search_ai.training.st_finetune.run_finetune()`이다 —
 차이는 LoRA를 켜고 learning rate가 다른 것뿐.
 
 **왜 ms-swift를 안 쓰나** (예전 버전은 ms-swift였다):
@@ -30,7 +30,7 @@ T4(15GB) 기준 모델별 설정:
         fp16 베이스는 overflow로 loss가 NaN이 될 수 있다 — 그러면 저장 없이 중단되니 L4/A100을 쓸 것.
   8B  : T4에서는 불가(L4/A100 필요).
 
-사용 전 준비는 `colab/run_finetune_simple.py` 상단과 동일(로컬에서 `python scripts/pack_for_colab.py` →
+사용 전 준비는 `colab/run_finetune_simple.ipynb` 맨 위 설명과 동일(로컬에서 `python scripts/pack_for_colab.py` →
 `colab_upload/project/`를 Drive `store-search-ai/project`로 올리기).
 """
 
@@ -43,16 +43,19 @@ if torch.cuda.is_available():
 else:
     print("[경고] GPU가 없습니다 — 런타임 > 런타임 유형 변경 > T4 GPU")
 
+# %%
 # colab/run_finetune_simple.py와 반드시 같은 버전 (팀 합의 없이 바꾸지 말 것)
 get_ipython().system(
     'pip -q install "sentence-transformers==3.4.1" "transformers==4.51.3" "peft==0.15.2" '
     '"datasets==3.5.0" "accelerate==1.6.0"'
 )
 
+# %%
 from google.colab import drive
 
 drive.mount("/content/drive")
 
+# %%
 import sys
 from pathlib import Path
 
@@ -105,6 +108,7 @@ cfg = FinetuneConfig(
     note=NOTE,
 )
 
+# %%
 final_dir = run_finetune(cfg)
 
 print("\n다음 단계:")

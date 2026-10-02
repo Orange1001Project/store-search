@@ -2,7 +2,7 @@
 """store_search_ai_colab_finetune_simple.ipynb
 
 Colab(무료 T4 포함)에서 Snowflake Arctic(`arctic_ko.yaml`), BGE-M3(`bge_m3.yaml`) 등 Qwen3가 아닌
-임베딩 모델을 full fine-tuning한다. Qwen3-Embedding은 `colab/run_finetune_qwen3.py`(LoRA) 참고 —
+임베딩 모델을 full fine-tuning한다. Qwen3-Embedding은 `colab/run_finetune_qwen3.ipynb`(LoRA) 참고 —
 두 스크립트는 설정값만 다르고 학습 코드는 `store_search_ai.training.st_finetune.run_finetune()`
 하나를 같이 쓴다(팀원마다 학습 코드가 달라서 결과를 비교할 수 없게 되는 일을 막기 위함).
 
@@ -39,6 +39,7 @@ if torch.cuda.is_available():
 else:
     print("[경고] GPU가 없습니다 — 런타임 > 런타임 유형 변경 > T4 GPU")
 
+# %%
 # 팀 전체가 같은 버전으로 학습해야 결과를 비교할 수 있다 — 버전을 바꾸려면 팀과 합의 후
 # 이 줄과 colab/run_finetune_qwen3.py, pyproject.toml의 train extra를 같이 바꿀 것.
 get_ipython().system(
@@ -46,10 +47,12 @@ get_ipython().system(
     '"datasets==3.5.0" "accelerate==1.6.0"'
 )
 
+# %%
 from google.colab import drive
 
 drive.mount("/content/drive")
 
+# %%
 import sys
 from pathlib import Path
 
@@ -95,6 +98,7 @@ cfg = FinetuneConfig(
     note=NOTE,
 )
 
+# %%
 final_dir = run_finetune(cfg)
 
 print("\n다음 단계:")
