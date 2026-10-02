@@ -1,12 +1,50 @@
 # 팀 학습 가이드 — 실험은 자유롭게, 결과는 서비스로 이어지게
 
-Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하되, 나중에 **가장 좋았던 모델 폴더 하나와 기록만 보고
+Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실험하되, 나중에 **가장 좋았던 모델 폴더 하나와 기록만 보고
 검색 서비스·벡터DB에 바로 연결**할 수 있게 하기 위한 최소 규칙입니다. 설계 배경은 `docs/TRAINING.md`에 있습니다.
 
 > **요약**
 > - 코드·설정은 마음대로 바꿔도 됩니다. 실험 중 코드는 **Colab 편집기에서 바로** 고치고(다시 올릴 필요 없음), 커밋·push는 좋은 결과가 나온 뒤에 합니다.
 > - 사람이 적는 건 **Colab의 `NOTE` 한 줄**과, 나중에 좋은 결과가 나왔을 때 **공유 시트 한 줄**뿐입니다. 나머지는 자동으로 기록됩니다.
 > - 평가 기준(정답 파일·채점 코드)만은 아무도 바꾸지 않습니다.
+
+---
+
+## 0. Colab 노트북 — 무엇을 열고, 어디를 고치나
+
+Colab에서 실행하는 파일은 전부 **`colab/*.ipynb`** 입니다. 같은 이름의 `.py`는 git·코드 리뷰용 원본이라 Colab에서 열지 않습니다.
+
+| 노트북 | 언제 | 설정 셀에서 바꾸는 것 |
+|---|---|---|
+| `colab/smoke_test_finetune.ipynb` | **처음 한 번**(또는 Colab 환경이 바뀐 것 같을 때) — 가짜 데이터로 학습 전체가 도는지 확인, 마지막에 `통과` | `TARGET`(`"qwen"`/`"arctic"`), 재개 테스트 때만 `RESUME_TAG` |
+| `colab/run_finetune_simple.ipynb` | **Arctic / BGE-M3 학습** (full fine-tuning) | `OWNER`, `MODEL_CONFIG`(`arctic_ko.yaml` / `arctic_ko_query.yaml` / `bge_m3.yaml`), `NOTE`, `cfg = FinetuneConfig(...)` 안의 값 |
+| `colab/run_finetune_qwen3.ipynb` | **Qwen3-Embedding 학습** (LoRA) | 위와 같음 + `MODEL_CONFIG`(`qwen3_0_6b.yaml` / `qwen3_0_6b_store.yaml` / `qwen3_4b.yaml` …), 4B면 `BASE_DTYPE`·`BATCH_SIZE`·`LOSS` |
+| `colab/run_model_eval_encoding.ipynb` | **평가** (zero-shot·학습한 모델 공통) — run.csv 생성, 채점은 로컬 | "모델 목록" 셀의 `MODEL_CONFIG_NAMES` (`None`이면 `configs/models/` 전부) |
+
+**여는 법**
+- Colab 메뉴 **파일 > 노트북 업로드** → 로컬 저장소의 `colab/*.ipynb` 선택. 또는 같은 메뉴의 **GitHub** 탭에서 저장소·브랜치를
+  골라 열기(private 저장소면 GitHub 권한 허용 필요).
+- 노트북은 **T4 GPU 런타임**으로 열리게 설정돼 있습니다. 실행 전에 메뉴 **런타임 > 런타임 유형 변경**에서 GPU인지 한 번 확인하세요.
+- 노트북을 열기 전에 Drive에 `project` 폴더가 올라가 있어야 합니다(3-1절).
+
+**학습 노트북의 셀 순서** (위에서부터 차례로 실행)
+
+| 셀 | 하는 일 | 고치나? |
+|---|---|---|
+| 안내 + 설명 | 이 노트북이 무엇을 하는지 | — |
+| GPU 확인 | `CUDA: True`, `Tesla T4` 등이 찍히는지 | 아니오 |
+| 라이브러리 설치 | `!pip -q install ...` (버전 고정) | **아니오** — 팀 전체가 같은 버전이어야 비교 가능 |
+| Drive 연결 | `drive.mount(...)` — 처음엔 권한 허용 창이 뜸 | 아니오 |
+| 경로·import | Drive의 `project/src`를 불러오고 `autoreload`를 켬 | 아니오 |
+| **`## 설정`** | `OWNER`, `MODEL_CONFIG`, `NOTE`, `RESUME_TAG`, `cfg = FinetuneConfig(...)` | **예 — 여기만** |
+| **실행** | `final_dir = run_finetune(cfg)` — 학습 → 저장 → 검증 → 기록 | 아니오(코드를 고친 뒤 **이 셀만 다시 실행**) |
+| `## (평가 후) 좋은 run을 KEEP으로 남기기` | 남길 run 표시 한 줄(주석 처리돼 있음) | 필요할 때 주석을 풀고 TAG만 바꿔 실행(7절) |
+
+**지킬 것**
+- 노트북에서 바꾸는 건 **설정 셀의 값뿐**입니다. 로직(학습 방식·데이터 처리)은 Drive의 `src/` 파일에서 고칩니다(3-2절) —
+  노트북 셀 안에 쓴 로직은 기록(`code_snapshot.zip`)에 남지 않습니다.
+- 노트북 구조 자체를 바꿔 팀과 공유하고 싶으면 `.ipynb`를 직접 고치지 말고 `colab/*.py`를 고친 뒤
+  `python scripts/build_colab_notebooks.py`로 다시 생성해서 둘 다 커밋합니다(어긋나면 `tests/test_colab_notebooks.py`가 실패).
 
 ---
 
@@ -23,11 +61,11 @@ Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하�
 | 이름 | 무엇 | 언제 바꾸나 |
 |---|---|---|
 | `OWNER` | 내 이름(영문 소문자) — run 이름에 들어감 | 처음 한 번 |
-| `MODEL_CONFIG` | 베이스 모델 선택(`arctic_ko.yaml` / `bge_m3.yaml`) | 모델 바꿀 때 |
+| `MODEL_CONFIG` | 베이스 모델 선택(`arctic_ko.yaml` / `bge_m3.yaml` / `qwen3_0_6b.yaml` 등, 0절 표) | 모델 바꿀 때 |
 | `batch_size`, `learning_rate`, `loss` … | 학습 설정 | 실험할 때 |
 | `RESUME_TAG` | 끊긴 학습을 이어 할 때만 | Colab 연결이 끊겼을 때(9절) |
 | `configs/models/*.yaml` | 모델별 기본 설정(query prompt 등) | 팀 합의 후에만 |
-| `QUERY_PROMPT_OVERRIDE` | Qwen3 전용 prompt 설정 | Arctic/BGE는 해당 없음 |
+| `QUERY_PROMPT_OVERRIDE` | Qwen3 노트북 전용 prompt 설정(보통은 `qwen3_*_store.yaml`처럼 yaml로 고르는 게 낫다) | Arctic/BGE는 해당 없음 |
 
 **`KEEP`**도 기록이 아닙니다. "이 run은 지우지 마" 표시일 뿐입니다(7절).
 
@@ -37,7 +75,7 @@ Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하�
 
 | | 1단계 — 돌려보기 | 2단계 — 비교·기록 |
 |---|---|---|
-| 언제 | 지금 ~ **val 정답(qrels) 배포 전** | 데이터 담당이 val 정답을 배포한 뒤 |
+| 언제 | val 정답(qrels) 배포 전 | 데이터 담당이 val 정답을 배포한 뒤 — **2026-10-02 val/test gold 확정, 지금은 2단계** |
 | 목적 | 학습이 끝까지 도는지, 시간·메모리, 어떤 설정이 T4에 맞는지 파악 | 점수로 비교해서 서비스 후보를 고름 |
 | 평가 | 불가(정답이 아직 없음) | 공식 채점으로 val 평가(10절) |
 | 기록 | manifest(자동)만. `NOTE`는 적으면 좋음 | 남길 run만 **공유 시트 + KEEP** |
@@ -61,7 +99,8 @@ Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하�
     ↓
 [Drive]    내 드라이브/store-search-ai/ 의 기존 project 폴더를 지우고, 새 project 폴더를 업로드
     ↓
-[Colab]    colab/run_finetune_simple.ipynb 열기 → 설정 셀에 OWNER, MODEL_CONFIG, NOTE 적고 위에서부터 실행
+[Colab]    학습 노트북 열기 (Arctic/BGE: run_finetune_simple.ipynb, Qwen3: run_finetune_qwen3.ipynb)
+           → 설정 셀에 OWNER, MODEL_CONFIG, NOTE 적고 위에서부터 실행 (0절)
     ↓
 [Drive]    runs/finetune/<TAG>/ 에 모델 + model_manifest.json 저장됨
 ```
@@ -71,18 +110,13 @@ Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하�
   나중에 그 모델이 어떤 코드로 학습됐는지 그대로 확인할 수 있습니다.
 - 처음 한 번은 `colab/smoke_test_finetune.ipynb`(가짜 데이터, 몇 분)로 마지막에 `통과`가 나오는지 확인하세요.
 
-**Colab에서 노트북 여는 법** — Colab에서 실행하는 파일은 전부 `colab/*.ipynb`입니다(같은 이름의 `.py`는 git용 원본).
-- Colab 메뉴 **파일 > 노트북 업로드** → 로컬 저장소의 `colab/run_finetune_simple.ipynb` 등을 선택. 또는
-- 같은 메뉴의 **GitHub** 탭에서 저장소·브랜치를 골라 열기(private 저장소면 GitHub 권한 허용 필요).
-- 노트북은 T4 GPU 런타임으로 열리도록 설정돼 있습니다. 위에서부터 셀을 순서대로 실행하면 됩니다.
-- 노트북 안에서 바꾸는 건 **설정 셀의 값뿐**입니다(로직은 3-2절대로 Drive의 `src/`에서). 노트북 자체를 고쳐서 팀과
-  공유하고 싶으면 `.py`를 고친 뒤 `python scripts/build_colab_notebooks.py`로 다시 생성해서 둘 다 커밋합니다.
+- 노트북 여는 법과 셀 순서는 0절.
 
 ### 3-2. 실험 중: Colab에서 바로 코드 고치기 (다시 올릴 필요 없음)
 
 1. Colab 왼쪽 **파일 아이콘(📁)** → `drive/MyDrive/store-search-ai/project/src/store_search_ai/training/st_finetune.py`
    (또는 고칠 파일)을 **더블클릭** → 오른쪽에 편집기가 열립니다. 고치면 Drive 파일에 바로 저장됩니다.
-2. 학습 셀(`final_dir = run_finetune(cfg)`)을 **다시 실행**합니다. 학습 스크립트가 `autoreload`를 켜 두어서 고친 코드가
+2. 학습 노트북의 실행 셀(`final_dir = run_finetune(cfg)`)을 **다시 실행**합니다. 노트북의 import 셀이 `autoreload`를 켜 두어서 고친 코드가
    자동으로 다시 불러와집니다(세션 재시작 불필요). 이상하게 예전 코드가 도는 것 같으면 그때만 **런타임 > 세션 다시 시작**.
 3. 기록은 자동입니다: 학습할 때 그 순간의 코드가 모델 폴더의 `code_snapshot.zip`에 저장되고, manifest의
    `code.edited_after_pack`이 `true`로 남습니다(올린 뒤 Colab에서 고쳤다는 표시). **`NOTE`에 무엇을 고쳤는지 한 줄**은 적어 주세요.
@@ -107,7 +141,7 @@ Arctic(Snowflake)·BGE-M3를 각자 코드와 설정을 바꿔 가며 실험하�
 
 ## 4. `NOTE`에 쓰는 것
 
-Colab 설정 셀 맨 위의 `NOTE = ""`에 **기본값에서 바꾼 것을 한 줄로** 적습니다. 바꾼 값 자체는 자동 기록되지만,
+학습 노트북 설정 셀의 `NOTE = ""`에 **기본값에서 바꾼 것을 한 줄로** 적습니다. 바꾼 값 자체는 자동 기록되지만,
 **왜 바꿨는지**는 사람만 알기 때문입니다.
 
 ```python
@@ -157,7 +191,7 @@ NOTE = "서비스도 필요: 쿼리 특수문자 제거 (store_search_ai/data/te
 
 Drive는 학습이 끝날 때마다 **내 run 중 같은 베이스 모델의 최신 3개만 남기고 오래된 것은 자동 삭제**합니다
 (다른 사람 run은 건드리지 않음). 남겨야 하는 run은 그 폴더 안에 **`KEEP`이라는 이름의 빈 파일**을 만들면 삭제되지 않습니다.
-Drive 화면에서는 빈 파일을 만들 수 없으니 Colab에서 이 한 줄을 실행합니다(학습 스크립트 맨 아래에도 있음):
+Drive 화면에서는 빈 파일을 만들 수 없으니 Colab에서 이 한 줄을 실행합니다(학습 노트북 맨 아래 `## (평가 후) 좋은 run을 KEEP으로 남기기` 셀에 주석으로 들어 있음 — 주석을 풀고 TAG만 바꿔 실행):
 
 ```python
 (DRIVE_ROOT / "runs" / "finetune" / "bge_m3_ft_jisu_20260930_0512" / "KEEP").touch()
@@ -229,7 +263,7 @@ TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision
   ```
   ① Drive → 로컬   runs/finetune/<TAG>/eval_config.yaml → configs/models/<TAG>.yaml   (yaml 하나만)
   ② 로컬 → Drive   pack_for_colab.py --with-eval-data 결과 project/ 업로드
-  ③ Colab          run_model_eval_encoding.py (MODEL_CONFIG_NAMES 지정) → runs/model_eval/<TAG>/run_t1_minimal_val.csv
+  ③ Colab          run_model_eval_encoding.ipynb (MODEL_CONFIG_NAMES 지정) → runs/model_eval/<TAG>/run_t1_minimal_val.csv
   ④ Drive → 로컬   runs/model_eval/<TAG>/ → results/model_eval/<TAG>/
   ⑤ 로컬           python scripts/15_score_model_runs.py --split val
   ```
@@ -256,10 +290,11 @@ TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision
 ## 11. 자주 묻는 질문
 
 **Q. Colab "설정 셀"이 어디예요?**
-`colab/run_finetune_simple.ipynb`의 **"## 설정"** 제목 바로 아래 코드 셀(`OWNER = ""`부터 `cfg = FinetuneConfig(...)`까지)입니다.
+학습 노트북(`colab/run_finetune_simple.ipynb`, `colab/run_finetune_qwen3.ipynb`)의 **"## 설정"** 제목 바로 아래 코드 셀
+(`OWNER = ""`부터 `cfg = FinetuneConfig(...)`까지)입니다. 셀 전체 순서는 0절 표.
 그 다음 셀(`final_dir = run_finetune(cfg)`)이 학습 실행 셀이라, 코드를 고친 뒤 다시 돌릴 때는 이 셀만 다시 실행하면 됩니다.
 
-**Q. `run_finetune_simple` 노트북을 계속 고치면 되나요?**
+**Q. 학습 노트북을 계속 고치면 되나요?**
 **설정값만** 노트북 설정 셀에서 바꿉니다. 로직은 Drive의 `src/` 파일을 **Colab 편집기에서 바로** 고칩니다(3-2절 —
 다시 올릴 필요 없음).
 
@@ -277,12 +312,15 @@ TAG	이름	베이스모델	NOTE	코드커밋	학습데이터해시	GPU	precision
 처음에 한 명이 팀 공유 Drive에 만듭니다(8절의 헤더를 첫 줄에 붙여넣기). 기록은 2단계(val 정답 배포 후)부터 합니다.
 
 **Q. KEEP은 자동인가요?**
-아니요, 직접 표시합니다. 학습 스크립트 맨 아래 셀의 주석을 풀고 TAG를 바꿔 실행하면 그 run 폴더에 빈 `KEEP` 파일이 생깁니다.
+아니요, 직접 표시합니다. 학습 노트북 맨 아래 `## (평가 후) 좋은 run을 KEEP으로 남기기` 셀의 주석을 풀고 TAG를 바꿔 실행하면 그 run 폴더에 빈 `KEEP` 파일이 생깁니다.
 기준은 7절(baseline / 시트에 올린 run / 서비스 후보·발표용).
 
 **Q. GPU 없이 평가하려면 무슨 파일을 옮기나요?**
 옮기는 건 두 번뿐입니다: 처음에 `eval_config.yaml` 하나(Drive → 로컬), 마지막에 `runs/model_eval/<TAG>/` 폴더(Drive → 로컬).
-순서는 10절 그림.
+그 사이에 Colab에서 `colab/run_model_eval_encoding.ipynb`를 실행합니다. 순서는 10절 그림.
+
+**Q. `.py`랑 `.ipynb`가 둘 다 있는데 뭘 열어요?**
+Colab에서는 항상 `.ipynb`를 엽니다. `.py`는 git에서 코드 리뷰·diff를 보기 위한 원본이고, `.ipynb`는 그걸로 자동 생성됩니다(0절 "지킬 것").
 
 ---
 
