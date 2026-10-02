@@ -1,0 +1,45 @@
+{
+  "stage": "final",
+  "queries": 548,
+  "query_families": 72,
+  "queries_by_split": {
+    "train": 237,
+    "test": 175,
+    "val": 136
+  },
+  "corpus_docs": 214043,
+  "pool_rows": 52115,
+  "pool_size_min": 27,
+  "pool_size_median": 93.0,
+  "pool_size_mean": 95.10036496350365,
+  "pool_size_max": 160,
+  "pool_systems": [
+    "char_bm25_v1",
+    "char_tfidf_v1",
+    "char_tfidf_v2"
+  ],
+  "pool_system_count": 3,
+  "judgments": 51599,
+  "judgments_per_query_min": 26,
+  "judgments_per_query_median": 92.0,
+  "binary_relevant_documents": 38613,
+  "agreement": {
+    "human_double_annotation_required_rows": 28549,
+    "human_double_annotation_completed_rows": 28223,
+    "double_annotation_coverage": 0.988581036113349,
+    "exact_agreement": 0.821174219608121,
+    "binary_agreement_rel_ge_threshold": 0.9297735889168409,
+    "unweighted_cohen_kappa": 0.6041821401246791,
+    "quadratic_weighted_cohen_kappa": 0.8300121234402739,
+    "rows_needing_adjudication": 5373,
+    "binary_relevance_threshold": 2
+  },
+  "warnings": [
+    "Some query pool is smaller than 60"
+  ],
+  "errors": [
+    "1 queries have no relevance>=2 document",
+    "Incomplete val/test double annotation"
+  ],
+  "valid": false
+}

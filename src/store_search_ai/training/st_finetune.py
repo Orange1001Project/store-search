@@ -280,6 +280,10 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
     model.max_seq_length = cfg.max_seq_length
 
     prompt_name = model_config.get("query_prompt_name")
+    # yaml에 query_prompt(문자열)가 있으면(prompt 실험용 yaml) 그 prompt로 학습한다 — 저장되는 모델의 prompt에도
+    # 기록되므로 eval_config.yaml은 prompt_name만으로 같은 문자열을 쓰게 된다.
+    if cfg.query_prompt_override is None and model_config.get("query_prompt"):
+        cfg.query_prompt_override = model_config["query_prompt"]
     if cfg.query_prompt_override is not None:
         prompt_name = prompt_name or "query"
         model.prompts[prompt_name] = cfg.query_prompt_override
@@ -448,6 +452,8 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
         "target_dimension": target_dim,
         "batch_size": model_config.get("batch_size", 32),
     }
+    if model_config.get("torch_dtype"):
+        eval_config["torch_dtype"] = model_config["torch_dtype"]  # 베이스 yaml과 같은 dtype으로 평가(4B+T4 OOM 방지)
     (partial_dir / "eval_config.yaml").write_text(
         yaml.safe_dump(eval_config, allow_unicode=True, sort_keys=False), encoding="utf-8", newline="\n"
     )

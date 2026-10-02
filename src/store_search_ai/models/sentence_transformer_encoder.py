@@ -26,7 +26,12 @@ class SentenceTransformerEncoder(BaseEncoder):
 
         self._torch = torch
         self.config = config
-        self.model = SentenceTransformer(config["model_id"])
+        # yaml의 torch_dtype(예: float16)으로 가중치를 올린다 — Qwen3-4B는 fp32면 약 16GB라 T4(15GB)에서 OOM.
+        # 없으면 예전과 같은 기본값(fp32).
+        model_kwargs = {}
+        if config.get("torch_dtype"):
+            model_kwargs["torch_dtype"] = getattr(torch, config["torch_dtype"])
+        self.model = SentenceTransformer(config["model_id"], model_kwargs=model_kwargs or None)
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "SentenceTransformerEncoder":
@@ -67,8 +72,13 @@ class SentenceTransformerEncoder(BaseEncoder):
             "show_progress_bar": True,
             "convert_to_numpy": True,
         }
+        # query_prompt(문자열)가 있으면 그걸 그대로 붙인다 — 모델에 내장된 prompt가 아닌 instruction을 실험할 때
+        # (예: configs/models/qwen3_0_6b_store.yaml). 없으면 모델에 내장된 query_prompt_name prompt.
+        prompt = self.config.get("query_prompt")
         prompt_name = self.config.get("query_prompt_name")
-        if prompt_name:
+        if prompt:
+            kwargs["prompt"] = prompt
+        elif prompt_name:
             kwargs["prompt_name"] = prompt_name
         with self._torch.no_grad():
             embeddings = self.model.encode(texts, **kwargs)

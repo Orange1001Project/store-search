@@ -28,7 +28,7 @@ ADJUDICATION_PATH = (
     BENCHMARK_DIR / "annotations" / "full_annotation_v1" / "analysis"
     / "adjudication_val_test_full_completed.csv"
 )
-TRAIN_QRELS_PATH = BENCHMARK_DIR / "qrels" / "provisional_v1" / "qrels_train_provisional.csv"
+TRAIN_QRELS_PATH = BENCHMARK_DIR / "qrels" / "full_annotation_v1" / "qrels_train_provisional.csv"
 GOLDEN_MANIFEST_PATH = BENCHMARK_DIR / "benchmark_manifest.json"
 
 pytestmark = pytest.mark.skipif(

@@ -204,3 +204,13 @@ def test_build_agreement_report_computes_coverage_and_kappa():
     assert report["double_annotation_coverage"] == pytest.approx(1.0)
     assert report["exact_agreement"] == pytest.approx(1.0)
     assert report["binary_relevance_threshold"] == 2
+
+
+def test_validate_expected_splits_accepts_train_only_subset():
+    import pandas as pd
+
+    from store_search_ai.data.annotation_prep import validate_expected_splits
+
+    validate_expected_splits({"A_train": pd.DataFrame({"split": ["train", "train"]})})
+    with pytest.raises(ValueError, match="A_train"):
+        validate_expected_splits({"A_train": pd.DataFrame({"split": ["train", "val"]})})

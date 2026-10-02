@@ -4,3 +4,4 @@ query_prompt_name: query
 normalize_embeddings: true
 target_dimension: 1024
 batch_size: 8
+torch_dtype: float16   # fp32면 약 16GB라 T4(15GB)에서 OOM — 평가/인코딩용(학습 dtype은 colab/run_finetune_qwen3.py의 BASE_DTYPE)

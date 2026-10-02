@@ -141,7 +141,7 @@ python scripts/09_prepare_full_annotations.py
 ```
 
 이 스크립트가 하는 일:
-- train: 단일 라벨을 그대로 provisional qrels로 변환 (`qrels/provisional_v1/qrels_train_provisional.csv`)
+- train: 단일 라벨을 그대로 provisional qrels로 변환 (`qrels/{round}/qrels_train_provisional.csv`, 기본 `qrels/full_annotation_v1/`)
 - val/test: A·B 라벨을 비교해서 **일치하는 것은 자동 확정**, **불일치(`needs_adjudication=True`)는 사람이
   봐야 할 목록**을 `analysis/adjudication_val_test_needed_only.csv`로 분리 저장
 - val+test 전체의 이중 라벨링 커버리지/합치도(Cohen's kappa 등)를 `benchmark_dir/agreement_report.json`에

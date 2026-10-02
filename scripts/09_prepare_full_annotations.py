@@ -6,6 +6,12 @@ A/B 비교 후 일치분 자동 확정 + 불일치분을 adjudication 대상으�
 
 사용법:
     python scripts/09_prepare_full_annotations.py
+    python scripts/09_prepare_full_annotations.py --train-only   # A train 완료 시트만 있을 때
+
+`--train-only`: train은 애노테이터 1명의 단일 라벨링이라 val/test(A/B 이중 라벨링 + adjudication)보다 먼저
+끝난다. 그때 val/test 완료 시트를 기다리지 않고 train provisional qrels만 먼저 만들어 fine-tuning 데이터
+준비(prepare_finetune_dataset.py)를 시작할 수 있게 한다. train 처리 로직은 전체 실행과 완전히 같고,
+val/test 비교·agreement_report는 만들지 않는다 — val/test 완료 시트가 오면 옵션 없이 다시 실행한다.
 """
 
 from __future__ import annotations
@@ -43,6 +49,11 @@ def main() -> None:
         help="08번과 동일한 --round 값. annotations/{round}/completed/ 밑 5개 완료 파일을 읽고,"
         " qrels/{round}/에 provisional train qrels를 만든다.",
     )
+    parser.add_argument(
+        "--train-only",
+        action="store_true",
+        help="annotation_A_train_completed.csv만으로 train provisional qrels만 만든다(val/test 완료 시트가 아직 없을 때)",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -56,6 +67,8 @@ def main() -> None:
     qrels_dir.mkdir(parents=True, exist_ok=True)
 
     files = {key: completed_dir / filename for key, filename in EXPECTED_FILES.items()}
+    if args.train_only:
+        files = {"A_train": files["A_train"]}
     missing = [str(path) for path in files.values() if not path.exists()]
     if missing:
         raise FileNotFoundError("Missing completed annotation files:\n" + "\n".join(missing))
@@ -74,6 +87,25 @@ def main() -> None:
     train_uncertain_excluded.to_csv(
         analysis_dir / "train_uncertain_excluded.csv", index=False, encoding="utf-8-sig", lineterminator="\n"
     )
+
+    if args.train_only:
+        print("========== TRAIN-ONLY PREP COMPLETE ==========")
+        print(
+            json.dumps(
+                {
+                    "train_rows": len(train),
+                    "train_qrels_rows": len(train_qrels),
+                    "train_uncertain_or_missing_excluded": len(train_uncertain_excluded),
+                    "train_queries": int(train_qrels["query_id"].nunique()),
+                    "relevance_counts": {int(k): int(v) for k, v in train_qrels["relevance"].value_counts().sort_index().items()},
+                    "output": (qrels_dir / "qrels_train_provisional.csv").as_posix(),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        print("val/test 완료 시트가 오면 --train-only 없이 다시 실행하세요.")
+        return
 
     # ----- Val/Test: A/B pairwise comparison -----
     val_merged, val_report = pairwise_report(data["A_val"], data["B_val"], "val")

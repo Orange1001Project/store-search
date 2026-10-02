@@ -31,7 +31,9 @@ if torch.cuda.is_available():
 # 라이브러리 설치 (store_search_ai 자체는 numpy/pandas/pyyaml만 있으면 되므로 별도 설치 불필요 —
 # 아래 sys.path.insert로 VSCode 프로젝트의 src/를 그대로 가져다 쓴다)
 get_ipython().system(
-    'pip -q install -U "transformers>=4.51.0" sentence-transformers accelerate'
+    # 학습(colab/run_finetune_*.py)과 같은 버전 — zero-shot과 fine-tuned 모델을 같은 라이브러리로 인코딩해야 비교가 공정하다
+    'pip -q install "sentence-transformers==3.4.1" "transformers==4.51.3" "peft==0.15.2" '
+    '"datasets==3.5.0" "accelerate==1.6.0"'
 )
 
 from google.colab import drive
@@ -134,109 +136,86 @@ retrieval 로직을 Colab에 다시 구현하지 않는다.
 
 import gc
 
-
 FINETUNE_RUN_DIR = DRIVE_ROOT / "runs" / "finetune"
 
+# 이미 run.csv가 있는 모델은 건너뛴다 — Colab 연결이 끊겨 다시 실행할 때 끝난 모델을 또 인코딩하지 않게.
+# 같은 tag로 다시 돌리고 싶으면 False로 하거나 Drive의 그 run 폴더를 지운다.
+SKIP_EXISTING = True
 
-def run_one_model(model_config_path, templates, split_queries, corpus, split):
+
+def resolve_config(model_config_path):
     config = load_config(model_config_path)
-    tag = config["name"]
     # fine-tuned 모델의 eval_config.yaml은 로컬 경로(models/<TAG>)를 가리킨다 — Colab에서는 같은 모델이
     # Drive runs/finetune/<TAG>/에 있으므로 그쪽으로 바꿔서 읽는다(yaml을 Colab용으로 따로 고칠 필요 없음).
     if str(config["model_id"]).startswith("models/"):
         config = {**config, "model_id": str(FINETUNE_RUN_DIR / Path(config["model_id"]).name)}
+    return config
+
+
+def corpus_key(config):
+    """문서 임베딩을 좌우하는 값 — 이게 같으면 query prompt만 다른 변형끼리 문서 임베딩을 재사용한다."""
+
+    return (config["model_id"], config.get("torch_dtype"), config.get("target_dimension"),
+            config.get("normalize_embeddings", True))
+
+
+# 같은 모델(문서 임베딩이 같은 설정)끼리 붙여서 돌린다 → 모델 로드·문서 인코딩(가장 비싼 부분)을 한 번만.
+configs = sorted((resolve_config(p) for p in model_config_paths), key=lambda c: (str(corpus_key(c)), c["name"]))
+
+query_texts = split_queries["query"].astype(str).tolist()
+doc_ids = corpus["doc_id"].tolist()
+encoder, encoder_key, doc_cache = None, None, {}
+
+for config in configs:
+    tag = config["name"]
+    output_dir = RUN_DIR / tag
+    pending = [t for t in TEMPLATES if not (SKIP_EXISTING and (output_dir / f"run_{t}_{SPLIT}.csv").exists())]
+    if not pending:
+        print(f"\n===== {tag}: 이미 완료 — 건너뜀 =====")
+        continue
     print(f"\n===== {tag} ({config['model_id']}) =====")
 
-    encoder = SentenceTransformerEncoder(config)
+    key = corpus_key(config)
+    if key != encoder_key:
+        del encoder
+        doc_cache = {}
+        gc.collect()
+        torch.cuda.empty_cache()
+        encoder, encoder_key = SentenceTransformerEncoder(config), key
+    encoder.config = config  # 같은 모델이면 가중치는 재사용하고 query prompt 등 설정만 바꾼다
 
-    query_texts = split_queries["query"].astype(str).tolist()
     query_embeddings = encoder.encode_queries(query_texts)
-
-    output_dir = RUN_DIR / tag
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for template in templates:
-        text_col = TEXT_COLUMNS[template]
-        documents = corpus[text_col].fillna("").astype(str).tolist()
+    for template in pending:
+        if template not in doc_cache:
+            documents = corpus[TEXT_COLUMNS[template]].fillna("").astype(str).tolist()
+            doc_cache[template] = encoder.encode_corpus(documents)
+        else:
+            print(f"  [{template}] 문서 임베딩 재사용(같은 모델의 다른 prompt 변형)")
 
-        doc_embeddings = encoder.encode_corpus(documents)
-
-        searcher = ExactCosineSearch(
-            corpus_embeddings=doc_embeddings,
-            doc_ids=corpus["doc_id"].tolist(),
-        )
+        searcher = ExactCosineSearch(corpus_embeddings=doc_cache[template], doc_ids=doc_ids)
         run = searcher.search(
             query_embeddings=query_embeddings,
             query_ids=split_queries["query_id"].tolist(),
             top_k=100,
             system=f"{tag}_{template}",
         )
-
-        run_path = output_dir / f"run_{template}_{split}.csv"
+        run_path = output_dir / f"run_{template}_{SPLIT}.csv"
         run.to_csv(run_path, index=False, encoding="utf-8-sig")
         print(f"  [{template}] saved: {run_path} ({len(run)} rows)")
 
-        del doc_embeddings
-        gc.collect()
-
-    del encoder
-    gc.collect()
-    torch.cuda.empty_cache()
-
-
-for model_config_path in model_config_paths:
-    run_one_model(model_config_path, TEMPLATES, split_queries, corpus, SPLIT)
+del encoder, doc_cache
+gc.collect()
+torch.cuda.empty_cache()
 
 print("\n모든 모델 완료. RUN_DIR을 통째로 로컬 results/model_eval/ 에 복사하세요:")
 print(RUN_DIR)
 
-"""## (선택) query prompt 실험 — 모델 기본 prompt vs custom instruction
+"""## query prompt 실험은 yaml로
 
-원본 노트북에서 하시던 "native vs store instruction" 비교입니다. 이건 `configs/models/*.yaml`의
-표준 루프와 별개로, 궁금한 모델 하나에 대해서만 즉흥적으로 돌려보는 실험용 셀입니다.
-결과 run도 스키마·저장 위치는 동일하게 맞춰서, `results/model_eval/<tag>__store_prompt/`처럼
-별도 tag를 붙여 VSCode에서 나머지와 동일하게 채점할 수 있게 했습니다.
+예전에는 여기에 custom instruction을 즉흥적으로 시험하는 셀이 있었다. 지금은 prompt 문자열을 yaml의
+`query_prompt`에 적은 변형 yaml을 두는 방식으로 바꿨다(예: `configs/models/qwen3_0_6b_store.yaml`) —
+기록이 남고, 위 루프에서 같은 모델의 문서 임베딩을 재사용하므로 추가 비용이 query 인코딩뿐이며, 좋은 쪽을
+그대로 학습(`colab/run_finetune_qwen3.py`의 MODEL_CONFIG)에 쓸 수 있다.
 """
-
-CUSTOM_PROMPT_MODEL_CONFIG = MODEL_CONFIG_DIR / "qwen3_0_6b.yaml"  # 실험하고 싶은 모델로 교체
-STORE_QUERY_PROMPT = (
-    "Instruct: Given a Korean local-store search query, "
-    "retrieve stores that satisfy the user's shopping, "
-    "dining, or service intent\nQuery:"
-)
-
-config = load_config(CUSTOM_PROMPT_MODEL_CONFIG)
-encoder = SentenceTransformerEncoder(config)
-
-# encode_queries()는 config의 query_prompt_name을 쓰므로, custom prompt를 쓰려면
-# sentence-transformers 모델을 직접 호출한다 (BaseEncoder 계약 밖의 1회성 실험이라 허용).
-query_texts = split_queries["query"].astype(str).tolist()
-custom_query_embeddings = encoder.model.encode(
-    query_texts,
-    prompt=STORE_QUERY_PROMPT,
-    batch_size=config.get("batch_size", 32),
-    normalize_embeddings=True,
-    convert_to_numpy=True,
-    show_progress_bar=True,
-)
-
-doc_embeddings = encoder.encode_corpus(
-    corpus[TEXT_COLUMNS["t1_minimal"]].fillna("").astype(str).tolist()
-)
-searcher = ExactCosineSearch(doc_embeddings, corpus["doc_id"].tolist())
-run = searcher.search(
-    query_embeddings=custom_query_embeddings,
-    query_ids=split_queries["query_id"].tolist(),
-    top_k=100,
-    system=f"{config['name']}_t1_store_prompt",
-)
-
-output_dir = RUN_DIR / f"{config['name']}__store_prompt"
-output_dir.mkdir(parents=True, exist_ok=True)
-run_path = output_dir / f"run_t1_{SPLIT}.csv"
-run.to_csv(run_path, index=False, encoding="utf-8-sig")
-print("saved:", run_path)
-
-del encoder, doc_embeddings
-gc.collect()
-torch.cuda.empty_cache()

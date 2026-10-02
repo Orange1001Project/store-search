@@ -30,3 +30,6 @@ __pycache__/
 
 # scripts/pack_for_colab.py 산출물(Drive 업로드용 사본)
 /colab_upload/
+
+# Office 잠금 파일(엑셀로 연 동안 생김)
+~$*
