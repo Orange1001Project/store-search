@@ -147,7 +147,7 @@ TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	libs	nDCG@10
 ## 9. 서비스에 쓸 수 있는 상태인지
 
 서비스는 `SentenceTransformer(모델폴더)` 한 줄로 모델을 불러옵니다. 노트북은 LoRA를 merge한 전체 모델을 sentence-transformers 형식으로
-저장하고, 저장 직후 다시 불러와 임베딩이 같은지 검증합니다(`[검증] … 일치 확인`). 그리고 manifest의 `serving`(query prompt, 차원, normalize,
+저장하고, 저장 직후 다시 불러와 학습된 모델과 임베딩이 같은지 검증합니다(`[검증] 저장본(float16) … 일치 확인`). fp16으로 저장하면 임베딩이 달라지는 경우엔 자동으로 float32로 다시 저장합니다(`[경고] … float32로 다시 저장합니다`, manifest `serving.saved_dtype`). 그리고 manifest의 `serving`(query prompt, 차원, normalize,
 문서 template)을 서비스가 그대로 따르면 됩니다. BGE-M3의 sparse/multi-vector처럼 **벡터 하나로 표현되지 않는 방식**은 벡터DB 구조가
 달라지므로 시작 전에 팀에 공유합니다.
 
@@ -163,6 +163,7 @@ TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	libs	nDCG@10
 | `CUDA out of memory` | 런타임 > 세션 다시 시작 후 `HP["mini_batch_size"]`를 절반으로(8, 4B는 2) — 결과는 같고 느려지기만 함, NOTE 불필요. 그래도 안 되면 `HP["batch_size"]` 16 또는 `HP["loss"] = "mnrl"` → `NOTE`에 적기 |
 | `loss가 NaN/inf` | 저장된 것 없음. `learning_rate`를 절반으로, 또는 bf16 GPU(L4/A100) |
 | `처음 실행과 설정/데이터가 다릅니다` | `RESUME_TAG`로 이어 할 때는 처음 설정 그대로 |
+| `저장본을 다시 불러오니 임베딩이 다릅니다` | float32로도 안 맞은 경우 — 출력 전체 공유(그 폴더는 `.partial`로 남고 쓰지 않음) |
 | `test split은 최종 후보를 정한 뒤 한 번만` | 정상 — 반복 실험은 val로만 |
 | 평가가 오래 걸림 | 문서 21만 개 인코딩(모델당 수 분~수십 분). 기준 zero-shot은 처음 한 번만 |
 | `OWNER를 … 적으세요` | 영문 소문자로 시작하는 2~16자(소문자·숫자) |
