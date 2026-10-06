@@ -217,6 +217,28 @@ python scripts/15_score_model_runs.py --split val
 `docs/MODELING.md` 참고. Fine-tuning 이후에도 이 두 스크립트를 그대로 써서 fine-tuned 모델을
 평가합니다(`docs/TRAINING.md` 참고) — 그래서 이름에 "zero_shot"을 넣지 않았습니다.
 
+## 8. 임베딩 모델 학습·평가 — Colab (`colab/train_eval.ipynb`)
+
+GPU가 필요한 학습과 전체 코퍼스 평가는 Colab 노트북 하나로 합니다. 순서:
+
+```bash
+# (로컬) 학습 데이터 만들기 — train qrels가 바뀌었을 때만(데이터 담당)
+python scripts/prepare_finetune_dataset.py
+# (로컬) Colab에 올릴 데이터 묶기 → colab_upload/data/
+python scripts/pack_for_colab.py
+```
+1. `colab_upload/data/`를 Drive `내 드라이브/store-search-ai/data/`로 업로드(처음 한 번, 데이터가 바뀔 때만).
+2. Colab **파일 > 노트북 업로드** → `colab/train_eval.ipynb` → GPU 런타임 → 설정 셀에 `OWNER` → `SMOKE=True`로 모두 실행해 `통과` 확인.
+3. `SMOKE=False` → `1. 설정` → `3. 데이터` → `8. 학습` → `9. 평가` → `10. 리더보드`. 고칠 때는 Colab에서 바로(세션 유지) 또는
+   VS Code에서 고쳐 다시 업로드(새 세션) — `docs/TRAINING_TEAM.md` 3·4절.
+4. 실험이 끝나면 Drive `store-search-ai`를 내려받아 로컬에서:
+   ```bash
+   python scripts/import_colab_results.py --drive-dir <내려받은 폴더> --verify
+   ```
+   → `results/model_eval/`, `artifacts/evaluation/`(공식 evaluator로 재채점 확인), KEEP한 모델은 `models/` + `configs/models/`.
+
+규칙·기록: `docs/TRAINING_TEAM.md`, 학습 설계: `docs/TRAINING.md`, 노트북 셀별 코드 설명: `docs/TRAIN_EVAL_NOTEBOOK.md`.
+
 ## 사람 개입이 필요한 범위
 
 01~07(전처리~corpus~lexical pooling)까지는 데이터가 바뀌어도 사람 개입 없이 끝까지 재실행됩니다.

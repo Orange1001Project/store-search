@@ -72,6 +72,17 @@ python scripts/prepare_finetune_dataset.py
 실행합니다. 처음엔 `SMOKE=True`로 전체 흐름을 확인합니다(절차는 `docs/TRAINING_TEAM.md`). `HP`의 나머지 값은 팀 공통 기본값입니다 —
 바꾼 값은 전부 manifest에 자동으로 남지만, 결과를 서로 비교하려면 합의 없이 바꾸지 마세요.
 
+**작업 방식(요약)** — 자세한 절차는 `docs/TRAINING_TEAM.md` 1~4절, 셀별 코드 설명은 `docs/TRAIN_EVAL_NOTEBOOK.md`.
+
+| 단계 | 어디서 | 무엇을 |
+|---|---|---|
+| 1. 데이터 올리기 (처음 한 번, 데이터가 바뀔 때만) | 로컬 → Drive | `pack_for_colab.py` → `colab_upload/data/`를 `store-search-ai/data/`로 |
+| 2. 노트북 올리기 | Colab | 파일 > 노트북 업로드 → `colab/train_eval.ipynb` → `SMOKE=True`로 `통과` 확인 |
+| 3. 실험 반복 | Colab | 설정·기법 수정 → 8. 학습 → 9. 평가 → 10. 리더보드 |
+| 3-A. 작은 수정 | Colab에서 바로 | 고친 셀 → 8 → 9 → 10 (세션 유지). 끝나면 노트북을 내려받아 저장소 파일에 덮어쓰기 |
+| 3-B. 큰 수정 | VS Code(Claude) | 저장소 `colab/train_eval.ipynb` 수정 → Drive `Colab Notebooks`의 이전 사본 삭제 → 다시 업로드 → 위에서부터 실행 |
+| 4. 마무리 | 로컬 | Drive `store-search-ai` 내려받기 → `import_colab_results.py --verify` → 커밋 |
+
 자동으로 처리되는 것:
 
 - **precision**: GPU가 bf16을 지원하면 bf16, T4처럼 안 되면 fp16 AMP(가중치는 fp32, 연산만 fp16).

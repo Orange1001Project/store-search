@@ -11,6 +11,12 @@ GPU가 필요한 일(학습, 21만 개 문서 인코딩·채점)은 Colab에서 
 ```
 
 - 노트북을 고쳐도 다시 올리는 건 **그 파일 하나**, 데이터는 바뀔 때만 다시 올립니다.
+- 고치는 방법 두 가지(`docs/TRAINING_TEAM.md` 3절):
+  - **A. Colab에서 바로** — 작은 수정. 고친 셀 → 8. 학습 → 9. 평가 → 10. 리더보드(세션 유지). 끝나면 파일 > 다운로드 > .ipynb로 받아
+    이 폴더의 `train_eval.ipynb`에 덮어쓰기(정본은 저장소 파일).
+  - **B. VS Code(Claude)에서** — 큰 수정. 이 파일을 고친 뒤 Drive `내 드라이브/Colab Notebooks/train_eval.ipynb`(이전 사본)를 지우고
+    다시 업로드 → 위에서부터 실행.
+- 셀별 코드 설명: `docs/TRAIN_EVAL_NOTEBOOK.md`.
 - 셀 구성·고쳐도 되는 곳·기록 규칙: `docs/TRAINING_TEAM.md`.
 - **`7. 평가` 셀은 고치지 않습니다** — 로컬 공식 evaluator(`scripts/13_evaluate_run.py`)와 같은 채점 로직이고,
   `tests/test_train_eval_notebook.py`가 노트북 셀을 실제로 실행해 공식 evaluator와 같은 결과인지 확인합니다.

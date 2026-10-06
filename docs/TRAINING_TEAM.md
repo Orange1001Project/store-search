@@ -7,36 +7,42 @@ Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실
 > - Colab에서 여는 파일은 **`colab/train_eval.ipynb` 하나**입니다. 학습·평가 코드가 전부 그 안에 있어서 **기법(학습 데이터 만드는 방식,
 >   LoRA·loss, 학습 인자)을 노트북 셀에서 바로 고치면** 됩니다. 노트북을 고쳐도 다시 올리는 건 그 파일 하나뿐입니다.
 > - Drive에는 **데이터만 한 번** 올립니다(`pack_for_colab.py` → `data/`). 데이터가 바뀔 때만 다시 올립니다.
+> - 노트북 수정은 두 가지: **A. Colab에서 바로**(작은 수정, 세션 유지) / **B. VS Code(Claude)에서 고쳐 다시 업로드**(큰 수정).
+>   정본은 저장소 `colab/train_eval.ipynb` — Colab에서 고쳤으면 내려받아 덮어쓴 뒤 VS Code에서 고칩니다(3절).
 > - 학습 → val 공식 채점 → 리더보드 → 수정 → 다시 학습을 **전부 Colab 안에서** 반복하고, 실험이 끝나면 결과만 VS Code로 가져와 저장합니다.
 > - 사람이 적는 건 **`NOTE` 한 줄**과 (남길 결과일 때) **공유 시트 한 줄**뿐. 나머지는 자동 기록.
 > - **평가 셀(채점 로직)과 test split은 아무도 건드리지 않습니다.** 반복 평가는 val로만.
 
 ---
 
-## 1. 처음 한 번 — 준비
+## 1. 처음 한 번 — 준비 (데이터는 한 번만 올림)
 
-1. 최신 코드 받기: `git fetch && git switch feature/pooling2-zeroshot && git pull`
-2. 데이터 폴더 만들기(로컬 VS Code 터미널):
+1. 최신 코드 받기(로컬 VS Code 터미널): `git fetch && git switch feature/pooling2-zeroshot && git pull`
+2. 데이터 폴더 만들기:
    ```bash
    python scripts/pack_for_colab.py
    ```
    → `colab_upload/data/` (학습 데이터, corpus, queries, val/test 정답, `data_version.json`, 약 90MB)
-3. Drive `내 드라이브/store-search-ai/` 밑에 **`data` 폴더째 업로드**(예전 `project/` 폴더가 있으면 지워도 됩니다 — 더 이상 안 씀).
-4. Colab 메뉴 **파일 > 노트북 업로드** → 로컬 저장소의 `colab/train_eval.ipynb` (또는 **GitHub** 탭에서 브랜치 선택).
-   메뉴 **런타임 > 런타임 유형 변경**에서 GPU(T4 이상)인지 확인.
-5. 설정 셀에서 `OWNER`를 적고 `SMOKE = True`로 둔 채 위에서부터 끝까지 실행 → 맨 아래 `통과`가 나오면 준비 끝(가짜 데이터·축소 코퍼스,
-   몇 분, 결과는 `runs_smoke/`라 실제 기록과 안 섞임). 확인 후 `SMOKE = False`로 되돌립니다.
+3. 웹 Google Drive에서 `내 드라이브/store-search-ai/` 폴더를 만들고 그 밑에 **`data` 폴더째 업로드**.
+   예전 `project/` 폴더가 있으면 지워도 됩니다(더 이상 안 씀). **이후에는 데이터 담당이 데이터를 바꿨다고 공지할 때만** 다시 올립니다.
+4. Colab(colab.research.google.com) 메뉴 **파일 > 노트북 업로드** → 로컬 저장소의 `colab/train_eval.ipynb` 선택.
+   - 업로드한 노트북은 Drive `내 드라이브/Colab Notebooks/train_eval.ipynb`에 사본으로 저장되고, Colab에서 고치면 그 사본이 자동 저장됩니다.
+   - 메뉴 **런타임 > 런타임 유형 변경**에서 GPU(T4 이상)인지 확인.
+5. 설정 셀에서 `OWNER`를 적고 `SMOKE = True`로 둔 채 **런타임 > 모두 실행** → 맨 아래 `통과`가 나오면 준비 끝
+   (가짜 데이터·축소 코퍼스, 결과는 `runs_smoke/`라 실제 기록과 안 섞임). 확인 후 `runs_smoke/`는 지워도 됩니다.
 
 ```
-내 드라이브/store-search-ai/
-  data/         ← pack_for_colab.py 결과 (처음 한 번, 데이터가 바뀔 때만)
-  runs/         ← 노트북이 씀: finetune/<TAG>/(모델+기록), model_eval/(검색 결과), evaluation/(지표)
-  runs_smoke/   ← SMOKE=True 결과(지워도 됨)
+내 드라이브/
+  Colab Notebooks/train_eval.ipynb   ← Colab이 쓰는 노트북 사본(업로드할 때 생김)
+  store-search-ai/
+    data/         ← pack_for_colab.py 결과 (처음 한 번, 데이터가 바뀔 때만)
+    runs/         ← 노트북이 씀: finetune/<TAG>/(모델+기록), model_eval/(검색 결과), evaluation/(지표)
+    runs_smoke/   ← SMOKE=True 결과(지워도 됨)
 ```
 
 ## 2. 노트북 구조 — 어디를 고치나
 
-위에서부터 순서대로 실행합니다.
+위에서부터 순서대로 실행합니다. 셀 하나하나의 코드 설명은 **`docs/TRAIN_EVAL_NOTEBOOK.md`**.
 
 | 셀 | 하는 일 | 고치나? |
 |---|---|---|
@@ -65,32 +71,83 @@ Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실
 | scheduler, gradient accumulation 등 Trainer 인자 | `6. 학습 루프`의 `train_model` 안 |
 | positive/negative 후보 자체(학습 데이터 재생성) | 저장소 `src/store_search_ai/data/finetune_dataset.py` — 데이터 담당과 상의(부록) |
 
-**코드를 고친 뒤**: 고친 셀을 다시 실행 → **8. 학습부터** 다시 실행(세션 재시작 불필요).
-학습할 때마다 그 세션에서 실행한 셀 코드 전체가 모델 폴더의 **`notebook_code.py`**에 자동 저장됩니다 — 셀을 고쳐 가며 실험해도
-어떤 코드로 만든 모델인지 그대로 남습니다(따로 커밋하지 않아도 기록은 남음).
+## 3. 노트북 고치기 — 두 가지 방법
 
-좋은 기법을 팀 기본값으로 만들 때는 수정한 `.ipynb`를 내려받아(파일 > 다운로드) 저장소 `colab/train_eval.ipynb`에 커밋합니다.
-이때 `7. 평가` 셀이 바뀌었으면 `tests/test_train_eval_notebook.py`가 실패합니다(채점이 공식 evaluator와 같아야 함).
+데이터는 Drive에 그대로 두고 **노트북만** 고칩니다. 수정 규모에 따라 둘 중 하나를 고르세요.
 
-## 3. 반복 루프
+| | A. Colab에서 바로 고치기 | B. VS Code(Claude)에서 고치고 다시 올리기 |
+|---|---|---|
+| 언제 | 값 몇 개, 한두 줄 수정 | 함수를 새로 쓰거나 여러 셀을 고칠 때, Claude에게 맡길 때 |
+| 세션 | **유지**(데이터·모델 다시 안 불러옴) | **새 세션**(위에서부터 다시 실행) |
+| 정본 맞추기 | 끝나고 Colab 노트북을 내려받아 저장소 파일에 덮어쓰기 | 저장소 파일이 이미 최신 |
+
+**정본은 저장소의 `colab/train_eval.ipynb` 하나입니다.** Colab에서 고친 내용은 Drive의 사본에만 있으므로, 다음에 VS Code에서 고치기 전에
+반드시 **Colab 메뉴 파일 > 다운로드 > .ipynb 다운로드**로 받아 저장소 `colab/train_eval.ipynb`에 덮어쓰세요. 안 그러면 Claude가 옛 버전을
+고쳐서 Colab에서 고친 내용이 사라집니다.
+
+### A. Colab에서 바로 고치기 (세션 유지)
+
+1. 고칠 셀을 Colab에서 직접 수정.
+2. **아래 "다시 실행할 셀" 표**대로 실행(보통 고친 셀 → 8 → 9 → 10).
+3. 실험이 끝나면(또는 VS Code에서 고치기 전에) 파일 > 다운로드 > .ipynb → 저장소 `colab/train_eval.ipynb`에 덮어쓰기.
+
+VS Code의 Claude에게 "이 셀을 이렇게 바꿔 줘"라고 해서 **바뀐 셀 코드만 받아 Colab 셀에 붙여넣는 것**도 A 방법입니다
+(세션을 유지한 채 Claude의 수정을 쓸 수 있음 — 이때는 저장소 파일도 Claude가 이미 고쳤으므로 다운로드할 필요 없음).
+
+### B. VS Code(Claude)에서 고치고 다시 올리기 (새 세션)
+
+1. (A로 고친 게 있으면 먼저 내려받아 덮어쓰기)
+2. VS Code에서 Claude에게 `colab/train_eval.ipynb` 수정을 요청 → 저장.
+3. 웹 Google Drive에서 `내 드라이브/Colab Notebooks/train_eval.ipynb`(이전 사본)를 **삭제** — 같은 이름이 여러 개 생겨 헷갈리는 것 방지.
+4. 지금 Colab 탭에서 **런타임 > 런타임 연결 해제 및 삭제**(GPU 반납) 후 탭 닫기.
+5. Colab **파일 > 노트북 업로드** → 고친 `colab/train_eval.ipynb`.
+6. 설정 셀 확인(`OWNER`·`MODEL`·`NOTE`·`SMOKE`) → **런타임 > 모두 실행**(또는 위에서부터 차례로).
+   큰 수정이면 `SMOKE = True`로 먼저 한 번 돌려 `통과`를 확인한 뒤 `SMOKE = False`로 실제 학습.
+
+### 다시 실행할 셀 (세션을 유지할 때)
+
+번호는 노트북의 제목 번호(`## 1. 설정`, `## 8. 학습` …)이고, 각 제목 바로 아래 코드 셀을 실행한다는 뜻입니다.
+함수만 정의하는 셀(2·4·5·6·7)은 **고쳤을 때만** 다시 실행하면 됩니다. 함수들은 설정·데이터 값을 호출하는 순간 읽기 때문입니다.
+
+| 바꾼 것 | 다시 실행할 셀 (순서대로) |
+|---|---|
+| `HP`, `NOTE`, `MODEL` (설정 셀) | 1 → 8 → 9 → 10 |
+| `SMOKE` (True↔False) | 1 → **3** → 8 → 9 → 10 (데이터가 바뀌므로 3번 필수) |
+| 4. 학습 행 / 5. 모델·loss / 6. 학습 루프 | 고친 셀 → 8 → 9 → 10 |
+| 학습 없이 기존 run 평가 | 1(`EVAL_RUN_TAG` 설정) → 9 → 10 |
+| Drive `data/`를 새로 올림 | 1 → 3 → 8 → 9 → 10 (기준 zero-shot도 새 데이터로 다시 평가해야 하면 `runs/model_eval/<기준이름>/` 삭제) |
+| 학습 셀(8)이 OOM·에러로 실패 | 런타임 > **세션 다시 시작** → 위에서부터 전부 |
+| 노트북을 새로 업로드(B) | 위에서부터 전부 |
+
+## 4. 실행 순서 — 학습 한 번의 전체 흐름
 
 ```
-설정·기법 수정 → 8. 학습 → 9. 평가(val, 기준 대비 Δ·p) → 10. 리더보드 확인
-  → 남길 결과면 13. KEEP + 공유 시트 한 줄 / 아니면 다시 수정
+[세션 시작]  GPU 확인 → 설치 → Drive 연결 → 1. 설정 → 2. 호환 → (환경 점검) → 3. 데이터 → 4·5·6·7 (함수 정의)
+[학습]       8. 학습      … 0.6B 기준 T4에서 약 1시간 (로그: [체크포인트] → [검증] … 일치 확인 → [완료] 최종 모델)
+[평가]       9. 평가      … 처음엔 기준 zero-shot도 평가(문서 21만 개 인코딩, 수십 분)
+[비교]       10. 리더보드  … 기준 대비 ΔnDCG@10, p-value
+[정리]       남길 run이면 13. KEEP + 공유 시트 한 줄 (8절)
+[다음 실험]  3절 방법 A 또는 B로 고치고 → 표대로 다시 실행
 ```
 
 - 학습 없이 기존 run만 다시 평가: `EVAL_RUN_TAG = "<TAG>"` 넣고 8번은 건너뛰고 9번부터.
 - Colab이 끊김: 로그에 `[체크포인트] … 저장 완료`가 나온 뒤였다면 `RESUME_TAG = "<TAG>"`, **다른 설정은 처음과 똑같이** 두고 처음부터
-  실행(설치·Drive 연결 → … → 8번). 그 전이면 처음부터 다시 학습.
+  실행. 그 전이면 처음부터 다시 학습. 끊긴 run의 `<TAG>.ckpt` 폴더는 이어 하지 않을 거면 지워도 됩니다.
+- 학습 셀이 끝나지 않았는데 9번을 실행하면 "8. 학습이 끝나지 않았습니다"로 멈춥니다(정상). 단, **같은 세션에서 앞서 끝난 학습이 있으면**
+  그 모델을 평가해 버리므로, 학습이 실패했으면 9번을 돌리지 말고 세션을 다시 시작하세요.
 - 처음 써 보는 설정(특히 4B, 큰 batch)은 `SMOKE=True`로 메모리·속도를 먼저 확인해도 됩니다.
+- 학습할 때마다 그 세션에서 실행한 셀 코드 전체가 모델 폴더의 **`notebook_code.py`**에 자동 저장됩니다 — A 방법으로 셀을 고쳐 가며
+  실험해도 어떤 코드로 만든 모델인지 그대로 남습니다.
+- 좋은 기법을 팀 기본값으로 만들 때는 저장소 `colab/train_eval.ipynb`를 커밋·push합니다. 이때 `7. 평가` 셀이나 `4. 학습 행`의 기본 동작이
+  바뀌었으면 `tests/test_train_eval_notebook.py`가 실패합니다(의도한 변경이면 테스트도 같이 고침).
 
-## 4. 기록 — 딱 세 군데
+## 5. 기록 — 딱 세 군데
 
 | 어디 | 누가 | 언제 | 무엇을 |
 |---|---|---|---|
 | **`model_manifest.json`** (Drive `runs/finetune/<TAG>/`) | **자동** | 학습·평가할 때마다 | 설정 전부(`HP`·preset), 학습 데이터 해시, 데이터 버전, 코드 사본(`notebook_code.py`), GPU·라이브러리 버전, 서비스가 따라야 할 값(`serving`), 평가 결과 — **손대지 않음** |
 | **설정 셀의 `NOTE`** | 나 | 기본값에서 무언가 바꿨을 때 | 무엇을 왜 바꿨는지 한 줄 |
-| **공유 시트** | 나 | val 평가 후, **남길 run만** | run 하나당 한 줄(7절) |
+| **공유 시트** | 나 | val 평가 후, **남길 run만** | run 하나당 한 줄(8절) |
 
 **`NOTE` 쓰는 법**
 ```python
@@ -103,19 +160,19 @@ NOTE = "서비스도 필요: 쿼리 특수문자 제거 후 인코딩"   # 모�
 
 처음 몇 번은 학습이 끝까지 도는지·시간·메모리만 보는 시험 run이어도 괜찮습니다(manifest는 자동으로 남음). 시트·KEEP은 **남길 run만**.
 
-## 5. 절대 바꾸지 않는 것
+## 6. 절대 바꾸지 않는 것
 
 - **`7. 평가` 셀**(채점 로직), 정답 파일(Drive `data/`의 qrels·queries·corpus — 데이터 담당이 배포한 것만).
 - **test split은 보지 않습니다.** 모든 선택은 val로. test는 팀이 최종 후보를 정한 뒤 `FINAL_TEST = True`로 한 번만.
 - 채점 방식을 바꿔야 한다면 팀 합의 후 저장소의 공식 evaluator부터 바꾸고 모든 run을 다시 채점합니다.
 
-## 6. KEEP — 지우면 안 되는 run 표시
+## 7. KEEP — 지우면 안 되는 run 표시
 
 Drive는 학습이 끝날 때마다 **내 run 중 같은 모델의 최신 3개(`HP["keep_last_runs"]`)만 남기고 자동 삭제**합니다(다른 사람 run은 안 건드림).
 남길 run은 `13. KEEP` 셀의 주석을 풀고 TAG를 바꿔 실행 → 그 폴더에 빈 `KEEP` 파일이 생겨 삭제되지 않습니다.
 KEEP 기준: **모델별 baseline run / 공유 시트에 올린 run / 서비스 후보·발표용**.
 
-## 7. 공유 시트 (남길 run만 한 줄)
+## 8. 공유 시트 (남길 run만 한 줄)
 
 팀 공유 Drive에 Google Sheets를 하나 만들고 첫 줄에 붙여넣기(탭 구분):
 ```
@@ -130,7 +187,7 @@ TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	libs	nDCG@10
 - **같은 학습 데이터 해시 + 같은 precision(T4=fp16, L4/A100=bf16) + 같은 `libs`**끼리만 비교합니다. Colab이 기본 라이브러리를 올렸으면
   기준 zero-shot 모델도 그 버전으로 다시 평가해서 비교합니다(그 모델의 `runs/model_eval/<이름>/` 폴더를 지우고 9번 실행).
 
-## 8. 실험이 끝나면 — VS Code로 가져와 저장
+## 9. 실험이 끝나면 — VS Code로 가져와 저장
 
 1. 웹 Google Drive에서 `내 드라이브/store-search-ai` 폴더 다운로드 → 압축 해제(`runs/`만 있으면 됨).
 2. 로컬 저장소 루트에서:
@@ -144,14 +201,37 @@ TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	libs	nDCG@10
 3. `git add results/ artifacts/ configs/models/` → 커밋. 좋은 기법이 들어간 노트북도 `colab/train_eval.ipynb`로 커밋.
    (`models/`는 용량 때문에 .gitignore — 서비스 후보 모델은 팀 공유 스토리지에 따로 보관)
 
-## 9. 서비스에 쓸 수 있는 상태인지
+## 10. 서비스에 쓸 수 있는 상태인지
 
 서비스는 `SentenceTransformer(모델폴더)` 한 줄로 모델을 불러옵니다. 노트북은 LoRA를 merge한 전체 모델을 sentence-transformers 형식으로
 저장하고, 저장 직후 다시 불러와 학습된 모델과 임베딩이 같은지 검증합니다(`[검증] 저장본(float16) … 일치 확인`). fp16으로 저장하면 임베딩이 달라지는 경우엔 자동으로 float32로 다시 저장합니다(`[경고] … float32로 다시 저장합니다`, manifest `serving.saved_dtype`). 그리고 manifest의 `serving`(query prompt, 차원, normalize,
 문서 template)을 서비스가 그대로 따르면 됩니다. BGE-M3의 sparse/multi-vector처럼 **벡터 하나로 표현되지 않는 방식**은 벡터DB 구조가
 달라지므로 시작 전에 팀에 공유합니다.
 
-## 10. 막히면
+## 11. 성능 올리기 — 모델별 방향 (일단 방향만)
+
+먼저 **기본값 baseline run 하나**(KEEP)를 만들고, 아래를 **한 번에 하나씩** 바꿔 val Δ·p로 판단합니다(차이 0.03 미만이면 개선 아님).
+
+| 모델 | 출발점 | 먼저 해 볼 것 |
+|---|---|---|
+| **Arctic-ko** (`arctic_ko`, `arctic_ko_query`) | 예전 zero-shot 중 가장 높았음(nDCG@10 0.47) | ① `arctic_ko_query`(학습 때 쓴 `query: ` 접두어)와 비교 ② 이미 강하므로 **망가뜨리지 않게** lr 1e-5·epoch 1 ③ negative 3→5 |
+| **BGE-M3** (`bge_m3`) | 0.39 | ① lr 1e-5~2e-5, epoch 1~3 ② negative 3→5 ③ 서비스에서 dense만 쓸지, sparse(키워드형)까지 쓸지 결정(벡터DB 구조가 달라짐 — 팀 공유) |
+| **Qwen3-0.6B** (`qwen3_0_6b`, `_store`) | 0.34(가장 낮게 출발) | ① **prompt**: `qwen3_0_6b_store`(매장 검색용 지시문) — 지시문 모델이라 효과가 큼 ② LoRA r 16→32/64, lr 5e-5~2e-4 ③ `loss="mnrl"`과 GIST 비교 |
+| **Qwen3-4B** (`qwen3_4b`, `_store`) | – | T4는 빠듯함 → 가능하면 **L4/A100**(bf16, batch 키움). 0.6B에서 효과 있던 설정을 옮겨서 |
+
+(위 zero-shot 숫자는 저장소에 남아 있는 예전 val 평가 기준이라, 지금 데이터로 `11. zero-shot 비교표`를 다시 돌려 확인하세요.)
+
+**모든 모델 공통 — 효과가 클 것으로 보는 순서**
+1. **학습 query 늘리기**: 지금 학습 query는 237개뿐(행은 7,270개로 충분하지만 표현이 다양하지 않음). 가맹점 문서로 LLM이 검색어를
+   만들게 하는 합성 query가 가장 큰 개선 수단 → 데이터 담당과 상의(학습 데이터를 바꾸는 일이라 모두의 비교 기준이 바뀜).
+2. **hard negative**: 학습된 모델이 상위에 올리는 오답을 다시 negative로 쓰기(정답인데 판정이 없는 문서가 섞일 수 있어 GIST와 함께).
+3. **하이퍼파라미터**: epoch(1~3), lr, batch(L4/A100에서 64), negative 수.
+4. **검색 시스템**: 키워드 검색(BM25)과 섞는 hybrid, 상위 결과를 다시 정렬하는 reranker — 모델 밖 처리라 `NOTE`를 `서비스도 필요:`로.
+
+**점수 읽을 때**: Judged@10이 낮으면(상위 10개 중 판정 없는 문서가 많음) 실제보다 낮게 나옵니다. 절대값보다 **같은 조건에서 기준 대비 Δ**로
+판단하고, 서비스 후보는 상위 결과를 사람이 직접 훑어보는 확인도 합니다.
+
+## 12. 막히면
 
 | 증상 | 조치 |
 |---|---|

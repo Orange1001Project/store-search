@@ -73,7 +73,8 @@ docs/
   EXTENDING_DATA.md               raw 데이터 확장 / query family 재정의 방법
   MODELING.md                    임베딩 모델 zero-shot 비교 구조 (BEIR 스타일)
   TRAINING.md                    Colab fine-tuning 설계·설정 (sentence-transformers; Qwen3=LoRA, 나머지=full)
-  TRAINING_TEAM.md               팀 학습 절차 — 배포된 데이터로 학습 → 평가 → 공유 시트 기록 (학습 담당 필독)
+  TRAINING_TEAM.md               팀 학습 절차 — 데이터 올리기·노트북 고치기·실행 순서·기록 (학습 담당 필독)
+  TRAIN_EVAL_NOTEBOOK.md         colab/train_eval.ipynb 셀별 코드 해설
 ```
 
 ## 빠른 시작
