@@ -16,23 +16,24 @@ train qrels(`benchmark/storesearch_ko_v1/qrels_train.csv`, 없으면
 까지 끝나면 준비됩니다 — val/test의 adjudication을 기다릴 필요는 없습니다(train은 애노테이터
 1명의 단일 라벨링이라 더 빨리 끝납니다).
 
-## 학습 코드는 하나, Colab 스크립트는 둘
+## 학습 코드 — Colab 노트북 하나
 
-| 스크립트 | 대상 모델 | 방식 |
-|---|---|---|
-| `colab/run_finetune_simple.ipynb` | `arctic_ko`, `bge_m3` 등 | full fine-tuning |
-| `colab/run_finetune_qwen3.ipynb` | `qwen3_0_6b` (`4b`는 조건부) | LoRA → 베이스에 merge |
+Colab에서는 **`colab/train_eval.ipynb` 하나**로 모든 모델(Arctic·BGE-M3는 full fine-tuning, Qwen3는 LoRA → 베이스에 merge)을
+학습하고 바로 val 채점까지 합니다. 학습·평가 코드가 전부 노트북 셀 안에 있어서(`src/`를 올리지 않음) 팀원이 기법을 셀에서 바로
+고쳐 실험하고, 노트북 파일 하나만 다시 올리면 됩니다. 모델별 차이는 설정 셀의 `MODEL_PRESETS` 항목(베이스 모델, prompt, LoRA 여부,
+lr 등)뿐이고 학습 루프는 같습니다.
 
-두 스크립트는 **설정 셀만 다르고** 학습 코드는 `store_search_ai.training.st_finetune.run_finetune()`
-하나를 같이 씁니다(sentence-transformers Trainer + peft). 팀원마다 학습 코드가 달라서 결과를 비교할
-수 없게 되는 일을 막기 위해서입니다.
+- 학습할 때마다 그 세션에서 실행한 셀 코드 전체가 모델 폴더의 `notebook_code.py`로 저장됩니다(어떤 코드로 만든 모델인지).
+- **채점 셀(`7. 평가`)은 공식 evaluator와 같은 로직**이고, `tests/test_train_eval_notebook.py`가 노트북 셀을 실제로 실행해
+  `store_search_ai.evaluation.evaluator`와 결과가 같은지 확인합니다. 학습 행 펼치기도 `store_search_ai.training.finetune`과 비교합니다.
+- `store_search_ai.training.st_finetune.run_finetune()`은 같은 학습 방식의 로컬 참조 구현입니다(로컬 GPU용).
 
 **라이브러리 버전**: Colab에 미리 깔린 torch·transformers·sentence-transformers·peft·datasets·accelerate를 **그대로** 씁니다
 (2026-10 기준 Python 3.13, transformers 5.18, sentence-transformers 5.7, peft 0.21). 예전에는 옛 버전(transformers 4.51,
 sentence-transformers 3.4)을 노트북에서 강제로 설치했는데, 그러면 Colab의 huggingface_hub·fsspec까지 내려가 gradio·diffusers·
 gcsfs와 충돌하고 Colab이 업데이트될수록 더 어긋났습니다. 노트북이 추가로 설치하는 건 채점용 `ir-measures`·`pytrec-eval-terrier`
 뿐입니다. 버전마다 바뀐 API(transformers 5의 `dtype`·`warmup_steps`, sentence-transformers 5의 읽기 전용 `auto_model` 등)는
-`store_search_ai.common.hf_compat`이 맞추고, 노트북의 `check_environment()`가 시작할 때 버전을 출력·점검합니다. 실제로 쓴 버전은
+노트북의 `2. 라이브러리 버전 호환` 셀(로컬은 `store_search_ai.common.hf_compat`)이 맞추고, `check_environment()`가 시작할 때 버전을 출력·점검합니다. 실제로 쓴 버전은
 manifest `environment`와 평가 json `library_versions`에 남고 리더보드에도 표시됩니다 — **비교는 같은 버전끼리** 합니다.
 
 **예전 버전(ms-swift)을 버린 이유**: T4는 ms-swift 예제가 전제하는 bf16/flash-attention을 지원하지
@@ -65,11 +66,11 @@ python scripts/prepare_finetune_dataset.py
 
 ## 2. Colab에서 학습 (T4 기준)
 
-로컬에서 `python scripts/pack_for_colab.py`로 `colab_upload/project/`(코드 + `configs/models` + 학습 데이터 +
-git 정보 `code_version.json`)를 만들어 Drive `내 드라이브/store-search-ai/project`로 올리고(기존 폴더는 지우고),
-스크립트의 **`OWNER`를 본인 이름(영문 소문자)으로 바꿔서** 실행합니다. 한 번 올린 뒤 실험하면서 코드를 고칠 때는 다시 올리지 않고
-Colab 편집기에서 Drive의 `src/` 파일을 바로 고칩니다(설정 셀 맨 앞의 `reload_project()`가 고친 코드를 다시 불러옴, 절차는 `docs/TRAINING_TEAM.md` 3-2·3-3절). 나머지 값은 팀 공통 기본값입니다 — 바꾼 값은 전부
-manifest에 자동으로 남지만, 결과를 서로 비교하려면 합의 없이 바꾸지 마세요.
+로컬에서 `python scripts/pack_for_colab.py`로 `colab_upload/data/`(학습 데이터·corpus·queries·val/test qrels +
+`data_version.json`: git 브랜치·커밋, 파일별 sha256, 평가 설정)를 만들어 Drive `내 드라이브/store-search-ai/data`로 **한 번** 올리고
+(데이터가 바뀔 때만 다시), Colab에서 `colab/train_eval.ipynb`를 열어 설정 셀의 **`OWNER`를 본인 이름(영문 소문자)으로 바꿔서**
+실행합니다. 처음엔 `SMOKE=True`로 전체 흐름을 확인합니다(절차는 `docs/TRAINING_TEAM.md`). `HP`의 나머지 값은 팀 공통 기본값입니다 —
+바꾼 값은 전부 manifest에 자동으로 남지만, 결과를 서로 비교하려면 합의 없이 바꾸지 마세요.
 
 자동으로 처리되는 것:
 
@@ -152,7 +153,7 @@ python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai
 ## 5. model_manifest.json — 서비스에 가져다 쓸 체크포인트 추적
 
 가중치만 있으면 몇 달 뒤엔 "이 모델이 정확히 무엇으로, 어떤 데이터로, 어떤 설정으로 학습됐고 성능이
-어땠는지" 알 방법이 없습니다. `run_finetune()`이 학습 직후 아래를 기록하고, 평가할 때마다 `evaluations`가 쌓입니다:
+어땠는지" 알 방법이 없습니다. 노트북의 `train_model()`(로컬은 `run_finetune()`)이 학습 직후 아래를 기록하고, 평가할 때마다 `evaluations`가 쌓입니다:
 
 | 키 | 내용 |
 |---|---|
@@ -162,7 +163,8 @@ python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai
 | `training_result` | 학습 시간, step 수, loss 기록, 중간 체크포인트 step, 이어서 학습했는지(`resumed_from`) |
 | `serving` | **서빙이 그대로 따라야 할 값**: document template, query prompt 이름·원문, 임베딩 차원, normalize, cosine, max_seq_length, 저장 dtype |
 | `environment` | 라이브러리 버전·GPU |
-| `code` | `scripts/pack_for_colab.py`가 적은 git 브랜치·커밋·커밋 안 된 파일 목록 + 학습에 실제로 쓴 코드 사본(모델 폴더의 `code_snapshot.zip`)과 그 해시. `edited_after_pack: true`면 올린 뒤 Colab 편집기에서 고친 코드로 학습했다는 뜻(정확한 코드는 사본) — Colab엔 .git이 없어서 사람이 커밋 번호를 적지 않아도 되게 |
+| `code` | 학습에 실제로 쓴 노트북 셀 코드 사본(모델 폴더의 `notebook_code.py`)과 그 해시 — 셀을 고쳐 가며 실험해도 정확한 코드가 남음(로컬 `run_finetune()`은 `code_snapshot.zip`) |
+| `data_version` | `pack_for_colab.py`가 적은 데이터의 git 브랜치·커밋, 파일별 sha256 — Colab엔 .git이 없어서 사람이 커밋 번호를 적지 않아도 되게 |
 | `evaluations` | 14번이 추가하는 split별 지표 |
 
 체크포인트 폴더(가중치+manifest)는 `.gitignore` 대상이라 git에는 안 올라갑니다 — 팀과 공유하려면

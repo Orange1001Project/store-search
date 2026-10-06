@@ -1,7 +1,8 @@
 """sentence-transformers Trainer로 임베딩 모델을 fine-tuning하고, 서비스에 바로 쓸 수 있는 최종
-모델 하나만 Drive에 남긴다. `colab/run_finetune_simple.py`(Arctic/BGE, full fine-tuning)와
-`colab/run_finetune_qwen3.py`(Qwen3-Embedding, LoRA)가 둘 다 이 `run_finetune()` 하나를 호출한다 —
-팀원마다 학습 코드가 달라서 결과를 비교할 수 없게 되는 일을 막기 위해서다.
+모델 하나만 저장하는 **로컬용 참조 구현**.
+
+Colab에서는 `colab/train_eval.ipynb`가 이 로직을 노트북 셀에 그대로 담고 있다(팀원이 셀에서 기법을 바로 고칠 수
+있게 `src/` 없이 혼자 돈다). 학습 행 펼치기·run 규칙·채점이 이쪽과 같은지는 `tests/test_train_eval_notebook.py`가 확인한다.
 
 T4(무료 Colab) 기준으로 맞춘 것:
 - T4는 bf16을 지원하지 않는다 → GPU가 bf16을 지원하면 bf16, 아니면 fp16 AMP를 자동 선택
@@ -161,7 +162,7 @@ def _training_data_record(path: Path, expand_stats: dict) -> dict:
 
 
 _PACKAGE_DIR = Path(__file__).resolve().parents[1]
-"""지금 import된 `store_search_ai` 패키지 폴더 — Colab에서는 Drive의 project/src/store_search_ai."""
+"""지금 import된 `store_search_ai` 패키지 폴더 (코드 사본 zip의 대상)."""
 
 
 def _save_code_snapshot(model_dir: Path) -> dict:

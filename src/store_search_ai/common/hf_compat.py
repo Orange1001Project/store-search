@@ -73,7 +73,7 @@ def check_environment(require_eval: bool = True) -> dict[str, str | None]:
     for package, major in TESTED_MAJOR.items():
         found = version_tuple(package)
         if found and found[0] > major:
-            print(f"[경고] {package} {versions.get(package)}: 확인된 적 없는 메이저 버전 — colab/smoke_test_finetune.ipynb로 먼저 확인하세요")
+            print(f"[경고] {package} {versions.get(package)}: 확인된 적 없는 메이저 버전 — SMOKE=True로 먼저 확인하세요")
     print("[환경] " + ", ".join(f"{k}={v}" for k, v in versions.items()))
     if problems:
         raise RuntimeError("Colab 환경 문제: " + "; ".join(problems))

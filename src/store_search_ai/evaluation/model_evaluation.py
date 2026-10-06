@@ -1,7 +1,8 @@
 """모델 하나를 "인코딩 → exact 검색 → 공식 채점 → 저장 → manifest 기록"까지 한 번에 평가한다.
 
-Colab 노트북(`colab/run_finetune_*.ipynb`, `colab/run_model_eval_encoding.ipynb`)에서 학습 직후 바로 점수를 보고
-코드를 고쳐 다시 학습하는 반복을 Colab 안에서 끝내기 위한 함수다. 채점은 `scripts/13_evaluate_run.py`와 **같은
+로컬(또는 `src/`를 쓰는 환경)에서 모델을 평가하고, `scripts/import_colab_results.py`·테스트가 같은 결과 형식을 쓰기 위한
+함수다(Colab 노트북 `colab/train_eval.ipynb`는 같은 로직을 셀에 담고 있다 — `tests/test_train_eval_notebook.py`가
+노트북 채점이 공식 evaluator와 같은지 확인). 채점은 `scripts/13_evaluate_run.py`와 **같은
 함수**(`evaluator.build_evaluation_report`)로 하므로 Colab에서 본 점수와 로컬 13번의 점수는 같다
 (`scripts/import_colab_results.py --verify`가 로컬에서 다시 채점해 확인한다).
 

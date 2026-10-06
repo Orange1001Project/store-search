@@ -107,7 +107,7 @@ def write_model_manifest(model_dir: str | Path, manifest: dict) -> Path:
     없어진다 — 이 매니페스트가 그 기록이다. `evaluations`는 빈 리스트로 시작하고,
     `14_run_model_eval.py`가 이 모델을 평가할 때마다 `append_model_manifest_evaluation()`으로
     채워진다(학습 시점엔 아직 val/test 점수를 모르므로).
-    `store_search_ai.training.st_finetune.run_finetune()`(= `colab/run_finetune_*.py`)이 호출한다.
+    `store_search_ai.training.st_finetune.run_finetune()`이 호출한다(Colab 노트북 `colab/train_eval.ipynb`는 같은 형식으로 직접 쓴다).
     """
 
     manifest = {
