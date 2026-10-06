@@ -90,9 +90,14 @@ T4(15GB)에서 모델별 설정:
 
 | 모델 | 설정 |
 |---|---|
-| arctic_ko / bge_m3 | 기본값(batch 32). OOM이면 batch 16 또는 `loss="mnrl"` |
-| qwen3 0.6B | 기본값(LoRA r=16, lr 1e-4, fp32 베이스) |
-| qwen3 4B | `BASE_DTYPE="float16"`, `BATCH_SIZE=8`, `LOSS="mnrl"`. fp16 overflow로 NaN이 나면 L4/A100 필요 |
+| arctic_ko / bge_m3 | 기본값(batch 32, mini_batch 16). OOM이면 mini_batch 8 → 그래도 안 되면 batch 16 또는 `loss="mnrl"` |
+| qwen3 0.6B | 기본값(LoRA r=16, lr 1e-4, fp32 베이스, batch 32, mini_batch 16) |
+| qwen3 4B | preset 기본값(fp16 베이스, batch 8, mini_batch 4, `mnrl`). fp16 overflow로 NaN이 나면 L4/A100 필요 |
+
+**mini_batch_size (GradCache)**: batch 32 × (query + positive + negative 3) = 한 step에 160문장을 한꺼번에 역전파하면 T4에서
+OOM이 납니다. `mini_batch_size < batch_size`면 Cached loss(`CachedGISTEmbedLoss`/`CachedMultipleNegativesRankingLoss`)를 써서
+batch 전체의 임베딩은 grad 없이 먼저 구하고 역전파만 mini_batch씩 나눠 합니다 — in-batch negative·loss·gradient는 같아서
+**결과는 batch 32와 같고 메모리만 줄어듭니다**(약 1.3~1.5배 느림). 그래서 run끼리 비교할 때 mini_batch는 달라도 됩니다.
 | qwen3 8B | T4 불가 |
 
 ### 중간 체크포인트 (한 번만) + 이어서 학습

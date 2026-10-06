@@ -160,7 +160,7 @@ TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	libs	nDCG@10
 | `Colab 환경 문제: …` (2번 셀) | 메시지대로 패키지 설치. `[경고] 확인된 적 없는 메이저 버전`이면 `SMOKE=True`로 먼저 확인 |
 | `No such file … data/…` | Drive `store-search-ai/data/`에 `pack_for_colab.py` 결과를 올렸는지 확인 |
 | `train_pairs.jsonl과 meta.json이 맞지 않습니다` | `pack_for_colab.py`로 다시 만들어 `data/`째 다시 올리기 |
-| `CUDA out of memory` | `HP["batch_size"]`를 16(4B는 4)으로, 또는 `HP["loss"] = "mnrl"` → `NOTE`에 적기 |
+| `CUDA out of memory` | 런타임 > 세션 다시 시작 후 `HP["mini_batch_size"]`를 절반으로(8, 4B는 2) — 결과는 같고 느려지기만 함, NOTE 불필요. 그래도 안 되면 `HP["batch_size"]` 16 또는 `HP["loss"] = "mnrl"` → `NOTE`에 적기 |
 | `loss가 NaN/inf` | 저장된 것 없음. `learning_rate`를 절반으로, 또는 bf16 GPU(L4/A100) |
 | `처음 실행과 설정/데이터가 다릅니다` | `RESUME_TAG`로 이어 할 때는 처음 설정 그대로 |
 | `test split은 최종 후보를 정한 뒤 한 번만` | 정상 — 반복 실험은 val로만 |
