@@ -47,7 +47,7 @@ Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실
 | 셀 | 하는 일 | 고치나? |
 |---|---|---|
 | GPU 확인 / 설치 / Drive 연결 | 설치는 채점용 2개만, torchao 제거(peft 충돌), HF 라이브러리는 Colab 기본 버전 그대로 | 아니오 |
-| **1. 설정** | `OWNER`(필수), `MODEL`, `NOTE`, `SMOKE`, `RESUME_TAG`, `EVAL_RUN_TAG`, `FINAL_TEST` / `MODEL_PRESETS`(모델 목록) / `HP`(학습 설정) | **예** |
+| **1. 설정** | `OWNER`(필수), `MODEL`, `NOTE`, `SMOKE`, `RESUME_TAG`, `SAVE_MID_CHECKPOINT`, `EVAL_RUN_TAG`, `FINAL_TEST` / `MODEL_PRESETS`(모델 목록) / `HP`(학습 설정) | **예** |
 | 2. 라이브러리 버전 호환 | transformers 4·5, sentence-transformers 3~5 차이 흡수 + 버전 출력·점검 | 거의 안 함 |
 | 3. 데이터 불러오기 | Drive `data/`에서 읽고 학습 데이터·meta 일치 확인 | 아니오 |
 | **4. 학습 행 만들기** | (query, positive, negative) 행으로 펼치기 — negative 고르는 방식, 샘플링, 증강 | **예 — 기법 실험** |
@@ -133,8 +133,8 @@ VS Code의 Claude에게 "이 셀을 이렇게 바꿔 줘"라고 해서 **바뀐 
 - 학습 없이 기존 run만 다시 평가: `EVAL_RUN_TAG = "<TAG>"` 넣고 8번은 건너뛰고 9번부터.
 - Colab이 끊김: 로그에 `[체크포인트] … 저장 완료`가 나온 뒤였다면 `RESUME_TAG = "<TAG>"`, **다른 설정은 처음과 똑같이** 두고 처음부터
   실행. 그 전이면 처음부터 다시 학습. 끊긴 run의 `<TAG>.ckpt` 폴더는 이어 하지 않을 거면 지워도 됩니다.
-- 학습 셀이 끝나지 않았는데 9번을 실행하면 "8. 학습이 끝나지 않았습니다"로 멈춥니다(정상). 단, **같은 세션에서 앞서 끝난 학습이 있으면**
-  그 모델을 평가해 버리므로, 학습이 실패했으면 9번을 돌리지 말고 세션을 다시 시작하세요.
+- 학습 셀이 끝나지 않았는데(실패·중단) 9번을 실행하면 "8. 학습이 끝나지 않았습니다"로 멈춥니다(정상 — 같은 세션의 이전 run을
+  잘못 평가하지 않게 8번이 시작할 때 `final_dir`을 비움).
 - 처음 써 보는 설정(특히 4B, 큰 batch)은 `SMOKE=True`로 메모리·속도를 먼저 확인해도 됩니다.
 
 ### 런타임이 끊겼을 때 — 어디부터 다시?
@@ -240,7 +240,9 @@ TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	libs	nDCG@10
 | **Qwen3-0.6B** (`qwen3_0_6b`, `_store`) | 0.34(가장 낮게 출발) | ① **prompt**: `qwen3_0_6b_store`(매장 검색용 지시문) — 지시문 모델이라 효과가 큼 ② LoRA r 16→32/64, lr 5e-5~2e-4 ③ `loss="mnrl"`과 GIST 비교 |
 | **Qwen3-4B** (`qwen3_4b`, `_store`) | – | T4는 빠듯함 → 가능하면 **L4/A100**(bf16, batch 키움). 0.6B에서 효과 있던 설정을 옮겨서 |
 
-(위 zero-shot 숫자는 저장소에 남아 있는 예전 val 평가 기준이라, 지금 데이터로 `11. zero-shot 비교표`를 다시 돌려 확인하세요.)
+(위 zero-shot 숫자는 gold qrels 확정 **이전**(pooling 재시작 전) 정답으로 채점한 예전 결과라 지금 점수와 비교할 수 없습니다 —
+순서만 참고하고, 지금 데이터로 `11. zero-shot 비교표`를 다시 돌려 확인하세요. 예전 결과 json은 `artifacts/evaluation/`에 남아 있지만
+그 run CSV는 지워져 다시 채점할 수 없고, Colab 결과를 가져오면 같은 이름 파일은 새 결과로 바뀝니다.)
 
 **모든 모델 공통 — 효과가 클 것으로 보는 순서**
 1. **학습 query 늘리기**: 지금 학습 query는 237개뿐(행은 7,270개로 충분하지만 표현이 다양하지 않음). 가맹점 문서로 LLM이 검색어를

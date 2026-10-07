@@ -5,7 +5,8 @@
 스크립트 단위로 뜯어봅니다. 회의에서 "이 단계가 왜 이렇게 동작하나요", "이 파일은 어디서
 나온 거예요" 같은 질문에 코드 근거를 대면서 답할 수 있도록 만든 문서입니다.
 
-번호 순서(01~15)대로 정리했고, 번호 없는 유틸리티 3개를 실제 실행 순서상 자리에 끼워 넣었습니다:
+번호 순서(01~15)대로 정리했고(16번 보충 pooling은 `docs/PIPELINE.md` 6-1절, Colab 도구 `pack_for_colab.py`·
+`import_colab_results.py`와 노트북은 `docs/TRAINING_TEAM.md`·`docs/TRAIN_EVAL_NOTEBOOK.md`), 번호 없는 유틸리티 3개를 실제 실행 순서상 자리에 끼워 넣었습니다:
 `import_queryset_xlsx.py`(05번 이전), `split_completed_annotations.py`(08번과 09번 사이),
 `prepare_finetune_dataset.py`(15번 이후, fine-tuning 준비 단계). 각 절은 다음 다섯 항목으로
 구성됩니다: **한 줄 요약 / 입력 파일 / 핵심 로직 / 출력 파일 / 사용하는 src/ 코드**.
@@ -730,7 +731,7 @@ prompt 차이를 여기서 흡수), `ExactCosineSearch`로 top-k(기본 100) run
 ## `prepare_finetune_dataset.py` *(번호 없는 유틸리티, 15번 이후 — fine-tuning 데이터 준비)*
 
 **한 줄 요약**: `qrels_train`(+ corpus, queries.csv)으로부터 fine-tuning용 (query, positive,
-negatives) 학습쌍 jsonl을 만든다. Colab 학습(`colab/run_finetune_*.py`)에 넘길 최종 산출물.
+negatives) 학습쌍 jsonl을 만든다. Colab 학습(`colab/train_eval.ipynb`, `pack_for_colab.py`로 Drive `data/`에 올림)에 넘길 최종 산출물.
 
 **입력 파일**
 - `--config`(기본 `configs/benchmark/storesearch_ko_v1.yaml`) → `corpus_path`, `benchmark_dir`,
@@ -820,10 +821,10 @@ zero-shot 리더보드에서도(`14_run_model_eval.py`로 여러 모델 비교) 
 
 **Q8. fine-tuning한 모델을 나중에 서비스에 연결할 때 뭘 봐야 하나요?**
 → 14번 절 + `store_search_ai.pipeline.common.write_model_manifest`/
-`append_model_manifest_evaluation`. 학습 코드(`store_search_ai.training.st_finetune`, Colab의
-`colab/run_finetune_*.py`가 호출)가 체크포인트 폴더에 `model_manifest.json`(base 모델, 학습 데이터 sha256,
-하이퍼파라미터, 코드 버전·사본, 서빙이 따라야 할 값)을 남기고, `14_run_model_eval.py`로 평가할 때마다 그 안의
-`evaluations` 리스트에 val/test 점수가 자동으로 쌓인다. 어떤 체크포인트를 배포할지 고를 때 이 파일 하나만 보면
+`append_model_manifest_evaluation`. Colab 노트북 `colab/train_eval.ipynb`의 `train_model()`(로컬 참조 구현은
+`store_search_ai.training.st_finetune.run_finetune()`)이 모델 폴더에 `model_manifest.json`(base 모델, 학습 데이터 sha256,
+하이퍼파라미터, 코드 사본, 서빙이 따라야 할 값)을 남기고, 평가할 때마다(Colab은 노트북 `evaluate()`, 로컬은
+`14_run_model_eval.py`) 그 안의 `evaluations` 리스트에 val/test 점수가 자동으로 쌓인다. 어떤 체크포인트를 배포할지 고를 때 이 파일 하나만 보면
 된다(`docs/TRAINING.md` 5절, 팀 규칙은 `docs/TRAINING_TEAM.md`).
 
 **Q9. 쿼리 원본은 어디서 오고, fine-tuning 데이터는 어떻게 만드나요?**

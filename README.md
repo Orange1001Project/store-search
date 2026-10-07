@@ -51,7 +51,7 @@ src/store_search_ai/
   pipeline/common.py             scripts/*.py 공통 보일러플레이트 (yaml 로드, TREC 저장 등)
   models/                        임베딩 인코더 (BEIR 스타일, docs/MODELING.md 참고)
   retrieval/exact_search.py      exact cosine 검색 (ANN 이전 단계 모델 비교용)
-scripts/01_*.py ~ scripts/15_*.py   파이프라인 본체 (docs/PIPELINE.md 참고)
+scripts/01_*.py ~ scripts/16_*.py   파이프라인 본체 (16 = 보충 pooling, docs/PIPELINE.md 참고)
 scripts/import_queryset_xlsx.py    data/query/queryset_final.xlsx → query_families_v1.yaml 변환기(번호 없음, 05 이전에 1회성 실행)
 scripts/prepare_finetune_dataset.py  train qrels+corpus → fine-tuning용 jsonl (번호 없음, docs/TRAINING.md 참고)
 scripts/pack_for_colab.py            Colab(Drive)에 올릴 data/ 폴더 생성 + 데이터 버전 기록 (docs/TRAINING_TEAM.md 참고)
@@ -67,9 +67,10 @@ benchmark/storesearch_ko_v1/
 archive/rule_based_train_labeling/ 한때 썼던 규칙 기반 train 자동 라벨링 스크립트 (재현율 문제로 보류, 참고용)
 models/                         fine-tuned 모델 가중치 (.gitignore 처리 — Colab에서 내려받은 걸 로컬에 둠)
 tests/                          단위 테스트 (pytest)
-colab/                          Colab(GPU)에서 임베딩 모델 인코딩/학습하는 스크립트 (colab/README.md 참고)
+colab/                          Colab(GPU) 학습·평가 노트북 train_eval.ipynb 하나 (colab/README.md 참고)
 docs/
-  PIPELINE.md                    15단계 실행 순서·인자·사람 개입 지점 (필독)
+  PIPELINE.md                    01~16단계 실행 순서·인자·사람 개입 지점 + Colab 학습 순서 (필독)
+  PIPELINE_CODE_REFERENCE.md     스크립트별 코드 상세(무엇을 읽고 계산해서 어디에 쓰는지)
   EXTENDING_DATA.md               raw 데이터 확장 / query family 재정의 방법
   MODELING.md                    임베딩 모델 zero-shot 비교 구조 (BEIR 스타일)
   TRAINING.md                    Colab fine-tuning 설계·설정 (sentence-transformers; Qwen3=LoRA, 나머지=full)

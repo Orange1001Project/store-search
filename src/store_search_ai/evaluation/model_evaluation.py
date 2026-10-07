@@ -43,7 +43,7 @@ def evaluation_tag(tag: str, template: str, split: str) -> str:
 
 
 def load_eval_inputs(project_dir: str | Path) -> dict:
-    """project 폴더(Colab에서는 Drive의 project/)에서 평가에 필요한 것을 읽는다: 벤치마크 설정, corpus, active queries."""
+    """저장소 루트(project_dir)에서 평가에 필요한 것을 읽는다: 벤치마크 설정, corpus, active queries."""
 
     project_dir = Path(project_dir)
     config = load_config(project_dir / BENCHMARK_CONFIG)

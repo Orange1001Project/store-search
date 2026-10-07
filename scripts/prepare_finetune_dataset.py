@@ -4,7 +4,7 @@
 (`docs/PIPELINE.md` 4절, `09_prepare_full_annotations.py`가 만드는
 `qrels/{round}/qrels_train_provisional.csv` 또는 `11_build_qrels.py`가 만드는
 최종 `qrels_train.csv`) 필요할 때마다 로컬(GPU 불필요)에서 실행하는 데이터 준비 도구다.
-결과 jsonl을 Colab으로 올려서 `colab/run_finetune_*.py`가 그대로 읽는다.
+결과 jsonl은 `scripts/pack_for_colab.py`로 Drive `data/`에 올려 `colab/train_eval.ipynb`가 그대로 읽는다.
 
 핵심 로직은 src/store_search_ai/data/finetune_dataset.py에 있다. 이 스크립트는 인자 파싱,
 파일 IO, 콘솔 출력만 담당한다.

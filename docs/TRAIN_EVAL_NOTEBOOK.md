@@ -43,7 +43,7 @@
 ### 데이터 흐름
 
 ```
-Drive data/ ──[10]──▶ corpus(문서 21만) · queries(val/test) · QRELS(정답 경로) · RECORDS(학습 query 237개)
+Drive data/ ──[10]──▶ corpus(문서 21만) · queries(active: train 237·val 136·test 175, 평가는 val/test만) · QRELS(정답 경로) · RECORDS(학습 query 237개)
                                                           │
 RECORDS ──[12] expand_training_rows──▶ rows 7,270행 {anchor, positive, negative_1..3}
                                                           │
@@ -78,7 +78,8 @@ TAG 형식: `<모델이름>_ft_<OWNER>_<UTC 날짜>_<시각>` (예: `qwen3_embed
 print("CUDA:", torch.cuda.is_available())
 print(torch.cuda.get_device_name(0), ... total_memory ...)
 ```
-GPU 종류에 따라 정밀도가 정해집니다: **T4 → fp16**, L4/A100 → bf16(더 빠르고 NaN 위험이 적음). GPU가 없으면 학습이 사실상 불가능하니
+GPU 종류에 따라 학습 정밀도가 정해집니다: **T4 → fp16**, L4/A100 → bf16(더 빠르고 NaN 위험이 적음). bf16은 GPU 세대(compute capability 8 이상)로
+판단합니다 — `torch.cuda.is_bf16_supported()`는 에뮬레이션까지 True라 T4에서도 True가 나와 쓰지 않습니다. GPU가 없으면 학습이 사실상 불가능하니
 런타임 유형을 바꾸라는 경고를 냅니다.
 
 ## [2] 설치
@@ -289,7 +290,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 2. **run_config**: `HP` + 모델 ID + 학습 데이터 sha256.
    - 새 run + 중간 체크포인트 사용 → `.ckpt/run_config.json`에 저장.
    - 이어서 학습 → 저장된 run_config와 비교해서 다르면 멈춤(다른 설정으로 이어 붙이는 사고 방지).
-3. **GPU 정리·정밀도**: `gc` + `empty_cache` + 최대 메모리 측정 초기화. bf16 지원이면 bf16, 아니면(T4) fp16 AMP.
+3. **GPU 정리·정밀도**: `gc` + `empty_cache` + 최대 메모리 측정 초기화. compute capability 8 이상(L4·A100)이면 bf16, 아니면(T4) fp16 AMP.
 4. **데이터·모델·loss**: `expand_training_rows` → `build_model` → `resolve_query_prompt` → `build_loss`.
 5. **콜백**
    - `Guard`: 로그된 loss가 NaN/inf면 학습 중단 → 저장하지 않고 에러.
@@ -340,7 +341,8 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 1. 저장 전 모델로 검증 문장 5개(`VERIFY_TEXTS`: query 3개는 prompt 포함, 문서 2개)를 인코딩 → 기준값.
 2. 모델을 CPU로(4B에서 재로드할 GPU 메모리 확보).
 3. `save_dtype`(float16)으로 저장 → **새로 불러와서** 같은 문장 인코딩 → 최소 cosine ≥ 0.999면 통과 `[검증] 저장본(float16) … 일치 확인`.
-4. 안 맞으면 `[경고]` 후 float32로 다시 저장·검증. 그래도 안 맞으면 에러(폴더는 `.partial`로 남고 쓰지 않음).
+4. 안 맞으면 `[경고]` 후 float32로 다시 저장·검증(fp32로 학습한 모델은 미리 복사해 둔 학습 가중치 그대로 저장 — fp16으로 깎인 값이 아님).
+   그래도 안 맞으면 에러(폴더는 `.partial`로 남고 쓰지 않음).
 
 이 검증이 잡는 사고: pooling·normalize·prompt 설정이 빠진 채 저장, LoRA merge 실패, fp16 저장 시 값 넘침(NaN은 불일치로 판정).
 
@@ -365,7 +367,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 | `validate_run` | 누락·모르는 query, 중복 (query, doc), 잘못된 rank 수 |
 | `score_run` | 위를 모아 report(dict) 생성 — 공식 evaluator와 같은 형식 |
 | `exact_search` | query·문서 임베딩 내적(정규화됐으므로 cosine) → query마다 top 100. 근사 검색(ANN)이 아닌 정확한 검색 |
-| `load_encoder(cfg)` | 평가할 모델 로드(`torch_dtype` 있으면 그 dtype) |
+| `load_encoder(cfg)` | 평가할 모델 로드. dtype은 `torch_dtype`(4B는 float16), 없으면 **float32로 고정** — 지정하지 않으면 transformers 5가 모델마다 다른 dtype(Qwen3=bf16, fp16 저장본=fp16)으로 올려 기준·학습 모델 점수에 정밀도 차이가 섞임 |
 | `encode(model, texts, cfg, is_query)` | query면 prompt 적용 → 인코딩 → `target_dimension`만큼 자름 → 정규화. **자른 뒤 정규화**해야 cosine이 맞음 |
 | `evaluate(cfg, split, …)` | 아래 |
 | `format_report` | 출력용 문자열 |
@@ -386,6 +388,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 ## [21] 8. 학습
 
 ```python
+final_dir = None
 if not EVAL_RUN_TAG:
     final_dir = train_model(preset, HP, OWNER, NOTE, resume_tag=RESUME_TAG, save_mid_checkpoint=SAVE_MID_CHECKPOINT)
 ```
@@ -395,7 +398,8 @@ if not EVAL_RUN_TAG:
 ## [23] 9. 평가 (val)
 
 1. `base_cfg` = 지금 preset에서 `train`을 뺀 것 = **같은 모델의 zero-shot**. 그 run.csv가 없으면 먼저 평가(처음 한 번, 문서 21만 개 인코딩).
-2. `final_dir`이 없으면(학습 셀이 중단·실패) 안내하고 멈춤 — 예전 run을 잘못 채점하는 것 방지.
+2. `final_dir`이 `None`이면(학습 셀이 중단·실패) 안내하고 멈춤. 8번이 시작할 때 `final_dir = None`으로 비우므로, 같은 세션에서
+   앞서 끝난 run이 있어도 그 모델을 새 모델로 잘못 평가하지 않습니다.
 3. 평가 대상 = `EVAL_RUN_TAG`가 있으면 그 run, 없으면 방금 학습한 `final_dir`. 그 폴더의 `eval_config.yaml`로 설정.
 4. 기준 모델 대비로 채점·출력 → 모델 변수 비우고 GPU 해제.
 

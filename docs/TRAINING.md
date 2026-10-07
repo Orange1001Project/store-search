@@ -85,17 +85,18 @@ python scripts/prepare_finetune_dataset.py
 
 자동으로 처리되는 것:
 
-- **precision**: GPU가 bf16을 지원하면 bf16, T4처럼 안 되면 fp16 AMP(가중치는 fp32, 연산만 fp16).
+- **precision**: GPU가 bf16을 하드웨어로 지원하면(L4·A100, compute capability 8 이상) bf16, T4면 fp16 AMP(가중치는 fp32,
+  연산만 fp16). `torch.cuda.is_bf16_supported()`는 에뮬레이션까지 True라 T4에서도 True가 나오므로 GPU 세대로 판단합니다.
   loss가 NaN/inf가 되면 학습을 멈추고 **Drive에 아무것도 저장하지 않습니다** → lr을 낮추거나 L4/A100 사용.
 - **배치**: `NO_DUPLICATES` — 같은 텍스트(같은 query의 다른 positive 행, 공유 negative)가 한 배치에
   두 번 들어가 서로를 오답으로 배우는 일을 막습니다.
 - **loss**: 기본 `gist`(GISTEmbedLoss, 베이스 모델이 guide) — 같은 family의 query가 한 배치에 섞이면
   서로의 정답을 오답으로 배우는데("국밥"과 "순대국"), guide가 정답보다 더 비슷하다고 보는 in-batch
-  negative를 걸러줍니다. 메모리가 부족하면 `mnrl`. yaml에 `target_dimension`이 있으면(qwen3_4b) 그
+  negative를 걸러줍니다. 메모리가 부족하면 `mnrl`. preset에 `target_dimension`이 있으면(qwen3_4b) 그
   차원에서도 성능이 유지되도록 Matryoshka로 감쌉니다.
-- **query prompt**: yaml의 `query_prompt_name` prompt를 학습 때도 그대로 붙입니다 → 평가/서빙에서도
-  `prompt_name`만 맞으면 학습 때와 같은 문자열이 붙습니다. Qwen3에서 `QUERY_PROMPT_OVERRIDE`를 주면 그
-  문자열로 학습하고, 저장되는 모델의 prompt도 그 문자열로 바뀝니다.
+- **query prompt**: preset(`MODEL_PRESETS`, 저장소 `configs/models/*.yaml`과 같은 값)의 `query_prompt_name` prompt를 학습 때도
+  그대로 붙입니다 → 평가/서빙에서도 `prompt_name`만 맞으면 학습 때와 같은 문자열이 붙습니다. preset에 `query_prompt` 문자열이
+  있으면(`*_store` 변형의 `STORE_PROMPT`) 그 문자열로 학습하고, 저장되는 모델의 prompt도 그 문자열로 바뀝니다.
 
 T4(15GB)에서 모델별 설정:
 
@@ -104,25 +105,26 @@ T4(15GB)에서 모델별 설정:
 | arctic_ko / bge_m3 | 기본값(batch 32, mini_batch 16). OOM이면 mini_batch 8 → 그래도 안 되면 batch 16 또는 `loss="mnrl"` |
 | qwen3 0.6B | 기본값(LoRA r=16, lr 1e-4, fp32 베이스, batch 32, mini_batch 16) |
 | qwen3 4B | preset 기본값(fp16 베이스, batch 8, mini_batch 4, `mnrl`). fp16 overflow로 NaN이 나면 L4/A100 필요 |
+| qwen3 8B | T4 불가 |
 
 **mini_batch_size (GradCache)**: batch 32 × (query + positive + negative 3) = 한 step에 160문장을 한꺼번에 역전파하면 T4에서
 OOM이 납니다. `mini_batch_size < batch_size`면 Cached loss(`CachedGISTEmbedLoss`/`CachedMultipleNegativesRankingLoss`)를 써서
 batch 전체의 임베딩은 grad 없이 먼저 구하고 역전파만 mini_batch씩 나눠 합니다 — in-batch negative·loss·gradient는 같아서
 **결과는 batch 32와 같고 메모리만 줄어듭니다**(약 1.3~1.5배 느림). 그래서 run끼리 비교할 때 mini_batch는 달라도 됩니다.
-| qwen3 8B | T4 불가 |
 
 ### 중간 체크포인트 (한 번만) + 이어서 학습
 
 학습 step의 **절반 지점에서 딱 한 번** Drive `runs/finetune/<TAG>.ckpt/checkpoint-N/`에 체크포인트(모델 +
 optimizer/scheduler 상태)를 저장합니다. 매 epoch마다 쌓지 않는 이유는 Drive 용량 때문입니다.
 
-- **Colab 연결이 끊기면**: 스크립트의 `RESUME_TAG`에 그 run의 TAG(`.ckpt` 앞부분)를 넣고, **나머지 설정은
+- **Colab 연결이 끊기면**: 노트북 `1. 설정`의 `RESUME_TAG`에 그 run의 TAG(`.ckpt` 앞부분)를 넣고, **나머지 설정은
   처음과 똑같이** 둔 채 다시 실행하면 checkpoint-N부터 이어서 학습합니다. 설정이나 `train_pairs.jsonl`이
-  처음과 다르면(`.ckpt/finetune_config.json`과 비교) 이어 붙이지 않고 거부합니다 — 다른 설정의 학습이 섞인
-  모델이 나오면 manifest를 믿을 수 없게 되기 때문입니다(`note`, `keep_last_runs`만 달라도 됨).
+  처음과 다르면(`.ckpt/run_config.json`과 비교) 이어 붙이지 않고 거부합니다 — 다른 설정의 학습이 섞인
+  모델이 나오면 manifest를 믿을 수 없게 되기 때문입니다(`note`, `keep_last_runs`, `save_mid_checkpoint`, `resume_tag`,
+  `mini_batch_size`만 달라도 됨 — OOM이 나서 mini_batch를 줄여 이어 하는 것은 허용). 끊긴 시점별 절차는 `docs/TRAINING_TEAM.md` 4절.
 - **절반 지점 전에 끊기면** 체크포인트가 없으니 처음부터 다시 돌립니다(`.ckpt` 폴더는 지워도 됨).
 - **최종 모델 저장이 성공하면 `.ckpt` 폴더는 자동으로 지웁니다.** 끝나지 않은 run의 `.ckpt`는 자동 정리
-  대상이 아니라서, 이어서 학습할 게 아니면 직접 지우세요(학습 끝에 경고로 목록이 찍힘).
+  대상이 아니라서, 이어서 학습할 게 아니면 Drive에서 직접 지우세요.
 - **크기**: LoRA(Qwen3)는 수십 MB, full fine-tuning(Arctic/BGE)은 fp32 가중치 + Adam 상태라 **약 7GB**입니다.
   학습 도중에는 Drive에 그만큼 여유가 필요합니다. 여유가 없으면 `SAVE_MID_CHECKPOINT = False`
   (끊기면 처음부터 다시).
@@ -133,11 +135,11 @@ optimizer/scheduler 상태)를 저장합니다. 매 epoch마다 쌓지 않는 �
 
 ```
 runs/finetune/bge_m3_ft_jisu_20260928_0307/
-  model.safetensors ...        # merge된 전체 모델, fp16 (fp32의 절반 용량)
+  model.safetensors ...        # merge된 전체 모델, fp16 (fp32의 절반 용량; fp16에서 임베딩이 달라지면 float32 — manifest serving.saved_dtype)
   modules.json, 1_Pooling/ ... # sentence-transformers 설정(pooling/prompt/normalize) — 그대로 로드 가능
   model_manifest.json          # 5절
   eval_config.yaml             # configs/models/<TAG>.yaml로 복사해서 쓰는 평가 설정
-  code_snapshot.zip            # 학습에 실제로 쓴 store_search_ai 코드 사본
+  notebook_code.py             # 이 모델을 만든 세션에서 실행한 노트북 셀 코드 전체(로컬 run_finetune은 code_snapshot.zip)
 ```
 
 - 저장은 `<TAG>.partial/`에 먼저 하고, **다시 로드해서 임베딩이 메모리의 모델과 같은지 검증**하고
@@ -145,23 +147,26 @@ runs/finetune/bge_m3_ft_jisu_20260928_0307/
 - 저장이 끝나면 **같은 OWNER·같은 베이스 모델의 run은 최신 3개(`keep_last_runs`)만 남기고 지웁니다.**
   다른 팀원의 run, 다른 베이스 모델의 run, `.partial`/`.ckpt` 폴더는 건드리지 않습니다.
 - **서비스 후보로 남길 run은 그 폴더에 빈 파일 `KEEP`을 만듭니다**(Drive 화면에서는 빈 파일을 못 만들어서,
-  Colab 학습 스크립트 맨 아래 셀의 `(... / "<TAG>" / "KEEP").touch()` 한 줄로). KEEP이 있는 run은 지우지 않고
-  3개 개수에도 세지 않습니다. 로컬에서 val 점수를 보고 고른 run에 KEEP을 붙이는 게 기본 흐름입니다.
+  노트북 `13. KEEP` 셀의 `(FINETUNE_DIR / "<TAG>" / "KEEP").touch()` 한 줄로). KEEP이 있는 run은 지우지 않고
+  3개 개수에도 세지 않습니다. Colab에서 val 점수(9·10번)를 보고 고른 run에 **Drive를 내려받기 전에** KEEP을 붙입니다 —
+  `import_colab_results.py`는 KEEP한 run의 모델만 가져옵니다(`--models`로 직접 지정하지 않는 한).
 - Drive에서 지운 폴더는 Drive 휴지통으로 갑니다. 용량을 바로 확보하려면 휴지통도 비우세요.
 
 ## 4. 평가 — Colab에서 바로, 마지막에 로컬로 가져오기
 
-학습 노트북은 학습 셀 다음에 **평가 셀**이 있어서, 학습이 끝나면 같은 노트북에서 val을 공식 evaluator로 채점하고
-기준 zero-shot 모델 대비 Δ·p-value와 리더보드를 바로 보여 줍니다(`store_search_ai.evaluation.model_evaluation.evaluate_model`
-— 로컬 13번과 같은 `build_evaluation_report`를 호출). 결과는 Drive `runs/model_eval/`·`runs/evaluation/`에 쌓이고 모델 폴더의
-`model_manifest.json` `evaluations`에도 기록됩니다. 그래서 **학습 → 평가 → 수정 → 다시 학습을 Colab 안에서 반복**합니다.
+학습 노트북은 학습 셀 다음에 **평가 셀**이 있어서, 학습이 끝나면 같은 노트북에서 val을 채점하고 기준 zero-shot 모델 대비
+Δ·p-value와 리더보드를 바로 보여 줍니다. 채점 코드는 노트북 `7. 평가` 셀(`evaluate()`·`score_run()`)에 들어 있는 **복제 구현**이고,
+로컬 공식 evaluator(13번, `store_search_ai.evaluation.evaluator`)와 결과가 같은지를 `tests/test_train_eval_notebook.py`가 노트북 셀을
+실제로 실행해 확인합니다(가져올 때 `import_colab_results.py --verify`도 로컬에서 다시 채점). 결과는 Drive `runs/model_eval/`·
+`runs/evaluation/`에 쌓이고 모델 폴더의 `model_manifest.json` `evaluations`에도 기록됩니다. 그래서 **학습 → 평가 → 수정 → 다시 학습을
+Colab 안에서 반복**합니다.
 
 실험이 다 끝나면 Drive의 `store-search-ai` 폴더를 내려받아:
 ```bash
 python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai> --verify
 ```
 → `results/model_eval/`, `artifacts/evaluation/storesearch_ko_v1/`, KEEP한 run의 `models/<TAG>/` + `configs/models/<TAG>.yaml`로
-정리하고, `--verify`가 로컬에서 다시 채점해 Colab 점수와 같은지 확인합니다. 절차는 `docs/TRAINING_TEAM.md` 3-4·10절.
+정리하고, `--verify`가 로컬에서 다시 채점해 Colab 점수와 같은지 확인합니다. 절차는 `docs/TRAINING_TEAM.md` 9절.
 
 로컬 GPU로 평가하는 기존 방법(`14_run_model_eval.py --model-config configs/models/<TAG>.yaml` → `15_score_model_runs.py`)도
 그대로 쓸 수 있습니다(같은 evaluator).
@@ -174,14 +179,14 @@ python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai
 | 키 | 내용 |
 |---|---|
 | `tag`, `owner`, `base_model_id`, `base_model_config`, `framework`, `precision` | 무엇을 누가 어떻게 |
-| `hyperparameters` | `FinetuneConfig` 전체(epoch, batch, lr, loss, LoRA, seed, max_seq_length, note …) |
+| `hyperparameters` | 노트북 `HP` 전체 + note·resume_tag·save_mid_checkpoint(로컬 `run_finetune()`은 `FinetuneConfig` 전체) |
 | `training_data` | jsonl 경로·sha256, 펼친 행 통계, `prepare_meta`(qrels 경로·sha256·final/provisional, template, threshold, 데이터를 만든 git commit) |
-| `training_result` | 학습 시간, step 수, loss 기록, 중간 체크포인트 step, 이어서 학습했는지(`resumed_from`) |
-| `serving` | **서빙이 그대로 따라야 할 값**: document template, query prompt 이름·원문, 임베딩 차원, normalize, cosine, max_seq_length, 저장 dtype |
+| `training_result` | 학습 시간, step 수, 최대 GPU 메모리, loss 기록, 중간 체크포인트 step, 이어서 학습했는지(`resumed_from`) |
+| `serving` | **서빙이 그대로 따라야 할 값**: document template, query prompt 이름·원문, 임베딩 차원, normalize, cosine, max_seq_length, 실제 저장 dtype |
 | `environment` | 라이브러리 버전·GPU |
-| `code` | 학습에 실제로 쓴 노트북 셀 코드 사본(모델 폴더의 `notebook_code.py`)과 그 해시 — 셀을 고쳐 가며 실험해도 정확한 코드가 남음(로컬 `run_finetune()`은 `code_snapshot.zip`) |
+| `code` | 학습에 실제로 쓴 노트북 셀 코드 사본(모델 폴더의 `notebook_code.py`)과 그 해시 — 셀을 고쳐 가며 실험해도 정확한 코드가 남음(로컬 `run_finetune()`은 `code_snapshot.zip` + git 커밋) |
 | `data_version` | `pack_for_colab.py`가 적은 데이터의 git 브랜치·커밋, 파일별 sha256 — Colab엔 .git이 없어서 사람이 커밋 번호를 적지 않아도 되게 |
-| `evaluations` | 14번이 추가하는 split별 지표 |
+| `evaluations` | 평가할 때마다 추가되는 split별 지표(Colab은 노트북 `evaluate()`, 로컬은 14번) |
 
 체크포인트 폴더(가중치+manifest)는 `.gitignore` 대상이라 git에는 안 올라갑니다 — 팀과 공유하려면
 폴더를 통째로 공유 스토리지에 두고, 공유 시트에는 TAG와 val 지표를 적습니다.
@@ -195,3 +200,7 @@ python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai
 `prepare_finetune_dataset.py`를 다시 돌리고 jsonl과 meta.json을 같이 다시 올린 뒤 Colab 학습도 다시 하면 됩니다.
 seed는 고정(20260831)이지만 GPU 종류·precision(fp16/bf16)이 다르면 결과가 조금 달라질 수 있으므로,
 비교는 manifest의 `precision`/`environment.gpu`가 같은 run끼리 하는 것이 원칙입니다.
+
+평가 dtype은 고정입니다: `torch_dtype`이 있으면(4B: float16) 그 값, 없으면 **float32**(노트북 `load_encoder`와 로컬
+`SentenceTransformerEncoder` 공통). 지정하지 않으면 transformers 5가 모델 config의 dtype(Qwen3=bf16, fp16 저장본=fp16)으로 올려
+기준 모델과 학습 모델이 서로 다른 정밀도로 채점되기 때문입니다(2026-10-07 이전 Colab 평가는 이 차이가 섞여 있음).

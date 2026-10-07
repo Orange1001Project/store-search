@@ -70,7 +70,9 @@ corpus·같은 config로 `06_generate_lexical_runs.py` → `07_build_annotation_
 - `benchmark/storesearch_ko_v1/queries.csv`, `qrels_train/val/test.csv(.trec)`, `qrels.csv(.trec)`,
   `benchmark_manifest.json`, `agreement_report.json`, `validation_final.json` — 위 원본을 집계한
   **최종 산출물**(548개 질의, gold qrels)
-- `results/model_eval/`, `artifacts/evaluation/` — zero-shot 모델 비교 결과(리더보드 + 모델별 상세)
+- `results/model_eval/`, `artifacts/evaluation/` — 모델 평가 결과. `artifacts/evaluation/`의 기존 zero-shot json은 gold qrels
+  확정(2026-10-02) **이전** 정답 기준이라 지금 점수와 비교할 수 없습니다(그 run CSV는 pooling 재시작 때 삭제). Colab 평가 결과를
+  `scripts/import_colab_results.py --verify`로 가져오면 같은 이름 파일이 새 결과로 바뀝니다
 - `data/query/queryset_final.xlsx`, `data/finetune/train_pairs.jsonl` — 작고 재사용되는 원본/산출물
 - `archive/` — 규칙 기반 train 라벨링을 되돌린 이력(작음)
 
