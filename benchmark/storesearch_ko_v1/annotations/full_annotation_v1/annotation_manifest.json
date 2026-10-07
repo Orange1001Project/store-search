@@ -14,7 +14,7 @@
       "test"
     ],
     "queries": 548,
-    "rows": 61619
+    "rows": 52115
   },
   "annotator_B": {
     "splits": [
@@ -22,32 +22,32 @@
       "test"
     ],
     "queries": 311,
-    "rows": 34857
+    "rows": 28549
   },
   "split_stats": [
     {
       "split": "train",
       "queries": 237,
-      "judgments": 26762,
-      "mean_candidates_per_query": 112.91983122362869,
-      "min_candidates_per_query": 35,
-      "max_candidates_per_query": 199
+      "judgments": 23566,
+      "mean_candidates_per_query": 99.43459915611814,
+      "min_candidates_per_query": 27,
+      "max_candidates_per_query": 160
     },
     {
       "split": "val",
       "queries": 136,
-      "judgments": 16230,
-      "mean_candidates_per_query": 119.33823529411765,
-      "min_candidates_per_query": 55,
-      "max_candidates_per_query": 274
+      "judgments": 13139,
+      "mean_candidates_per_query": 96.61029411764706,
+      "min_candidates_per_query": 47,
+      "max_candidates_per_query": 142
     },
     {
       "split": "test",
       "queries": 175,
-      "judgments": 18627,
-      "mean_candidates_per_query": 106.44,
-      "min_candidates_per_query": 53,
-      "max_candidates_per_query": 220
+      "judgments": 15410,
+      "mean_candidates_per_query": 88.05714285714286,
+      "min_candidates_per_query": 56,
+      "max_candidates_per_query": 128
     }
   ],
   "relevance": {

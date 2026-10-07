@@ -9,63 +9,66 @@
   "splits": {
     "train": {
       "queries": 237,
-      "judgments": 26762,
+      "judgments": 23263,
       "grade_distribution": {
-        "0": 6649,
-        "1": 576,
-        "2": 2410,
-        "3": 17127
+        "0": 3512,
+        "1": 2407,
+        "2": 1819,
+        "3": 15525
       },
-      "binary_relevant_ge_2": 19537
+      "binary_relevant_ge_2": 17344
     },
     "val": {
       "queries": 136,
-      "judgments": 16230,
+      "judgments": 13028,
       "grade_distribution": {
-        "0": 3919,
-        "1": 56,
-        "2": 500,
-        "3": 11755
+        "0": 2239,
+        "1": 1016,
+        "2": 480,
+        "3": 9293
       },
-      "binary_relevant_ge_2": 12255
+      "binary_relevant_ge_2": 9773
     },
     "test": {
       "queries": 175,
-      "judgments": 18625,
+      "judgments": 15360,
       "grade_distribution": {
-        "0": 4758,
-        "1": 92,
-        "2": 640,
-        "3": 13135
+        "0": 2917,
+        "1": 917,
+        "2": 429,
+        "3": 11097
       },
-      "binary_relevant_ge_2": 13775
+      "binary_relevant_ge_2": 11526
     },
     "all": {
       "queries": 548,
-      "judgments": 61617,
+      "judgments": 51651,
       "grade_distribution": {
-        "0": 15326,
-        "1": 724,
-        "2": 3550,
-        "3": 42017
+        "0": 8668,
+        "1": 4340,
+        "2": 2728,
+        "3": 35915
       },
-      "binary_relevant_ge_2": 45567
+      "binary_relevant_ge_2": 38643
     }
   },
   "files": {
     "queries.csv": "605b17d74b36c0a861f76f899f4f91a76f19d3b890876999a86606cf7cea10ee",
-    "qrels_train.csv": "48540191a551e2248b24a6c766054665caaa3ea9b2faa9068b3b6a80cf85c5f2",
-    "qrels_val.csv": "500abb4b24bf41a4414bbdb28c3e1fc84b3526f03c156f5fa20c0632c2d7208d",
-    "qrels_test.csv": "bec5a0d4caafc2f9868e788fa0a55aa2b0d6f41bb31d18f14c5d0402beb95c13",
-    "qrels.csv": "5e6bbf8051c860beacf940199d42889934347dc0a207f058590093f671a07e20",
-    "qrels_train.trec": "c3de9480880dfaea6180e8da5656a6ff59ebc23101c5cb3593bc00c786ed7338",
-    "qrels_val.trec": "4029af4558422c308e723941d1f1b79a82f59743152fd8b2e8a148872df3fb52",
-    "qrels_test.trec": "c86d26f6d46c2d5c42bbb87010e9f7b59a6f8b654c5ce436798d23162b414c82",
-    "qrels.trec": "f3c736e6c11364d90609e24d105e090c015f834d536575fe8d4e067c8e950756"
+    "qrels_train.csv": "6a9c42466462e7b584b6d89d7fceca745debd7f968ec6ec0b121df8e20a0de97",
+    "qrels_val.csv": "52fb5b1a37d0fe6b2b1a660423f498cb1f04a48527db6922b24f1b9bcd24be57",
+    "qrels_test.csv": "e18ca5e634e01b52b4bd8ce55165a6497fc1d79e4b7397eca7a294b233387dc4",
+    "qrels.csv": "ff9c3f7debd03474c10dbc9df7ddb78240ae1e733987d7485c15c04f607661f4",
+    "qrels_train.trec": "ea27c57604d08814fa80bfe1bd0b049e1bc7d684f40fae38f225b29518a9d0dc",
+    "qrels_val.trec": "da50d9680fb21956ff919c823a4d4b0bd7bb5810619e5aa50384eb473cd79642",
+    "qrels_test.trec": "3f6b79bc2c895bda1f91203c2e95b668486b9d3dc57718b2d4641b761a015587",
+    "qrels.trec": "16d3a6f0b0321b799aa278ce3878d2f84d120c27e9157db23e422c7e2c997471"
   },
   "source": {
     "adjudication": "benchmark\\storesearch_ko_v1\\annotations\\full_annotation_v1\\analysis\\adjudication_val_test_full_completed.csv",
-    "train_qrels": "benchmark\\storesearch_ko_v1\\qrels\\provisional_v1\\qrels_train_provisional.csv"
+    "train_qrels": "benchmark\\storesearch_ko_v1\\qrels\\full_annotation_v1\\qrels_train_provisional.csv",
+    "supplemental_adjudication": [
+      "benchmark/storesearch_ko_v1/annotations/supplement_v1/analysis/adjudication_full_completed.csv"
+    ]
   },
   "important": "Train is used for model fine-tuning. Val is used for checkpoint, template and hyperparameter selection. Test remains held out until the final configuration is fixed."
 }

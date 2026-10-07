@@ -23,7 +23,7 @@ BEIR 스타일로 관심사를 분리한다:
     python scripts/14_run_model_eval.py --model-config configs/models/bge_m3.yaml --split val
 
     # fine-tuned 모델 (model_id가 로컬 경로인 configs/models/*.yaml)
-    python scripts/14_run_model_eval.py --model-config configs/models/qwen3_embedding_0_6b_ft_v1.yaml --split val
+    python scripts/14_run_model_eval.py --model-config configs/models/bge_m3_ft_jisu_20260930_0512.yaml --split val
 
     # 네트워크/GPU 없이 배관만 검증 (숫자는 무의미)
     python scripts/14_run_model_eval.py --dummy --split val

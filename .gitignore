@@ -27,3 +27,12 @@ __pycache__/
 /benchmark/storesearch_ko_v1/annotations/full_annotation_v1/completed/annotation_B_val_completed.csv
 /benchmark/storesearch_ko_v1/annotations/full_annotation_v1/completed/annotation_B_test_completed.csv
 /artifacts/reports/item_analysis_stores_v003/*_stores_v003.csv
+
+# scripts/pack_for_colab.py 산출물(Drive 업로드용 사본)
+/colab_upload/
+
+# Office 잠금 파일(엑셀로 연 동안 생김)
+~$*
+
+# 내려받은 Drive 폴더(import_colab_results.py --drive-dir 입력, 모델 가중치 포함 — 커밋 금지)
+/store-search-ai*/

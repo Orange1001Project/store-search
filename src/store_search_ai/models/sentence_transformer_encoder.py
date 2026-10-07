@@ -26,10 +26,17 @@ class SentenceTransformerEncoder(BaseEncoder):
 
         self._torch = torch
         self.config = config
-        self.model = SentenceTransformer(config["model_id"])
+        # yaml의 torch_dtype(예: float16)으로 가중치를 올린다 — Qwen3-4B는 fp32면 약 16GB라 T4(15GB)에서 OOM.
+        # 없으면 GPU float16 / CPU float32 — 명시하지 않으면 transformers 5가 모델 config의 dtype(Qwen3=bf16, fp16 저장본=fp16)으로
+        # 올려서 모델마다 다른 정밀도로 채점된다(Colab 노트북 eval_dtype()과 같은 규칙).
+        from store_search_ai.common.hf_compat import dtype_kwargs
+
+        default_dtype = "float16" if torch.cuda.is_available() else "float32"
+        model_kwargs = dtype_kwargs(getattr(torch, config.get("torch_dtype") or default_dtype))
+        self.model = SentenceTransformer(config["model_id"], model_kwargs=model_kwargs)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "SentenceTransformerEncoder":
+    def from_yaml(cls, path: str | Path) -> SentenceTransformerEncoder:
         return cls(load_config(path))
 
     @property
@@ -67,8 +74,13 @@ class SentenceTransformerEncoder(BaseEncoder):
             "show_progress_bar": True,
             "convert_to_numpy": True,
         }
+        # query_prompt(문자열)가 있으면 그걸 그대로 붙인다 — 모델에 내장된 prompt가 아닌 instruction을 실험할 때
+        # (예: configs/models/qwen3_0_6b_store.yaml). 없으면 모델에 내장된 query_prompt_name prompt.
+        prompt = self.config.get("query_prompt")
         prompt_name = self.config.get("query_prompt_name")
-        if prompt_name:
+        if prompt:
+            kwargs["prompt"] = prompt
+        elif prompt_name:
             kwargs["prompt_name"] = prompt_name
         with self._torch.no_grad():
             embeddings = self.model.encode(texts, **kwargs)

@@ -22,7 +22,6 @@ from store_search_ai.retrieval.lexical import (
     build_pool_document_texts,
     fit_bm25_scorer,
     fit_char_tfidf_scorer,
-    fit_word_tfidf_char_scorer,
     retrieve_run,
     write_run_files,
 )
@@ -44,15 +43,15 @@ def main() -> None:
 
     docs = build_pool_document_texts(corpus)
 
-    print("[INFO] fitting char TF-IDF...")
-    char_scores = fit_char_tfidf_scorer(docs)
-    print("[INFO] fitting word TF-IDF...")
-    word_scores = fit_word_tfidf_char_scorer(docs)
-    print("[INFO] fitting BM25 regex-token baseline...")
+    print("[INFO] fitting char n-gram TF-IDF (n=2-5)...")
+    char_scores_v1 = fit_char_tfidf_scorer(docs, ngram_range=(2, 5))
+    print("[INFO] fitting char n-gram TF-IDF (n=2-4)...")
+    char_scores_v2 = fit_char_tfidf_scorer(docs, ngram_range=(2, 4))
+    print("[INFO] fitting char n-gram BM25 baseline...")
     bm25_scores = fit_bm25_scorer(docs)
 
-    systems = ["char_tfidf_v1", "word_tfidf_v1", "bm25_regex_v1"]
-    score_fns = [char_scores, word_scores, bm25_scores]
+    systems = ["char_tfidf_v1", "char_tfidf_v2", "char_bm25_v1"]
+    score_fns = [char_scores_v1, char_scores_v2, bm25_scores]
 
     run_stats = []
     for system, score_fn in zip(systems, score_fns):

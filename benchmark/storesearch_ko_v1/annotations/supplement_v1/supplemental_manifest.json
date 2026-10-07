@@ -1,0 +1,27 @@
+{
+  "round": "supplement_v1",
+  "base_round": "full_annotation_v1",
+  "created_at": "2026-10-02T01:50:10.429272+00:00",
+  "reason": "q_수선_01(바지 기장 줄이는 곳): lexical pool에 수선 매장이 없어 관련 문서 0개(12번 final 오류). 수선 family positive_terms가 비어 있었음.",
+  "queries": [
+    "q_수선_01"
+  ],
+  "positive_terms": [
+    "수선",
+    "옷수선",
+    "의복수선",
+    "수선실",
+    "리폼",
+    "세탁"
+  ],
+  "per_term": 15,
+  "new_pairs": 52,
+  "new_pairs_per_query": {
+    "q_수선_01": 52
+  },
+  "annotators": [
+    "A",
+    "B"
+  ],
+  "policy": "기존 판정은 바꾸지 않음. 새 후보만 val/test는 A·B 독립 판정 → 일치 자동 확정 → 불일치 adjudication."
+}

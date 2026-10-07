@@ -1,84 +1,35 @@
-# Colab에서 임베딩 모델 인코딩/평가하기
+# Colab — `train_eval.ipynb` 하나로 학습·평가
 
-이 프로젝트는 GPU가 없는 로컬/VSCode 환경과, GPU가 있는 Colab 환경을 나눠서 씁니다.
-
-```
-[VSCode 로컬]                              [Colab]
-1. Drive에 프로젝트 업로드
-   (src/, configs/models/, data/corpus/,
-    benchmark/.../queries.csv)
-                                  ──▶
-                                       2. run_model_eval_encoding.py 실행
-                                          (모델별로 corpus/query 인코딩
-                                           → exact cosine 검색 → run.csv)
-                              ◀──
-3. Drive의 runs/model_eval/ 를
-   results/model_eval/ 에 그대로 복사
-4. scripts/15_score_model_runs.py
-   로 전체 채점 → 리더보드
-```
-
-## 1. VSCode → Drive 업로드
-
-Google Drive의 `내 드라이브/store-search-ai/project/` 밑에 아래만 있으면 됩니다 (전체 프로젝트를
-zip해서 올리고 그 자리에서 압축 해제해도 됩니다):
+GPU가 필요한 일(학습, 21만 개 문서 인코딩·채점)은 Colab에서 이 노트북 하나로 합니다. **학습·평가 코드가 전부 노트북 안에** 있어서
+`src/`를 올리지 않고, 기법(학습 데이터 만드는 방식, LoRA·loss, 학습 인자)을 셀에서 바로 고쳐 실험합니다.
 
 ```
-project/
-  src/store_search_ai/              (그대로)
-  configs/models/*.yaml             (그대로)
-  data/corpus/store_corpus_v002.parquet
-  benchmark/storesearch_ko_v1/queries.csv
+[처음 한 번]    로컬: python scripts/pack_for_colab.py → colab_upload/data/ 를 Drive store-search-ai/data/ 로 업로드
+               Colab: 파일 > 노트북 업로드 → colab/train_eval.ipynb, SMOKE=True로 끝까지 실행해 "통과" 확인
+[반복 — Colab]  설정·기법 수정 → 학습 → val 공식 채점(기준 대비 Δ·p) → 리더보드 → 고쳐서 다시
+[마지막 한 번]  Drive store-search-ai 내려받기 → 로컬: python scripts/import_colab_results.py --drive-dir ... --verify
 ```
 
-`data/raw/*.xlsx`나 애노테이션 원본은 Colab에 필요 없으므로 올리지 않아도 됩니다.
+- 노트북을 고쳐도 다시 올리는 건 **그 파일 하나**, 데이터는 바뀔 때만 다시 올립니다.
+- 고치는 방법 두 가지(`docs/TRAINING_TEAM.md` 3절):
+  - **A. Colab에서 바로** — 작은 수정. 고친 셀 → 8. 학습 → 9. 평가 → 10. 리더보드(세션 유지). 끝나면 파일 > 다운로드 > .ipynb로 받아
+    이 폴더의 `train_eval.ipynb`에 덮어쓰기(정본은 저장소 파일).
+  - **B. VS Code(Claude)에서** — 큰 수정. 이 파일을 고친 뒤 Drive `내 드라이브/Colab Notebooks/train_eval.ipynb`(이전 사본)를 지우고
+    다시 업로드 → 위에서부터 실행.
+- 셀별 코드 설명: `docs/TRAIN_EVAL_NOTEBOOK.md`.
+- 셀 구성·고쳐도 되는 곳·기록 규칙: `docs/TRAINING_TEAM.md`.
+- **`7. 평가` 셀은 고치지 않습니다** — 로컬 공식 evaluator(`scripts/13_evaluate_run.py`)와 같은 채점 로직이고,
+  `tests/test_train_eval_notebook.py`가 노트북 셀을 실제로 실행해 공식 evaluator와 같은 결과인지 확인합니다.
+  가져올 때 `import_colab_results.py --verify`도 로컬에서 다시 채점해 확인합니다.
+- 라이브러리: Colab 기본 torch·transformers·sentence-transformers·peft를 그대로 쓰고(다운그레이드 안 함), 채점용
+  `ir-measures`·`pytrec-eval-terrier`만 설치, peft와 충돌하는 Colab 기본 `torchao`는 지웁니다. 버전 차이는 `2. 호환` 셀이 맞춥니다.
 
-## 2. Colab에서 실행
+## Drive 구조 (`내 드라이브/store-search-ai/`)
 
-`colab/run_model_eval_encoding.py`를 Colab 노트북 셀로 복사해서 실행하세요 (또는 그대로 `.py`로
-업로드해서 `%run`으로 실행해도 됩니다). 이 스크립트는:
-
-- Drive에 올려둔 `src/store_search_ai`를 `sys.path`로 그대로 가져다 씁니다 — 즉 로컬에서 쓰는
-  `SentenceTransformerEncoder`, `ExactCosineSearch`와 **완전히 같은 코드**로 인코딩·검색합니다.
-- `configs/models/*.yaml`에 있는 모델을 전부 순회합니다. 모델을 추가/제외하려면 이 스크립트가
-  아니라 `configs/models/`의 yaml 파일을 추가/삭제하세요.
-- 결과를 `Drive/store-search-ai/runs/model_eval/<모델명>/run_<template>_<split>.csv`로 저장합니다.
-
-`SPLIT`, `TEMPLATES` 두 변수만 바꾸면 다른 split/template 조합을 돌릴 수 있습니다. 맨 아래
-"query prompt 실험" 셀은 특정 모델 하나에 대해 커스텀 instruction을 즉흥적으로 비교해보고 싶을 때만
-쓰는 선택 셀입니다.
-
-## 3. Drive → VSCode 로 결과 회수
-
-Drive의 `store-search-ai/runs/model_eval/`를 통째로 내려받아 로컬 프로젝트의 `results/model_eval/`
-자리에 그대로 덮어씁니다 (폴더 구조가 이미 동일하게 맞춰져 있습니다).
-
-## 4. VSCode에서 채점
-
-```bash
-python scripts/15_score_model_runs.py --split val
 ```
-
-`results/model_eval/*/run_*_val.csv`를 전부 찾아서 공식 evaluator(`scripts/13_evaluate_run.py`)로
-채점하고, `results/model_eval/leaderboard_val.csv`에 nDCG@10 기준 정렬된 비교표를 남깁니다.
-
-모델 하나만 빠르게 확인하고 싶으면 기존처럼:
-
-```bash
-python scripts/13_evaluate_run.py --qrels benchmark/storesearch_ko_v1/qrels_val.trec \
-    --run results/model_eval/bge_m3/run_t1_minimal_val.csv --tag bge_m3_t1_val
+data/                       ← pack_for_colab.py 결과(학습 데이터·corpus·queries·qrels·data_version.json)
+runs/finetune/<TAG>/        ← 모델 + model_manifest.json + eval_config.yaml + notebook_code.py(그 모델을 만든 셀 코드)
+runs/model_eval/<tag>/      ← run_<template>_<split>.csv (검색 결과)
+runs/evaluation/            ← <tag>_<template>_<split>_evaluation.json, _per_query.csv (지표)
+runs_smoke/                 ← SMOKE=True 결과(지워도 됨)
 ```
-
-## 로컬에 GPU가 있다면
-
-Colab 없이 `scripts/14_run_model_eval.py`를 로컬에서 바로 실행해도 됩니다 (`pip install -e".[embedding]"` 필요). 폴더 구조와 스키마가 동일하므로 `scripts/15_score_model_runs.py`은
-Colab 결과와 로컬 결과를 구분 없이 함께 채점합니다.
-
-## Zero-shot 다음 단계: Fine-tuning
-
-zero-shot 비교로 후보 모델을 추린 뒤에는 실제로 학습을 시켜봅니다 — `docs/TRAINING.md` 참고.
-`colab/run_finetune_qwen3.py`(Qwen3-Embedding, ms-swift+LoRA), `colab/run_finetune_simple.py`
-(Snowflake Arctic/BGE 등, sentence-transformers) 두 스크립트가 있고, 학습 데이터는 로컬에서
-`python scripts/prepare_finetune_dataset.py`로 미리 만들어 Drive에 올립니다. Fine-tuned 모델도
-`run_model_eval_encoding.py`/`14_run_model_eval.py`로 zero-shot 모델과 완전히 동일하게 평가됩니다
-(그래서 이 문서/스크립트들 이름에 "zero_shot"을 쓰지 않습니다).

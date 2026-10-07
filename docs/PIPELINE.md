@@ -98,6 +98,14 @@ python scripts/07_build_annotation_pool.py --round lexical_v1
 python scripts/08_make_full_annotation_sheets.py
 ```
 
+08~11번, `split_completed_annotations.py`, `prepare_finetune_dataset.py`는 전부 `--round`(기본
+`full_annotation_v1`)를 받는다 — 같은 라운드 이름을 쓰는 스크립트끼리는 자동으로 같은
+`annotations/{round}/`, `qrels/{round}/` 디렉터리를 참조하므로 명시적으로 넘길 필요는 거의
+없지만, **이전 애노테이션 라운드를 보존한 채 완전히 새 라운드를 시작하려면** 08번부터
+`--round full_annotation_v2`처럼 새 이름을 주고 09~11번에도 동일한 이름을 넘기면 된다(자세한
+경로 계산은 `docs/PIPELINE_CODE_REFERENCE.md` 08~11절, `store_search_ai.pipeline.common.
+get_annotation_round_dirs` 참고).
+
 - train: 애노테이터 A만 단일 라벨링 — training signal이므로 모델 성능을 "보고"하는 데는 쓰지
   않아 시간 절약을 위해 단일 라벨링으로 처리
 - val/test: 애노테이터 A, B 모두 독립적으로 라벨링
@@ -133,7 +141,7 @@ python scripts/09_prepare_full_annotations.py
 ```
 
 이 스크립트가 하는 일:
-- train: 단일 라벨을 그대로 provisional qrels로 변환 (`qrels/provisional_v1/qrels_train_provisional.csv`)
+- train: 단일 라벨을 그대로 provisional qrels로 변환 (`qrels/{round}/qrels_train_provisional.csv`, 기본 `qrels/full_annotation_v1/`)
 - val/test: A·B 라벨을 비교해서 **일치하는 것은 자동 확정**, **불일치(`needs_adjudication=True`)는 사람이
   봐야 할 목록**을 `analysis/adjudication_val_test_needed_only.csv`로 분리 저장
 - val+test 전체의 이중 라벨링 커버리지/합치도(Cohen's kappa 등)를 `benchmark_dir/agreement_report.json`에
@@ -173,6 +181,32 @@ python scripts/13_evaluate_run.py --run <모델_run.csv> --tag <실험명>
 - 13: 공식 evaluator. `--qrels`(기본값 `qrels_val.trec`), `--run`, `--tag` 필요. Primary metric은
   `nDCG@10`, bootstrap 95% CI 포함.
 
+## 6-1. 보충 pooling (16번) — 최종 qrels 뒤에 빠진 정답이 발견됐을 때
+
+12번 final에서 `queries have no relevance>=2 document`가 나오면(pool이 그 쿼리의 실제 정답을 하나도 못 찾음),
+그 쿼리만 추가 용어로 pool을 넓히고 **새 후보만** 판정한다. 기존 판정(A/B, adjudication 결과)은 바꾸지
+않는다. 보충 판정은 보충 라운드 폴더(`annotations/{round}/analysis/adjudication_full_completed.csv`)에만 남고,
+11번·12번이 `annotations/*/supplemental_manifest.json`으로 보충 라운드를 찾아 본 라운드 판정과 **매번 합쳐서**
+읽는다 — 본 라운드 파일(10번 출력)에 쓰지 않으므로 10번을 다시 돌려도 보충 판정이 사라지지 않는다.
+
+```bash
+python scripts/16_supplemental_round.py make --round supplement_v1 \
+    --query q_수선_01 --terms "수선|옷수선|의복수선|수선실|리폼|세탁" --per-term 15 --reason "..."
+# → annotations/supplement_v1/annotation_A.csv, annotation_B.csv (+ supplemental_manifest.json)
+# A/B가 채워서 annotations/supplement_v1/completed/annotation_A_completed.csv, annotation_B_completed.csv로 저장
+python scripts/16_supplemental_round.py merge --round supplement_v1
+# A·B 불일치가 있으면 analysis/adjudication_needed_only.csv → adjudication 후 _completed.csv로 저장 → merge 재실행
+python scripts/11_build_qrels.py          # 보충 라운드 판정을 자동으로 합침([INFO] 보충 라운드 판정 포함: ...)
+python scripts/12_validate_benchmark.py --stage final
+```
+
+- 판정 절차는 본 라운드와 같다(val/test: A·B 독립 → 일치 자동 확정 → 불일치 adjudication).
+- 추가 용어는 `supplemental_manifest.json`에만 남기고 `queries.csv`/`query_families_v1.yaml`은 건드리지 않는다
+  (이미 확정된 다른 쿼리의 pool이 바뀌지 않게). `candidate_pool_internal.csv`는 재생성 산출물이라, 06~07번을
+  처음부터 다시 돌렸다면 16번 make도 같은 인자로 다시 실행해야 같은 pool이 된다.
+- 12번 final의 이중 판정 검사는 "adjudication에서 확정(점수 또는 gold 제외)된 행"을 완료로 센다
+  (`resolution_coverage`). 한쪽 애노테이터가 uncertain으로 둔 행도 adjudication에서 결론이 났으면 확정이다.
+
 ## 7. 모델 평가 — zero-shot 비교, 이후 fine-tuning 평가에도 재사용 (선택)
 
 ```bash
@@ -182,6 +216,29 @@ python scripts/15_score_model_runs.py --split val
 
 `docs/MODELING.md` 참고. Fine-tuning 이후에도 이 두 스크립트를 그대로 써서 fine-tuned 모델을
 평가합니다(`docs/TRAINING.md` 참고) — 그래서 이름에 "zero_shot"을 넣지 않았습니다.
+
+## 8. 임베딩 모델 학습·평가 — Colab (`colab/train_eval.ipynb`)
+
+GPU가 필요한 학습과 전체 코퍼스 평가는 Colab 노트북 하나로 합니다. 순서:
+
+```bash
+# (로컬) 학습 데이터 만들기 — train qrels가 바뀌었을 때만(데이터 담당)
+python scripts/prepare_finetune_dataset.py
+# (로컬) Colab에 올릴 데이터 묶기 → colab_upload/data/
+python scripts/pack_for_colab.py
+```
+1. `colab_upload/data/`를 Drive `내 드라이브/store-search-ai/data/`로 업로드(처음 한 번, 데이터가 바뀔 때만).
+2. Colab **파일 > 노트북 업로드** → `colab/train_eval.ipynb` → GPU 런타임 → 설정 셀에 `OWNER` → `SMOKE=True`로 모두 실행해 `통과` 확인.
+3. `SMOKE=False` → `1. 설정` → `3. 데이터` → `8. 학습` → `9. 평가` → `10. 리더보드`. 고칠 때는 Colab에서 바로(세션 유지) 또는
+   VS Code에서 고쳐 다시 업로드(새 세션) — `docs/TRAINING_TEAM.md` 3·4절.
+4. 실험이 끝나면 Drive `store-search-ai`를 내려받아 로컬에서:
+   ```bash
+   python scripts/import_colab_results.py --drive-dir <내려받은 폴더> --verify
+   ```
+   → `results/model_eval/`, `artifacts/evaluation/`(공식 evaluator로 재채점 확인), `results/experiments.csv`(실험 기록표),
+   `results/finetune_runs/<TAG>/`(학습 run 기록), KEEP한 모델은 `models/` + `configs/models/`. (`docs/TRAINING_TEAM.md` 7~9절)
+
+규칙·기록: `docs/TRAINING_TEAM.md`, 학습 설계: `docs/TRAINING.md`, 노트북 셀별 코드 설명: `docs/TRAIN_EVAL_NOTEBOOK.md`.
 
 ## 사람 개입이 필요한 범위
 

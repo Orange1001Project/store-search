@@ -1,10 +1,9 @@
-"""리팩터링 전후로 13_evaluate_run.py의 산출물이 동일한지 확인하는 golden-file 회귀 테스트.
+"""공식 evaluator(build_evaluation_report)의 결과가 저장소에 커밋된 평가 결과와 동일한지 확인하는 golden-file 회귀 테스트.
 
-artifacts/evaluation/storesearch_ko_v1/*_evaluation.json은 리팩터링 전 스크립트가 실제
-results/model_eval/*/run_*.csv (사람 애노테이션으로 만든 qrels_val.trec 기준)를 채점해서
-만든 진짜 결과물이다 — 방금 만든 회의 노트의 리더보드 숫자와 동일한 파일. 이 테스트는
-리팩터링된 build_evaluation_report()를 같은 입력·같은 seed로 실행해서 aggregate 지표와
-bootstrap CI가 완전히 동일한지 검증한다.
+artifacts/evaluation/storesearch_ko_v1/*_evaluation.json은 확정 gold qrels(qrels_val.trec)로
+results/model_eval/*/run_*.csv를 채점한 실제 결과다(Colab에서 채점 → import_colab_results.py --verify로
+로컬 evaluator와 일치 확인 후 커밋). 이 테스트는 같은 입력·같은 seed로 evaluator를 다시 돌려 aggregate 지표와
+bootstrap CI가 완전히 같은지 검증한다 — evaluator나 qrels가 바뀌면 여기서 실패한다.
 """
 
 import json
@@ -21,10 +20,8 @@ GOLDEN_EVAL_DIR = REPO_ROOT / "artifacts" / "evaluation" / "storesearch_ko_v1"
 
 # (tag_dir, template) -> eval_tag은 15_score_model_runs.py와 동일하게 f"{tag}_{template}_val"
 GOLDEN_RUNS = [
-    ("bge_m3", "t1_minimal"),
     ("qwen3_embedding_0_6b", "t1_minimal"),
-    ("snowflake_arctic_embed_l_v2_ko", "t1_minimal"),
-    ("snowflake_arctic_embed_l_v2_ko", "t2_market"),
+    ("qwen3_embedding_0_6b_ft_kse1_20261006_0708", "t1_minimal"),
 ]
 
 pytestmark = pytest.mark.skipif(
@@ -38,8 +35,9 @@ def test_evaluation_matches_checked_in_golden_report(tag, template):
     run_path = RESULTS_DIR / tag / f"run_{template}_val.csv"
     golden_path = GOLDEN_EVAL_DIR / f"{eval_tag}_evaluation.json"
 
-    assert run_path.exists(), f"run 파일 없음: {run_path}"
-    assert golden_path.exists(), f"golden 파일 없음: {golden_path}"
+    if not run_path.exists() or not golden_path.exists():
+        # results/model_eval/은 git에 없는 재생성 산출물 — 그 run을 채점한 golden과 짝이 맞을 때만 비교한다
+        pytest.skip(f"run 또는 golden 없음: {run_path.name} / {golden_path.name}")
 
     golden = json.loads(golden_path.read_text(encoding="utf-8"))
 

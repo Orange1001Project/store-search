@@ -2,6 +2,17 @@ from __future__ import annotations
 
 import hashlib
 
+import pandas as pd
+
+
+def _clean(value: object) -> str:
+    """엑셀의 빈 셀은 문자열이 아니라 float NaN으로 들어온다 — NaN은 파이썬에서
+    truthy라서 `value or ""`로는 걸러지지 않는다(`.casefold()` 호출 시 AttributeError)."""
+
+    if value is None or pd.isna(value):
+        return ""
+    return str(value)
+
 
 def build_entity_fingerprint(
     business_no: str | None,
@@ -18,9 +29,9 @@ def build_entity_fingerprint(
 
     key = "|".join(
         [
-            business_no or "",
-            (store_name or "").casefold(),
-            (address or "").casefold(),
+            _clean(business_no),
+            _clean(store_name).casefold(),
+            _clean(address).casefold(),
         ]
     )
 

@@ -20,6 +20,10 @@ from store_search_ai.data.qrels_builder import (
     load_train_qrels,
     save_qrels_outputs,
 )
+from store_search_ai.data.supplemental_round import (
+    combine_with_supplemental,
+    supplemental_adjudication_paths,
+)
 from store_search_ai.pipeline.common import load_config, sha256_file
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +32,7 @@ ADJUDICATION_PATH = (
     BENCHMARK_DIR / "annotations" / "full_annotation_v1" / "analysis"
     / "adjudication_val_test_full_completed.csv"
 )
-TRAIN_QRELS_PATH = BENCHMARK_DIR / "qrels" / "provisional_v1" / "qrels_train_provisional.csv"
+TRAIN_QRELS_PATH = BENCHMARK_DIR / "qrels" / "full_annotation_v1" / "qrels_train_provisional.csv"
 GOLDEN_MANIFEST_PATH = BENCHMARK_DIR / "benchmark_manifest.json"
 
 pytestmark = pytest.mark.skipif(
@@ -48,6 +52,9 @@ def test_qrels_and_manifest_match_checked_in_golden_files(tmp_path):
     active_query_ids = set(active_queries["query_id"].astype(str))
 
     adj = load_adjudication(ADJUDICATION_PATH)
+    # 11_build_qrels.py와 똑같이 보충 pooling 라운드(16번) 판정을 합친다
+    supplemental_paths, _ = supplemental_adjudication_paths(BENCHMARK_DIR / "annotations", "full_annotation_v1")
+    adj = combine_with_supplemental(adj, [load_adjudication(path) for path in supplemental_paths])
     qrels_val = build_split_qrels(adj, "val")
     qrels_test = build_split_qrels(adj, "test")
     qrels_train = load_train_qrels(TRAIN_QRELS_PATH)
