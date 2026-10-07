@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 from pathlib import Path, PureWindowsPath
 
@@ -71,6 +72,9 @@ def plan_import(drive_dir: Path, repo_root: Path, benchmark_version: str, models
     for tag_dir in sorted(model_eval.iterdir()) if model_eval.exists() else []:
         if tag_dir.is_dir() and tag_dir.name not in unofficial_tags:
             for run_file in sorted(tag_dir.glob("run_*.csv")):
+                if not RUN_FILE_PATTERN.fullmatch(run_file.name):   # 손으로 만든 사본(run_..._pre.csv 등)은 안 가져옴
+                    print(f"[건너뜀] 정식 run 파일 이름이 아님: {tag_dir.name}/{run_file.name}")
+                    continue
                 plan.append((run_file, repo_root / "results" / "model_eval" / tag_dir.name / run_file.name))
 
     finetune = runs / "finetune"
@@ -88,6 +92,9 @@ def plan_import(drive_dir: Path, repo_root: Path, benchmark_version: str, models
                     plan.append((run_dir / "eval_config.yaml", repo_root / "configs" / "models" / f"{run_dir.name}.yaml"))
     return plan
 
+
+RUN_FILE_PATTERN = re.compile(r"run_[a-z0-9_]+_(train|val|test)\.csv")
+"""노트북 evaluate()가 쓰는 run 파일 이름(`run_<template>_<split>.csv`). 이 형식이 아닌 파일은 평가 json과 연결되지 않는다."""
 
 RECORD_FILES = ("model_manifest.json", "eval_config.yaml", "notebook_code.py")
 

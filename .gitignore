@@ -33,3 +33,6 @@ __pycache__/
 
 # Office 잠금 파일(엑셀로 연 동안 생김)
 ~$*
+
+# 내려받은 Drive 폴더(import_colab_results.py --drive-dir 입력, 모델 가중치 포함 — 커밋 금지)
+/store-search-ai*/

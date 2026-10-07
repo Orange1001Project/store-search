@@ -46,6 +46,8 @@ def _drive_with_results(tmp_path):
                    eval_root=runs / "evaluation", encoder=_Encoder())
     evaluate_model({"name": "smoke", "model_id": "x"}, inputs, run_root=runs / "model_eval",
                    eval_root=runs / "evaluation", encoder=_Encoder(), official=False)
+    good_run = runs / "model_eval" / "good" / "run_t1_minimal_val.csv"
+    good_run.with_name("run_t1_minimal_val_pre.csv").write_text(good_run.read_text(encoding="utf-8"), encoding="utf-8")
     for name, keep in (("m_ft_a_1", True), ("m_ft_a_2", False)):
         run_dir = runs / "finetune" / name
         run_dir.mkdir(parents=True)
@@ -63,6 +65,7 @@ def test_plan_skips_unofficial_and_copies_only_kept_models(tmp_path):
     assert "artifacts/evaluation/bv1/good_t1_minimal_val_evaluation.json" in targets
     assert "results/model_eval/good/run_t1_minimal_val.csv" in targets
     assert not any("smoke" in t for t in targets)          # 비공식(smoke) 평가는 안 가져옴
+    assert not any(t.endswith("_pre.csv") for t in targets)  # 손으로 만든 사본은 안 가져옴
     assert "models/m_ft_a_1" in targets and "configs/models/m_ft_a_1.yaml" in targets
     assert "models/m_ft_a_2" not in targets                 # KEEP 안 한 run은 안 가져옴
 

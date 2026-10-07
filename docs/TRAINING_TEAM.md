@@ -220,6 +220,9 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 - 모든 fine-tuned run의 기록 파일(`model_manifest.json`, `eval_config.yaml`, `notebook_code.py`)도 `results/finetune_runs/<TAG>/`로 저장돼
   git에 남습니다 — 모델 가중치(`models/`)는 용량 때문에 git에 안 올라가므로, "어떤 설정·데이터·코드로 만든 run인지"는 여기서 봅니다.
 - 실험 중간에 팀원에게 빨리 공유하고 싶으면 Colab `10. 리더보드` 출력을 복사해 공유해도 되지만, 공식 기록은 이 표입니다.
+- KEEP한(서비스 후보·baseline) run은 `results/finetune_runs/<TAG>/`에 **학습할 때 쓴 노트북 파일**(`train_eval_pre.ipynb` 등)과 짧은 `README.md`
+  (무엇을 위한 run인지, 지금 노트북과 다른 점)를 같이 넣어 두면 나중에 그대로 재현할 수 있습니다. 예: `results/finetune_runs/qwen3_embedding_0_6b_ft_kse1_20261006_0708/`.
+- Drive 다운로드 zip에는 빈 파일(`KEEP`)이 빠질 수 있습니다 — 가져올 때 KEEP이 안 잡히면 `--models <TAG>`로 지정하세요.
 
 **숫자 읽는 법**
 - val은 136개 쿼리라 nDCG@10에 ±0.05 정도 오차가 있습니다. **차이가 0.03보다 작거나 p가 크면 "개선"이라 하지 않습니다.**
