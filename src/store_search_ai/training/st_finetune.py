@@ -122,7 +122,7 @@ class FinetuneConfig:
     keep_last_runs: int = 3
     note: str = ""
     """이 run에서 무엇을 왜 바꿨는지 한 줄. 모델 폴더 밖에서 하는 처리(쿼리 전처리 추가 등)를 했다면
-    서비스도 똑같이 해야 하므로 `서비스도 필요:`로 시작해서 적는다(`docs/TRAINING_TEAM.md` 4절)."""
+    서비스도 똑같이 해야 하므로 `서비스도 필요:`로 시작해서 적는다(`docs/TRAINING_TEAM.md` 5절)."""
     extra: dict = field(default_factory=dict)
     """manifest에 그대로 남길 추가 메모(실험 목적 등)."""
 

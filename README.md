@@ -51,11 +51,15 @@ src/store_search_ai/
   pipeline/common.py             scripts/*.py 공통 보일러플레이트 (yaml 로드, TREC 저장 등)
   models/                        임베딩 인코더 (BEIR 스타일, docs/MODELING.md 참고)
   retrieval/exact_search.py      exact cosine 검색 (ANN 이전 단계 모델 비교용)
+  evaluation/                    공식 evaluator(13번 본체) + 모델 평가·리더보드 헬퍼
+  training/                      fine-tuning 로컬 참조 구현(Colab은 colab/train_eval.ipynb)
+  common/hf_compat.py            transformers / sentence-transformers 버전 차이 흡수
+results/                         모델 평가 run CSV(model_eval/), 실험 기록표(experiments.csv), 학습 run 기록(finetune_runs/)
 scripts/01_*.py ~ scripts/16_*.py   파이프라인 본체 (16 = 보충 pooling, docs/PIPELINE.md 참고)
 scripts/import_queryset_xlsx.py    data/query/queryset_final.xlsx → query_families_v1.yaml 변환기(번호 없음, 05 이전에 1회성 실행)
 scripts/prepare_finetune_dataset.py  train qrels+corpus → fine-tuning용 jsonl (번호 없음, docs/TRAINING.md 참고)
 scripts/pack_for_colab.py            Colab(Drive)에 올릴 data/ 폴더 생성 + 데이터 버전 기록 (docs/TRAINING_TEAM.md 참고)
-scripts/import_colab_results.py      Colab 실험 결과(Drive runs/)를 저장소로 가져오기 + 로컬 재채점 검증(--verify)
+scripts/import_colab_results.py      Colab 실험 결과(Drive runs/)를 저장소로 가져오기 + 로컬 재채점 검증(--verify) + 실험 기록표(results/experiments.csv)
 data/
   raw/stores_20260907.xlsx       원본 전국 데이터 (수정 금지)
   query/queryset_final.xlsx      팀이 작성한 최종 query family/질의 원본 (수정 금지, import_queryset_xlsx.py가 읽음)

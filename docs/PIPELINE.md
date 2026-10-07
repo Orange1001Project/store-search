@@ -235,7 +235,8 @@ python scripts/pack_for_colab.py
    ```bash
    python scripts/import_colab_results.py --drive-dir <내려받은 폴더> --verify
    ```
-   → `results/model_eval/`, `artifacts/evaluation/`(공식 evaluator로 재채점 확인), KEEP한 모델은 `models/` + `configs/models/`.
+   → `results/model_eval/`, `artifacts/evaluation/`(공식 evaluator로 재채점 확인), `results/experiments.csv`(실험 기록표),
+   `results/finetune_runs/<TAG>/`(학습 run 기록), KEEP한 모델은 `models/` + `configs/models/`. (`docs/TRAINING_TEAM.md` 7~9절)
 
 규칙·기록: `docs/TRAINING_TEAM.md`, 학습 설계: `docs/TRAINING.md`, 노트북 셀별 코드 설명: `docs/TRAIN_EVAL_NOTEBOOK.md`.
 

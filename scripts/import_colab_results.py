@@ -21,7 +21,7 @@ Colab 노트북이 Drive `store-search-ai/runs/` 밑에 쌓은 것을 저장소�
 사용법:
     # Drive의 store-search-ai 폴더를 내려받아(웹 Drive에서 폴더 다운로드 → 압축 해제) 그 경로를 준다
     python scripts/import_colab_results.py --drive-dir "C:/Users/me/Downloads/store-search-ai" --verify
-    python scripts/import_colab_results.py --drive-dir ... --models bge_m3_ft_jisu_20261002_0512   # 특정 run만 모델 복사
+    python scripts/import_colab_results.py --drive-dir ... --models bge_m3_ft_jisu_20261002_0512   # KEEP 외에 이 run도 모델 복사
     python scripts/import_colab_results.py --drive-dir ... --dry-run                               # 무엇을 옮길지만 출력
 
 `models/`는 .gitignore 대상(용량)이고, results/·artifacts/·configs/models/<TAG>.yaml은 커밋할 수 있다.
@@ -85,7 +85,7 @@ def plan_import(drive_dir: Path, repo_root: Path, benchmark_version: str, models
             for name in RECORD_FILES:   # 기록 파일은 KEEP과 상관없이 전부(작은 텍스트, git에 남김)
                 if (run_dir / name).exists():
                     plan.append((run_dir / name, repo_root / "results" / "finetune_runs" / run_dir.name / name))
-            chosen = run_dir.name in models if models else (run_dir / "KEEP").exists()
+            chosen = (run_dir / "KEEP").exists() or run_dir.name in (models or [])   # KEEP한 run + --models로 더 고른 run
             if chosen:
                 plan.append((run_dir, repo_root / "models" / run_dir.name))
                 if (run_dir / "eval_config.yaml").exists():
@@ -201,7 +201,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--drive-dir", required=True, help="내려받은 Drive의 store-search-ai 폴더(안에 runs/가 있음)")
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
-    parser.add_argument("--models", nargs="*", default=None, help="models/로 복사할 run TAG(생략하면 KEEP 표시된 run)")
+    parser.add_argument("--models", nargs="*", default=None, help="KEEP 표시된 run에 더해 models/로 복사할 run TAG(Drive zip에서 빈 KEEP 파일이 빠졌을 때 등)")
     parser.add_argument("--verify", action="store_true", help="가져온 평가를 로컬 공식 evaluator로 다시 채점해 비교")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()

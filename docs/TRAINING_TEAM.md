@@ -17,7 +17,7 @@ Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실
 
 ## 1. 처음 한 번 — 준비 (데이터는 한 번만 올림)
 
-1. 최신 코드 받기(로컬 VS Code 터미널): `git fetch && git switch feature/pooling2-zeroshot && git pull`
+1. 최신 코드 받기(로컬 VS Code 터미널): `git fetch && git switch main && git pull` (PR #2 머지 전이면 `main` 대신 `feature/pooling2-zeroshot`)
 2. 데이터 폴더 만들기:
    ```bash
    python scripts/pack_for_colab.py
@@ -47,7 +47,7 @@ Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실
 | 셀 | 하는 일 | 고치나? |
 |---|---|---|
 | GPU 확인 / 설치 / Drive 연결 | 설치는 채점용 2개만, torchao 제거(peft 충돌), HF 라이브러리는 Colab 기본 버전 그대로 | 아니오 |
-| **1. 설정** | `OWNER`(필수), `MODEL`, `NOTE`, `SMOKE`, `RESUME_TAG`, `SAVE_MID_CHECKPOINT`, `EVAL_RUN_TAG`, `FINAL_TEST` / `MODEL_PRESETS`(모델 목록) / `HP`(학습 설정) | **예** |
+| **1. 설정** | `OWNER`(필수), `MODEL`, `NOTE`, `SMOKE`, `RESUME_TAG`, `SAVE_MID_CHECKPOINT`, `EVAL_RUN_TAG`, `FINAL_TEST`, `EVAL_DTYPE`, `EVAL_BATCH_SIZE` / `MODEL_PRESETS`(모델 목록) / `HP`(학습 설정) | **예** |
 | 2. 라이브러리 버전 호환 | transformers 4·5, sentence-transformers 3~5 차이 흡수 + 버전 출력·점검 | 거의 안 함 |
 | 3. 데이터 불러오기 | Drive `data/`에서 읽고 학습 데이터·meta 일치 확인 | 아니오 |
 | **4. 학습 행 만들기** | (query, positive, negative) 행으로 펼치기 — negative 고르는 방식, 샘플링, 증강 | **예 — 기법 실험** |
@@ -112,7 +112,7 @@ VS Code의 Claude에게 "이 셀을 이렇게 바꿔 줘"라고 해서 **바뀐 
 | 바꾼 것 | 다시 실행할 셀 (순서대로) |
 |---|---|
 | `HP`, `NOTE`, `MODEL` (설정 셀) | 1 → 8 → 9 → 10 |
-| `SMOKE` (True↔False) | 1 → **3** → 8 → 9 → 10 (데이터가 바뀌므로 3번 필수) |
+| `SMOKE` (True↔False) | 1 → **3** → 8 → 9 → 10 (데이터가 바뀌므로 3번 필수 — 빼먹으면 8·9번이 "3. 데이터 셀을 다시 실행하세요"로 멈춤) |
 | 4. 학습 행 / 5. 모델·loss / 6. 학습 루프 | 고친 셀 → 8 → 9 → 10 |
 | 학습 없이 기존 run 평가 | 1(`EVAL_RUN_TAG` 설정) → 9 → 10 |
 | Drive `data/`를 새로 올림 | 1 → 3 → 8 → 9 → 10 (기준 zero-shot도 새 데이터로 다시 평가해야 하면 `runs/model_eval/<기준이름>/` 삭제) |
@@ -213,7 +213,7 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 | `eval_tag`, `model`, `kind`(zero-shot / fine-tuned) | 평가 json |
 | `owner`, `base_model`, `note`, `train_data_sha8`, `gpu`, `precision` | 그 run의 `model_manifest.json` |
 | `eval_dtype`, `libs`, `nDCG@10`, `Judged@10`, `Recall@100`, `MRR@100`, `Bpref`, `delta_nDCG@10`, `p_nDCG@10`, `baseline` | 평가 json |
-| `keep` | Drive run 폴더의 `KEEP` 파일(또는 `--models`로 고른 run) |
+| `keep` | Drive run 폴더의 `KEEP` 파일이 있거나 `--models`로 더 고른 run |
 | `evaluated_at` | 평가 json |
 
 - 같은 `eval_tag`를 다시 가져오면 그 줄만 새 값으로 바뀌고, 예전에 가져온 다른 줄(Drive에서 정리돼 지워진 run 포함)은 남습니다.
@@ -248,10 +248,11 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
    | `evaluation/*_evaluation.json`, `*_per_query.csv` (지표) | `artifacts/evaluation/storesearch_ko_v1/` | 커밋 |
    | `finetune/<TAG>/`의 manifest·eval_config·notebook_code (모든 run) | `results/finetune_runs/<TAG>/` | 커밋 |
    | (자동 생성) 평가마다 한 줄 | `results/experiments.csv` | 커밋 |
-   | `finetune/<TAG>/` 모델 전체 — **KEEP한 run만**(또는 `--models <TAG> ...`) | `models/<TAG>/` | 안 함(.gitignore, 용량) |
+   | `finetune/<TAG>/` 모델 전체 — **KEEP한 run** + `--models <TAG> ...`로 더 고른 run | `models/<TAG>/` | 안 함(.gitignore, 용량) |
    | 그 run의 `eval_config.yaml` | `configs/models/<TAG>.yaml` | 커밋 |
 
    - SMOKE 같은 비공식 평가는 자동으로 빠집니다(`runs_smoke/`는 내려받지 않아도 됨).
+   - run 파일은 노트북이 만든 정식 이름(`run_<template>_<split>.csv`)만 가져옵니다. 손으로 만든 사본(`run_..._pre.csv` 등)은 `[건너뜀]`으로 표시되고 빠집니다.
    - `--verify`: 가져온 평가를 로컬 공식 evaluator로 다시 채점해 Colab 점수와 같은지 확인(다르면 종료코드 1).
 3. `git add results/ artifacts/ configs/models/` → 커밋. 좋은 기법이 들어간 노트북도 `colab/train_eval.ipynb`로 커밋.
    서비스 후보 모델(`models/<TAG>/`)은 팀 공유 스토리지에 따로 보관합니다.
@@ -289,7 +290,7 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
   판정이 없는 문서입니다(Judged@10 ≈ 0.5). 모델이 상위에 올린 문서를 val/test pool에 더해 추가 판정하면(16번 보충 라운드 방식) 모델끼리
   비교가 공정해집니다. 서비스용 모델을 고르기 전에 한 번 하는 것을 권장합니다.
 - **학습 데이터 보강**: 학습 쿼리 237개·29개 업종(val·test 업종과 겹치지 않음)이고 대부분 4~5자 업종 키워드입니다. 서비스형(T5) 쿼리는 학습 6개·val 0개뿐이고,
-  positive 7,270행 중 서로 다른 취급품목 문자열은 1,099개라 반복이 많습니다. 업종·쿼리 표현을 넓히는 합성 쿼리가 가장 큰 보강 수단입니다.
+  positive 7,270행 중 서로 다른 취급품목 문자열(`취급품목:` 뒤)은 1,099개라 반복이 많습니다. 업종·쿼리 표현을 넓히는 합성 쿼리가 가장 큰 보강 수단입니다.
 
 **점수 읽을 때**: Judged@10이 낮으면(상위 10개 중 판정 없는 문서가 많음) 실제보다 낮게 나옵니다. 절대값보다 **같은 조건에서 기준 대비 Δ**로
 판단하고, 서비스 후보는 상위 결과를 사람이 직접 훑어보는 확인도 합니다.
@@ -307,6 +308,7 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 | `임베딩에 NaN/inf가 있습니다` | `EVAL_DTYPE = "float32"`로 바꾸고 기준 모델 결과 폴더(`runs/model_eval/<기준이름>/`)도 지운 뒤 다시 평가(같은 dtype끼리 비교) |
 | `CUDA out of memory` | 런타임 > 세션 다시 시작 후 `HP["mini_batch_size"]`를 절반으로(8, 4B는 2) — 결과는 같고 느려지기만 함, NOTE 불필요. 그래도 안 되면 `HP["batch_size"]` 16 또는 `HP["loss"] = "mnrl"` → `NOTE`에 적기 |
 | `loss가 NaN/inf` | 저장된 것 없음. `learning_rate`를 절반으로, 또는 bf16 GPU(L4/A100) |
+| `데이터는 SMOKE=…로 불러왔는데 지금 설정은 SMOKE=…입니다` | `SMOKE`를 바꾼 뒤 `3. 데이터` 셀을 다시 실행(안 하면 가짜 데이터로 `runs/`에 학습되거나 그 반대) |
 | `처음 실행과 설정/데이터가 다릅니다` | `RESUME_TAG`로 이어 할 때는 처음 설정 그대로 |
 | `처음 실행은 fp16, 지금 GPU는 bf16입니다` | 이어 하기는 처음과 같은 종류의 GPU에서만(T4끼리, L4·A100끼리). 아니면 처음부터 |
 | `저장본을 다시 불러오니 임베딩이 다릅니다` | float32로도 안 맞은 경우 — 출력 전체 공유(그 폴더는 `.partial`로 남고 쓰지 않음) |

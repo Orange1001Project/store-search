@@ -149,7 +149,7 @@ runs/finetune/bge_m3_ft_jisu_20260928_0307/
 - **서비스 후보로 남길 run은 그 폴더에 빈 파일 `KEEP`을 만듭니다**(Drive 화면에서는 빈 파일을 못 만들어서,
   노트북 `13. KEEP` 셀의 `(FINETUNE_DIR / "<TAG>" / "KEEP").touch()` 한 줄로). KEEP이 있는 run은 지우지 않고
   3개 개수에도 세지 않습니다. Colab에서 val 점수(9·10번)를 보고 고른 run에 **Drive를 내려받기 전에** KEEP을 붙입니다 —
-  `import_colab_results.py`는 KEEP한 run의 모델만 가져옵니다(`--models`로 직접 지정하지 않는 한).
+  `import_colab_results.py`는 KEEP한 run의 모델만 가져옵니다(`--models <TAG>`로 지정한 run은 KEEP에 더해서 가져옴).
 - Drive에서 지운 폴더는 Drive 휴지통으로 갑니다. 용량을 바로 확보하려면 휴지통도 비우세요.
 
 ## 4. 평가 — Colab에서 바로, 마지막에 로컬로 가져오기
@@ -165,7 +165,8 @@ Colab 안에서 반복**합니다.
 ```bash
 python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai> --verify
 ```
-→ `results/model_eval/`, `artifacts/evaluation/storesearch_ko_v1/`, KEEP한 run의 `models/<TAG>/` + `configs/models/<TAG>.yaml`로
+→ `results/model_eval/`(run CSV), `artifacts/evaluation/storesearch_ko_v1/`(평가 json), `results/experiments.csv`(실험 기록표, 평가마다 한 줄),
+`results/finetune_runs/<TAG>/`(모든 학습 run의 manifest·eval_config·notebook_code), KEEP한 run의 `models/<TAG>/` + `configs/models/<TAG>.yaml`로
 정리하고, `--verify`가 로컬에서 다시 채점해 Colab 점수와 같은지 확인합니다. 절차는 `docs/TRAINING_TEAM.md` 9절.
 
 로컬 GPU로 평가하는 기존 방법(`14_run_model_eval.py --model-config configs/models/<TAG>.yaml` → `15_score_model_runs.py`)도
@@ -282,6 +283,4 @@ keep_fp32_wrapper=False)`로 그 덮개를 벗기고, 저장 dtype으로 바꾸�
 seed는 고정(20260831)이지만 GPU 종류·precision(fp16/bf16)이 다르면 결과가 조금 달라질 수 있으므로,
 비교는 manifest의 `precision`/`environment.gpu`가 같은 run끼리 하는 것이 원칙입니다.
 
-평가 dtype은 고정입니다: `torch_dtype`이 있으면(4B: float16) 그 값, 없으면 **float32**(노트북 `load_encoder`와 로컬
-`SentenceTransformerEncoder` 공통). 지정하지 않으면 transformers 5가 모델 config의 dtype(Qwen3=bf16, fp16 저장본=fp16)으로 올려
-기준 모델과 학습 모델이 서로 다른 정밀도로 채점되기 때문입니다(2026-10-07 이전 Colab 평가는 이 차이가 섞여 있음).
+평가도 같은 원칙입니다: 평가 dtype(`eval_dtype`)이 같은 결과끼리만 비교합니다(6절 — GPU 기본 fp16, 4B는 preset의 float16).

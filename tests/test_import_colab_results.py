@@ -70,7 +70,7 @@ def test_plan_skips_unofficial_and_copies_only_kept_models(tmp_path):
     assert "models/m_ft_a_2" not in targets                 # KEEP 안 한 run은 안 가져옴
 
     chosen = {dst.relative_to(repo).as_posix() for _, dst in plan_import(drive, repo, "bv1", models=["m_ft_a_2"])}
-    assert "models/m_ft_a_2" in chosen and "models/m_ft_a_1" not in chosen
+    assert "models/m_ft_a_2" in chosen and "models/m_ft_a_1" in chosen   # --models는 KEEP에 더해서 고름
 
 
 def test_verify_matches_local_rescoring_and_flags_changed_qrels(tmp_path):

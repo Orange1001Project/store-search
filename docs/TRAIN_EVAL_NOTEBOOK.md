@@ -212,6 +212,9 @@ QRELS = {"val": .../qrels_val.trec, "test": .../qrels_test.trec}          # 정�
 - **SMOKE**: 코퍼스를 "val 정답이 있는 문서 + 무작위 2,000개"로 줄이고(약 8,500개), 학습 데이터는 가짜 query 40개 × positive 4개 = 160행을
   `/content/smoke_train_pairs.jsonl`에 만들어 씁니다(10 step 학습, 중간 체크포인트는 5 step).
 
+마지막에 `DATA_SMOKE = SMOKE`로 **이 데이터를 어떤 SMOKE 설정으로 불러왔는지** 기록합니다. 학습·평가 함수가 시작할 때 지금 `SMOKE`와
+비교해서 다르면 멈춥니다(`check_data_matches_settings`) — `SMOKE`만 바꾸고 이 셀을 다시 실행하지 않아 가짜 데이터로 `runs/`에 학습되는 사고 방지.
+
 학습 데이터 한 줄의 형식:
 ```json
 {"query_id": "q_가방_01", "query": "가방",
@@ -280,6 +283,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 |---|---|
 | `KEEP_MARKER, PARTIAL, CKPT` | `"KEEP"` 표시 파일, `.partial`(저장 중), `.ckpt`(중간 체크포인트) 접미사 |
 | `RESUME_IGNORED` | 이어서 학습할 때 처음과 달라도 되는 설정(note, keep_last_runs, save_mid_checkpoint, resume_tag, mini_batch_size) |
+| `check_data_matches_settings()` | 3번에서 기록한 `DATA_SMOKE`와 지금 `SMOKE`가 다르면 멈춤("3. 데이터 셀을 다시 실행하세요"). `train_model`·`evaluate`가 처음에 호출 |
 | `run_prefix` / `make_run_tag` | `<모델>_ft_<owner>_` + UTC `YYYYMMDD_HHMM` |
 | `latest_checkpoint(root)` | `.ckpt/` 안에서 가장 큰 `checkpoint-N` |
 | `prune_runs(root, prefix, keep_last)` | **내** run 중 **같은 모델**의 완성된 run을 `created_at` 최신순으로 keep_last개만 남기고 삭제. KEEP 표시, `.partial`, manifest 없는 폴더(학습 중·실패)는 건드리지 않음 |
@@ -289,6 +293,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 
 순서대로:
 
+0. **데이터 확인**: `check_data_matches_settings()` — SMOKE 설정과 불러온 데이터가 맞는지.
 1. **TAG·폴더 결정**: 새 run이면 새 TAG, `RESUME_TAG`면 그 TAG(내 모델·내 이름으로 시작하는지 확인). 최종 폴더가 이미 있으면 멈춤.
 2. **run_config**: `HP` + 모델 ID + 학습 데이터 sha256 + 학습 정밀도(`precision`).
    - 새 run + 중간 체크포인트 사용 → `.ckpt/run_config.json`에 저장.
@@ -331,7 +336,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 | 키 | 내용 |
 |---|---|
 | `tag`, `owner`, `base_model_id`, `base_model_config`, `framework`, `precision` | 무엇을 누가 어떻게 |
-| `hyperparameters` | `HP` 전부 + note·resume_tag |
+| `hyperparameters` | `HP` 전부 + note·resume_tag·save_mid_checkpoint |
 | `training_data` | 학습 데이터 경로·sha256·펼친 행 통계·meta(qrels 종류·template·데이터 만든 커밋) |
 | `data_version` | `data_version.json` 전체(데이터 git 커밋, 파일별 sha256) |
 | `code` | `notebook_code.py`와 그 sha256 |
@@ -380,7 +385,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 | `release_gpu()` | `gc` + `empty_cache`. 부르기 전에 호출한 쪽에서 모델 변수를 `None`으로 지워야 실제로 풀림 |
 
 `evaluate`의 순서:
-1. split이 test인데 `allow_test=False`면 에러(test 보호).
+1. split이 test인데 `allow_test=False`면 에러(test 보호). SMOKE 설정과 불러온 데이터가 다르면 멈춤(`check_data_matches_settings`).
 2. 모델 로드(이미 로드된 `model`을 넘기면 재사용).
 3. corpus 전체 인코딩 — 같은 텍스트는 한 번만 인코딩해 펼침(약 6% 절약). 넘겨받은 `doc_embeddings`가 있으면 재사용(prompt만 다른 변형 비교 때).
 4. 해당 split query 인코딩 → `exact_search` → `runs/model_eval/<이름>/run_<template>_<split>.csv` 저장.

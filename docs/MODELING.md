@@ -22,8 +22,8 @@ nDCG/Recall/Precision/MRR을 여러 곳에서 각자 재구현하면 언젠가 �
 
 - **예외 — Colab 노트북** `colab/train_eval.ipynb`는 `src/` 없이 혼자 돌도록 채점 코드를 `7. 평가` 셀에 **복제**해 두었습니다.
   대신 `tests/test_train_eval_notebook.py`가 그 셀을 실제로 실행해 공식 evaluator(`evaluator.build_evaluation_report`)와
-  지표·신뢰구간·비교 결과가 같은지 확인하고, 결과를 가져올 때 `scripts/import_colab_results.py --verify`가 로컬 13번 경로로
-  다시 채점해 같은지 확인합니다. 그래서 채점 방식을 바꿀 때는 evaluator와 노트북 셀을 함께 고쳐야 테스트가 통과합니다.
+  지표·신뢰구간·비교 결과가 같은지 확인하고, 결과를 가져올 때 `scripts/import_colab_results.py --verify`가 공식 evaluator
+  (`build_evaluation_report`, 13번과 같은 함수)로 다시 채점해 같은지 확인합니다. 그래서 채점 방식을 바꿀 때는 evaluator와 노트북 셀을 함께 고쳐야 테스트가 통과합니다.
 - `scripts/14_run_model_eval.py`가 run.csv를 만든 뒤, **`scripts/13_evaluate_run.py`를 그대로
   서브프로세스로 호출**해서 채점합니다. 코드를 복사하지 않고 같은 프로세스를 그대로 재사용하므로,
   숫자가 어긋날 여지 자체가 없습니다.
@@ -46,8 +46,9 @@ nDCG/Recall/Precision/MRR을 여러 곳에서 각자 재구현하면 언젠가 �
 **Colab (GPU)에서 인코딩하는 경우** — 실제로 이 프로젝트가 쓰는 방식입니다. `colab/README.md`에
 전체 절차가 있습니다. 요약하면: `scripts/pack_for_colab.py`로 만든 데이터(corpus, queries.csv, qrels)를 Drive에 한 번 올리고,
 `colab/train_eval.ipynb`가 corpus 인코딩 → 정확 코사인 검색 → `run.csv` → 공식 evaluator와 같은 채점까지 합니다
-(zero-shot 비교표는 노트북 11번 셀). 결과는 `scripts/import_colab_results.py --verify`로 `results/model_eval/`에 가져오며,
-이때 로컬 `13_evaluate_run.py`로 다시 채점해 Colab 점수와 같은지 확인합니다.
+(zero-shot 비교표는 노트북 11번 셀). 결과는 `scripts/import_colab_results.py --verify`로 `results/model_eval/`·`artifacts/evaluation/`에
+가져오고 실험 기록표 `results/experiments.csv`에도 한 줄씩 남으며,
+이때 공식 evaluator(`build_evaluation_report`, 13번과 같은 함수)로 다시 채점해 Colab 점수와 같은지 확인합니다.
 
 **로컬에 GPU가 있는 경우**:
 
