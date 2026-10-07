@@ -114,6 +114,8 @@ Drive에 쓴 결과(모델·평가)는 남습니다.
 | `SAVE_MID_CHECKPOINT` | `True` | 학습 절반에서 Drive에 체크포인트 1회 |
 | `EVAL_RUN_TAG` | `None` | 학습 없이 기존 run만 평가 |
 | `FINAL_TEST` | `False` | test 채점(최종 후보 확정 후에만) |
+| `EVAL_DTYPE` | `"float16"` | 평가 인코딩 dtype(GPU). 기준·학습 모델 모두 이 값. NaN 안내가 나오면 `"float32"` |
+| `EVAL_BATCH_SIZE` | `256` | 평가 인코딩 batch. 평가 중 OOM이면 128/64 |
 
 ### `MODEL_PRESETS` — 모델별 고정값
 
@@ -369,8 +371,9 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 | `validate_run` | 누락·모르는 query, 중복 (query, doc), 잘못된 rank 수 |
 | `score_run` | 위를 모아 report(dict) 생성 — 공식 evaluator와 같은 형식 |
 | `exact_search` | query·문서 임베딩 내적(정규화됐으므로 cosine) → query마다 top 100. 근사 검색(ANN)이 아닌 정확한 검색 |
-| `load_encoder(cfg)` | 평가할 모델 로드. dtype은 `torch_dtype`(4B는 float16), 없으면 **float32로 고정** — 지정하지 않으면 transformers 5가 모델마다 다른 dtype(Qwen3=bf16, fp16 저장본=fp16)으로 올려 기준·학습 모델 점수에 정밀도 차이가 섞임 |
-| `encode(model, texts, cfg, is_query)` | query면 prompt 적용 → 인코딩 → `target_dimension`만큼 자름 → 정규화. **자른 뒤 정규화**해야 cosine이 맞음 |
+| `eval_dtype(cfg)` | 평가 dtype: `torch_dtype`(4B float16) → 없으면 GPU `EVAL_DTYPE`(기본 float16) / CPU float32. 기준·학습 모델이 항상 같은 dtype으로 채점되게(지정 안 하면 transformers 5가 모델마다 다른 dtype으로 올림) |
+| `load_encoder(cfg)` | `eval_dtype(cfg)`로 모델 로드 |
+| `encode(model, texts, cfg, is_query)` | query면 prompt 적용 → 인코딩(batch `EVAL_BATCH_SIZE`, 기본 256) → NaN/inf면 멈춤 → `target_dimension`만큼 자름 → 정규화. **자른 뒤 정규화**해야 cosine이 맞음 |
 | `evaluate(cfg, split, …)` | 아래 |
 | `format_report` | 출력용 문자열 |
 | `leaderboard(split, include_unofficial)` | `EVAL_DIR`의 평가 json을 전부 모아 nDCG@10 순. 비공식(SMOKE)은 기본 제외. `libs` = ST/transformers 버전, `eval_dtype` = 평가 정밀도(비어 있으면 고정 전 결과) |
@@ -379,7 +382,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 `evaluate`의 순서:
 1. split이 test인데 `allow_test=False`면 에러(test 보호).
 2. 모델 로드(이미 로드된 `model`을 넘기면 재사용).
-3. corpus 전체 인코딩(넘겨받은 `doc_embeddings`가 있으면 재사용 — prompt만 다른 변형 비교 때 시간 절약).
+3. corpus 전체 인코딩 — 같은 텍스트는 한 번만 인코딩해 펼침(약 6% 절약). 넘겨받은 `doc_embeddings`가 있으면 재사용(prompt만 다른 변형 비교 때).
 4. 해당 split query 인코딩 → `exact_search` → `runs/model_eval/<이름>/run_<template>_<split>.csv` 저장.
 5. 기준 모델 run이 있으면 비교 포함해 채점 → `runs/evaluation/`에 json·per_query csv 저장.
    json에는 `official`, `corpus_docs`, `model_id`, `eval_dtype`, `evaluated_at`, `library_versions`, `evaluated_with`가 추가됩니다.

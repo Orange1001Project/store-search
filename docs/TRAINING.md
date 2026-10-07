@@ -227,7 +227,7 @@ python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai
 | **LoRA 파라미터** | 항상 float32 | fp16 파라미터는 GradScaler가 unscale하지 못해 에러(4B) |
 | **GIST guide 모델** | 학습 정밀도 계열(T4 fp16, L4·A100 bf16) | 학습하지 않고 유사도만 계산 → 반 정밀도로 메모리 절약 |
 | **저장**(`HP["save_dtype"]`) | float16 (안 맞으면 float32) | 용량 절반. 저장 후 다시 불러와 **학습된 모델(fp32)과 임베딩 비교**(cosine ≥ 0.999), 다르면 학습된 fp32 가중치로 다시 저장. 실제 값은 manifest `serving.saved_dtype` |
-| **평가 로드**(`load_encoder`) | `torch_dtype`(4B float16), 없으면 **float32** | 아래 "평가 dtype" |
+| **평가 로드**(`eval_dtype()`) | `torch_dtype`(4B float16), 없으면 GPU **`EVAL_DTYPE`(기본 float16)**, CPU float32 | 아래 "평가 dtype" |
 | **검색·채점** | numpy float32 | 내적·정규화는 항상 fp32 |
 
 ### 평가 dtype을 고정한 이유
@@ -236,9 +236,17 @@ transformers 5는 dtype을 지정하지 않으면 `dtype="auto"`, 즉 **모델 �
 - 기준 zero-shot Qwen3(모델 config가 bf16) → **bf16**으로 채점(T4에서는 느린 bf16)
 - 학습 모델(fp16으로 저장) → **fp16**으로 채점
 
-이렇게 같은 리더보드 안에서 정밀도가 달라 Δ에 정밀도 차이가 섞였습니다. 지금은 노트북·로컬 인코더 모두 **설정이 없으면 float32**로 올립니다
-(fp16 저장본을 fp32로 올리면 값은 그대로이고 계산만 fp32). 4B는 T4 메모리 때문에 기준·학습 모델 모두 float16으로 같게 평가합니다.
-평가 json의 `eval_dtype`과 리더보드 `eval_dtype` 열에 기록되며, **비어 있으면 고정 전 결과**라 다시 평가해야 같은 조건입니다.
+이렇게 같은 리더보드 안에서 정밀도가 달라 Δ에 정밀도 차이가 섞였습니다. 지금은 **모든 모델을 같은 dtype으로** 올립니다:
+preset에 `torch_dtype`이 있으면(4B) 그 값, 없으면 GPU에서는 `1. 설정`의 `EVAL_DTYPE`(기본 **float16**), CPU에서는 float32
+(노트북 `eval_dtype()`, 로컬 `SentenceTransformerEncoder` 같은 규칙).
+
+- **왜 float16인가 — 평가 시간**: 평가 시간의 대부분은 문서 21만 개 인코딩입니다. T4는 fp16 텐서코어가 있어 fp32보다 몇 배 빠르고, 기준·학습
+  모델을 같은 fp16으로 채점하면 비교 조건도 같습니다. 학습 모델 저장 검증에서 fp16과 fp32 임베딩이 cosine 0.999 이상으로 같았습니다.
+- **같이 줄인 것**: 평가 batch `EVAL_BATCH_SIZE`(기본 256 — 문서가 평균 24자라 32개씩 넣으면 GPU를 거의 놀림), 같은 텍스트 문서(약 6%)는 한 번만
+  인코딩. 둘 다 결과는 그대로이고 시간만 줄어듭니다.
+- **안전장치**: 임베딩에 NaN/inf가 나오면(fp16 넘침) 평가를 멈추고 `EVAL_DTYPE = "float32"`로 바꾸라고 안내합니다. 평가 중 OOM이면
+  `EVAL_BATCH_SIZE`를 128/64로.
+- 평가 json의 `eval_dtype`과 리더보드 `eval_dtype` 열에 기록되며, **값이 다른 결과끼리는 비교하지 않습니다**(비어 있으면 고정 전 결과 → 다시 평가).
 
 ### 학습 뒤 저장 검증과 관련된 함정
 
@@ -253,7 +261,7 @@ keep_fp32_wrapper=False)`로 그 덮개를 벗기고, 저장 dtype으로 바꾸�
 - **평가 dtype이 같은 결과끼리** 비교합니다(리더보드 `eval_dtype`).
 - **이어서 학습(`RESUME_TAG`)은 처음과 같은 종류의 GPU에서만** 됩니다 — `run_config.json`에 precision이 기록되고 다르면 거부합니다
   (T4로 시작한 run을 L4에서 이어 붙이면 앞 절반은 fp16, 뒤 절반은 bf16인 모델이 됨).
-- 서비스는 fp16·fp32 어느 쪽으로 올려도 됩니다(저장 검증 cosine ≥ 0.999). 평가는 fp32로 했다는 점만 기억하면 됩니다.
+- 서비스는 fp16·fp32 어느 쪽으로 올려도 됩니다(저장 검증 cosine ≥ 0.999). 평가는 GPU fp16(`eval_dtype`)으로 했습니다.
 
 ### 2026-10-07 이전에 T4에서 학습한 run
 
@@ -261,7 +269,7 @@ keep_fp32_wrapper=False)`로 그 덮개를 벗기고, 저장 dtype으로 바꾸�
   **느렸을 뿐** 계산 결과가 틀린 것이 아닙니다. 저장 검증(학습된 모델과 저장본 임베딩 일치)도 통과했습니다. manifest `precision`은 `bf16`으로
   정확히 기록돼 있습니다.
 - **평가는 다시 하세요.** 그때 평가는 기준(bf16)과 학습 모델(fp16)의 정밀도가 달랐습니다. Drive `runs/model_eval/<기준이름>/`을 지우고
-  `EVAL_RUN_TAG = "<TAG>"`로 다시 실행하면 둘 다 float32로 채점됩니다.
+  `EVAL_RUN_TAG = "<TAG>"`로 다시 실행하면 둘 다 같은 `eval_dtype`(GPU fp16)으로 채점됩니다.
 - 이후 T4에서 새로 학습하는 run은 fp16 AMP라 정밀도가 다릅니다. 이 run을 기준(baseline)으로 계속 쓸 거면 비교 때 이 점을 적어 두고,
   깔끔한 비교가 필요하면 같은 설정으로 한 번 다시 학습해 fp16 baseline을 만드는 것도 방법입니다(필수는 아님).
 

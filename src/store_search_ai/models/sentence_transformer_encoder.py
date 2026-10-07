@@ -27,11 +27,12 @@ class SentenceTransformerEncoder(BaseEncoder):
         self._torch = torch
         self.config = config
         # yaml의 torch_dtype(예: float16)으로 가중치를 올린다 — Qwen3-4B는 fp32면 약 16GB라 T4(15GB)에서 OOM.
-        # 없으면 float32 — 명시하지 않으면 transformers 5가 모델 config의 dtype(Qwen3=bf16, fp16 저장본=fp16)으로 올려서
-        # 모델마다 다른 정밀도로 채점된다(transformers 4.x의 기본값 fp32와 같게, Colab 노트북 load_encoder와 같은 규칙).
+        # 없으면 GPU float16 / CPU float32 — 명시하지 않으면 transformers 5가 모델 config의 dtype(Qwen3=bf16, fp16 저장본=fp16)으로
+        # 올려서 모델마다 다른 정밀도로 채점된다(Colab 노트북 eval_dtype()과 같은 규칙).
         from store_search_ai.common.hf_compat import dtype_kwargs
 
-        model_kwargs = dtype_kwargs(getattr(torch, config.get("torch_dtype") or "float32"))
+        default_dtype = "float16" if torch.cuda.is_available() else "float32"
+        model_kwargs = dtype_kwargs(getattr(torch, config.get("torch_dtype") or default_dtype))
         self.model = SentenceTransformer(config["model_id"], model_kwargs=model_kwargs)
 
     @classmethod
