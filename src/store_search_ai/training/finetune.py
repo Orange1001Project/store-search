@@ -25,7 +25,9 @@ CHECKPOINT_SUFFIX = ".ckpt"
 """학습 도중 한 번 저장하는 중간 체크포인트 폴더(`<TAG>.ckpt/checkpoint-N/`). Colab 연결이 끊겼을 때
 이어서 학습하기 위한 것이라, 최종 모델 저장이 성공하면 지운다."""
 
-RESUME_IGNORED_KEYS = frozenset({"resume_tag", "note", "extra", "keep_last_runs", "save_mid_checkpoint"})
+RESUME_IGNORED_KEYS = frozenset(
+    {"resume_tag", "note", "extra", "keep_last_runs", "save_mid_checkpoint", "mini_batch_size"}
+)
 """이어서 학습할 때 처음 실행과 달라도 되는 설정 — 나머지가 하나라도 다르면 다른 실험이 섞이므로 거부한다."""
 
 _OWNER_PATTERN = re.compile(r"^[a-z][a-z0-9]{1,15}$")
@@ -98,8 +100,8 @@ def iter_package_files(package_dir: str | Path) -> list[Path]:
 def package_tree_sha256(package_dir: str | Path) -> str:
     """패키지 폴더 전체(파일 경로 + 내용)의 해시.
 
-    `scripts/pack_for_colab.py`가 올릴 때 한 번, 학습할 때 한 번 계산해서 비교한다 — 다르면 Drive에 올린 뒤
-    Colab 편집기에서 코드를 고쳐서 학습했다는 뜻이다(이때 정확한 코드 기록은 모델 폴더의 code_snapshot.zip).
+    로컬 학습(`st_finetune.run_finetune`)이 manifest의 `code.src_tree_sha256`으로 기록한다 — 같은 해시면 같은 코드
+    (정확한 코드는 모델 폴더의 code_snapshot.zip).
     """
 
     package_dir = Path(package_dir)

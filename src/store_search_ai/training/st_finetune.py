@@ -28,6 +28,7 @@ import json
 import math
 import platform
 import shutil
+import subprocess
 import time
 import zipfile
 from dataclasses import asdict, dataclass, field
@@ -68,7 +69,8 @@ from store_search_ai.training.finetune import (
 @dataclass
 class FinetuneConfig:
     model_config_path: Path
-    """베이스 모델의 `configs/models/*.yaml` (model_id, query_prompt_name, target_dimension을 읽음)."""
+    """베이스 모델의 `configs/models/*.yaml` (name, model_id, query_prompt_name/query_prompt, target_dimension,
+    torch_dtype, batch_size, normalize_embeddings를 읽음)."""
     train_pairs_path: Path
     run_root: Path
     """최종 모델이 저장될 곳(Colab에서는 Drive의 runs/finetune)."""
@@ -79,6 +81,10 @@ class FinetuneConfig:
 
     num_epochs: int = 2
     batch_size: int = 32
+    mini_batch_size: int | None = 16
+    """GradCache: batch_size보다 작으면 Cached loss로 batch 전체 임베딩은 grad 없이 먼저 구하고 역전파만 이만큼씩
+    나눠 계산한다. loss·gradient는 같고 GPU 메모리만 줄어든다(T4에서 batch 32 × 문장 5개를 한 번에 역전파하면 OOM).
+    None이거나 batch_size 이상이면 일반 loss. 결과에 영향이 없어 이어서 학습할 때 달라도 된다."""
     learning_rate: float = 2e-5
     warmup_ratio: float = 0.1
     weight_decay: float = 0.01
@@ -137,7 +143,8 @@ def _environment(torch) -> dict:
 def _pick_precision(torch) -> str:
     if not torch.cuda.is_available():
         return "fp32"
-    return "bf16" if torch.cuda.is_bf16_supported() else "fp16"
+    # torch.cuda.is_bf16_supported()는 에뮬레이션까지 True라 T4에서도 True → GPU 세대(Ampere 이상)로 판단
+    return "bf16" if torch.cuda.get_device_capability()[0] >= 8 else "fp16"
 
 
 def _training_data_record(path: Path, expand_stats: dict) -> dict:
@@ -165,36 +172,33 @@ _PACKAGE_DIR = Path(__file__).resolve().parents[1]
 """지금 import된 `store_search_ai` 패키지 폴더 (코드 사본 zip의 대상)."""
 
 
-def _save_code_snapshot(model_dir: Path) -> dict:
-    """학습에 실제로 쓴 코드를 모델 폴더에 zip으로 남기고, `pack_for_colab.py`가 적은 git 정보를 읽어온다.
+def _git_info() -> dict | None:
+    """로컬 저장소에서 돌릴 때 git 브랜치·커밋·커밋 안 된 파일 목록(없거나 git이 없으면 None)."""
 
-    Colab에는 git이 없어서 사람이 커밋 번호를 적어야 했는데, 잊거나 틀리기 쉽다. 코드 사본을 모델 옆에 두면
-    커밋을 안 했더라도 나중에 "이 모델은 정확히 이 코드로 학습됐다"를 그대로 확인·재현할 수 있다.
+    def git(*args):
+        return subprocess.run(["git", *args], cwd=_PACKAGE_DIR, capture_output=True, text=True, check=True).stdout.strip()
+
+    try:
+        return {"branch": git("rev-parse", "--abbrev-ref", "HEAD"), "commit": git("rev-parse", "HEAD"),
+                "dirty_files": [line[3:] for line in git("status", "--porcelain").splitlines() if line]}
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def _save_code_snapshot(model_dir: Path) -> dict:
+    """학습에 실제로 쓴 코드를 모델 폴더에 zip으로 남기고 git 정보를 같이 기록한다.
+
+    커밋 안 한 코드로 학습했더라도 나중에 "이 모델은 정확히 이 코드로 학습됐다"를 확인·재현할 수 있게.
+    (Colab 노트북은 대신 실행한 셀 코드 전체를 notebook_code.py로 남긴다.)
     """
 
     snapshot_path = model_dir / "code_snapshot.zip"
     with zipfile.ZipFile(snapshot_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for path in iter_package_files(_PACKAGE_DIR):
             zf.write(path, Path("store_search_ai") / path.relative_to(_PACKAGE_DIR))
-
-    tree_sha256 = package_tree_sha256(_PACKAGE_DIR)
-    version_path = _PACKAGE_DIR.parents[1] / "code_version.json"
-    edited_after_pack = None
-    if version_path.exists():
-        version = json.loads(version_path.read_text(encoding="utf-8"))
-        edited_after_pack = version.get("src_tree_sha256") != tree_sha256
-        if edited_after_pack:
-            print(
-                "[안내] Drive에 올린 뒤 Colab에서 고친 코드로 학습했습니다 — 정확한 코드는 모델 폴더의 "
-                "code_snapshot.zip에 있습니다(좋은 결과면 이걸 로컬에 풀어서 커밋, docs/TRAINING_TEAM.md 3절)."
-            )
-    else:
-        version = None
-        print("[안내] code_version.json 없음 — scripts/pack_for_colab.py로 올리면 git 커밋 정보도 자동으로 남습니다.")
     return {
-        "version": version,
-        "edited_after_pack": edited_after_pack,
-        "src_tree_sha256": tree_sha256,
+        "git": _git_info(),
+        "src_tree_sha256": package_tree_sha256(_PACKAGE_DIR),
         "snapshot": snapshot_path.name,
         "snapshot_sha256": sha256_file(snapshot_path),
     }
@@ -254,7 +258,7 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
             raise SystemExit(f"처음 실행과 설정/데이터가 다릅니다 — 처음 값으로 되돌리세요: {details}")
         print(f"[INFO] 이어서 학습: {resume_from}")
     elif cfg.save_mid_checkpoint:
-        checkpoint_root.mkdir()
+        checkpoint_root.mkdir(exist_ok=True)
         (checkpoint_root / "finetune_config.json").write_text(
             json.dumps(run_config, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
         )
@@ -320,6 +324,8 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
 
     # ---------------- loss ----------------
     guide = None
+    cached = bool(cfg.mini_batch_size) and cfg.mini_batch_size < cfg.batch_size
+    mini = {"mini_batch_size": cfg.mini_batch_size} if cached else {}
     if cfg.loss == "gist":
         guide = SentenceTransformer(
             model_config["model_id"],
@@ -328,9 +334,11 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
         )
         guide.max_seq_length = cfg.max_seq_length
         guide.eval()
-        train_loss = losses.GISTEmbedLoss(model, guide=guide)
+        train_loss = (losses.CachedGISTEmbedLoss if cached else losses.GISTEmbedLoss)(model, guide=guide, **mini)
     elif cfg.loss == "mnrl":
-        train_loss = losses.MultipleNegativesRankingLoss(model)
+        train_loss = (losses.CachedMultipleNegativesRankingLoss if cached else losses.MultipleNegativesRankingLoss)(
+            model, **mini
+        )
     else:
         raise ValueError(f"loss는 'gist' 또는 'mnrl': {cfg.loss!r}")
 
@@ -440,12 +448,14 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
         torch.cuda.empty_cache()
 
     # ---------------- 저장 (partial → 검증 → 최종 이름) ----------------
+    # fp16/bf16 학습이면 accelerate가 모델 forward에 autocast를 씌워 두고 학습 뒤에도 남겨 둔다 → 벗겨야
+    # 저장본과 같은 조건으로 비교된다(안 벗기면 검증이 엉뚱하게 실패).
+    from accelerate.utils import extract_model_from_parallel
+
+    model = extract_model_from_parallel(model, keep_fp32_wrapper=False)
     if cfg.lora_rank is not None:
         set_transformer_model(model[0], model[0].auto_model.merge_and_unload())
-    model.to(getattr(torch, cfg.save_dtype))
-    model.save(str(partial_dir), safe_serialization=True)
-
-    _verify_reload(model, partial_dir, prompt_name, device, SentenceTransformer, torch)
+    saved_dtype = _save_verified(model, partial_dir, prompt_name, device, cfg.save_dtype, SentenceTransformer, torch)
 
     eval_config = {
         "name": tag,
@@ -495,7 +505,7 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
                 "normalize_embeddings": eval_config["normalize_embeddings"],
                 "similarity": "cosine",
                 "max_seq_length": cfg.max_seq_length,
-                "saved_dtype": cfg.save_dtype,
+                "saved_dtype": saved_dtype,
             },
             "environment": _environment(torch),
         },
@@ -523,37 +533,48 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
     return final_dir
 
 
-def _verify_reload(model, saved_dir: Path, prompt_name, device, SentenceTransformer, torch) -> None:
-    """저장한 폴더를 새로 로드해서 메모리의 모델과 같은 임베딩이 나오는지 확인한다.
+def _save_verified(model, saved_dir: Path, prompt_name, device, save_dtype: str, SentenceTransformer, torch) -> str:
+    """저장한 폴더를 새로 로드해서 학습된 모델과 같은 임베딩이 나오는지 확인하고, 실제로 저장한 dtype을 반환한다.
 
-    pooling 설정이나 prompt가 빠진 채 저장되면(예: merge 후 sentence-transformers 설정 누락)
-    로드는 되지만 조용히 다른 임베딩이 나온다 — 그런 체크포인트를 평가/서빙에 넘기지 않기 위한 검사.
+    pooling 설정이나 prompt가 빠진 채 저장되면(예: merge 후 sentence-transformers 설정 누락) 로드는 되지만 조용히
+    다른 임베딩이 나온다. 기준은 저장 dtype으로 바꾸기 전(학습된 그대로)의 임베딩이고, save_dtype(기본 float16)으로
+    저장했을 때 달라지면(값 넘침 등) float32로 다시 저장한다. NaN은 불일치로 본다. `colab/train_eval.ipynb`의
+    `save_verified`와 같은 로직.
     """
 
     queries = ["국밥", "24시 약국", "아이 옷 가게"]
     docs = ["가맹점명: 할매순대국 / 취급품목: 한식", "가맹점명: 온누리약국 / 취급품목: 의약품"]
     cases = [(queries, {"prompt_name": prompt_name} if prompt_name else {}), (docs, {})]
 
-    # 메모리의 모델로 기준 임베딩을 먼저 뽑고 CPU로 내린 뒤에 저장본을 올린다(GPU에 모델 두 벌이 동시에 안 있게).
-    expected = [
-        model.encode(texts, normalize_embeddings=True, convert_to_tensor=True, **kwargs).float().cpu()
-        for texts, kwargs in cases
-    ]
-    model.to("cpu")
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+    def embed(m):
+        return [m.encode(texts, normalize_embeddings=True, convert_to_tensor=True, **kwargs).float().cpu()
+                for texts, kwargs in cases]
 
-    reloaded = SentenceTransformer(str(saved_dir), device=device)
-    for (texts, kwargs), a in zip(cases, expected):
-        b = reloaded.encode(texts, normalize_embeddings=True, convert_to_tensor=True, **kwargs).float().cpu()
-        min_cos = torch.nn.functional.cosine_similarity(a, b).min().item()
-        if min_cos < 0.999:
-            raise RuntimeError(
-                f"저장된 모델을 다시 로드하니 임베딩이 달라졌습니다(min cosine={min_cos:.4f}). "
-                f"{saved_dir}는 평가/서빙에 쓰면 안 됩니다."
-            )
-    print("[검증] 저장된 모델 재로드 임베딩 일치 확인")
-    del reloaded
-    gc.collect()
+    expected = embed(model)
+    model.to("cpu")   # GPU에 모델 두 벌이 동시에 안 있게
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+    # fp32로 학습한 모델이면 원래 가중치를 복사해 둔다 — float32로 다시 저장할 때 fp16으로 깎인 값이 아니라 학습된 값을 저장
+    original = ({k: v.detach().clone() for k, v in model.state_dict().items()}
+                if next(model.parameters()).dtype == torch.float32 and save_dtype != "float32" else None)
+    for dtype in dict.fromkeys([save_dtype, "float32"]):
+        if saved_dir.exists():
+            shutil.rmtree(saved_dir)
+        model.to(getattr(torch, dtype))
+        if dtype == "float32" and original is not None:
+            model.load_state_dict(original)
+        model.save(str(saved_dir), safe_serialization=True)
+        reloaded = SentenceTransformer(str(saved_dir), device=device, model_kwargs=dtype_kwargs(getattr(torch, dtype)))
+        got = embed(reloaded)
+        del reloaded
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        min_cos = min(torch.nan_to_num(torch.nn.functional.cosine_similarity(a, b), nan=-1.0).min().item()
+                      for a, b in zip(expected, got))
+        if min_cos >= 0.999:
+            print(f"[검증] 저장본({dtype}) 재로드 임베딩 일치 확인 (최소 cosine {min_cos:.5f})")
+            return dtype
+        print(f"[경고] {dtype}로 저장한 모델의 임베딩이 학습된 모델과 다릅니다(최소 cosine {min_cos:.5f})"
+              + (" — float32로 다시 저장합니다." if dtype != "float32" else ""))
+    raise RuntimeError(f"저장된 모델을 다시 로드하니 임베딩이 다릅니다 — {saved_dir}는 평가/서빙에 쓰면 안 됩니다.")
