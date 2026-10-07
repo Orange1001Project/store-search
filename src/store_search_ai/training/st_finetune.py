@@ -243,7 +243,9 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
 
     # 체크포인트에는 이 설정 + 학습 데이터 해시를 같이 남겨서, 이어서 학습할 때 설정이나 데이터가
     # 바뀌었으면 거부한다(바뀐 채로 이어 붙이면 어떤 설정의 결과인지 알 수 없는 모델이 나온다).
-    run_config = {**_config_record(cfg), "train_pairs_sha256": sha256_file(cfg.train_pairs_path)}
+    precision = _pick_precision(torch)
+    # precision도 기록해서, T4(fp16)로 시작한 run을 bf16 GPU에서 이어 붙여 정밀도가 섞이는 것을 막는다
+    run_config = {**_config_record(cfg), "train_pairs_sha256": sha256_file(cfg.train_pairs_path), "precision": precision}
     resume_from = None
     if cfg.resume_tag:
         resume_from = latest_checkpoint(checkpoint_root)
@@ -264,7 +266,6 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
         )
     use_checkpoints = cfg.save_mid_checkpoint or resume_from is not None
 
-    precision = _pick_precision(torch)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[INFO] run: {tag}  base: {model_config['model_id']}  precision: {precision}  device: {device}")
 
@@ -330,7 +331,8 @@ def run_finetune(cfg: FinetuneConfig) -> Path:
         guide = SentenceTransformer(
             model_config["model_id"],
             device=device,
-            model_kwargs=dtype_kwargs(torch.float16 if device == "cuda" else torch.float32),
+            # 유사도만 계산하는 guide는 반 정밀도 — 학습 정밀도와 같은 계열(T4 fp16, Ampere 이상 bf16)
+            model_kwargs=dtype_kwargs({"bf16": torch.bfloat16, "fp16": torch.float16}.get(precision, torch.float32)),
         )
         guide.max_seq_length = cfg.max_seq_length
         guide.eval()

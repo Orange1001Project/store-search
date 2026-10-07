@@ -86,7 +86,7 @@ python scripts/prepare_finetune_dataset.py
 자동으로 처리되는 것:
 
 - **precision**: GPU가 bf16을 하드웨어로 지원하면(L4·A100, compute capability 8 이상) bf16, T4면 fp16 AMP(가중치는 fp32,
-  연산만 fp16). `torch.cuda.is_bf16_supported()`는 에뮬레이션까지 True라 T4에서도 True가 나오므로 GPU 세대로 판단합니다.
+  연산만 fp16). `torch.cuda.is_bf16_supported()`는 에뮬레이션까지 True라 T4에서도 True가 나오므로 GPU 세대로 판단합니다(자세히는 6절).
   loss가 NaN/inf가 되면 학습을 멈추고 **Drive에 아무것도 저장하지 않습니다** → lr을 낮추거나 L4/A100 사용.
 - **배치**: `NO_DUPLICATES` — 같은 텍스트(같은 query의 다른 positive 행, 공유 negative)가 한 배치에
   두 번 들어가 서로를 오답으로 배우는 일을 막습니다.
@@ -192,6 +192,78 @@ python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai
 폴더를 통째로 공유 스토리지에 두고, 공유 시트에는 TAG와 val 지표를 적습니다.
 서빙 인프라(API, ANN 인덱스 등)는 아직 이 저장소 범위 밖입니다 — 이 매니페스트의 `serving`이
 "서빙이 학습·평가와 똑같이 인코딩하려면 무엇을 맞춰야 하는지"의 단일 기준입니다.
+
+## 6. 정밀도(fp32 · fp16 · bf16) 정리
+
+### 세 가지 숫자 형식
+
+| 형식 | 비트 | 표현 범위(최댓값) | 정밀도(유효 자릿수) | 특징 |
+|---|---|---|---|---|
+| **fp32** (float32) | 32 | 약 3.4×10³⁸ | 약 7자리 | 기준. 정확하지만 메모리 2배·느림 |
+| **fp16** (float16) | 16 | **65,504** | 약 3~4자리 | 범위가 좁아 큰 값은 `inf`로 넘침(→ NaN). 학습 땐 loss scaling 필요 |
+| **bf16** (bfloat16) | 16 | fp32와 같음(약 3.4×10³⁸) | 약 2~3자리 | 범위가 넓어 넘침이 거의 없음. 대신 자릿수가 fp16보다 적음 |
+
+임베딩 학습·검색에서는 반 정밀도(fp16/bf16)로도 점수 차이가 거의 없어서, 속도·메모리를 위해 "가중치는 fp32로 두고 연산만 반 정밀도로"
+하는 **AMP(mixed precision)**를 씁니다. fp16 AMP는 작은 gradient가 0이 되지 않게 loss를 키웠다 되돌리는 GradScaler를 같이 쓰고, bf16 AMP는
+범위가 넓어서 필요 없습니다.
+
+### GPU별로 무엇을 쓰나
+
+| GPU (compute capability) | fp16 | bf16 | 노트북이 고르는 학습 정밀도 |
+|---|---|---|---|
+| **T4** (7.5, 무료 Colab) | 텐서코어 가속 | **하드웨어 없음** — torch가 bf16 텐서는 만들 수 있지만 가속을 못 받아 느림 | **fp16** |
+| **L4** (8.9) / **A100** (8.0) | 가속 | 가속 | **bf16** (넘침 위험이 적어 더 안전) |
+
+**주의 — `torch.cuda.is_bf16_supported()`**: 최신 torch에서는 이 함수가 "에뮬레이션으로라도 bf16 텐서를 만들 수 있는가"까지 보고 True를 돌려줘서
+**T4에서도 True**가 나옵니다. 2026-10-07 이전 노트북은 이 함수로 판단해서 T4에서 bf16(하드웨어 가속 없음)으로 학습했습니다. 지금은 GPU 세대
+(compute capability 8 이상이면 bf16)로 판단합니다(노트북 `training_precision()`, 로컬 `st_finetune._pick_precision`).
+
+### 노트북에서 dtype이 정해지는 곳
+
+| 어디 | 값 | 이유 |
+|---|---|---|
+| **학습 연산**(`precision`, Trainer `fp16`/`bf16`) | T4 fp16 AMP, L4·A100 bf16 AMP | 위 표. manifest `precision`에 기록 |
+| **베이스 가중치**(`HP["base_dtype"]`) | 0.6B·Arctic·BGE: float32 / 4B: float16 | 4B는 fp32면 약 16GB라 T4(15GB)에 안 올라감 |
+| **LoRA 파라미터** | 항상 float32 | fp16 파라미터는 GradScaler가 unscale하지 못해 에러(4B) |
+| **GIST guide 모델** | 학습 정밀도 계열(T4 fp16, L4·A100 bf16) | 학습하지 않고 유사도만 계산 → 반 정밀도로 메모리 절약 |
+| **저장**(`HP["save_dtype"]`) | float16 (안 맞으면 float32) | 용량 절반. 저장 후 다시 불러와 **학습된 모델(fp32)과 임베딩 비교**(cosine ≥ 0.999), 다르면 학습된 fp32 가중치로 다시 저장. 실제 값은 manifest `serving.saved_dtype` |
+| **평가 로드**(`load_encoder`) | `torch_dtype`(4B float16), 없으면 **float32** | 아래 "평가 dtype" |
+| **검색·채점** | numpy float32 | 내적·정규화는 항상 fp32 |
+
+### 평가 dtype을 고정한 이유
+
+transformers 5는 dtype을 지정하지 않으면 `dtype="auto"`, 즉 **모델 파일에 적힌 dtype**으로 올립니다. 그래서 고정 전에는:
+- 기준 zero-shot Qwen3(모델 config가 bf16) → **bf16**으로 채점(T4에서는 느린 bf16)
+- 학습 모델(fp16으로 저장) → **fp16**으로 채점
+
+이렇게 같은 리더보드 안에서 정밀도가 달라 Δ에 정밀도 차이가 섞였습니다. 지금은 노트북·로컬 인코더 모두 **설정이 없으면 float32**로 올립니다
+(fp16 저장본을 fp32로 올리면 값은 그대로이고 계산만 fp32). 4B는 T4 메모리 때문에 기준·학습 모델 모두 float16으로 같게 평가합니다.
+평가 json의 `eval_dtype`과 리더보드 `eval_dtype` 열에 기록되며, **비어 있으면 고정 전 결과**라 다시 평가해야 같은 조건입니다.
+
+### 학습 뒤 저장 검증과 관련된 함정
+
+fp16/bf16 AMP로 학습하면 accelerate가 모델의 forward에 autocast를 덧씌우고 학습이 끝나도 그대로 둡니다. 이 상태로 "메모리 속 모델 vs 저장본"을
+비교하면 서로 다른 정밀도로 계산돼 멀쩡한 저장본도 불일치로 나옵니다. 그래서 저장 전에 `extract_model_from_parallel(model,
+keep_fp32_wrapper=False)`로 그 덮개를 벗기고, 저장 dtype으로 바꾸기 **전** 임베딩을 기준으로 비교합니다(NaN은 불일치로 판정).
+
+### 비교·재개 규칙
+
+- **학습 정밀도가 같은 run끼리** 비교합니다(manifest `precision`, 공유 시트 `precision` 열). fp16 AMP와 bf16 AMP 결과는 보통 차이가 작지만
+  0은 아닙니다.
+- **평가 dtype이 같은 결과끼리** 비교합니다(리더보드 `eval_dtype`).
+- **이어서 학습(`RESUME_TAG`)은 처음과 같은 종류의 GPU에서만** 됩니다 — `run_config.json`에 precision이 기록되고 다르면 거부합니다
+  (T4로 시작한 run을 L4에서 이어 붙이면 앞 절반은 fp16, 뒤 절반은 bf16인 모델이 됨).
+- 서비스는 fp16·fp32 어느 쪽으로 올려도 됩니다(저장 검증 cosine ≥ 0.999). 평가는 fp32로 했다는 점만 기억하면 됩니다.
+
+### 2026-10-07 이전에 T4에서 학습한 run
+
+- **모델은 유효합니다 — 다시 학습할 필요 없음.** bf16 AMP는 A100에서 쓰는 것과 같은 정상적인 학습 방식이고, T4에서는 하드웨어 가속이 없어
+  **느렸을 뿐** 계산 결과가 틀린 것이 아닙니다. 저장 검증(학습된 모델과 저장본 임베딩 일치)도 통과했습니다. manifest `precision`은 `bf16`으로
+  정확히 기록돼 있습니다.
+- **평가는 다시 하세요.** 그때 평가는 기준(bf16)과 학습 모델(fp16)의 정밀도가 달랐습니다. Drive `runs/model_eval/<기준이름>/`을 지우고
+  `EVAL_RUN_TAG = "<TAG>"`로 다시 실행하면 둘 다 float32로 채점됩니다.
+- 이후 T4에서 새로 학습하는 run은 fp16 AMP라 정밀도가 다릅니다. 이 run을 기준(baseline)으로 계속 쓸 거면 비교 때 이 점을 적어 두고,
+  깔끔한 비교가 필요하면 같은 설정으로 한 번 다시 학습해 fp16 baseline을 만드는 것도 방법입니다(필수는 아님).
 
 ## 재현성 메모
 

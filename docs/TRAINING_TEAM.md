@@ -197,15 +197,16 @@ KEEP 기준: **모델별 baseline run / 공유 시트에 올린 run / 서비스 
 
 팀 공유 Drive에 Google Sheets를 하나 만들고 첫 줄에 붙여넣기(탭 구분):
 ```
-TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	libs	nDCG@10	Judged@10	Recall@100	ΔnDCG@10	p-value	KEEP
+TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	eval_dtype	libs	nDCG@10	Judged@10	Recall@100	ΔnDCG@10	p-value	KEEP
 ```
-값은 `9. 평가` 출력과 `10. 리더보드`(Δ·p·libs), manifest(`training_data.sha256`, `environment.gpu`, `precision`)에서 복사합니다.
+값은 `9. 평가` 출력과 `10. 리더보드`(Δ·p·libs·eval_dtype), manifest(`training_data.sha256`, `environment.gpu`, `precision`)에서 복사합니다.
 
 **숫자 읽는 법**
 - val은 136개 쿼리라 nDCG@10에 ±0.05 정도 오차가 있습니다. **차이가 0.03보다 작거나 p가 크면 "개선"이라 하지 않습니다.**
 - **Judged@10**(상위 10개 중 정답 판정이 있는 비율)이 낮으면 점수가 실제보다 낮게 나왔을 수 있습니다(정답이 키워드 검색 pool로 만들어져
   모델이 새로 찾은 문서는 판정이 없어 오답으로 계산).
-- **같은 학습 데이터 해시 + 같은 precision(T4=fp16, L4/A100=bf16) + 같은 `libs`**끼리만 비교합니다. Colab이 기본 라이브러리를 올렸으면
+- **같은 학습 데이터 해시 + 같은 precision(T4=fp16, L4/A100=bf16) + 같은 `eval_dtype` + 같은 `libs`**끼리만 비교합니다.
+  리더보드 `eval_dtype`이 비어 있는 결과는 평가 정밀도를 고정하기 전(2026-10-07 이전) 것이라 다시 평가합니다. 정밀도 설명은 `docs/TRAINING.md` 6절. Colab이 기본 라이브러리를 올렸으면
   기준 zero-shot 모델도 그 버전으로 다시 평가해서 비교합니다(그 모델의 `runs/model_eval/<이름>/` 폴더를 지우고 9번 실행).
 
 ## 9. 실험이 끝나면 — VS Code로 가져와 저장
@@ -266,6 +267,7 @@ TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	libs	nDCG@10
 | `CUDA out of memory` | 런타임 > 세션 다시 시작 후 `HP["mini_batch_size"]`를 절반으로(8, 4B는 2) — 결과는 같고 느려지기만 함, NOTE 불필요. 그래도 안 되면 `HP["batch_size"]` 16 또는 `HP["loss"] = "mnrl"` → `NOTE`에 적기 |
 | `loss가 NaN/inf` | 저장된 것 없음. `learning_rate`를 절반으로, 또는 bf16 GPU(L4/A100) |
 | `처음 실행과 설정/데이터가 다릅니다` | `RESUME_TAG`로 이어 할 때는 처음 설정 그대로 |
+| `처음 실행은 fp16, 지금 GPU는 bf16입니다` | 이어 하기는 처음과 같은 종류의 GPU에서만(T4끼리, L4·A100끼리). 아니면 처음부터 |
 | `저장본을 다시 불러오니 임베딩이 다릅니다` | float32로도 안 맞은 경우 — 출력 전체 공유(그 폴더는 `.partial`로 남고 쓰지 않음) |
 | `test split은 최종 후보를 정한 뒤 한 번만` | 정상 — 반복 실험은 val로만 |
 | 평가가 오래 걸림 | 문서 21만 개 인코딩(모델당 수 분~수십 분). 기준 zero-shot은 처음 한 번만 |

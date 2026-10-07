@@ -178,6 +178,7 @@ Colab 라이브러리가 업데이트돼도 노트북이 돌도록 버전 차이
 
 | 함수 | 하는 일 | 배경 |
 |---|---|---|
+| `training_precision()` | 학습 정밀도: compute capability 8 이상(L4·A100) `bf16`, T4 `fp16`, CPU `fp32` | `torch.cuda.is_bf16_supported()`는 에뮬레이션까지 True라 T4에서도 True → GPU 세대로 판단(`docs/TRAINING.md` 6절) |
 | `version_tuple(pkg)` | `"5.18.0+cu"` → `(5, 18, 0)` | 버전 비교용 |
 | `library_versions()` | 주요 라이브러리 버전 dict | manifest·평가 json의 `libs`로 기록 |
 | `check_environment()` | 최소 버전 미달·채점 라이브러리 누락이면 에러, 확인 안 된 메이저 버전이면 경고 | |
@@ -259,7 +260,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 
 | 경우 | loss | 설명 |
 |---|---|---|
-| `loss="gist"` | `GISTEmbedLoss` / `CachedGISTEmbedLoss` | 대조학습(MNRL)에 **guide 모델**(학습 전 베이스 모델, fp16)을 더함. guide가 "정답보다 더 비슷하다"고 보는 in-batch negative는 오답에서 빼서, 같은 계열 query("한식"·"국밥")끼리 서로의 정답을 오답으로 배우는 문제(false negative)를 줄임 |
+| `loss="gist"` | `GISTEmbedLoss` / `CachedGISTEmbedLoss` | 대조학습(MNRL)에 **guide 모델**(학습 전 베이스 모델, 학습 정밀도 계열의 반 정밀도: T4 fp16·L4/A100 bf16)을 더함. guide가 "정답보다 더 비슷하다"고 보는 in-batch negative는 오답에서 빼서, 같은 계열 query("한식"·"국밥")끼리 서로의 정답을 오답으로 배우는 문제(false negative)를 줄임 |
 | `loss="mnrl"` | `MultipleNegativesRankingLoss` / `Cached…` | 표준 대조학습. query마다 자기 positive를 batch 안의 다른 모든 문서(다른 행의 positive + hard negative)보다 가깝게 |
 | `mini_batch_size < batch_size` | `Cached…` 버전 | **GradCache**: batch 전체 임베딩을 grad 없이 먼저 구하고, 역전파만 mini_batch씩 나눠 계산. loss·gradient는 같고 메모리만 줄어듦(약 1.3~1.5배 느림). batch 32 × 문장 5개 = 160문장을 한 번에 역전파하면 T4가 OOM이라 기본으로 켬 |
 | `target_dimension`이 있으면 | `MatryoshkaLoss`로 감쌈 | 전체 차원과 앞 1024차원 모두에서 학습 → 앞부분만 잘라 써도 성능 유지(4B) |
@@ -287,10 +288,11 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 순서대로:
 
 1. **TAG·폴더 결정**: 새 run이면 새 TAG, `RESUME_TAG`면 그 TAG(내 모델·내 이름으로 시작하는지 확인). 최종 폴더가 이미 있으면 멈춤.
-2. **run_config**: `HP` + 모델 ID + 학습 데이터 sha256.
+2. **run_config**: `HP` + 모델 ID + 학습 데이터 sha256 + 학습 정밀도(`precision`).
    - 새 run + 중간 체크포인트 사용 → `.ckpt/run_config.json`에 저장.
-   - 이어서 학습 → 저장된 run_config와 비교해서 다르면 멈춤(다른 설정으로 이어 붙이는 사고 방지).
-3. **GPU 정리·정밀도**: `gc` + `empty_cache` + 최대 메모리 측정 초기화. compute capability 8 이상(L4·A100)이면 bf16, 아니면(T4) fp16 AMP.
+   - 이어서 학습 → 저장된 run_config와 비교해서 다르면 멈춤(다른 설정으로 이어 붙이는 사고 방지). GPU 종류가 달라 precision만
+     다르면 "처음 실행은 fp16, 지금 GPU는 bf16"처럼 알려 줌.
+3. **GPU 정리**: `gc` + `empty_cache` + 최대 메모리 측정 초기화. (정밀도는 2단계에서 `training_precision()`으로 이미 정함)
 4. **데이터·모델·loss**: `expand_training_rows` → `build_model` → `resolve_query_prompt` → `build_loss`.
 5. **콜백**
    - `Guard`: 로그된 loss가 NaN/inf면 학습 중단 → 저장하지 않고 에러.
@@ -371,7 +373,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 | `encode(model, texts, cfg, is_query)` | query면 prompt 적용 → 인코딩 → `target_dimension`만큼 자름 → 정규화. **자른 뒤 정규화**해야 cosine이 맞음 |
 | `evaluate(cfg, split, …)` | 아래 |
 | `format_report` | 출력용 문자열 |
-| `leaderboard(split, include_unofficial)` | `EVAL_DIR`의 평가 json을 전부 모아 nDCG@10 순. 비공식(SMOKE)은 기본 제외. `libs` = ST/transformers 버전 |
+| `leaderboard(split, include_unofficial)` | `EVAL_DIR`의 평가 json을 전부 모아 nDCG@10 순. 비공식(SMOKE)은 기본 제외. `libs` = ST/transformers 버전, `eval_dtype` = 평가 정밀도(비어 있으면 고정 전 결과) |
 | `release_gpu()` | `gc` + `empty_cache`. 부르기 전에 호출한 쪽에서 모델 변수를 `None`으로 지워야 실제로 풀림 |
 
 `evaluate`의 순서:
@@ -380,7 +382,7 @@ query 앞에 붙일 지시문(prompt)을 정합니다. preset에 `query_prompt` 
 3. corpus 전체 인코딩(넘겨받은 `doc_embeddings`가 있으면 재사용 — prompt만 다른 변형 비교 때 시간 절약).
 4. 해당 split query 인코딩 → `exact_search` → `runs/model_eval/<이름>/run_<template>_<split>.csv` 저장.
 5. 기준 모델 run이 있으면 비교 포함해 채점 → `runs/evaluation/`에 json·per_query csv 저장.
-   json에는 `official`, `corpus_docs`, `model_id`, `evaluated_at`, `library_versions`, `evaluated_with`가 추가됩니다.
+   json에는 `official`, `corpus_docs`, `model_id`, `eval_dtype`, `evaluated_at`, `library_versions`, `evaluated_with`가 추가됩니다.
 6. 평가한 모델 폴더에 `model_manifest.json`이 있으면(fine-tuned 모델) `evaluations`에 결과 추가.
 
 ---
@@ -414,7 +416,7 @@ if not EVAL_RUN_TAG:
 
 ## [29] 12. SMOKE 확인
 
-`SMOKE=True`일 때만 동작. 모델 폴더 구성, LoRA merge, 임시 폴더 정리, 중간 체크포인트, loss 유한, manifest 평가 기록, val 쿼리 누락·중복 0,
+`SMOKE=True`일 때만 동작. 모델 폴더 구성, LoRA merge, 임시 폴더 정리, 중간 체크포인트, loss 유한, GPU에 맞는 학습 정밀도, manifest 평가 기록, val 쿼리 누락·중복 0,
 비교 계산, 리더보드, 비공식 분리, test 차단을 `[OK]/[FAIL]`로 점검하고 전부 OK면 `통과`.
 
 ## [31] 13. KEEP
