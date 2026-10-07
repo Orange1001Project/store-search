@@ -155,6 +155,8 @@ def merge(args, config: dict, benchmark_dir: Path) -> None:
         if len(a_split) or len(b_split):
             merged[split], report = pairwise_report(a_split, b_split, split)
             print(json.dumps(report, ensure_ascii=False, indent=2))
+    if not merged:
+        raise SystemExit("완료 시트에 val/test 행이 없습니다 — annotation_A_completed.csv / annotation_B_completed.csv를 확인하세요.")
     reference = next(iter(merged.values()))
     frame = build_adjudication_frame(merged.get("val", empty_like(reference)), merged.get("test", empty_like(reference)))
 

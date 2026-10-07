@@ -91,6 +91,20 @@ def test_exclude_supplemental_rows_drops_rounds_with_manifest(tmp_path):
     assert exclude_supplemental_rows(pool, tmp_path)["doc_id"].tolist() == ["a"]
 
 
+def test_exclude_supplemental_rows_keeps_rounds_of_other_base_round(tmp_path):
+    import json
+
+    from store_search_ai.data.supplemental_round import exclude_supplemental_rows
+
+    pool = pd.DataFrame({"query_id": ["q1", "q1"], "doc_id": ["a", "b"], "first_seen_round": ["lexical_v1", "supplement_v1"]})
+    (tmp_path / "supplement_v1").mkdir()
+    (tmp_path / "supplement_v1" / "supplemental_manifest.json").write_text(
+        json.dumps({"round": "supplement_v1", "base_round": "full_annotation_v1"}), encoding="utf-8")
+    assert exclude_supplemental_rows(pool, tmp_path, "full_annotation_v1")["doc_id"].tolist() == ["a"]
+    # 새 본 라운드에는 v1 보충 판정이 합쳐지지 않으므로(11/12번) 보충 후보도 새 시트에 들어가야 한다
+    assert exclude_supplemental_rows(pool, tmp_path, "full_annotation_v2")["doc_id"].tolist() == ["a", "b"]
+
+
 def test_supplemental_adjudication_paths_finds_merged_and_pending_rounds(tmp_path):
     import json
 

@@ -50,7 +50,7 @@ def main() -> None:
     queries_path = benchmark_dir / "queries.csv"
 
     pool = pd.read_csv(pool_path)
-    pool = exclude_supplemental_rows(pool, benchmark_dir / "annotations")  # 보충 후보는 16번이 따로 판정
+    pool = exclude_supplemental_rows(pool, benchmark_dir / "annotations", args.round)  # 이 라운드의 보충 후보는 16번이 따로 판정
     queries = pd.read_csv(queries_path)
     queries = queries[queries["status"] == "active"].copy()
 

@@ -37,13 +37,23 @@ def supplemental_round_names(annotations_root: Path) -> set[str]:
     }
 
 
-def exclude_supplemental_rows(pool: pd.DataFrame, annotations_root: Path) -> pd.DataFrame:
+def exclude_supplemental_rows(pool: pd.DataFrame, annotations_root: Path, base_round: str | None = None) -> pd.DataFrame:
     """본 라운드(08번) 시트를 만들 때 보충 라운드에서 들어온 후보를 뺀다 — 보충 후보는 16번이 따로 판정한다.
 
     이게 없으면 보충 라운드 뒤에 08번을 다시 돌렸을 때 본 라운드 시트에 보충 후보가 섞인다.
+    `base_round`를 주면 그 본 라운드에 덧붙는 보충 라운드만 뺀다 — 11/12번은 `base_round`가 같은 보충 판정만 합치므로,
+    다른 본 라운드(예: full_annotation_v2)를 새로 시작할 때 보충 후보까지 빼면 그 판정이 어디에도 들어가지 않고 사라진다.
+    그런 후보는 새 본 라운드 시트에 포함돼 다시 판정된다.
     """
 
-    rounds = supplemental_round_names(annotations_root)
+    rounds = set()
+    for manifest_path in Path(annotations_root).glob("*/supplemental_manifest.json"):
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if base_round is None or manifest.get("base_round") in (None, base_round):
+            rounds.add(manifest["round"])
+        else:
+            print(f"[안내] 보충 라운드 {manifest['round']}(base_round={manifest.get('base_round')})는 {base_round}에 합쳐지지 "
+                  "않으므로 그 후보를 이번 본 라운드 시트에 포함합니다.")
     return pool[~pool["first_seen_round"].isin(rounds)] if rounds else pool
 
 
