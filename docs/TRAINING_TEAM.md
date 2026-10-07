@@ -10,7 +10,7 @@ Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실
 > - 노트북 수정은 두 가지: **A. Colab에서 바로**(작은 수정, 세션 유지) / **B. VS Code(Claude)에서 고쳐 다시 업로드**(큰 수정).
 >   정본은 저장소 `colab/train_eval.ipynb` — Colab에서 고쳤으면 내려받아 덮어쓴 뒤 VS Code에서 고칩니다(3절).
 > - 학습 → val 공식 채점 → 리더보드 → 수정 → 다시 학습을 **전부 Colab 안에서** 반복하고, 실험이 끝나면 결과만 VS Code로 가져와 저장합니다.
-> - 사람이 적는 건 **`NOTE` 한 줄**과 (남길 결과일 때) **공유 시트 한 줄**뿐. 나머지는 자동 기록.
+> - 사람이 하는 건 **`NOTE` 한 줄**과 남길 run의 **KEEP 표시**뿐. 실험 기록표(`results/experiments.csv`)는 결과를 가져올 때 자동으로 채워집니다.
 > - **평가 셀(채점 로직)과 test split은 아무도 건드리지 않습니다.** 반복 평가는 val로만.
 
 ---
@@ -126,7 +126,7 @@ VS Code의 Claude에게 "이 셀을 이렇게 바꿔 줘"라고 해서 **바뀐 
 [학습]       8. 학습      … 0.6B 기준 T4에서 약 1시간 (로그: [체크포인트] → [검증] … 일치 확인 → [완료] 최종 모델)
 [평가]       9. 평가      … 처음엔 기준 zero-shot도 평가(문서 21만 개 인코딩, 수십 분)
 [비교]       10. 리더보드  … 기준 대비 ΔnDCG@10, p-value
-[정리]       남길 run이면 13. KEEP + 공유 시트 한 줄 (8절)
+[정리]       남길 run이면 13. KEEP (7절) — 기록표는 마지막에 가져올 때 자동(8·9절)
 [다음 실험]  3절 방법 A 또는 B로 고치고 → 표대로 다시 실행
 ```
 
@@ -168,7 +168,7 @@ VS Code의 Claude에게 "이 셀을 이렇게 바꿔 줘"라고 해서 **바뀐 
 |---|---|---|---|
 | **`model_manifest.json`** (Drive `runs/finetune/<TAG>/`) | **자동** | 학습·평가할 때마다 | 설정 전부(`HP`·preset), 학습 데이터 해시, 데이터 버전, 코드 사본(`notebook_code.py`), GPU·라이브러리 버전, 서비스가 따라야 할 값(`serving`), 평가 결과 — **손대지 않음** |
 | **설정 셀의 `NOTE`** | 나 | 기본값에서 무언가 바꿨을 때 | 무엇을 왜 바꿨는지 한 줄 |
-| **공유 시트** | 나 | val 평가 후, **남길 run만** | run 하나당 한 줄(8절) |
+| **실험 기록표** `results/experiments.csv` (저장소) | **자동** | 결과를 가져올 때(9절) | 평가 하나당 한 줄 — manifest·평가 json에서 채움(8절) |
 
 **`NOTE` 쓰는 법**
 ```python
@@ -179,7 +179,7 @@ NOTE = "서비스도 필요: 쿼리 특수문자 제거 후 인코딩"   # 모�
 **모델 밖에서 하는 처리**(쿼리·문서 전처리, BM25 hybrid, reranker 등)는 모델 폴더에 저장되지 않아서 서비스에서도 똑같이 다시 해야 합니다.
 이런 처리를 넣었으면 `NOTE`를 `서비스도 필요:`로 시작하고, 그 코드는 서비스로 옮길 수 있게 함수로 분리해 두세요.
 
-처음 몇 번은 학습이 끝까지 도는지·시간·메모리만 보는 시험 run이어도 괜찮습니다(manifest는 자동으로 남음). 시트·KEEP은 **남길 run만**.
+처음 몇 번은 학습이 끝까지 도는지·시간·메모리만 보는 시험 run이어도 괜찮습니다(manifest는 자동으로 남음). KEEP은 **남길 run만**.
 
 ## 6. 절대 바꾸지 않는 것
 
@@ -189,17 +189,37 @@ NOTE = "서비스도 필요: 쿼리 특수문자 제거 후 인코딩"   # 모�
 
 ## 7. KEEP — 지우면 안 되는 run 표시
 
-Drive는 학습이 끝날 때마다 **내 run 중 같은 모델의 최신 3개(`HP["keep_last_runs"]`)만 남기고 자동 삭제**합니다(다른 사람 run은 안 건드림).
-남길 run은 `13. KEEP` 셀의 주석을 풀고 TAG를 바꿔 실행 → 그 폴더에 빈 `KEEP` 파일이 생겨 삭제되지 않습니다.
-KEEP 기준: **모델별 baseline run / 공유 시트에 올린 run / 서비스 후보·발표용**.
+KEEP은 문서에 적는 게 아니라 **Drive의 그 run 폴더 안에 `KEEP`이라는 빈 파일을 만드는 것**입니다. 하는 일은 두 가지:
+- Drive 자동 정리에서 빠짐 — 학습이 끝날 때마다 **내 run 중 같은 모델의 최신 3개(`HP["keep_last_runs"]`)만 남기고 지우는데**, KEEP 파일이 있는
+  run은 지우지 않고 3개에도 세지 않습니다(다른 사람 run은 원래 안 건드림).
+- 결과를 가져올 때(9절) **KEEP한 run만 모델 가중치까지** `models/<TAG>/`로 복사되고 실험 기록표의 `keep` 열이 `True`가 됩니다.
 
-## 8. 공유 시트 (남길 run만 한 줄)
+**하는 법** — Colab 노트북 `13. KEEP` 셀의 주석(`#`)을 지우고 TAG를 넣어 실행합니다(Drive 화면에서는 빈 파일을 만들 수 없어서 이 한 줄로):
+```python
+(FINETUNE_DIR / "qwen3_embedding_0_6b_ft_kse1_20261006_0708" / "KEEP").touch()
+```
+런타임을 새로 연결했다면 설치·Drive 연결·`1. 설정` 셀을 먼저 실행해야 `FINETUNE_DIR`이 생깁니다. 확인: Drive `runs/finetune/<TAG>/`에 `KEEP` 파일이
+보이면 됩니다. 취소는 그 파일을 Drive에서 지우면 됩니다. **Drive를 내려받기 전에** 표시해야 가져오기에 반영됩니다.
 
-팀 공유 Drive에 Google Sheets를 하나 만들고 첫 줄에 붙여넣기(탭 구분):
-```
-TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	eval_dtype	libs	nDCG@10	Judged@10	Recall@100	ΔnDCG@10	p-value	KEEP
-```
-값은 `9. 평가` 출력과 `10. 리더보드`(Δ·p·libs·eval_dtype), manifest(`training_data.sha256`, `environment.gpu`, `precision`)에서 복사합니다.
+KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계속 쓸 run**.
+
+## 8. 실험 기록표 — `results/experiments.csv` (저장소 안, 자동)
+
+팀 실험 기록은 외부 시트가 아니라 **저장소의 `results/experiments.csv`** 하나입니다. 9절의 가져오기 스크립트가 Drive의 공식 평가마다 한 줄씩
+자동으로 채우므로 사람이 옮겨 적을 필요가 없고, 커밋하면 팀 전체가 같은 표를 봅니다.
+
+| 열 | 출처 |
+|---|---|
+| `eval_tag`, `model`, `kind`(zero-shot / fine-tuned) | 평가 json |
+| `owner`, `base_model`, `note`, `train_data_sha8`, `gpu`, `precision` | 그 run의 `model_manifest.json` |
+| `eval_dtype`, `libs`, `nDCG@10`, `Judged@10`, `Recall@100`, `MRR@100`, `Bpref`, `delta_nDCG@10`, `p_nDCG@10`, `baseline` | 평가 json |
+| `keep` | Drive run 폴더의 `KEEP` 파일(또는 `--models`로 고른 run) |
+| `evaluated_at` | 평가 json |
+
+- 같은 `eval_tag`를 다시 가져오면 그 줄만 새 값으로 바뀌고, 예전에 가져온 다른 줄(Drive에서 정리돼 지워진 run 포함)은 남습니다.
+- 모든 fine-tuned run의 기록 파일(`model_manifest.json`, `eval_config.yaml`, `notebook_code.py`)도 `results/finetune_runs/<TAG>/`로 저장돼
+  git에 남습니다 — 모델 가중치(`models/`)는 용량 때문에 git에 안 올라가므로, "어떤 설정·데이터·코드로 만든 run인지"는 여기서 봅니다.
+- 실험 중간에 팀원에게 빨리 공유하고 싶으면 Colab `10. 리더보드` 출력을 복사해 공유해도 되지만, 공식 기록은 이 표입니다.
 
 **숫자 읽는 법**
 - val은 136개 쿼리라 nDCG@10에 ±0.05 정도 오차가 있습니다. **차이가 0.03보다 작거나 p가 크면 "개선"이라 하지 않습니다.**
@@ -217,11 +237,21 @@ TAG	이름	베이스모델	NOTE	학습데이터해시	GPU	precision	eval_dtype	l
    python scripts/import_colab_results.py --drive-dir "C:/Users/me/Downloads/store-search-ai" --dry-run   # 무엇을 옮길지 확인
    python scripts/import_colab_results.py --drive-dir "C:/Users/me/Downloads/store-search-ai" --verify
    ```
-   - 평가 결과 → `results/model_eval/`, `artifacts/evaluation/storesearch_ko_v1/` (SMOKE 같은 비공식 평가는 자동 제외)
-   - **KEEP 표시한 run**만 → `models/<TAG>/` + `configs/models/<TAG>.yaml` (특정 run만: `--models <TAG> ...`)
-   - `--verify`: 로컬 공식 evaluator로 다시 채점해 Colab 점수와 같은지 확인(다르면 종료코드 1)
+   **`results/` 밑에 폴더를 손으로 복사하지 마세요** — 이 스크립트가 정해진 자리로 나눠 넣고 검증·기록까지 합니다:
+
+   | Drive `store-search-ai/runs/` | → 저장소 | git |
+   |---|---|---|
+   | `model_eval/<이름>/run_*.csv` (검색 결과) | `results/model_eval/<이름>/` | 커밋 |
+   | `evaluation/*_evaluation.json`, `*_per_query.csv` (지표) | `artifacts/evaluation/storesearch_ko_v1/` | 커밋 |
+   | `finetune/<TAG>/`의 manifest·eval_config·notebook_code (모든 run) | `results/finetune_runs/<TAG>/` | 커밋 |
+   | (자동 생성) 평가마다 한 줄 | `results/experiments.csv` | 커밋 |
+   | `finetune/<TAG>/` 모델 전체 — **KEEP한 run만**(또는 `--models <TAG> ...`) | `models/<TAG>/` | 안 함(.gitignore, 용량) |
+   | 그 run의 `eval_config.yaml` | `configs/models/<TAG>.yaml` | 커밋 |
+
+   - SMOKE 같은 비공식 평가는 자동으로 빠집니다(`runs_smoke/`는 내려받지 않아도 됨).
+   - `--verify`: 가져온 평가를 로컬 공식 evaluator로 다시 채점해 Colab 점수와 같은지 확인(다르면 종료코드 1).
 3. `git add results/ artifacts/ configs/models/` → 커밋. 좋은 기법이 들어간 노트북도 `colab/train_eval.ipynb`로 커밋.
-   (`models/`는 용량 때문에 .gitignore — 서비스 후보 모델은 팀 공유 스토리지에 따로 보관)
+   서비스 후보 모델(`models/<TAG>/`)은 팀 공유 스토리지에 따로 보관합니다.
 
 ## 10. 서비스에 쓸 수 있는 상태인지
 

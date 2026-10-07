@@ -6,6 +6,14 @@ Colab 노트북이 Drive `store-search-ai/runs/` 밑에 쌓은 것을 저장소�
     runs/evaluation/*_evaluation.json, *_per_query  → artifacts/evaluation/<benchmark_version>/   (공식 평가만)
     runs/finetune/<TAG>/ (KEEP 표시된 run 또는 --models로 고른 run)
                                                     → models/<TAG>/  +  configs/models/<TAG>.yaml (eval_config.yaml)
+    runs/finetune/<TAG>/ 의 기록 파일(모든 run)       → results/finetune_runs/<TAG>/
+                                                       (model_manifest.json, eval_config.yaml, notebook_code.py — 작은 텍스트)
+    + 공식 평가마다 한 줄씩                          → results/experiments.csv  (실험 기록표, TAG 기준으로 갱신)
+
+`results/experiments.csv`는 팀 실험 기록표다: 평가 하나당 한 줄(모델, 누가, NOTE, 학습 데이터 해시, GPU, 학습 precision,
+평가 dtype, 라이브러리, 지표, 기준 대비 Δ·p, KEEP 여부). manifest와 평가 json에서 자동으로 채우므로 사람이 적을 필요가 없고,
+이미 있는 줄은 같은 평가 TAG면 새 값으로 바뀐다(Drive에서 정리돼 지워진 run의 줄도 남는다). 모델 가중치(`models/`)는
+.gitignore라 git에 안 올라가므로, 어떤 run이었는지는 `results/finetune_runs/<TAG>/model_manifest.json`으로 남긴다.
 
 `--verify`: 가져온 평가 json마다 로컬 qrels + 가져온 run.csv로 **공식 evaluator를 다시 돌려** Colab에서 낸 지표와
 같은지 확인한다(같은 함수라 같아야 정상 — 다르면 qrels 버전이 다른 것). 하나라도 다르면 종료코드 1.
@@ -25,6 +33,8 @@ import argparse
 import json
 import shutil
 from pathlib import Path, PureWindowsPath
+
+import pandas as pd
 
 from store_search_ai.pipeline.common import load_config
 
@@ -68,12 +78,77 @@ def plan_import(drive_dir: Path, repo_root: Path, benchmark_version: str, models
         for run_dir in sorted(finetune.iterdir()):
             if not run_dir.is_dir() or not (run_dir / "model_manifest.json").exists():
                 continue
+            for name in RECORD_FILES:   # 기록 파일은 KEEP과 상관없이 전부(작은 텍스트, git에 남김)
+                if (run_dir / name).exists():
+                    plan.append((run_dir / name, repo_root / "results" / "finetune_runs" / run_dir.name / name))
             chosen = run_dir.name in models if models else (run_dir / "KEEP").exists()
             if chosen:
                 plan.append((run_dir, repo_root / "models" / run_dir.name))
                 if (run_dir / "eval_config.yaml").exists():
                     plan.append((run_dir / "eval_config.yaml", repo_root / "configs" / "models" / f"{run_dir.name}.yaml"))
     return plan
+
+
+RECORD_FILES = ("model_manifest.json", "eval_config.yaml", "notebook_code.py")
+
+EXPERIMENT_COLUMNS = [
+    "eval_tag", "model", "kind", "owner", "base_model", "note", "train_data_sha8", "gpu", "precision", "eval_dtype",
+    "libs", "nDCG@10", "Judged@10", "Recall@100", "MRR@100", "Bpref", "delta_nDCG@10", "p_nDCG@10", "baseline",
+    "keep", "evaluated_at",
+]
+
+
+def experiment_rows(drive_dir: Path, models: list[str] | None = None) -> list[dict]:
+    """Drive runs/의 공식 평가마다 실험 기록표 한 줄(평가 json + 그 모델의 manifest)."""
+
+    runs = drive_dir / "runs"
+    eval_dir = runs / "evaluation"
+    rows = []
+    for path in sorted(eval_dir.glob("*_evaluation.json")) if eval_dir.exists() else []:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        if not report.get("official", True):
+            continue
+        model = _run_path(report).parent.name
+        run_dir = runs / "finetune" / model
+        manifest_path = run_dir / "model_manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+        aggregate = report.get("aggregate", {})
+        ndcg = (report.get("comparison") or {}).get("metrics", {}).get("nDCG@10", {})
+        libs = report.get("library_versions") or {}
+        rows.append({
+            "eval_tag": report["tag"],
+            "model": model,
+            "kind": "fine-tuned" if manifest else "zero-shot",
+            "owner": manifest.get("owner"),
+            "base_model": manifest.get("base_model_id") or report.get("model_id"),
+            "note": (manifest.get("hyperparameters") or {}).get("note"),
+            "train_data_sha8": ((manifest.get("training_data") or {}).get("sha256") or "")[:8] or None,
+            "gpu": (manifest.get("environment") or {}).get("gpu"),
+            "precision": manifest.get("precision"),
+            "eval_dtype": report.get("eval_dtype"),
+            "libs": f"st{libs.get('sentence-transformers')}/tf{libs.get('transformers')}" if libs else None,
+            **{m: aggregate.get(m) for m in ("nDCG@10", "Judged@10", "Recall@100", "MRR@100", "Bpref")},
+            "delta_nDCG@10": ndcg.get("delta_mean"),
+            "p_nDCG@10": ndcg.get("paired_permutation_pvalue"),
+            "baseline": (report.get("comparison") or {}).get("baseline_tag"),
+            "keep": bool(manifest) and ((run_dir / "KEEP").exists() or model in (models or [])),
+            "evaluated_at": report.get("evaluated_at"),
+        })
+    return rows
+
+
+def update_experiment_registry(path: Path, rows: list[dict]) -> pd.DataFrame:
+    """기존 기록표에 rows를 합친다(같은 eval_tag는 새 값으로 교체, 나머지 줄은 유지)."""
+
+    new = pd.DataFrame(rows, columns=EXPERIMENT_COLUMNS)
+    if path.exists():
+        old = pd.read_csv(path, encoding="utf-8-sig")
+        old = old[~old["eval_tag"].isin(new["eval_tag"])]
+        new = pd.concat([old, new], ignore_index=True) if len(old) else new
+    new = new.reindex(columns=EXPERIMENT_COLUMNS).sort_values(["eval_tag"]).reset_index(drop=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    new.to_csv(path, index=False, encoding="utf-8-sig", lineterminator="\n")
+    return new
 
 
 def apply_plan(plan: list[tuple[Path, Path]]) -> None:
@@ -133,10 +208,15 @@ def main() -> None:
     plan = plan_import(drive_dir, repo_root, config["benchmark_version"], args.models)
     for src, dst in plan:
         print(f"{'[예정]' if args.dry_run else '[복사]'} {src}  →  {dst.relative_to(repo_root)}")
+    rows = experiment_rows(drive_dir, args.models)
+    registry = repo_root / "results" / "experiments.csv"
     if args.dry_run:
+        print(f"[예정] {registry.relative_to(repo_root)}에 평가 {len(rows)}줄 기록")
         return
     apply_plan(plan)
     print(f"[완료] {len(plan)}개 항목 복사")
+    table = update_experiment_registry(registry, rows)
+    print(f"[기록] {registry.relative_to(repo_root)} — 평가 {len(rows)}줄 갱신(전체 {len(table)}줄)")
 
     if args.verify:
         eval_files = [dst for _, dst in plan if dst.name.endswith("_evaluation.json")]

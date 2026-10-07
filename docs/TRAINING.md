@@ -6,7 +6,7 @@
 그대로 채점합니다("run을 채점하는 evaluator는 하나만 둔다", `docs/MODELING.md` 참고).
 
 > **학습만 맡은 팀원은 `docs/TRAINING_TEAM.md`부터 보세요** — 배포된 학습 데이터로 Colab 학습 → 평가 →
-> 공유 시트 기록까지의 절차와 팀 규칙만 모아 둔 문서입니다. 이 문서는 그 배경(설계 이유·설정 의미)입니다.
+> 실험 기록(`results/experiments.csv`)까지의 절차와 팀 규칙만 모아 둔 문서입니다. 이 문서는 그 배경(설계 이유·설정 의미)입니다.
 
 ## 사전 조건
 
@@ -188,8 +188,9 @@ python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai
 | `data_version` | `pack_for_colab.py`가 적은 데이터의 git 브랜치·커밋, 파일별 sha256 — Colab엔 .git이 없어서 사람이 커밋 번호를 적지 않아도 되게 |
 | `evaluations` | 평가할 때마다 추가되는 split별 지표(Colab은 노트북 `evaluate()`, 로컬은 14번) |
 
-체크포인트 폴더(가중치+manifest)는 `.gitignore` 대상이라 git에는 안 올라갑니다 — 팀과 공유하려면
-폴더를 통째로 공유 스토리지에 두고, 공유 시트에는 TAG와 val 지표를 적습니다.
+모델 가중치 폴더(`models/<TAG>/`)는 `.gitignore` 대상이라 git에는 안 올라갑니다 — 서비스 후보는 폴더를 통째로 공유 스토리지에 둡니다.
+대신 `import_colab_results.py`가 모든 run의 manifest·eval_config·notebook_code를 `results/finetune_runs/<TAG>/`로, 평가마다 한 줄을
+`results/experiments.csv`(실험 기록표)로 저장소에 남깁니다.
 서빙 인프라(API, ANN 인덱스 등)는 아직 이 저장소 범위 밖입니다 — 이 매니페스트의 `serving`이
 "서빙이 학습·평가와 똑같이 인코딩하려면 무엇을 맞춰야 하는지"의 단일 기준입니다.
 
@@ -256,7 +257,7 @@ keep_fp32_wrapper=False)`로 그 덮개를 벗기고, 저장 dtype으로 바꾸�
 
 ### 비교·재개 규칙
 
-- **학습 정밀도가 같은 run끼리** 비교합니다(manifest `precision`, 공유 시트 `precision` 열). fp16 AMP와 bf16 AMP 결과는 보통 차이가 작지만
+- **학습 정밀도가 같은 run끼리** 비교합니다(manifest `precision`, 실험 기록표 `precision` 열). fp16 AMP와 bf16 AMP 결과는 보통 차이가 작지만
   0은 아닙니다.
 - **평가 dtype이 같은 결과끼리** 비교합니다(리더보드 `eval_dtype`).
 - **이어서 학습(`RESUME_TAG`)은 처음과 같은 종류의 GPU에서만** 됩니다 — `run_config.json`에 precision이 기록되고 다르면 거부합니다
