@@ -143,3 +143,19 @@ def test_notebook_run_management_rules(ns, tmp_path):
         "bge_m3_ft_minho_20261001_0000",
     ]
     assert ns["latest_checkpoint"](tmp_path / "missing") is None
+
+
+def test_notebook_pool_runs_cover_val_and_test_without_scoring(ns, tmp_path):
+    import yaml
+
+    ns.update(yaml=yaml, RUNS=tmp_path / "runs", MODEL_PRESETS={},
+              queries=pd.DataFrame({"query_id": ["q1", "q2"], "query": ["치킨", "빵"], "split": ["val", "test"]}))
+    exec(compile(_cell("pool"), "<notebook:pool>", "exec"), ns)  # noqa: S102 — 목록이 비어 있으면 정의만 한다
+    ns["POOL_DEPTH"] = 2
+    ns["make_pool_run"]({"name": "m", "model_id": "x"}, model=_FakeModel())
+
+    run = pd.read_csv(tmp_path / "runs" / "pooling_runs" / "m.csv", encoding="utf-8-sig")
+    assert set(run["query_id"]) == {"q1", "q2"}              # val + test 둘 다
+    assert run.groupby("query_id")["rank"].max().eq(2).all() and set(run["system"]) == {"m"}
+    assert run[run["rank"] == 1].set_index("query_id")["doc_id"].to_dict() == {"q1": "d1", "q2": "d2"}
+    assert not (tmp_path / "runs" / "evaluation").exists()  # 채점 결과는 만들지 않음

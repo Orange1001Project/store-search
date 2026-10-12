@@ -146,3 +146,64 @@ def merge_into_base_adjudication(base: pd.DataFrame, supplemental: pd.DataFrame)
     columns = list(base.columns) + [c for c in supplemental.columns if c not in base.columns]
     merged = pd.concat([base, supplemental.reindex(columns=columns)], ignore_index=True)
     return merged[columns]
+
+
+# ============================================================
+# 모델 run 기반 보충(dense pooling) — TREC 관례: 성격이 다른 검색기의 상위 k개를 pool에 더한다
+# ============================================================
+
+RUN_COLUMNS = ["query_id", "doc_id", "rank", "score", "system"]
+
+
+def load_supplement_runs(runs_dir: Path, max_depth: int, query_ids: set[str], existing_systems: set[str]) -> pd.DataFrame:
+    """`runs_dir/*.csv`(노트북 15번이 만든 모델 run) 중 대상 쿼리의 상위 `max_depth`개만 읽는다.
+
+    파일 하나 = system 하나여야 하고, 이미 pool에 있는 system(lexical 3종 등)과 이름이 겹치면 안 된다 — 같은 이름이면
+    pool_sources에서 기존 run의 순위를 덮어써 어느 run이 그 후보를 넣었는지 알 수 없게 된다.
+    """
+
+    files = sorted(Path(runs_dir).glob("*.csv"))
+    if not files:
+        raise FileNotFoundError(f"{runs_dir}에 run CSV가 없습니다 — 노트북 15번 결과(runs/pooling_runs/)를 내려받은 경로를 주세요.")
+    frames, names = [], []
+    for path in files:
+        frame = pd.read_csv(path, encoding="utf-8-sig")
+        missing = set(RUN_COLUMNS) - set(frame.columns)
+        if missing:
+            raise ValueError(f"{path.name}: 필요한 컬럼이 없습니다 {sorted(missing)}")
+        systems = set(frame["system"].astype(str))
+        if len(systems) != 1:
+            raise ValueError(f"{path.name}: 파일 하나에 system이 하나여야 합니다 — {sorted(systems)}")
+        names.append(systems.pop())
+        frames.append(frame[RUN_COLUMNS])
+    if len(set(names)) != len(names):
+        raise ValueError(f"같은 system 이름의 run 파일이 두 개 이상입니다: {sorted(names)}")
+    runs = pd.concat(frames, ignore_index=True)
+    runs["query_id"], runs["doc_id"], runs["system"] = (runs[c].astype(str) for c in ("query_id", "doc_id", "system"))
+
+    clash = set(runs["system"]) & existing_systems
+    if clash:
+        raise ValueError(f"이미 pool에 있는 system과 이름이 겹칩니다: {sorted(clash)}")
+    covered = runs[runs["query_id"].isin(query_ids)]
+    seen = covered.groupby("system")["query_id"].agg(set).to_dict()
+    short = {s: sorted(query_ids - seen.get(s, set()))[:3] for s in names if query_ids - seen.get(s, set())}
+    if short:
+        raise ValueError(f"대상 쿼리 일부가 run에 없습니다(앞 3개): {short}")
+    return covered[covered["rank"] <= max_depth].reset_index(drop=True)
+
+
+def new_pair_counts(runs: pd.DataFrame, pooled: set[tuple[str, str]], depths: list[int]) -> pd.DataFrame:
+    """depth별로 각 run이 새로 들고 오는 (쿼리, 문서) 수와 전체 합집합 — 판정 비용을 보고 depth를 정하는 표."""
+
+    rows = []
+    n_queries = runs["query_id"].nunique()
+    for depth in depths:
+        top = runs[runs["rank"] <= depth]
+        is_new = [(q, d) not in pooled for q, d in zip(top["query_id"], top["doc_id"])]
+        new = top[is_new]
+        row = {"depth": depth, **new.groupby("system").size().to_dict()}
+        union = new.drop_duplicates(["query_id", "doc_id"])
+        row["union"] = len(union)
+        row["union_per_query"] = round(len(union) / n_queries, 1) if n_queries else 0.0
+        rows.append(row)
+    return pd.DataFrame(rows).fillna(0)

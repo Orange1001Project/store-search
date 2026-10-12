@@ -35,6 +35,7 @@
 | [29] | 12. SMOKE 확인 | 실행 | 전체 흐름 자동 점검 | 안 함 |
 | [31] | 13. KEEP | 실행 | 남길 run 표시 | TAG만 |
 | [33] | 14. test | 실행 | 최종 후보만 test 채점 | 안 함 |
+| [35] | 15. 보충 pooling run | 실행 | val+test 검색 결과만 저장(채점 없음) | 목록만 |
 
 **정의 셀과 실행 셀**: [7]·[12]·[14]·[16]·[17]·[19]는 함수만 정의하고 아무것도 실행하지 않습니다. 실제 일은 [21] 이후 셀이
 그 함수를 부를 때 일어납니다. 함수들은 `RUN_DIR`, `corpus`, `RECORDS` 같은 전역 값을 **호출하는 순간** 읽기 때문에, 설정([5])이나
@@ -66,6 +67,7 @@ preset·HP ──[14] build_model / build_loss──▶ model(+LoRA) · loss(GIS
 | `runs/model_eval/<이름>/run_<template>_<split>.csv` | `evaluate` | 검색 결과(query별 top 100) |
 | `runs/evaluation/<이름>_<template>_<split>_evaluation.json` | `evaluate` | 지표·신뢰구간·기준 대비 비교 |
 | `runs/evaluation/..._per_query.csv` | `evaluate` | 쿼리별 지표 |
+| `runs/pooling_runs/<이름>.csv` | 15번 `make_pool_run` | 보충 pooling용 val+test 검색 결과(query별 top `POOL_DEPTH`), 채점 없음 |
 | `runs_smoke/...` | `SMOKE=True` | 위와 같은 구조, 비공식 |
 
 TAG 형식: `<모델이름>_ft_<OWNER>_<UTC 날짜>_<시각>` (예: `qwen3_embedding_0_6b_ft_kse1_20261006_0647`).
@@ -435,6 +437,13 @@ if not EVAL_RUN_TAG:
 
 `FINAL_TEST=True`일 때만. 기준 zero-shot의 test run이 없으면 먼저 만들고, 9번에서 정한 `eval_cfg` 모델을 test로 채점해 비교합니다.
 팀이 최종 후보를 정한 뒤 **한 번만** 실행합니다(여러 번 보고 고르면 test가 val처럼 오염됨).
+
+## [35] 15. 보충 pooling run `# @cell pool`
+
+벤치마크 담당이 **한 번만** 씁니다. `POOL_RUN_MODELS`(preset 키)와 `POOL_RUN_FINETUNED`(Drive `runs/finetune/` TAG)에 적은 모델마다
+val+test 쿼리의 상위 `POOL_DEPTH`(기본 100)개를 `runs/pooling_runs/<이름>.csv`로 저장합니다. 지표를 계산하지 않으므로 test 점수를 보는
+것이 아닙니다. 이미 있는 파일은 건너뛰고, prompt만 다른 변형은 문서 임베딩을 재사용합니다. 저장소에서
+`scripts/16_supplemental_round.py make-runs`가 이 파일로 판정 시트를 만듭니다(`docs/PIPELINE.md` 6-2).
 
 ---
 

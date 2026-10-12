@@ -4,7 +4,9 @@ import pytest
 from store_search_ai.data.annotation_sheets import build_judgment_id
 from store_search_ai.data.supplemental_round import (
     build_supplemental_sheet_rows,
+    load_supplement_runs,
     merge_into_base_adjudication,
+    new_pair_counts,
     select_new_pairs,
     target_queries_with_terms,
 )
@@ -140,3 +142,39 @@ def test_combine_with_supplemental_keeps_base_and_rejects_overlap():
     assert base["judgment_id"].tolist() == ["a"]  # 원본은 그대로
     with pytest.raises(ValueError):
         combine_with_supplemental(base, [pd.DataFrame({"judgment_id": ["a"], "supplemental_round": ["s3"]})])
+
+
+def _write_run(path, system, rows):
+    pd.DataFrame(
+        [{"query_id": q, "doc_id": d, "rank": r, "score": 1.0 / r, "system": system} for q, d, r in rows]
+    ).to_csv(path, index=False, encoding="utf-8-sig")
+
+
+def test_load_supplement_runs_filters_targets_and_rejects_bad_runs(tmp_path):
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+    _write_run(runs_dir / "a.csv", "dense_a", [("q1", "d1", 1), ("q1", "d2", 2), ("q1", "d3", 3), ("q9", "d1", 1)])
+    runs = load_supplement_runs(runs_dir, 2, {"q1"}, {"char_bm25_v1"})
+    assert runs[["query_id", "doc_id"]].values.tolist() == [["q1", "d1"], ["q1", "d2"]]   # 대상 쿼리·depth만
+
+    with pytest.raises(ValueError, match="겹칩니다"):
+        load_supplement_runs(runs_dir, 2, {"q1"}, {"dense_a"})
+    with pytest.raises(ValueError, match="run에 없습니다"):
+        load_supplement_runs(runs_dir, 2, {"q1", "q2"}, set())
+    _write_run(runs_dir / "b.csv", "dense_a", [("q1", "d1", 1)])
+    with pytest.raises(ValueError, match="두 개 이상"):
+        load_supplement_runs(runs_dir, 2, {"q1"}, set())
+
+
+def test_new_pair_counts_counts_only_unpooled_pairs_per_depth():
+    runs = pd.DataFrame(
+        {
+            "query_id": ["q1"] * 4,
+            "doc_id": ["d1", "d2", "d1", "d3"],
+            "rank": [1, 2, 1, 2],
+            "system": ["a", "a", "b", "b"],
+        }
+    )
+    table = new_pair_counts(runs, {("q1", "d1")}, [1, 2]).set_index("depth")
+    assert table.loc[1, "union"] == 0                                   # d1은 이미 pool에 있음
+    assert (table.loc[2, "a"], table.loc[2, "b"], table.loc[2, "union"]) == (1, 1, 2)

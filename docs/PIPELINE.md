@@ -207,6 +207,27 @@ python scripts/12_validate_benchmark.py --stage final
 - 12번 final의 이중 판정 검사는 "adjudication에서 확정(점수 또는 gold 제외)된 행"을 완료로 센다
   (`resolution_coverage`). 한쪽 애노테이터가 uncertain으로 둔 행도 adjudication에서 결론이 났으면 확정이다.
 
+## 6-2. 모델 run 보충 pooling (16번 make-runs) — 임베딩 모델 결과가 판정되지 않을 때
+
+본 라운드 pool은 lexical 3종(char BM25/TF-IDF)으로만 만들어서, 임베딩 모델 상위 10개의 약 60%가 판정 없음(Judged@10 ≈ 0.4)이고
+그만큼 nDCG가 낮게 나온다. TREC 관례대로 성격이 다른 모델 여러 개의 상위 k개를 pool에 더해 **새 후보만** 판정한다. 한 번으로 끝내려면
+앞으로 비교할 모델 계열을 모두 넣는다(zero-shot 여러 계열 + 학습 모델).
+
+```bash
+# 1) Colab 노트북 15번: POOL_RUN_MODELS / POOL_RUN_FINETUNED를 채워 실행 → Drive runs/pooling_runs/*.csv
+# 2) 내려받은 폴더로 depth별 판정 건수 확인(아무것도 쓰지 않음)
+python scripts/16_supplemental_round.py make-runs --round supplement_v2 --runs-dir <pooling_runs> --dry-run
+# 3) depth를 정해 시트 생성 → annotations/supplement_v2/annotation_A.csv, annotation_B.csv
+#    (쓴 run 사본은 runs/supplement_v2/, system·depth·sha256은 supplemental_manifest.json)
+python scripts/16_supplemental_round.py make-runs --round supplement_v2 --runs-dir <pooling_runs> --depth 20 --reason "..."
+# 4) 이후는 6-1과 같다: A/B 판정 → merge → 11 → 12
+```
+
+- val/test 전체가 대상이다(train은 provisional 단일 판정이라 이 라운드에 넣지 않음). 이미 pool에 있는 (쿼리, 문서)는 다시 판정하지 않는다.
+- 같은 `--round`로 다시 만들면 멈춘다(채우는 중인 시트를 덮어쓰지 않도록). depth를 바꾸려면 시트를 배포하기 전에 라운드 폴더를 지우고 다시 만든다.
+- 하이브리드(BM25+임베딩) 상위 결과는 대부분 lexical run 상위 40개(이미 pool)나 임베딩 run 상위 k개 안에 있어 따로 넣지 않는다.
+  판정 후 Judged@10으로 확인한다.
+
 ## 7. 모델 평가 — zero-shot 비교, 이후 fine-tuning 평가에도 재사용 (선택)
 
 ```bash
