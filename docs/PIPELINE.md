@@ -218,7 +218,7 @@ python scripts/12_validate_benchmark.py --stage final
 # 2) 내려받은 폴더로 depth별 판정 건수 확인(아무것도 쓰지 않음)
 python scripts/16_supplemental_round.py make-runs --round supplement_v2 --runs-dir <pooling_runs> --dry-run
 # 3) depth를 정해 시트 생성 → annotations/supplement_v2/annotation_A.csv, annotation_B.csv
-#    (쓴 run 사본은 runs/supplement_v2/, system·depth·sha256은 supplemental_manifest.json)
+#    (쓴 run 사본은 annotations/supplement_v2/runs/, system·depth·sha256은 supplemental_manifest.json)
 python scripts/16_supplemental_round.py make-runs --round supplement_v2 --runs-dir <pooling_runs> --depth 20 --reason "..."
 # 4) 이후는 6-1과 같다: A/B 판정 → merge → 11 → 12
 ```

@@ -1,16 +1,22 @@
 {
-  "round": "supplement_v1",
-  "pool_rows": 52167,
+  "round": "supplement_v2",
+  "pool_rows": 65926,
   "queries": 548,
   "pool_systems": [
+    "bge_m3",
     "char_bm25_v1",
     "char_tfidf_v1",
-    "char_tfidf_v2"
+    "char_tfidf_v2",
+    "qwen3_embedding_0_6b",
+    "qwen3_embedding_0_6b_ft_kse1_20261006_0708",
+    "qwen3_embedding_0_6b_store",
+    "snowflake_arctic_embed_l_v2_ko",
+    "snowflake_arctic_embed_l_v2_ko_query"
   ],
-  "pool_system_count": 3,
-  "mean_pool_size": 95.19525547445255,
+  "pool_system_count": 9,
+  "mean_pool_size": 120.3029197080292,
   "min_pool_size": 27,
-  "median_pool_size": 93.0,
-  "max_pool_size": 160,
-  "first_seen_in_this_round": 52
+  "median_pool_size": 118.0,
+  "max_pool_size": 212,
+  "first_seen_in_this_round": 13759
 }

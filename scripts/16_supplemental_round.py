@@ -28,7 +28,7 @@
 
   1') 노트북 15번이 만든 Drive runs/pooling_runs/*.csv를 내려받아, 먼저 depth별 판정 건수만 본다
      python scripts/16_supplemental_round.py make-runs --round supplement_v2 --runs-dir <pooling_runs 경로> --dry-run
-     depth를 정해 시트 생성(쓴 run 사본은 benchmark/.../runs/supplement_v2/에 남는다)
+     depth를 정해 시트 생성(쓴 run 사본은 annotations/supplement_v2/runs/에 남는다)
      python scripts/16_supplemental_round.py make-runs --round supplement_v2 --runs-dir <...> --depth 20 --reason "..."
   2)~4)는 같다.
 """
@@ -193,8 +193,9 @@ def make_runs(args, config: dict, benchmark_dir: Path) -> None:
     if new_pairs.empty:
         raise SystemExit("새 후보가 없습니다 — 모든 run의 상위 후보가 이미 판정돼 있습니다.")
 
-    # 어떤 run으로 넓혔는지 재현할 수 있게, 쓴 depth까지의 run 사본을 저장소에 남긴다
-    run_copy_dir = benchmark_dir / "runs" / args.round
+    # 어떤 run으로 넓혔는지 재현할 수 있게, 쓴 depth까지의 run 사본을 라운드 폴더에 남긴다
+    # (benchmark/.../runs/는 .gitignore라 거기 두면 저장소에 안 남는다)
+    run_copy_dir = round_dir / "runs"
     run_copy_dir.mkdir(parents=True, exist_ok=True)
     systems = {}
     for system, frame in chosen.groupby("system"):

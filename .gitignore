@@ -36,3 +36,7 @@ __pycache__/
 
 # 내려받은 Drive 폴더(import_colab_results.py --drive-dir 입력, 모델 가중치 포함 — 커밋 금지)
 /store-search-ai*/
+
+# 노트북 15번이 만든 보충 pooling용 원본 run(top 100, 약 18MB). 실제로 pool에 넣은 depth까지의 사본은
+# benchmark/storesearch_ko_v1/annotations/<round>/runs/에 커밋된다.
+/results/pooling_runs/

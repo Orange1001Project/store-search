@@ -1,3 +1,4 @@
 ﻿round,pool_rows,queries,pool_systems,pool_system_count,mean_pool_size,min_pool_size,median_pool_size,max_pool_size,first_seen_in_this_round
 lexical_v1,52115,548,"['char_bm25_v1', 'char_tfidf_v1', 'char_tfidf_v2']",3,95.10036496350364,27,93.0,160,52115
-supplement_v1,52167,548,"['char_bm25_v1', 'char_tfidf_v1', 'char_tfidf_v2']",3,95.19525547445255,27,93.0,160,52
+supplement_v1,52167,548,"['char_bm25_v1', 'char_tfidf_v1', 'char_tfidf_v2']",3,95.19525547445257,27,93.0,160,52
+supplement_v2,65926,548,"['bge_m3', 'char_bm25_v1', 'char_tfidf_v1', 'char_tfidf_v2', 'qwen3_embedding_0_6b', 'qwen3_embedding_0_6b_ft_kse1_20261006_0708', 'qwen3_embedding_0_6b_store', 'snowflake_arctic_embed_l_v2_ko', 'snowflake_arctic_embed_l_v2_ko_query']",9,120.3029197080292,27,118.0,212,13759
