@@ -12,7 +12,8 @@ Colab 노트북이 Drive `store-search-ai/runs/` 밑에 쌓은 것을 저장소�
 
 `results/experiments.csv`는 팀 실험 기록표다: 평가 하나당 한 줄(모델, 누가, NOTE, 학습 데이터 해시, GPU, 학습 precision,
 평가 dtype, 라이브러리, 지표, 기준 대비 Δ·p, KEEP 여부). manifest와 평가 json에서 자동으로 채우므로 사람이 적을 필요가 없고,
-이미 있는 줄은 같은 평가 TAG면 새 값으로 바뀐다(Drive에서 정리돼 지워진 run의 줄도 남는다). 모델 가중치(`models/`)는
+이미 있는 줄은 같은 평가 TAG면 새 값으로 바뀐다(Drive에서 정리돼 지워진 run의 줄도 남는다 — 그 run의 manifest는
+전에 가져온 `results/finetune_runs/<TAG>/`에서 읽고, 거기도 없으면 그 평가 줄은 새로 쓰지 않고 기존 줄을 둔다). 모델 가중치(`models/`)는
 .gitignore라 git에 안 올라가므로, 어떤 run이었는지는 `results/finetune_runs/<TAG>/model_manifest.json`으로 남긴다.
 
 `--verify`: 가져온 평가 json마다 로컬 qrels + 가져온 run.csv로 **공식 evaluator를 다시 돌려** Colab에서 낸 지표와
@@ -105,8 +106,18 @@ EXPERIMENT_COLUMNS = [
 ]
 
 
-def experiment_rows(drive_dir: Path, models: list[str] | None = None) -> list[dict]:
-    """Drive runs/의 공식 평가마다 실험 기록표 한 줄(평가 json + 그 모델의 manifest)."""
+def _is_finetuned_report(report: dict) -> bool:
+    """노트북은 학습 모델을 Drive run 폴더(.../runs/finetune/<TAG>)로 평가하므로 model_id로 학습 모델인지 안다."""
+
+    return "finetune" in PureWindowsPath(str(report.get("model_id") or "")).parts
+
+
+def experiment_rows(drive_dir: Path, models: list[str] | None = None, repo_root: Path | None = None) -> list[dict]:
+    """Drive runs/의 공식 평가마다 실험 기록표 한 줄(평가 json + 그 모델의 manifest).
+
+    Drive에서 정리(prune_runs)돼 run 폴더가 지워진 학습 모델은 전에 가져온 `results/finetune_runs/<TAG>/model_manifest.json`
+    을 대신 읽는다. 그것도 없으면 zero-shot으로 잘못 덮어쓰지 않도록 그 평가 줄은 만들지 않는다(기존 줄 유지).
+    """
 
     runs = drive_dir / "runs"
     eval_dir = runs / "evaluation"
@@ -118,14 +129,21 @@ def experiment_rows(drive_dir: Path, models: list[str] | None = None) -> list[di
         model = _run_path(report).parent.name
         run_dir = runs / "finetune" / model
         manifest_path = run_dir / "model_manifest.json"
+        kept = (run_dir / "KEEP").exists()
+        if not manifest_path.exists() and repo_root is not None:
+            manifest_path = repo_root / "results" / "finetune_runs" / model / "model_manifest.json"
+            kept = (repo_root / "models" / model).exists()   # 전에 models/로 가져온 run
         manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+        if not manifest_path.exists() and _is_finetuned_report(report):
+            print(f"[건너뜀] {report['tag']}: 학습 run의 manifest가 Drive·저장소 어디에도 없어 기록표 줄을 바꾸지 않음")
+            continue
         aggregate = report.get("aggregate", {})
         ndcg = (report.get("comparison") or {}).get("metrics", {}).get("nDCG@10", {})
         libs = report.get("library_versions") or {}
         rows.append({
             "eval_tag": report["tag"],
             "model": model,
-            "kind": "fine-tuned" if manifest else "zero-shot",
+            "kind": "fine-tuned" if manifest_path.exists() else "zero-shot",
             "owner": manifest.get("owner"),
             "base_model": manifest.get("base_model_id") or report.get("model_id"),
             "note": (manifest.get("hyperparameters") or {}).get("note"),
@@ -138,7 +156,7 @@ def experiment_rows(drive_dir: Path, models: list[str] | None = None) -> list[di
             "delta_nDCG@10": ndcg.get("delta_mean"),
             "p_nDCG@10": ndcg.get("paired_permutation_pvalue"),
             "baseline": (report.get("comparison") or {}).get("baseline_tag"),
-            "keep": bool(manifest) and ((run_dir / "KEEP").exists() or model in (models or [])),
+            "keep": manifest_path.exists() and (kept or model in (models or [])),
             "evaluated_at": report.get("evaluated_at"),
         })
     return rows
@@ -215,7 +233,7 @@ def main() -> None:
     plan = plan_import(drive_dir, repo_root, config["benchmark_version"], args.models)
     for src, dst in plan:
         print(f"{'[예정]' if args.dry_run else '[복사]'} {src}  →  {dst.relative_to(repo_root)}")
-    rows = experiment_rows(drive_dir, args.models)
+    rows = experiment_rows(drive_dir, args.models, repo_root)
     registry = repo_root / "results" / "experiments.csv"
     if args.dry_run:
         print(f"[예정] {registry.relative_to(repo_root)}에 평가 {len(rows)}줄 기록")

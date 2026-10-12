@@ -31,6 +31,21 @@ def _git(*args: str) -> str | None:
         return None
 
 
+def _remove_previous_pack(output: Path) -> None:
+    """예전에 이 스크립트가 만든 결과물만 지운다. `--output .`·`data`처럼 잘못 준 경로를 통째로 지우지 않도록,
+    저장소 안팎의 작업 폴더·그 상위 폴더이거나 이 스크립트가 만든 흔적(data/data_version.json)이 없으면 멈춘다."""
+
+    if not output.exists():
+        return
+    resolved, cwd = output.resolve(), Path.cwd().resolve()
+    if resolved == cwd or resolved in cwd.parents or resolved == Path(resolved.anchor):
+        raise SystemExit(f"--output {output} 은 작업 폴더이거나 그 상위 폴더라 지울 수 없습니다 — 빈 폴더나 새 경로를 주세요.")
+    if not (output / "data" / "data_version.json").exists():
+        raise SystemExit(f"--output {output} 이 이미 있는데 pack_for_colab.py가 만든 폴더(data/data_version.json)가 아닙니다 — "
+                         "지우지 않고 멈춥니다. 직접 확인해 지우거나 다른 경로를 주세요.")
+    shutil.rmtree(output)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
@@ -53,8 +68,7 @@ def main() -> None:
         raise SystemExit(f"없는 파일: {missing} — 학습 데이터는 prepare_finetune_dataset.py, 정답은 11_build_qrels.py로 만든다")
 
     data_dir = Path(args.output) / "data"
-    if Path(args.output).exists():
-        shutil.rmtree(args.output)  # 예전 project/ 형식 결과물도 같이 지운다
+    _remove_previous_pack(Path(args.output))
     data_dir.mkdir(parents=True)
     for source in sources:
         shutil.copy2(source, data_dir / source.name)

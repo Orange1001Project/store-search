@@ -1,4 +1,5 @@
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -114,3 +115,27 @@ def test_records_all_finetune_runs_and_experiment_table(tmp_path):
     update_experiment_registry(registry, [{"eval_tag": "old_run_val", "model": "old"}])
     table = update_experiment_registry(registry, list(rows.values()))
     assert sorted(table["eval_tag"]) == ["good_t1_minimal_val", "m_ft_a_1_t1_minimal_val", "old_run_val"]  # 예전 줄 유지
+
+
+def test_pruned_finetune_run_keeps_its_experiment_row(tmp_path):
+    drive, repo, _ = _drive_with_results(tmp_path)
+    runs = drive / "runs"
+    report = json.loads((runs / "evaluation" / "good_t1_minimal_val_evaluation.json").read_text(encoding="utf-8"))
+    for name in ("m_ft_a_2", "m_ft_a_3"):   # Drive에 평가 json은 남고 run 폴더는 prune_runs로 지워진 학습 모델
+        report.update(tag=f"{name}_t1_minimal_val", run=str(runs / "model_eval" / name / "run_t1_minimal_val.csv"),
+                      model_id=f"/content/drive/MyDrive/store-search-ai/runs/finetune/{name}")
+        (runs / "evaluation" / f"{name}_t1_minimal_val_evaluation.json").write_text(json.dumps(report), encoding="utf-8")
+    shutil.rmtree(runs / "finetune" / "m_ft_a_2")
+    record = repo / "results" / "finetune_runs" / "m_ft_a_2"   # 전에 가져온 기록 파일
+    record.mkdir(parents=True)
+    (record / "model_manifest.json").write_text(json.dumps({"owner": "a", "precision": "fp16"}), encoding="utf-8")
+
+    rows = {r["eval_tag"]: r for r in experiment_rows(drive, repo_root=repo)}
+    assert (rows["m_ft_a_2_t1_minimal_val"]["kind"], rows["m_ft_a_2_t1_minimal_val"]["owner"]) == ("fine-tuned", "a")
+    assert "m_ft_a_3_t1_minimal_val" not in rows   # manifest가 어디에도 없으면 zero-shot으로 덮어쓰지 않음
+    assert rows["good_t1_minimal_val"]["kind"] == "zero-shot"
+
+    registry = repo / "results" / "experiments.csv"
+    update_experiment_registry(registry, [{"eval_tag": "m_ft_a_3_t1_minimal_val", "kind": "fine-tuned", "owner": "a"}])
+    table = update_experiment_registry(registry, list(rows.values())).set_index("eval_tag")
+    assert table.loc["m_ft_a_3_t1_minimal_val", "kind"] == "fine-tuned"
