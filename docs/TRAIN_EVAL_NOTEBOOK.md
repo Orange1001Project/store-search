@@ -36,6 +36,7 @@
 | [31] | 13. KEEP | 실행 | 남길 run 표시 | TAG만 |
 | [33] | 14. test | 실행 | 최종 후보만 test 채점 | 안 함 |
 | [35] | 15. 보충 pooling run | 실행 | val+test 검색 결과만 저장(채점 없음) | 목록만 |
+| [37] | 16. 재채점 | 실행 | qrels가 바뀐 뒤 Drive 평가를 같은 run으로 다시 채점 | 안 함 |
 
 **정의 셀과 실행 셀**: [7]·[12]·[14]·[16]·[17]·[19]는 함수만 정의하고 아무것도 실행하지 않습니다. 실제 일은 [21] 이후 셀이
 그 함수를 부를 때 일어납니다. 함수들은 `RUN_DIR`, `corpus`, `RECORDS` 같은 전역 값을 **호출하는 순간** 읽기 때문에, 설정([5])이나
@@ -444,6 +445,12 @@ if not EVAL_RUN_TAG:
 val+test 쿼리의 상위 `POOL_DEPTH`(기본 100)개를 `runs/pooling_runs/<이름>.csv`로 저장합니다. 지표를 계산하지 않으므로 test 점수를 보는
 것이 아닙니다. 이미 있는 파일은 건너뛰고, prompt만 다른 변형은 문서 임베딩을 재사용합니다. 저장소에서
 `scripts/16_supplemental_round.py make-runs`가 이 파일로 판정 시트를 만듭니다(`docs/PIPELINE.md` 6-2).
+
+## [37] 16. 기존 평가 다시 채점 `# @cell rescore`
+
+보충 판정 라운드로 qrels가 바뀌어 새 `data/`를 올린 뒤 한 번 실행합니다. Drive `runs/evaluation/`의 공식 평가마다 같은 run 파일을 새
+`QRELS`로 `score_run`해 json·per_query를 덮어씁니다(모델·인코딩 정보는 유지, `rescored`에 이전 지표). 지표가 그대로면 건드리지 않고,
+test 평가는 `FINAL_TEST=True`일 때만 다시 채점합니다. 실행하지 않으면 저장소 `import_colab_results.py`가 그 평가를 가져오지 않습니다.
 
 ---
 

@@ -221,12 +221,19 @@ python scripts/16_supplemental_round.py make-runs --round supplement_v2 --runs-d
 #    (쓴 run 사본은 annotations/supplement_v2/runs/, system·depth·sha256은 supplemental_manifest.json)
 python scripts/16_supplemental_round.py make-runs --round supplement_v2 --runs-dir <pooling_runs> --depth 20 --reason "..."
 # 4) 이후는 6-1과 같다: A/B 판정 → merge → 11 → 12
+# 5) qrels가 바뀌었으므로 기존 평가를 같은 run으로 다시 채점(모델 재실행 없음) → artifacts/evaluation, results/experiments.csv
+python scripts/rescore_evaluations.py
+# 6) pack_for_colab.py로 data/를 다시 만들어 Drive에 올리고, 노트북 16번으로 Drive 평가도 다시 채점
 ```
 
 - val/test 전체가 대상이다(train은 provisional 단일 판정이라 이 라운드에 넣지 않음). 이미 pool에 있는 (쿼리, 문서)는 다시 판정하지 않는다.
 - 같은 `--round`로 다시 만들면 멈춘다(채우는 중인 시트를 덮어쓰지 않도록). depth를 바꾸려면 시트를 배포하기 전에 라운드 폴더를 지우고 다시 만든다.
 - 하이브리드(BM25+임베딩) 상위 결과는 대부분 lexical run 상위 40개(이미 pool)나 임베딩 run 상위 k개 안에 있어 따로 넣지 않는다.
   판정 후 Judged@10으로 확인한다.
+- `import_colab_results.py`는 Drive 평가 중 저장소 qrels로 다시 매긴 지표와 다른 것(예전 qrels로 채점된 것)을 가져오지 않는다 —
+  5)에서 다시 채점한 값을 예전 점수로 덮지 않게. 노트북 16번을 돌린 뒤 가져오면 된다.
+- 결과(supplement_v2, 2026-10): 6종 × 상위 20개 → 새 판정 13,759쌍(val 6,254 / test 7,505), A·B 가중 kappa val 0.906 / test 0.931,
+  조정 1,477행(229행 gold 제외). val Judged@10: Qwen3-0.6B zero-shot 0.38 → 1.00, nDCG@10 0.39 → 0.87.
 
 ## 7. 모델 평가 — zero-shot 비교, 이후 fine-tuning 평가에도 재사용 (선택)
 

@@ -159,3 +159,22 @@ def test_notebook_pool_runs_cover_val_and_test_without_scoring(ns, tmp_path):
     assert run.groupby("query_id")["rank"].max().eq(2).all() and set(run["system"]) == {"m"}
     assert run[run["rank"] == 1].set_index("query_id")["doc_id"].to_dict() == {"q1": "d1", "q2": "d2"}
     assert not (tmp_path / "runs" / "evaluation").exists()  # 채점 결과는 만들지 않음
+
+
+def test_notebook_rescore_updates_drive_evaluations_after_qrels_change(ns, tmp_path):
+    ns["evaluate"]({"name": "base", "model_id": "x"}, model=_FakeModel())
+    ns["evaluate"]({"name": "ft", "model_id": "y"}, baseline_tag="base", model=_FakeModel(flip=True))
+    ns["FINAL_TEST"] = False
+    exec(compile(_cell("rescore"), "<notebook:rescore>", "exec"), ns)  # noqa: S102
+    assert ns["rescore_evaluations"]() == 0                      # qrels가 그대로면 아무것도 안 바뀜
+
+    qrels = tmp_path / "data" / "qrels_val.trec"
+    qrels.write_text("q1 0 d3 3\nq1 0 d1 1\nq2 0 d2 3\nq2 0 d1 1\n", encoding="utf-8")   # 보충 판정으로 정답이 바뀐 경우
+    assert ns["rescore_evaluations"]() == 2
+    path = tmp_path / "runs" / "evaluation" / "ft_t1_minimal_val_evaluation.json"
+    report = json.loads(path.read_text(encoding="utf-8"))
+    expected, _ = build_evaluation_report(qrels_path=qrels, run_path=Path(report["run"]), tag=report["tag"],
+                                          bootstrap_samples=200, seed=7)
+    assert report["aggregate"] == pytest.approx(expected["aggregate"])
+    assert report["model_id"] == "y" and "previous_aggregate" in report["rescored"]
+    assert report["comparison"]["baseline_tag"] == "base"

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from store_search_ai.evaluation.model_evaluation import evaluate_model
 
@@ -139,3 +140,31 @@ def test_pruned_finetune_run_keeps_its_experiment_row(tmp_path):
     update_experiment_registry(registry, [{"eval_tag": "m_ft_a_3_t1_minimal_val", "kind": "fine-tuned", "owner": "a"}])
     table = update_experiment_registry(registry, list(rows.values())).set_index("eval_tag")
     assert table.loc["m_ft_a_3_t1_minimal_val", "kind"] == "fine-tuned"
+
+
+def test_skips_evaluations_scored_with_old_qrels_and_rescores_locally(tmp_path):
+    from import_colab_results import stale_evaluations
+    from rescore_evaluations import rescore_report, update_registry
+
+    drive, repo, benchmark_dir = _drive_with_results(tmp_path)
+    assert stale_evaluations(drive, benchmark_dir) == {}
+    apply_plan(plan_import(drive, repo, "bv1", models=None))
+    registry = repo / "results" / "experiments.csv"
+    update_experiment_registry(registry, experiment_rows(drive))
+
+    (benchmark_dir / "qrels_val.trec").write_text("q1 0 d3 3\nq2 0 d2 3\n", encoding="utf-8")   # 보충 라운드로 qrels 변경
+    stale = stale_evaluations(drive, benchmark_dir)
+    assert set(stale) == {"good_t1_minimal_val_evaluation.json"}
+    targets = {dst.relative_to(repo).as_posix() for _, dst in plan_import(drive, repo, "bv1", None, skip=set(stale))}
+    assert not any(t.endswith("_evaluation.json") for t in targets)          # 예전 점수로 덮지 않음
+    assert "results/model_eval/good/run_t1_minimal_val.csv" in targets       # run 파일은 가져옴
+    assert experiment_rows(drive, skip=set(stale)) == []
+
+    local = repo / "artifacts" / "evaluation" / "bv1" / "good_t1_minimal_val_evaluation.json"
+    old = json.loads(local.read_text(encoding="utf-8"))
+    report, _ = rescore_report(old, repo, benchmark_dir, bootstrap=20, seed=1)
+    assert report["aggregate"]["nDCG@10"] < old["aggregate"]["nDCG@10"]       # q1 정답이 바뀌어 점수가 내려감
+    assert report["run"] == old["run"] and report["rescored"]["previous_aggregate"] == old["aggregate"]
+    assert update_registry(registry, [report]) == 1
+    row = pd.read_csv(registry, encoding="utf-8-sig").set_index("eval_tag").loc["good_t1_minimal_val"]
+    assert row["nDCG@10"] == pytest.approx(report["aggregate"]["nDCG@10"])

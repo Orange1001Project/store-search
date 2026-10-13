@@ -19,6 +19,10 @@ Colab 노트북이 Drive `store-search-ai/runs/` 밑에 쌓은 것을 저장소�
 `--verify`: 가져온 평가 json마다 로컬 qrels + 가져온 run.csv로 **공식 evaluator를 다시 돌려** Colab에서 낸 지표와
 같은지 확인한다(같은 함수라 같아야 정상 — 다르면 qrels 버전이 다른 것). 하나라도 다르면 종료코드 1.
 
+`--verify`와 상관없이, 가져오기 전에 Drive run을 저장소 qrels로 채점해 보고 지표가 다른 평가(보충 판정 라운드 전의 예전
+qrels로 채점된 것)는 평가 json·기록표 줄을 가져오지 않는다 — `rescore_evaluations.py`로 다시 채점해 둔 저장소 값을 예전 점수로
+덮지 않게. run 파일은 qrels와 무관하므로 가져온다. Drive 평가는 노트북 16번으로 다시 채점하면 된다.
+
 사용법:
     # Drive의 store-search-ai 폴더를 내려받아(웹 Drive에서 폴더 다운로드 → 압축 해제) 그 경로를 준다
     python scripts/import_colab_results.py --drive-dir "C:/Users/me/Downloads/store-search-ai" --verify
@@ -50,8 +54,43 @@ def _run_path(report: dict) -> PureWindowsPath:
     return PureWindowsPath(report["run"])
 
 
-def plan_import(drive_dir: Path, repo_root: Path, benchmark_version: str, models: list[str] | None) -> list[tuple[Path, Path]]:
-    """(원본, 대상) 복사 목록. 비공식(official=false, smoke test 등) 평가와 그 run은 뺀다."""
+def stale_evaluations(drive_dir: Path, benchmark_dir: Path) -> dict[str, dict]:
+    """Drive 평가 중 지금 저장소 qrels로 다시 매긴 지표와 다른 것(= 예전 qrels로 채점된 것) → {파일 이름: 차이}.
+
+    보충 판정 라운드로 qrels가 바뀐 뒤 Drive에 남은 예전 평가를 가져오면, rescore_evaluations.py로 다시 채점해 둔
+    저장소 평가·기록표가 예전 점수로 덮인다. 그래서 가져오기 전에 Drive run을 로컬 qrels로 채점해 보고 다르면 뺀다
+    (노트북 16번으로 Drive 평가를 다시 채점한 뒤 가져오면 된다). 지표만 계산하므로 bootstrap은 돌리지 않는다.
+    """
+
+    from store_search_ai.evaluation.evaluator import (
+        calculate_metrics,
+        load_qrels,
+        load_run,
+    )
+
+    stale = {}
+    eval_dir = drive_dir / "runs" / "evaluation"
+    for path in sorted(eval_dir.glob("*_evaluation.json")) if eval_dir.exists() else []:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        if not report.get("official", True):
+            continue
+        colab_run = _run_path(report)
+        run_file = drive_dir / "runs" / "model_eval" / colab_run.parent.name / colab_run.name
+        qrels = benchmark_dir / f"qrels_{colab_run.stem.rsplit('_', 1)[-1]}.trec"
+        if not run_file.exists() or not qrels.exists():
+            continue
+        local, _ = calculate_metrics(load_qrels(qrels), load_run(run_file))
+        diffs = {m: (report["aggregate"].get(m), v) for m, v in local.items()
+                 if abs((report["aggregate"].get(m) or 0) - v) > 1e-9}
+        if diffs:
+            stale[path.name] = diffs
+    return stale
+
+
+def plan_import(
+    drive_dir: Path, repo_root: Path, benchmark_version: str, models: list[str] | None, skip: set[str] = frozenset()
+) -> list[tuple[Path, Path]]:
+    """(원본, 대상) 복사 목록. 비공식(official=false, smoke test 등) 평가와 그 run은 뺀다. `skip`(예전 qrels 평가)도 뺀다."""
 
     runs = drive_dir / "runs"
     plan: list[tuple[Path, Path]] = []
@@ -62,6 +101,8 @@ def plan_import(drive_dir: Path, repo_root: Path, benchmark_version: str, models
         report = json.loads(path.read_text(encoding="utf-8"))
         if not report.get("official", True):
             unofficial_tags.add(_run_path(report).parent.name)
+            continue
+        if path.name in skip:   # run 파일은 qrels와 무관하므로 아래에서 그대로 가져온다
             continue
         target_dir = repo_root / "artifacts" / "evaluation" / benchmark_version
         plan.append((path, target_dir / path.name))
@@ -112,8 +153,10 @@ def _is_finetuned_report(report: dict) -> bool:
     return "finetune" in PureWindowsPath(str(report.get("model_id") or "")).parts
 
 
-def experiment_rows(drive_dir: Path, models: list[str] | None = None, repo_root: Path | None = None) -> list[dict]:
-    """Drive runs/의 공식 평가마다 실험 기록표 한 줄(평가 json + 그 모델의 manifest).
+def experiment_rows(
+    drive_dir: Path, models: list[str] | None = None, repo_root: Path | None = None, skip: set[str] = frozenset()
+) -> list[dict]:
+    """Drive runs/의 공식 평가마다 실험 기록표 한 줄(평가 json + 그 모델의 manifest). `skip`(예전 qrels 평가)은 뺀다.
 
     Drive에서 정리(prune_runs)돼 run 폴더가 지워진 학습 모델은 전에 가져온 `results/finetune_runs/<TAG>/model_manifest.json`
     을 대신 읽는다. 그것도 없으면 zero-shot으로 잘못 덮어쓰지 않도록 그 평가 줄은 만들지 않는다(기존 줄 유지).
@@ -124,7 +167,7 @@ def experiment_rows(drive_dir: Path, models: list[str] | None = None, repo_root:
     rows = []
     for path in sorted(eval_dir.glob("*_evaluation.json")) if eval_dir.exists() else []:
         report = json.loads(path.read_text(encoding="utf-8"))
-        if not report.get("official", True):
+        if not report.get("official", True) or path.name in skip:
             continue
         model = _run_path(report).parent.name
         run_dir = runs / "finetune" / model
@@ -230,10 +273,14 @@ def main() -> None:
     if not (drive_dir / "runs").exists():
         raise SystemExit(f"{drive_dir}/runs 가 없습니다 — Drive의 store-search-ai 폴더를 내려받은 경로를 주세요.")
 
-    plan = plan_import(drive_dir, repo_root, config["benchmark_version"], args.models)
+    stale = stale_evaluations(drive_dir, Path(config["benchmark_dir"]))
+    for name, diffs in stale.items():
+        print(f"[건너뜀] {name}: 저장소 qrels로 매긴 지표와 다름(예전 qrels로 채점됨) {diffs} — "
+              "노트북 16번으로 Drive 평가를 다시 채점한 뒤 가져오세요")
+    plan = plan_import(drive_dir, repo_root, config["benchmark_version"], args.models, skip=set(stale))
     for src, dst in plan:
         print(f"{'[예정]' if args.dry_run else '[복사]'} {src}  →  {dst.relative_to(repo_root)}")
-    rows = experiment_rows(drive_dir, args.models, repo_root)
+    rows = experiment_rows(drive_dir, args.models, repo_root, skip=set(stale))
     registry = repo_root / "results" / "experiments.csv"
     if args.dry_run:
         print(f"[예정] {registry.relative_to(repo_root)}에 평가 {len(rows)}줄 기록")
