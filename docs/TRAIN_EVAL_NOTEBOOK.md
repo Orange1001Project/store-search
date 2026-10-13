@@ -154,6 +154,8 @@ Drive에 쓴 결과(모델·평가)는 남습니다.
 | `weight_decay` | 0.01 | |
 | `max_seq_length` | 128 | 문서 평균 24자라 충분 |
 | `num_hard_negatives` | 3 | 행마다 붙는 hard negative 수. 학습 데이터에 query당 최대 8개. 7 이상이면 negative가 적은 query가 빠짐 |
+| `typo_variants_per_query` | 0 | 오타 증강. query마다 오타 변형 query를 몇 개 더할지(0=끔). 2면 237 → +474 query, 7,270 → 11,056행 |
+| `typo_positives_per_variant` | 8 | 오타 변형 query 하나에 붙일 정답 수(relevance 높은 순). negative는 원래 query와 같음 |
 | `max_positives_per_query` | 32 | query당 positive 상한(넓은 query 독점 방지) |
 | `loss` | preset | `"gist"` / `"mnrl"` |
 | `lora_rank`·`lora_alpha`·`lora_dropout` | preset·32·0.05 | LoRA 크기. `lora_rank=None`이면 full FT |
@@ -245,8 +247,24 @@ def expand_training_rows(records, num_hard_negatives, max_positives_per_query):
 - 같은 query의 행들은 같은 negative를 공유합니다.
 - 반환하는 `stats`는 manifest `training_data.expansion`에 기록됩니다.
 
-**실험 아이디어**: negative를 행마다 다르게 섞기(무작위 샘플), positive 상한을 query 크기에 따라 다르게, relevance=3인 positive만 쓰기,
-query 증강(띄어쓰기·오타 변형). 바꾸면 `NOTE`에 적으세요. 테스트(`tests/test_train_eval_notebook.py`)는 이 함수가 저장소의 기준 구현과
+### 오타 증강 — `augment_typo_records(records, variants_per_query, positives_per_variant, seed)`
+
+`HP["typo_variants_per_query"]`가 1 이상이면 `train_model`이 `RECORDS`에 오타 변형 query를 덧붙인 뒤 `expand_training_rows`로 펼칩니다
+(원래 query 행은 그대로). `make_typo`가 오타 하나를 넣습니다:
+
+| 종류 | 예 |
+|---|---|
+| 받침 바꾸기·빼기·붙이기(어느 음절이든) | 가방 → 갛방, 화장품 → 화장픔 |
+| 초성·모음을 두벌식 옆 키로 | 돼지갈비 → 돼지갈미 |
+| 비슷한 모음(ㅐ/ㅔ, ㅓ/ㅗ, ㅕ/ㅛ …) | 카페 → 카패 |
+| 음절 중복 / 빠짐(단어 첫 음절은 빼지 않음) | 양식 → 양양식, 아이 옷 파는 곳 → 아이 옷 파 곳 |
+| 띄어쓰기 넣기·빼기 | 건강식품 → 건강 식품 |
+| 접미어(추천·근처·어디) | 공구점 → 공구점추천 |
+
+벤치마크 T6는 "마지막 음절 받침 + 추천" 패턴으로 만들어졌습니다. 그 패턴만 흉내 내면 val 점수만 오르고 실제 오타에는 약할 수 있어 위치·종류를
+섞습니다. 쿼리별로 seed를 고정해(`seed + crc32(query)`) 다시 돌려도 같은 변형이 나옵니다.
+
+**실험 아이디어**: negative를 행마다 다르게 섞기(무작위 샘플), positive 상한을 query 크기에 따라 다르게, relevance=3인 positive만 쓰기. 바꾸면 `NOTE`에 적으세요. 테스트(`tests/test_train_eval_notebook.py`)는 이 함수가 저장소의 기준 구현과
 같은지 확인하므로, 의도적으로 바꾼 뒤 노트북을 저장소에 커밋할 때는 그 테스트도 같이 고쳐야 합니다.
 
 ---
@@ -419,6 +437,11 @@ if not EVAL_RUN_TAG:
 ## [25] 10. 리더보드
 
 `leaderboard("val")` 결과에서 주요 열만 출력. Δ·p는 기준 모델과의 비교값이라 **기준 모델 행 자신은 `-`**.
+
+이어서 **서비스 지표**(`service_metrics`, 공식 채점과 별개)를 run 파일과 val qrels로 계산해 출력합니다:
+- `bad@3`: 상위 3개에 오답(relevance ≤ 1 또는 판정 없음)이 하나라도 섞인 쿼리 비율 — **서비스 목표 ≤ 0.05**
+- `top1_ok`: 1위가 정답(relevance ≥ 2)인 비율
+- `bad@3 T1`…`bad@3 T6`: 쿼리 유형별 `bad@3`. 판정 없는 문서도 오답으로 세서 실제보다 약간 나쁘게 나옵니다.
 
 ## [27] 11. zero-shot 비교표
 

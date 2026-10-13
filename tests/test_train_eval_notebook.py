@@ -178,3 +178,56 @@ def test_notebook_rescore_updates_drive_evaluations_after_qrels_change(ns, tmp_p
     assert report["aggregate"] == pytest.approx(expected["aggregate"])
     assert report["model_id"] == "y" and "previous_aggregate" in report["rescored"]
     assert report["comparison"]["baseline_tag"] == "base"
+
+
+def test_notebook_typo_augmentation_is_deterministic_and_keeps_labels(ns):
+    records = [
+        {"query_id": "a", "query": "치킨 먹을 곳", "positives": [f"p{i}" for i in range(20)], "negatives": ["n1", "n2", "n3"]},
+        {"query_id": "b", "query": "떡", "positives": ["p"], "negatives": ["n4", "n5", "n6"]},
+    ]
+    augmented = ns["augment_typo_records"](records, 3, 8, seed=7)
+    assert augmented == ns["augment_typo_records"](records, 3, 8, seed=7)          # 다시 돌려도 같음
+    by_source = {}
+    for r in augmented:
+        by_source.setdefault(r["augmented_from"], []).append(r)
+    assert len(by_source["치킨 먹을 곳"]) == 3                                      # 요청한 개수만큼
+    for source, variants in by_source.items():
+        original = next(x for x in records if x["query"] == source)
+        assert len({v["query"] for v in variants}) == len(variants)                # 서로 다른 변형
+        for v in variants:
+            assert v["query"] != source and v["query"].strip()
+            assert v["positives"] == original["positives"][:8] and v["negatives"] == original["negatives"]
+
+    rows, stats = ns["expand_training_rows"](records + augmented, 3, None)
+    base_rows, _ = ns["expand_training_rows"](records, 3, None)
+    assert rows[: len(base_rows)] == base_rows                                     # 원래 행은 그대로, 뒤에 덧붙음
+    assert stats["n_queries_used"] == len(records) + len(augmented)
+
+
+def test_notebook_make_typo_produces_korean_typos(ns):
+    rng = np.random.default_rng(0)
+    variants = {ns["make_typo"]("수산물", rng) for _ in range(300)} - {None}
+    assert "수산물" not in variants and len(variants) > 20
+    assert any(v.endswith(("추천", "근처", "어디")) for v in variants)            # 접미어
+    assert any(len(v) == 3 and v[:2] == "수산" and v != "수산물" for v in variants)  # 마지막 음절 변형(받침·자모)
+    assert any(v[0] != "수" for v in variants if len(v) == 3)                       # 첫 음절도 바뀜(마지막 글자만이 아님)
+
+
+def test_notebook_service_metrics_counts_bad_top3(ns, tmp_path):
+    exec(compile(_cell("board").split("\nboard = leaderboard(")[0], "<notebook:board>", "exec"), ns)  # noqa: S102
+    ns["queries"] = pd.DataFrame({"query_id": ["q1", "q2"], "query": ["치킨", "빵"], "split": ["val", "val"],
+                                  "query_type": ["T1 정확표기", "T6 기계변형"]})
+    run = tmp_path / "run.csv"
+    pd.DataFrame({"query_id": ["q1"] * 3 + ["q2"] * 3, "doc_id": ["d1", "d3", "d2", "d2", "d9", "d1"],
+                  "rank": [1, 2, 3, 1, 2, 3], "score": [3, 2, 1, 3, 2, 1], "system": "m"}).to_csv(run, index=False)
+    out = ns["service_metrics"](run, tmp_path / "data" / "qrels_val.trec")
+    # q1: d3(rel 1)·d2(판정 없음)가 상위 3개에 있어 bad, 1위 d1(3) 정답. q2: d9(판정 없음) → bad, 1위 d2(3) 정답
+    assert out["bad@3"] == 1.0 and out["top1_ok"] == 1.0
+    assert out["bad@3 T1"] == 1.0 and out["bad@3 T6"] == 1.0
+
+
+def test_notebook_typo_never_drops_first_syllable_of_a_word(ns):
+    rng = np.random.default_rng(1)
+    for _ in range(500):
+        v = ns["make_typo"]("떡케이크", rng)
+        assert v is None or v.startswith("떡") or v[0] != "케"   # 첫 음절을 지워 '케이크'가 되지 않음
