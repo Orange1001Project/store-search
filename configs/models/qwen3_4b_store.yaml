@@ -1,0 +1,8 @@
+# qwen3_4b.yaml과 같은 모델 + 매장 검색용 instruction (qwen3_0_6b_store.yaml과 같은 문자열).
+name: qwen3_embedding_4b_store
+model_id: Qwen/Qwen3-Embedding-4B
+query_prompt: "Instruct: Given a Korean local-store search query, retrieve stores that satisfy the user's shopping, dining, or service intent\nQuery:"
+normalize_embeddings: true
+target_dimension: 1024
+batch_size: 8
+torch_dtype: float16   # fp32면 약 16GB라 T4(15GB)에서 OOM

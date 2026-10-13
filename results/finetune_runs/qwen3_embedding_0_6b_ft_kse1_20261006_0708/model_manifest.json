@@ -1,0 +1,356 @@
+{
+  "tag": "qwen3_embedding_0_6b_ft_kse1_20261006_0708",
+  "owner": "kse1",
+  "base_model_id": "Qwen/Qwen3-Embedding-0.6B",
+  "base_model_config": {
+    "name": "qwen3_embedding_0_6b",
+    "model_id": "Qwen/Qwen3-Embedding-0.6B",
+    "query_prompt_name": "query",
+    "batch_size": 32,
+    "train": {
+      "lora_rank": 16,
+      "learning_rate": 0.0001,
+      "base_dtype": "float32",
+      "batch_size": 32,
+      "loss": "gist",
+      "mini_batch_size": 16
+    }
+  },
+  "framework": "sentence-transformers+peft-lora(merged)",
+  "hyperparameters": {
+    "num_epochs": 2,
+    "batch_size": 32,
+    "mini_batch_size": 16,
+    "learning_rate": 0.0001,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "max_seq_length": 128,
+    "num_hard_negatives": 3,
+    "max_positives_per_query": 32,
+    "loss": "gist",
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "base_dtype": "float32",
+    "save_dtype": "float16",
+    "seed": 20260831,
+    "keep_last_runs": 3,
+    "note": "baseline",
+    "resume_tag": null,
+    "save_mid_checkpoint": true
+  },
+  "precision": "bf16",
+  "training_data": {
+    "source": "/content/drive/MyDrive/store-search-ai/data/train_pairs.jsonl",
+    "sha256": "067e4aa48a1ca59c432a4f4e29b55ba023b6346e452f343e508ed28e1a2d262e",
+    "expansion": {
+      "n_queries_in_file": 237,
+      "n_queries_used": 237,
+      "n_skipped_few_negatives": 0,
+      "n_rows": 7270
+    },
+    "prepare_meta": {
+      "created_at": "2026-10-02T01:19:32.162173+00:00",
+      "git_commit": "40506ea0efa1fca67ed4f3a61411638ae99b7294",
+      "benchmark_version": "storesearch_ko_v1",
+      "corpus_version": "store_corpus_v002",
+      "qrels_path": "benchmark/storesearch_ko_v1/qrels_train.csv",
+      "qrels_sha256": "6a9c42466462e7b584b6d89d7fceca745debd7f968ec6ec0b121df8e20a0de97",
+      "qrels_kind": "final",
+      "template": "t1_minimal",
+      "binary_relevance_threshold": 2,
+      "max_negatives": 8,
+      "train_pairs_sha256": "067e4aa48a1ca59c432a4f4e29b55ba023b6346e452f343e508ed28e1a2d262e",
+      "stats": {
+        "n_written": 237,
+        "n_skipped_no_positive": 0,
+        "total_positives": 16671,
+        "total_negatives": 1885
+      }
+    },
+    "smoke": false
+  },
+  "data_version": {
+    "packed_at": "2026-10-06T00:33:06.479610+00:00",
+    "git_branch": "feature/pooling2-zeroshot",
+    "git_commit": "c6572402adf7c10312237d460f00364fb4c72952",
+    "benchmark_version": "storesearch_ko_v1",
+    "corpus_version": "store_corpus_v002",
+    "corpus_file": "store_corpus_v002.parquet",
+    "evaluation": {
+      "bootstrap_samples": 10000,
+      "random_seed": 20260831,
+      "binary_relevance_threshold": 2
+    },
+    "files": {
+      "train_pairs.jsonl": "067e4aa48a1ca59c432a4f4e29b55ba023b6346e452f343e508ed28e1a2d262e",
+      "train_pairs.meta.json": "dc77e5e0044a891065abdc968cb682108d711f7246a5133bbe4429ee0c0e29d6",
+      "store_corpus_v002.parquet": "93bd159a98207087a784434c7731cc8b059aa9d10a0dc71d226829cc2c270a87",
+      "queries.csv": "605b17d74b36c0a861f76f899f4f91a76f19d3b890876999a86606cf7cea10ee",
+      "qrels_val.trec": "da50d9680fb21956ff919c823a4d4b0bd7bb5810619e5aa50384eb473cd79642",
+      "qrels_test.trec": "3f6b79bc2c895bda1f91203c2e95b668486b9d3dc57718b2d4641b761a015587"
+    }
+  },
+  "code": {
+    "notebook": "colab/train_eval.ipynb",
+    "snapshot": "notebook_code.py",
+    "snapshot_sha256": "4f0dbd6fac4da30156aad4bee0f7c85828d4cffa5a52112e932eb4b22f21f440"
+  },
+  "training_result": {
+    "runtime_sec": 4179.4,
+    "resumed_from": null,
+    "mid_checkpoint_step": 228,
+    "global_steps": 456,
+    "peak_gpu_memory_gb": 6.76,
+    "final_loss": 0.04021,
+    "loss_history": [
+      {
+        "step": 10,
+        "loss": 0.65383
+      },
+      {
+        "step": 20,
+        "loss": 0.30449
+      },
+      {
+        "step": 30,
+        "loss": 0.47001
+      },
+      {
+        "step": 40,
+        "loss": 0.28296
+      },
+      {
+        "step": 50,
+        "loss": 0.30933
+      },
+      {
+        "step": 60,
+        "loss": 0.24304
+      },
+      {
+        "step": 70,
+        "loss": 0.21272
+      },
+      {
+        "step": 80,
+        "loss": 0.16662
+      },
+      {
+        "step": 90,
+        "loss": 0.14788
+      },
+      {
+        "step": 100,
+        "loss": 0.09817
+      },
+      {
+        "step": 110,
+        "loss": 0.15651
+      },
+      {
+        "step": 120,
+        "loss": 0.18309
+      },
+      {
+        "step": 130,
+        "loss": 0.15205
+      },
+      {
+        "step": 140,
+        "loss": 0.16215
+      },
+      {
+        "step": 150,
+        "loss": 0.13821
+      },
+      {
+        "step": 160,
+        "loss": 0.10621
+      },
+      {
+        "step": 170,
+        "loss": 0.12431
+      },
+      {
+        "step": 180,
+        "loss": 0.15119
+      },
+      {
+        "step": 190,
+        "loss": 0.20168
+      },
+      {
+        "step": 200,
+        "loss": 0.15035
+      },
+      {
+        "step": 210,
+        "loss": 0.07748
+      },
+      {
+        "step": 220,
+        "loss": 0.08368
+      },
+      {
+        "step": 230,
+        "loss": 0.0116
+      },
+      {
+        "step": 240,
+        "loss": 0.12381
+      },
+      {
+        "step": 250,
+        "loss": 0.13077
+      },
+      {
+        "step": 260,
+        "loss": 0.0617
+      },
+      {
+        "step": 270,
+        "loss": 0.08439
+      },
+      {
+        "step": 280,
+        "loss": 0.07164
+      },
+      {
+        "step": 290,
+        "loss": 0.1159
+      },
+      {
+        "step": 300,
+        "loss": 0.06183
+      },
+      {
+        "step": 310,
+        "loss": 0.07109
+      },
+      {
+        "step": 320,
+        "loss": 0.06892
+      },
+      {
+        "step": 330,
+        "loss": 0.06763
+      },
+      {
+        "step": 340,
+        "loss": 0.06747
+      },
+      {
+        "step": 350,
+        "loss": 0.05538
+      },
+      {
+        "step": 360,
+        "loss": 0.05931
+      },
+      {
+        "step": 370,
+        "loss": 0.0669
+      },
+      {
+        "step": 380,
+        "loss": 0.05703
+      },
+      {
+        "step": 390,
+        "loss": 0.04758
+      },
+      {
+        "step": 400,
+        "loss": 0.05657
+      },
+      {
+        "step": 410,
+        "loss": 0.04597
+      },
+      {
+        "step": 420,
+        "loss": 0.05177
+      },
+      {
+        "step": 430,
+        "loss": 0.06535
+      },
+      {
+        "step": 440,
+        "loss": 0.02272
+      },
+      {
+        "step": 450,
+        "loss": 0.04021
+      }
+    ]
+  },
+  "serving": {
+    "document_template": "t1_minimal",
+    "query_prompt_name": "query",
+    "query_prompt": "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:",
+    "document_prompt": null,
+    "embedding_dim": 1024,
+    "full_embedding_dim": 1024,
+    "normalize_embeddings": true,
+    "similarity": "cosine",
+    "max_seq_length": 128,
+    "saved_dtype": "float16"
+  },
+  "environment": {
+    "packages": {
+      "torch": "2.11.0+cu130",
+      "transformers": "5.18.0",
+      "sentence-transformers": "5.7.0",
+      "peft": "0.21.1",
+      "datasets": "4.8.5",
+      "accelerate": "1.15.0",
+      "huggingface-hub": "1.33.0",
+      "ir-measures": "0.4.3",
+      "pytrec-eval-terrier": "0.5.10"
+    },
+    "gpu": "Tesla T4"
+  },
+  "created_at": "2026-10-06T08:19:42.600122+00:00",
+  "evaluations": [
+    {
+      "evaluated_at": "2026-10-07T00:28:06.084787+00:00",
+      "split": "val",
+      "template": "t1_minimal",
+      "tag": "qwen3_embedding_0_6b_ft_kse1_20261006_0708_t1_minimal_val",
+      "official": true,
+      "metrics": {
+        "nDCG@10": 0.5057762533435272,
+        "Precision@10": 0.488235294117647,
+        "MRR@100": 0.681973308185527,
+        "Recall@50": 0.22597123485319176,
+        "Recall@100": 0.3344115143113126,
+        "Bpref": 0.3307982565063406,
+        "Judged@10": 0.5036764705882352,
+        "Judged@100": 0.2457352941176469
+      },
+      "baseline": "qwen3_embedding_0_6b",
+      "where": "colab"
+    },
+    {
+      "evaluated_at": "2026-10-07T01:04:48.591466+00:00",
+      "split": "val",
+      "template": "t1_minimal",
+      "tag": "qwen3_embedding_0_6b_ft_kse1_20261006_0708_t1_minimal_val",
+      "official": true,
+      "metrics": {
+        "nDCG@10": 0.5043107775179209,
+        "Precision@10": 0.486764705882353,
+        "MRR@100": 0.6820355222701108,
+        "Recall@50": 0.22603808241438123,
+        "Recall@100": 0.3346271523415507,
+        "Bpref": 0.33101991357801774,
+        "Judged@10": 0.5022058823529411,
+        "Judged@100": 0.24588235294117636
+      },
+      "baseline": "qwen3_embedding_0_6b",
+      "where": "colab"
+    }
+  ]
+}

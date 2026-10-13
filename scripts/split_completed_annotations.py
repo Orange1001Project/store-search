@@ -17,8 +17,9 @@
         --a-all path/to/annotation_A_all_completed.csv \
         --b-val-test path/to/annotation_B_val_test_completed.csv
 
-기본값은 둘 다 benchmark_dir/annotations/full_annotation_v1/completed/ 밑에서 찾고, 결과도
-같은 폴더에 저장한다 — 즉 그 폴더에 두 파일만 넣고 인자 없이 실행해도 된다.
+기본값은 둘 다 benchmark_dir/annotations/{round}/completed/ 밑에서 찾고(--round 기본값은
+08번과 동일한 full_annotation_v1), 결과도 같은 폴더에 저장한다 — 즉 그 폴더에 두 파일만 넣고
+인자 없이 실행해도 된다.
 """
 
 from __future__ import annotations
@@ -32,7 +33,11 @@ from store_search_ai.data.annotation_split import (
     split_by_column,
     validate_splits_present,
 )
-from store_search_ai.pipeline.common import load_config
+from store_search_ai.pipeline.common import (
+    DEFAULT_ANNOTATION_ROUND,
+    get_annotation_round_dirs,
+    load_config,
+)
 
 
 def split_and_save(source_path: Path, splits: list[str], out_dir: Path, prefix: str) -> None:
@@ -49,6 +54,11 @@ def split_and_save(source_path: Path, splits: list[str], out_dir: Path, prefix: 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
+    parser.add_argument(
+        "--round",
+        default=DEFAULT_ANNOTATION_ROUND,
+        help="08번과 동일한 --round 값. annotations/{round}/completed/ 밑에서 찾고 같은 곳에 저장한다.",
+    )
     parser.add_argument("--a-all", default=None, help="채운 annotation_A_all_completed.csv 경로")
     parser.add_argument(
         "--b-val-test", default=None, help="채운 annotation_B_val_test_completed.csv 경로"
@@ -56,9 +66,8 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_config(args.config)
-    completed_dir = (
-        Path(config["benchmark_dir"]) / "annotations" / "full_annotation_v1" / "completed"
-    )
+    base, _ = get_annotation_round_dirs(Path(config["benchmark_dir"]), args.round)
+    completed_dir = base / "completed"
     completed_dir.mkdir(parents=True, exist_ok=True)
 
     a_all_path = Path(args.a_all) if args.a_all else completed_dir / "annotation_A_all_completed.csv"

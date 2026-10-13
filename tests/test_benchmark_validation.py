@@ -132,3 +132,28 @@ def test_build_validation_report_final_without_agreement_is_invalid():
     report = build_validation_report(_config(), "final", _queries(), _corpus())
     assert report["valid"] is False
     assert "Missing human agreement report" in report["errors"]
+
+
+def test_resolution_coverage_counts_adjudicated_and_excluded_rows_as_resolved():
+    import pandas as pd
+
+    from store_search_ai.data.benchmark_validation import adjudication_resolution
+
+    adj = pd.DataFrame(
+        {
+            "final_relevance": [3, None, 1, None],
+            "exclude_from_gold": ["", "Y", None, ""],
+        }
+    )
+    summary = adjudication_resolution(adj)
+    assert summary["adjudication_resolved_rows"] == 3
+    assert summary["adjudication_excluded_rows"] == 1
+    assert summary["resolution_coverage"] == 0.75
+
+    report = {"agreement": {"double_annotation_coverage": 0.5, **summary}}
+    errors = validate_final_stage(report, _queries(), _config())
+    assert "Unresolved val/test judgments after adjudication" in errors
+    assert "Incomplete val/test double annotation" not in errors
+
+    resolved = {"agreement": {"double_annotation_coverage": 0.5, "resolution_coverage": 1.0}}
+    assert not any("judgments" in e or "double annotation" in e for e in validate_final_stage(resolved, _queries(), _config()))

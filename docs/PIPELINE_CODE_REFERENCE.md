@@ -5,7 +5,8 @@
 스크립트 단위로 뜯어봅니다. 회의에서 "이 단계가 왜 이렇게 동작하나요", "이 파일은 어디서
 나온 거예요" 같은 질문에 코드 근거를 대면서 답할 수 있도록 만든 문서입니다.
 
-번호 순서(01~15)대로 정리했고, 번호 없는 유틸리티 3개를 실제 실행 순서상 자리에 끼워 넣었습니다:
+번호 순서(01~15)대로 정리했고(16번 보충 pooling은 `docs/PIPELINE.md` 6-1절, Colab 도구 `pack_for_colab.py`·
+`import_colab_results.py`와 노트북은 `docs/TRAINING_TEAM.md`·`docs/TRAIN_EVAL_NOTEBOOK.md`), 번호 없는 유틸리티 3개를 실제 실행 순서상 자리에 끼워 넣었습니다:
 `import_queryset_xlsx.py`(05번 이전), `split_completed_annotations.py`(08번과 09번 사이),
 `prepare_finetune_dataset.py`(15번 이후, fine-tuning 준비 단계). 각 절은 다음 다섯 항목으로
 구성됩니다: **한 줄 요약 / 입력 파일 / 핵심 로직 / 출력 파일 / 사용하는 src/ 코드**.
@@ -274,27 +275,49 @@ split에서 relevance는 사람이 직접 판정).
 **핵심 로직**
 document 텍스트는 `store_name + " " + item_text`(T1과 개념적으로 동일한 필드 조합, 다만 이
 스크립트는 `search_text_t1_minimal` 컬럼을 그대로 쓰지 않고 즉석에서 다시 조합한다)로 고정한다.
-세 시스템을 각각 corpus 전체에 fit한다: **char TF-IDF**(`char_wb`, 2~5-gram), **word TF-IDF**
-(이름과 달리 실제로는 `char_wb`, 2~4-gram), **BM25Okapi**(이름과 달리 문자 2~3-gram, `char_ngrams`).
-세 시스템 모두 문자 n-gram 기반으로 통일되어 있다 — 원래 word TF-IDF/BM25는 정규식 단어 토큰화
-(`\b\w+\b`류)를 썼지만, 한국어는 복합어를 띄어쓰기 없이 붙여 쓰는 경우가 흔해서(예: "가구추천" =
-"가구"+"추천") 단어 경계 토큰화로는 부분 일치가 원천적으로 불가능한 쿼리가 548개 중 97개
-확인되어(2026-09), McNamee & Mayfield(2004)의 문자 n-gram 방식으로 통일했다
-(`src/store_search_ai/retrieval/lexical.py`의 `char_ngrams` 참고). 이 변경으로 세 시스템 이름
-(`char_tfidf_v1`/`word_tfidf_v1`/`bm25_regex_v1`)은 유지하되 실제 토큰화 방식은 다르며, 차이는
-n-gram 길이(2~5 vs 2~4)와 scoring 모델(TF-IDF 코사인 유사도 vs BM25)로만 남는다. 쿼리마다 세
-시스템 각각의 점수를 계산해서 **score>0인 문서만** top-40으로 남긴다(0점 이하는 "lexical
-overlap이 아예 없다"는 뜻이라, 억지로 채우면 무의미한 문서가 pool을 오염시키기 때문 — random
-negative는 07에서 별도 채널로 명시적으로 뽑는다).
+
+세 시스템 모두 **문자 n-gram(character n-gram) 토큰화**로 통일되어 있다 — McNamee &
+Mayfield(2004), *"Character N-Gram Tokenization for European Language Text Retrieval"*에서
+제안된, 형태소 분석기 없이도 언어에 무관하게(language-agnostic) 부분 문자열 일치를 가능하게
+하는 표준적 완화책이다. 원래는 두 시스템이 정규식 단어 토큰화(`\b\w+\b`류)를 썼지만, 한국어는
+복합어를 띄어쓰기 없이 붙여 쓰는 경우가 흔해서(예: "가구추천" = "가구"+"추천") 단어 경계
+토큰화로는 부분 일치가 원천적으로 불가능한 쿼리가 548개 중 97개 확인되어(2026-09), 세 시스템
+모두 char n-gram으로 교체했다(`src/store_search_ai/retrieval/lexical.py`의 `char_ngrams` 참고).
+
+그 결과 세 시스템은 **토큰화가 아니라 n-gram 길이와 scoring 모델로만** 구분된다. 서로 다른
+n-gram 범위/scoring을 가진 여러 char n-gram 인덱스를 병렬로 두고 그 합집합을 pool로 쓰는 것은
+TREC 스타일 pooling에서 다양성을 확보하기 위해 흔히 쓰는 방식이다(Voorhees & Harman의 pooling
+방법론; 하나의 시스템만 쓰면 그 시스템의 편향이 곧 pool의 편향이 된다). system id도 이 실제
+기법을 그대로 반영한다 — `fit_char_tfidf_scorer(docs, ngram_range=...)`를 n-gram 범위만 바꿔 두 번
+호출해서 `char_tfidf_v1`/`char_tfidf_v2`를 만들고, `fit_bm25_scorer`(같은 `char_ngrams` 토큰화 +
+BM25Okapi)로 `char_bm25_v1`을 만든다:
+
+| system id (=출력 파일명) | 실제 기법 | n-gram 범위 | scoring |
+|---|---|---|---|
+| `char_tfidf_v1` | char n-gram TF-IDF | 2~5 | TF-IDF 코사인 유사도 |
+| `char_tfidf_v2` | char n-gram TF-IDF | 2~4 | TF-IDF 코사인 유사도 |
+| `char_bm25_v1` | char n-gram + BM25Okapi | 2~3 | BM25 saturating term frequency |
+
+> **과거 이름(2026-09 이전 라운드)**: 이 리네이밍 전에는 `char_tfidf_v2`가 `word_tfidf_v1`,
+> `char_bm25_v1`이 `bm25_regex_v1`이라는 이름이었다 — 실제로는 둘 다 word/regex 토큰화가 아니라
+> char n-gram이었던 역사적 오기(misnomer)다. `pool_stats.json`/`pool_history.csv`/
+> `validation_*.json`처럼 그 라운드 때 이미 생성·커밋된 산출물에는 옛 이름이 그대로 남아있으니
+> 과거 기록을 읽을 때는 이 대응 관계를 참고할 것. 이후 라운드부터는 이 표의 새 이름만 쓴다.
+
+쿼리마다 세 시스템 각각의 점수를 계산해서 **score>0인 문서만** top-40으로 남긴다(0점 이하는
+"lexical overlap이 아예 없다"는 뜻이라, 억지로 채우면 무의미한 문서가 pool을 오염시키기 때문 —
+random negative는 07에서 별도 채널로 명시적으로 뽑는다).
 
 **출력 파일** (`benchmark_dir/runs/pooling/` 밑)
-- `char_tfidf_v1.csv/.trec`, `word_tfidf_v1.csv/.trec`, `bm25_regex_v1.csv/.trec`
+- `char_tfidf_v1.csv/.trec`, `char_tfidf_v2.csv/.trec`, `char_bm25_v1.csv/.trec`(파일명=system id,
+  위 표 참고)
 - `lexical_run_manifest.json` — 시스템별 통계(결과 있는/없는 쿼리 수, 평균 결과 수 등)
 
 **사용하는 src/ 코드**
-- `store_search_ai.retrieval.lexical` — 위 핵심 로직 전체(문서 텍스트 정규화/토큰화, char
-  TF-IDF/word TF-IDF/BM25 fit+채점, run 조립, manifest 생성)가 여기 있다.
-  `06_generate_lexical_runs.py`는 인자 파싱 + 파일 IO만 담당하는 얇은 CLI다.
+- `store_search_ai.retrieval.lexical` — 위 핵심 로직 전체(문서 텍스트 정규화/토큰화,
+  `fit_char_tfidf_scorer`를 n-gram 범위 다르게 두 번 호출/char n-gram BM25 fit+채점, run 조립,
+  manifest 생성)가 여기 있다. `06_generate_lexical_runs.py`는 인자 파싱 + 파일 IO만 담당하는
+  얇은 CLI다.
 - `store_search_ai.pipeline.common.load_active_queries`, `load_config`
 
 ---
@@ -316,7 +339,10 @@ negative는 07에서 별도 채널로 명시적으로 뽑는다).
 **핵심 로직 — "pooling"이 실제로 하는 일**: 한 쿼리에 대해 코퍼스 21만 건 전체를 사람이 다
 판정할 수는 없으니, **여러 독립적인 검색 방법이 "관련 있어 보인다"고 지목한 문서들의 합집합**만
 사람 앞에 놓는다(TREC 스타일 pooling). 이번 스크립트가 합치는 채널은 세 가지다:
-1. **`run:{system}`** — 06의 세 lexical run 각각의 상위 40개(그 시스템이 실제로 찾은 것)
+1. **`run:{system}`** — 06의 세 lexical run 각각의 상위 40개(그 시스템이 실제로 찾은 것). `{system}`은
+   `char_tfidf_v1`/`char_tfidf_v2`/`char_bm25_v1` 그대로 들어간다 — 세 system id의 실제 기법·n-gram
+   범위는 06 절의 표 참고(2026-09 이전 라운드에서 만든 pool에는 옛 이름 `word_tfidf_v1`/
+   `bm25_regex_v1`이 남아있을 수 있음)
 2. **`target:positive:{term}`/`target:boundary:{term}`** — `queries.csv`의
    `pool_positive_terms`/`pool_boundary_terms`를 취급품목/가맹점명에 직접 문자열 매칭시켜(term당
    최대 5개, doc_id 기준 결정적 정렬) 찾아낸 "경계 사례" 후보. **relevance 점수에는 전혀 반영되지
@@ -351,6 +377,12 @@ A 혼자, val/test는 A/B 독립 이중 판정.
 
 **입력 파일**
 - `--config`(기본 `configs/benchmark/storesearch_ko_v1.yaml`)
+- `--round`(기본 `full_annotation_v1`, `store_search_ai.pipeline.common.DEFAULT_ANNOTATION_ROUND`) —
+  출력 디렉터리 `annotations/{round}/`를 결정한다. 예전에는 이 경로가 스크립트에 하드코딩돼
+  있어서, 애노테이션을 다시 돌릴 때마다 이전 라운드의 시트·완료본·조정 결과를 같은 폴더에
+  덮어썼다. 지금은 08~11번, `split_completed_annotations.py`, `prepare_finetune_dataset.py`가
+  전부 `--round`를 받아 `get_annotation_round_dirs()`로 경로를 계산하므로, 새 라운드를 이전과
+  다른 이름(예: `--round full_annotation_v2`)으로 돌리면 이전 라운드가 보존된다.
 - `benchmark_dir/candidate_pool_internal.csv`, `queries.csv`(status=active만)
 
 **핵심 로직**
@@ -369,7 +401,7 @@ sha256(query_id|doc_id)[:20]`을 이 단계에서 처음 부여한다(이후 09/
 `annotation_B_{val,test}.csv` 둘 다. 어느 쪽을 채워도 결과는 같다(뒤에서
 `split_completed_annotations.py`가 combined 버전을 per-split 버전으로 변환해줌).
 
-**출력 파일** (`benchmark_dir/annotations/full_annotation_v1/` 밑)
+**출력 파일** (`benchmark_dir/annotations/{round}/` 밑, 기본 `round=full_annotation_v1`)
 `annotation_A_all.csv`, `annotation_A_train.csv`, `annotation_A_val.csv`, `annotation_A_test.csv`,
 `annotation_B_val_test.csv`, `annotation_B_val.csv`, `annotation_B_test.csv`,
 `annotation_manifest.json`(정책 문서화: train=single/val·test=double+adjudication, test는 학습·
@@ -391,8 +423,10 @@ sha256(query_id|doc_id)[:20]`을 이 단계에서 처음 부여한다(이후 09/
 쪼개준다.
 
 **입력 파일**
-- `--a-all`(기본 `completed/annotation_A_all_completed.csv`),
-  `--b-val-test`(기본 `completed/annotation_B_val_test_completed.csv`)
+- `--round`(기본 `full_annotation_v1`) — `annotations/{round}/completed/` 밑에서 찾는다(08번과
+  같은 값이어야 함)
+- `--a-all`(기본 `annotations/{round}/completed/annotation_A_all_completed.csv`),
+  `--b-val-test`(기본 `annotations/{round}/completed/annotation_B_val_test_completed.csv`)
 - `--config`(기본 `configs/benchmark/storesearch_ko_v1.yaml`)
 
 **핵심 로직**
@@ -421,7 +455,8 @@ train/val/test 3개로, B 파일은 val/test 2개로 쪼갠다.
 A/B 비교 후 일치분 자동 확정 + 불일치분을 adjudication 대상으로 분리한다. **val+test 전체의
 이중 라벨링 합치도(`agreement_report.json`)도 이 스크립트가 만든다.**
 
-**입력 파일** (`benchmark_dir/annotations/full_annotation_v1/completed/` 밑, 5개 전부 필수)
+**입력 파일** (`--round`(기본 `full_annotation_v1`) → `benchmark_dir/annotations/{round}/completed/`
+밑, 5개 전부 필수)
 `annotation_A_train_completed.csv`, `annotation_A_val_completed.csv`,
 `annotation_A_test_completed.csv`, `annotation_B_val_completed.csv`,
 `annotation_B_test_completed.csv`
@@ -452,9 +487,9 @@ agreement, Cohen's kappa(unweighted/quadratic-weighted)를 다시 한번 계산�
 스키마이며, `12_validate_benchmark.py --stage final`이 그대로 찾아서 읽는다(자세한 배경은
 문서 하단 FAQ Q6).
 
-**출력 파일** (`benchmark_dir/annotations/full_annotation_v1/` 밑, `agreement_report.json`만 예외)
-- `qrels/provisional_v1/qrels_train_provisional.csv/.trec` — **11번의 `--train-qrels` 기본값과
-  동일 경로**
+**출력 파일** (`benchmark_dir/annotations/{round}/` 밑, `agreement_report.json`만 예외)
+- `qrels/{round}/qrels_train_provisional.csv/.trec` — **11번의 `--train-qrels` 기본값과
+  동일 경로**(둘 다 `store_search_ai.pipeline.common.get_annotation_round_dirs()`로 계산)
 - `analysis/adjudication_val_test_full.csv` — val/test 전체(자동 확정분 + 미확정분)
 - `analysis/adjudication_val_test_needed_only.csv` — 사람이 봐야 할 불일치 행만, 우선순위순 정렬.
   **여기에 `final_relevance`를 채운 뒤 `_completed.csv`로 저장하는 게 다음 사람 작업**
@@ -479,6 +514,8 @@ agreement, Cohen's kappa(unweighted/quadratic-weighted)를 다시 한번 계산�
 **한 줄 요약**: 3rd adjudicator가 채운 "불일치 건 최종 판정"을 전체 val/test 파일에 병합한다.
 
 **입력 파일**
+- `--config`, `--round`(기본 `full_annotation_v1`, 09번과 같은 값이어야 함) — `--full`/`--patch`/
+  `--output`을 직접 안 주면 이 라운드의 `annotations/{round}/analysis/` 밑 기본 경로를 쓴다
 - `--full`(기본 `analysis/adjudication_val_test_full.csv`, 09번 산출물)
 - `--patch`(기본 `analysis/adjudication_val_test_needed_only_completed.csv` — 사람이
   `final_relevance`, `human_adjudication_note`, 필요시 `exclude_from_gold`를 채운 파일)
@@ -509,9 +546,12 @@ final_relevance가 여전히 비어있는 행"**(`unresolved_non_excluded`)이 �
 
 **입력 파일**
 - `--config`(기본 `configs/benchmark/storesearch_ko_v1.yaml`)
+- `--round`(기본 `full_annotation_v1`, 09/10번과 같은 값이어야 함) — `--adjudication`/
+  `--train-qrels`를 직접 안 주면 이 값으로 기본 경로를 계산한다
 - `benchmark_dir/queries.csv`(active만)
-- `--adjudication`(기본 `analysis/adjudication_val_test_full_completed.csv`, 10번 산출물)
-- `--train-qrels`(기본 `qrels/provisional_v1/qrels_train_provisional.csv`, 09번 산출물)
+- `--adjudication`(기본 `annotations/{round}/analysis/adjudication_val_test_full_completed.csv`,
+  10번 산출물)
+- `--train-qrels`(기본 `qrels/{round}/qrels_train_provisional.csv`, 09번 산출물)
 
 **핵심 로직**
 `build_split_qrels()`가 val/test 각각에 대해: `exclude_from_gold`가 Y인 행은 gold에서 완전히
@@ -691,33 +731,37 @@ prompt 차이를 여기서 흡수), `ExactCosineSearch`로 top-k(기본 100) run
 ## `prepare_finetune_dataset.py` *(번호 없는 유틸리티, 15번 이후 — fine-tuning 데이터 준비)*
 
 **한 줄 요약**: `qrels_train`(+ corpus, queries.csv)으로부터 fine-tuning용 (query, positive,
-negatives) 학습쌍 jsonl을 만든다. Colab 학습(`colab/run_finetune_*.py`)에 넘길 최종 산출물.
+negatives) 학습쌍 jsonl을 만든다. Colab 학습(`colab/train_eval.ipynb`, `pack_for_colab.py`로 Drive `data/`에 올림)에 넘길 최종 산출물.
 
 **입력 파일**
 - `--config`(기본 `configs/benchmark/storesearch_ko_v1.yaml`) → `corpus_path`, `benchmark_dir`,
   `evaluation.binary_relevance_threshold`
 - `--qrels`(생략 시 자동 탐색): `benchmark_dir/qrels_train.csv`(11번의 최종본)가 있으면 그것,
-  없으면 `qrels/provisional_v1/qrels_train_provisional.csv`(09번의 provisional본) — **즉 val/test
-  adjudication을 기다리지 않고 train 애노테이션만 끝나도 바로 fine-tuning 데이터를 만들 수 있다**
+  없으면 `qrels/{round}/qrels_train_provisional.csv`(09번의 provisional본, `--round` 기본
+  `full_annotation_v1`) — **즉 val/test adjudication을 기다리지 않고 train 애노테이션만 끝나도
+  바로 fine-tuning 데이터를 만들 수 있다**
 - `queries.csv`(train split만), corpus의 `--template`(기본 `t1_minimal`) 컬럼
 
 **핵심 로직**
-쿼리별로 qrels를 그룹핑해서: **positive** = `relevance >= binary_relevance_threshold`(기본 2)인
-문서 중 첫 번째, **negatives** = 같은 쿼리의 같은 pool에서 그 미만인 문서를 최대
+쿼리별로 qrels를 그룹핑해서: **positives** = `relevance >= binary_relevance_threshold`(기본 2)인
+문서 전부(relevance 높은 순), **negatives** = 같은 쿼리의 같은 pool에서 그 미만인 문서를 최대
 `--max-negatives`(기본 8)개. negative를 고를 때 `relevance=1`(경계 사례)을 `relevance=0`보다
 먼저 정렬해서 우선 채운다 — 무작위 negative보다 "어휘적으로는 비슷해 보이지만 실제로는 관련
 없는" 진짜 어려운 negative를 우선하는 것으로, GPL/E5/BGE 계열 논문의 hard negative mining과
 같은 발상이다. pooling(06~07)이 이미 그런 후보를 모아 놨고 train qrels가 그 전체 pool에 대한
 사람 판정이므로 추가 검색 없이 바로 재사용된다. positive가 하나도 없는 쿼리(=pool 전체가 낮은
-relevance)는 학습쌍을 만들 수 없으므로 제외하고 개수를 로그에 남긴다.
+relevance)는 학습쌍을 만들 수 없으므로 제외하고 개수를 로그에 남긴다. 텍스트가 완전히 같은
+문서(체인점 등)는 한 번만 쓰고, positive와 텍스트가 같은 문서는 negative에서 뺀다.
 
-출력 스키마는 프레임워크 중립적이다(`{"query_id","query","positive","negatives":[...]}"`) —
-ms-swift는 `positive→response`, `negatives→rejected_response`로 매핑해서 쓰고,
-sentence-transformers는 `InputExample(texts=[query, positive, *negatives])`로 그대로 쓴다.
+출력 스키마는 `{"query_id","query","positives":[...],"negatives":[...]}`이다. (query, positive)
+행으로 펼치고 query당 positive 수를 자르는 건 학습 쪽(`store_search_ai.training.finetune.
+expand_training_rows`, `docs/TRAINING.md` 1절)이 한다.
 
 **출력 파일**
 - `--output`(기본 `data/finetune/train_pairs.jsonl`) — qrels_train + corpus + queries.csv로부터
   결정적으로 재생성되는 파생 파일(train qrels가 갱신되면 다시 돌리면 됨)
+- 같은 위치의 `train_pairs.meta.json` — 사용한 qrels 경로·sha256·final/provisional 여부, template,
+  threshold, git commit. Colab 학습이 이 내용을 model_manifest.json에 그대로 복사한다
 
 **사용하는 src/ 코드**
 - `store_search_ai.data.finetune_dataset.{resolve_train_qrels_path, build_training_pairs}` —
@@ -777,10 +821,11 @@ zero-shot 리더보드에서도(`14_run_model_eval.py`로 여러 모델 비교) 
 
 **Q8. fine-tuning한 모델을 나중에 서비스에 연결할 때 뭘 봐야 하나요?**
 → 14번 절 + `store_search_ai.pipeline.common.write_model_manifest`/
-`append_model_manifest_evaluation`. 학습 스크립트(`colab/run_finetune_*.py`)가 체크포인트 폴더에
-`model_manifest.json`(base 모델, 학습 데이터 sha256, 하이퍼파라미터)을 남기고,
-`14_run_model_eval.py`로 평가할 때마다 그 안의 `evaluations` 리스트에 val/test 점수가 자동으로
-쌓인다. 어떤 체크포인트를 배포할지 고를 때 이 파일 하나만 보면 된다(`docs/TRAINING.md` 4절).
+`append_model_manifest_evaluation`. Colab 노트북 `colab/train_eval.ipynb`의 `train_model()`(로컬 참조 구현은
+`store_search_ai.training.st_finetune.run_finetune()`)이 모델 폴더에 `model_manifest.json`(base 모델, 학습 데이터 sha256,
+하이퍼파라미터, 코드 사본, 서빙이 따라야 할 값)을 남기고, 평가할 때마다(Colab은 노트북 `evaluate()`, 로컬은
+`14_run_model_eval.py`) 그 안의 `evaluations` 리스트에 val/test 점수가 자동으로 쌓인다. 어떤 체크포인트를 배포할지 고를 때 이 파일 하나만 보면
+된다(`docs/TRAINING.md` 5절, 팀 규칙은 `docs/TRAINING_TEAM.md`).
 
 **Q9. 쿼리 원본은 어디서 오고, fine-tuning 데이터는 어떻게 만드나요?**
 → `import_queryset_xlsx.py` 절 + `prepare_finetune_dataset.py` 절. 둘 다 01~15 실행 순서에

@@ -1,0 +1,39 @@
+{
+  "round": "supplement_v2",
+  "base_round": "full_annotation_v1",
+  "created_at": "2026-10-12T06:05:11.362355+00:00",
+  "reason": "lexical-only pool이라 임베딩 모델 상위 10개의 약 60%가 미판정(Judged@10 0.33~0.56). zero-shot 5종 + 학습 1종의 val/test 상위 20개를 pool에 추가. leave-one-out 검사에서 같은 계열 새 모델의 Judged@10 0.92~0.96(depth 20).",
+  "method": "model_runs",
+  "splits": [
+    "val",
+    "test"
+  ],
+  "depth": 20,
+  "systems_sha256": {
+    "bge_m3": "22f7a3a54299016dd702ef6bb4952c1555cd0078380e3641628a8db97224b08c",
+    "qwen3_embedding_0_6b": "b5efe2792cab1124f4f3aef42279c8068fabe359a48f535f4c23b077bd8fa86e",
+    "qwen3_embedding_0_6b_ft_kse1_20261006_0708": "2ffd3e04d4ffbaf90f6e4bc67cdbc3aa0e05cd714a2bc5bd3ebcaede63eaff0e",
+    "qwen3_embedding_0_6b_store": "6e3983007bb375d1936d66bfddd3725a5c2555b476d36e0f60a402843a724db6",
+    "snowflake_arctic_embed_l_v2_ko": "3066e75326aa28abab8e26158db465b36346d6998e43bc09e0db2d980e4b079a",
+    "snowflake_arctic_embed_l_v2_ko_query": "3b243aa56505907771268a35280d2ee6911315c903ff2402d11a860a7cfb2416"
+  },
+  "run_copies": "benchmark/storesearch_ko_v1/annotations/supplement_v2/runs",
+  "new_pairs": 13759,
+  "new_pairs_by_split": {
+    "test": 7505,
+    "val": 6254
+  },
+  "new_pairs_by_system": {
+    "bge_m3": 3964,
+    "qwen3_embedding_0_6b": 4075,
+    "qwen3_embedding_0_6b_ft_kse1_20261006_0708": 3316,
+    "qwen3_embedding_0_6b_store": 4369,
+    "snowflake_arctic_embed_l_v2_ko": 3140,
+    "snowflake_arctic_embed_l_v2_ko_query": 3541
+  },
+  "annotators": [
+    "A",
+    "B"
+  ],
+  "policy": "기존 판정은 바꾸지 않음. 새 후보만 val/test는 A·B 독립 판정 → 일치 자동 확정 → 불일치 adjudication."
+}

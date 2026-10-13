@@ -1,0 +1,9 @@
+# qwen3_0_6b.yaml과 같은 모델, 기본 instruction(웹 검색용) 대신 매장 검색용 instruction을 붙인 버전.
+# Qwen3-Embedding은 task에 맞는 instruction에 민감하다(모델카드). zero-shot으로 비교해서 좋은 쪽을 학습에 쓴다
+# (이 yaml로 학습하면 이 instruction으로 학습되고 저장 모델의 "query" prompt에도 기록됨).
+name: qwen3_embedding_0_6b_store
+model_id: Qwen/Qwen3-Embedding-0.6B
+query_prompt: "Instruct: Given a Korean local-store search query, retrieve stores that satisfy the user's shopping, dining, or service intent\nQuery:"
+normalize_embeddings: true
+target_dimension: null
+batch_size: 32

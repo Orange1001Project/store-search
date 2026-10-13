@@ -2,9 +2,9 @@
 뽑아 pooling 재료를 만드는 로직.
 
 scripts/06_generate_lexical_runs.py의 CLI 배관(인자 파싱, 콘솔 출력)을 제외한 핵심 로직
-전체 — 문서 텍스트 정규화/토큰화, char TF-IDF/word TF-IDF/BM25 세 시스템의 fit과 채점,
-run 조립, manifest 생성까지 (docs/PIPELINE_CODE_REFERENCE.md `06_generate_lexical_runs.py`
-절 참고).
+전체 — 문서 텍스트 정규화/토큰화, char n-gram TF-IDF 2종(n-gram 길이만 다름)/char n-gram
+BM25 세 시스템의 fit과 채점, run 조립, manifest 생성까지 (docs/PIPELINE_CODE_REFERENCE.md
+`06_generate_lexical_runs.py` 절 참고).
 
 세 시스템 모두 **query 텍스트만** 사용한다 — positive_terms/boundary_terms는 여기서 전혀
 retrieval score에 영향을 주지 않는다(07_build_annotation_pool.py의 targeted 채널에서만
@@ -72,28 +72,18 @@ def build_pool_document_texts(corpus: pd.DataFrame) -> pd.Series:
     ).str.strip()
 
 
-def fit_char_tfidf_scorer(docs: pd.Series) -> ScoreFn:
-    vec = TfidfVectorizer(
-        analyzer="char_wb", ngram_range=(2, 5), min_df=1, sublinear_tf=True, max_features=150000
-    )
-    mat = vec.fit_transform(docs)
+def fit_char_tfidf_scorer(docs: pd.Series, ngram_range: tuple[int, int] = (2, 5)) -> ScoreFn:
+    """char n-gram(word-boundary padded, `char_wb`) TF-IDF 코사인 유사도 채점기.
 
-    def score(query: str) -> np.ndarray:
-        return (vec.transform([query]) @ mat.T).toarray()[0]
-
-    return score
-
-
-def fit_word_tfidf_char_scorer(docs: pd.Series) -> ScoreFn:
-    """이름은 `word_tfidf`지만 실제 analyzer는 char_wb다 — 띄어쓰기 없는 한국어 복합어를
-    쪼갤 수 없는 순수 단어 토큰화의 한계 때문에(`char_ngrams` docstring 참고) char n-gram으로
-    통일했다. `char_tfidf_v1`과는 n-gram 길이(2~4 vs 2~5)로 차별화되고, `bm25_regex_v1`과는
-    scoring 방식(TF-IDF 코사인 유사도 vs BM25 saturating term frequency)으로 차별화되어
-    pooling 다양성은 유지된다.
+    06_generate_lexical_runs.py는 이 함수를 서로 다른 `ngram_range`로 두 번 호출해서
+    (`char_tfidf_v1`=2~5, `char_tfidf_v2`=2~4) pooling 다양성을 확보한다 — 토큰화 방식은
+    동일하고 n-gram 길이만 다른, TREC 스타일 pooling에서 흔한 방식이다(McNamee & Mayfield,
+    2004, "Character N-Gram Tokenization for European Language Text Retrieval"; `char_ngrams`
+    docstring 참고).
     """
 
     vec = TfidfVectorizer(
-        analyzer="char_wb", ngram_range=(2, 4), min_df=1, sublinear_tf=True, max_features=150000
+        analyzer="char_wb", ngram_range=ngram_range, min_df=1, sublinear_tf=True, max_features=150000
     )
     mat = vec.fit_transform(docs)
 
@@ -104,8 +94,10 @@ def fit_word_tfidf_char_scorer(docs: pd.Series) -> ScoreFn:
 
 
 def fit_bm25_scorer(docs: pd.Series) -> ScoreFn:
-    """이름은 `bm25_regex`지만 토큰화는 정규식 단어 추출이 아니라 `char_ngrams`다 — 이유는
-    `fit_word_tfidf_char_scorer`와 동일(한국어 복합어 부분 일치 문제)."""
+    """char n-gram(`char_ngrams`) 토큰 위의 BM25Okapi 채점기 — `fit_char_tfidf_scorer`와 같은
+    이유(한국어 복합어 부분 일치 문제, `char_ngrams` docstring 참고)로 정규식 단어 토큰화
+    대신 char n-gram을 쓰지만, scoring 모델이 TF-IDF 코사인 유사도가 아니라 BM25 saturating
+    term frequency라는 점에서 pooling 다양성에 기여한다."""
 
     bm25 = BM25Okapi([char_ngrams(x) for x in docs.tolist()])
 

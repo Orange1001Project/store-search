@@ -1,0 +1,9 @@
+# arctic_ko.yaml과 같은 모델, query에 모델 내장 prompt "query: "를 붙인 버전.
+# dragonkue/snowflake-arctic-embed-l-v2.0-ko의 config_sentence_transformers.json에 prompts.query="query: "가
+# 정의돼 있다(모델카드 권장 사용법). arctic_ko.yaml(prompt 없음)과 zero-shot으로 비교해서 하나로 정한다.
+name: snowflake_arctic_embed_l_v2_ko_query
+model_id: dragonkue/snowflake-arctic-embed-l-v2.0-ko
+query_prompt_name: query
+normalize_embeddings: true
+target_dimension: null
+batch_size: 32

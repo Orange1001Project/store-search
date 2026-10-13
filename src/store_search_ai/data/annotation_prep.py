@@ -78,8 +78,11 @@ def load_completed(path: Path) -> pd.DataFrame:
 
 
 def validate_expected_splits(data: dict[str, pd.DataFrame]) -> None:
-    for key, split in EXPECTED_SPLIT_BY_KEY.items():
-        found = set(data[key]["split"].astype(str))
+    """읽은 시트마다 split 값이 파일 이름과 맞는지 확인한다(`--train-only`면 A_train 하나만 들어온다)."""
+
+    for key, frame in data.items():
+        split = EXPECTED_SPLIT_BY_KEY[key]
+        found = set(frame["split"].astype(str))
         if found != {split}:
             raise ValueError(f"{key}: expected split={split}, found={found}")
 

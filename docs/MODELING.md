@@ -20,6 +20,10 @@ nDCG/Recall/Precision/MRR을 여러 곳에서 각자 재구현하면 언젠가 �
 "어느 숫자가 맞는 숫자인지" 아무도 확신할 수 없게 됩니다. 그래서 이 구조에서는 metric 계산을
 `scripts/13_evaluate_run.py` 한 곳에만 두고:
 
+- **예외 — Colab 노트북** `colab/train_eval.ipynb`는 `src/` 없이 혼자 돌도록 채점 코드를 `7. 평가` 셀에 **복제**해 두었습니다.
+  대신 `tests/test_train_eval_notebook.py`가 그 셀을 실제로 실행해 공식 evaluator(`evaluator.build_evaluation_report`)와
+  지표·신뢰구간·비교 결과가 같은지 확인하고, 결과를 가져올 때 `scripts/import_colab_results.py --verify`가 공식 evaluator
+  (`build_evaluation_report`, 13번과 같은 함수)로 다시 채점해 같은지 확인합니다. 그래서 채점 방식을 바꿀 때는 evaluator와 노트북 셀을 함께 고쳐야 테스트가 통과합니다.
 - `scripts/14_run_model_eval.py`가 run.csv를 만든 뒤, **`scripts/13_evaluate_run.py`를 그대로
   서브프로세스로 호출**해서 채점합니다. 코드를 복사하지 않고 같은 프로세스를 그대로 재사용하므로,
   숫자가 어긋날 여지 자체가 없습니다.
@@ -34,16 +38,17 @@ nDCG/Recall/Precision/MRR을 여러 곳에서 각자 재구현하면 언젠가 �
 | `src/store_search_ai/retrieval/exact_search.py` | `ExactCosineSearch` — 코퍼스 임베딩 전체와 코사인 유사도로 top-k 계산 |
 | `scripts/14_run_model_eval.py` | (로컬 GPU가 있을 때) 위 셋을 엮어서 corpus 인코딩 → query 인코딩 → 검색 → run.csv → `13_evaluate_run.py` 호출까지 한 번에 |
 | `scripts/15_score_model_runs.py` | `results/model_eval/` 밑의 여러 run(Colab/로컬, zero-shot/fine-tuned 어느 쪽에서 왔든)을 한 번에 채점해 리더보드 생성 |
-| `colab/run_model_eval_encoding.py` | Colab(GPU)에서 같은 인코더/검색 코드를 재사용해 run.csv를 생성 (`colab/README.md` 참고) |
+| `colab/train_eval.ipynb` | Colab(GPU)에서 학습 + 인코딩·검색(run.csv) + 공식과 같은 채점까지 한 파일로 (`colab/README.md` 참고) |
 | `store_search_ai.evaluation.evaluator` | `13_evaluate_run.py`의 채점 로직 본체(qrels/run 로딩, `ir_measures` 위임 계산, bootstrap CI, paired comparison). `13_evaluate_run.py`는 이 모듈을 호출하는 얇은 CLI일 뿐이고, 14/15번은 여전히 `13_evaluate_run.py`를 **서브프로세스로** 호출한다(이 모듈을 직접 import하지 않음) — "모든 모델의 run은 동일 evaluator를 거친다"는 원칙을 CLI 계약으로 강제하기 위함 |
 
 ## 실행 예시
 
 **Colab (GPU)에서 인코딩하는 경우** — 실제로 이 프로젝트가 쓰는 방식입니다. `colab/README.md`에
-전체 절차가 있습니다. 요약하면: VSCode 프로젝트의 `src/`, `configs/models/`, corpus, queries.csv를
-Drive에 올려두고, `colab/run_model_eval_encoding.py`가 **같은 `SentenceTransformerEncoder`/
-`ExactCosineSearch`**로 인코딩·검색해서 `run.csv`를 만듭니다. 그 파일을 `results/model_eval/`로
-가져오면, 아래 로컬 명령과 완전히 동일하게 채점됩니다. 자세한 사항은 `colab/README.md` 참고하세요.
+전체 절차가 있습니다. 요약하면: `scripts/pack_for_colab.py`로 만든 데이터(corpus, queries.csv, qrels)를 Drive에 한 번 올리고,
+`colab/train_eval.ipynb`가 corpus 인코딩 → 정확 코사인 검색 → `run.csv` → 공식 evaluator와 같은 채점까지 합니다
+(zero-shot 비교표는 노트북 11번 셀). 결과는 `scripts/import_colab_results.py --verify`로 `results/model_eval/`·`artifacts/evaluation/`에
+가져오고 실험 기록표 `results/experiments.csv`에도 한 줄씩 남으며,
+이때 공식 evaluator(`build_evaluation_report`, 13번과 같은 함수)로 다시 채점해 Colab 점수와 같은지 확인합니다.
 
 **로컬에 GPU가 있는 경우**:
 

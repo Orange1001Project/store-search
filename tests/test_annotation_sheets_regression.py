@@ -28,6 +28,7 @@ from store_search_ai.data.annotation_sheets import (
     build_split_stats,
     prepare_pool,
 )
+from store_search_ai.data.supplemental_round import exclude_supplemental_rows
 from store_search_ai.pipeline.common import load_config
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -48,7 +49,7 @@ pytestmark = pytest.mark.skipif(
 def test_annotation_sheets_match_checked_in_golden_files():
     config = load_config(REPO_ROOT / "configs" / "benchmark" / "storesearch_ko_v1.yaml")
 
-    pool = pd.read_csv(POOL_PATH)
+    pool = exclude_supplemental_rows(pd.read_csv(POOL_PATH), BENCHMARK_DIR / "annotations")
     queries = pd.read_csv(QUERIES_PATH)
     queries = queries[queries["status"] == "active"].copy()
 

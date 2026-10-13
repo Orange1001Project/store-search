@@ -1,7 +1,7 @@
 """리팩터링 전후로 09_prepare_full_annotations.py의 산출물이 동일한지 확인하는 golden-file
 회귀 테스트.
 
-benchmark/storesearch_ko_v1/agreement_report.json, qrels/provisional_v1/qrels_train_provisional.*,
+benchmark/storesearch_ko_v1/agreement_report.json, qrels/full_annotation_v1/qrels_train_provisional.*,
 annotations/full_annotation_v1/analysis/*는 리팩터링 전 스크립트가 실제 완료된 애노테이션
 (completed/annotation_A_all_completed.csv, annotation_B_val_test_completed.csv - 사람이 직접
 판정한 원본, 이 공유 폴더에 그대로 남아있음)으로 만든 진짜 결과물이다. split별 5개 완료
@@ -95,7 +95,7 @@ def test_prepare_full_annotations_matches_checked_in_golden_files(tmp_path):
 
     _assert_matches_golden(
         _write(train_qrels, "qrels_train_provisional.csv"),
-        BENCHMARK_DIR / "qrels" / "provisional_v1" / "qrels_train_provisional.csv",
+        BENCHMARK_DIR / "qrels" / "full_annotation_v1" / "qrels_train_provisional.csv",
     )
     _assert_matches_golden(
         _write(needed, "adjudication_val_test_needed_only.csv"),
