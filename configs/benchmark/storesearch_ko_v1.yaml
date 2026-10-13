@@ -33,10 +33,10 @@ pooling:
   random_per_query: 8
   random_seed: 20260831
   min_pool_size_warn: 60
-  # dense retrieval pooling 라운드 없이 lexical(char n-gram TF-IDF 2종 + char n-gram BM25) 3개로
-  # final 확정하기로 결정
-  # (팀 결정, 2026-09-11) — dense round를 추가하면 이 값을 다시 올릴 것.
-  min_pool_systems_final: 3
+  # 처음에는 lexical(char n-gram TF-IDF 2종 + char n-gram BM25) 3개로 final 확정(팀 결정, 2026-09-11).
+  # 2026-10 보충 라운드 supplement_v2에서 임베딩 모델 6종(val/test 상위 20개)을 더해 9개가 됐다 —
+  # 이 값보다 적으면 12번 final 검증이 실패한다(dense pool이 빠진 채 qrels를 다시 만드는 실수를 막는다).
+  min_pool_systems_final: 9
 
 annotation:
   double_annotate_splits: [val, test]
