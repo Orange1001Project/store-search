@@ -40,3 +40,7 @@ __pycache__/
 # 노트북 15번이 만든 보충 pooling용 원본 run(top 100, 약 18MB). 실제로 pool에 넣은 depth까지의 사본은
 # benchmark/storesearch_ko_v1/annotations/<round>/runs/에 커밋된다.
 /results/pooling_runs/
+
+# 모델 가중치는 models/(위)에만 둔다 — Drive 폴더를 통째로 results/ 아래에 풀었을 때 1GB대 파일이 커밋되지 않게
+/results/**/*.safetensors
+/results/**/*.bin
