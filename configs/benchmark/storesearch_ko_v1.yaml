@@ -22,6 +22,9 @@ query_set:
   version: query_set_v004
   random_seed: 20260831
   corrections_path: configs/query/query_corrections_v004.yaml
+  # 여기 적힌 쿼리는 queries.csv에 status=inactive로 남고 qrels·평가·학습에서 빠진다(05번이 읽음).
+  # 2026-10-14: 오타 변형 49개 비활성화 — 이유는 파일 머리말 참고.
+  inactive_queries_path: configs/benchmark/inactive_queries_v1.yaml
 
 relevance:
   grades: [0, 1, 2, 3]

@@ -1,0 +1,63 @@
+# 비활성(status=inactive) 쿼리 목록 — scripts/05_init_benchmark.py가 queries.csv를 만들 때 읽는다.
+#
+# 비활성 쿼리는 queries.csv에 행은 남지만 qrels·평가·학습 데이터 어디에도 들어가지 않는다
+# (load_active_queries, 11_build_qrels.py가 status == active만 쓴다). 판정 기록(annotations/)도 그대로 남으므로
+# 다시 쓰려면 이 목록에서 빼고 05 → 11 → 12를 다시 돌리면 된다(재판정 불필요).
+#
+# 2026-10-14 팀 결정: T6 기계변형 중 실제 오타 변형 49개(train 22 / val 12 / test 15)를 비활성화.
+# - 이유: 오타는 임베딩 모델보다 검색 앞단의 철자 교정이 다룰 문제이고(서비스 관례), 철자 교정은 기본 검색 성능을 확정한 뒤
+#   검색 로그와 함께 다룬다. 오타 강건성 연구도 오타 쿼리를 주 지표에 섞지 않고 별도 세트로 보고한다.
+# - 근거(val): 오타 증강 학습(kse13_20261013_0721)이 기준선 대비 nDCG@10 Δ +0.001(p=0.70), 오타 쿼리 bad@3 0.375 그대로.
+#   실패 유형이 실제 단어·상호와의 충돌(과잉, 원담, 운돈→돈)과 분절 오류(원단추천→단추)라 학습으로 고쳐지지 않음.
+#   val 오타 쿼리가 12개뿐이라 쿼리 하나가 그 묶음 평균을 0.08씩 움직임. T6는 규칙으로 만든 변형이라 실제 사용자 오타 분포도 아님.
+# - "~추천" 변형(46개)과 띄어쓰기 변형(건강 식품·주방 용품·피부 관리)은 오타가 아닌 자연스러운 쿼리라 남긴다.
+inactive_queries:
+  - {query_id: q_가구_09, query: "가두", reason: typo}   # test
+  - {query_id: q_간식_06, query: "간싣", reason: typo}   # test
+  - {query_id: q_건강식품_09, query: "건강식푼", reason: typo}   # test
+  - {query_id: q_귀금속_11, query: "귀금솓", reason: typo}   # test
+  - {query_id: q_분식_18, query: "분싣", reason: typo}   # test
+  - {query_id: q_속옷_06, query: "속옥", reason: typo}   # test
+  - {query_id: q_의료_09, query: "의요", reason: typo}   # test
+  - {query_id: q_일식_09, query: "일싣", reason: typo}   # test
+  - {query_id: q_주방용품_06, query: "주방용푼", reason: typo}   # test
+  - {query_id: q_중식_09, query: "중싣", reason: typo}   # test
+  - {query_id: q_치과_09, query: "치돠", reason: typo}   # test
+  - {query_id: q_침구_10, query: "침두", reason: typo}   # test
+  - {query_id: q_칼국수_09, query: "칼국구", reason: typo}   # test
+  - {query_id: q_피부관리_08, query: "피부관이", reason: typo}   # test
+  - {query_id: q_한의원_09, query: "한의웜", reason: typo}   # test
+  - {query_id: q_가방_06, query: "가반", reason: typo}   # train
+  - {query_id: q_건어물_06, query: "건어뭉", reason: typo}   # train
+  - {query_id: q_교육_09, query: "교윧", reason: typo}   # train
+  - {query_id: q_네일_10, query: "네잉", reason: typo}   # train
+  - {query_id: q_떡_08, query: "떧", reason: typo}   # train
+  - {query_id: q_미용_12, query: "미욘", reason: typo}   # train
+  - {query_id: q_반찬_09, query: "반참", reason: typo}   # train
+  - {query_id: q_빵_09, query: "빤", reason: typo}   # train
+  - {query_id: q_신발_10, query: "신방", reason: typo}   # train
+  - {query_id: q_양식_09, query: "양싣", reason: typo}   # train
+  - {query_id: q_의류_15, query: "의유", reason: typo}   # train
+  - {query_id: q_의약품_09, query: "의약푼", reason: typo}   # train
+  - {query_id: q_잡화_05, query: "잡롸", reason: typo}   # train
+  - {query_id: q_정육_22, query: "정윧", reason: typo}   # train
+  - {query_id: q_주류_07, query: "주유", reason: typo}   # train
+  - {query_id: q_철물_10, query: "철뭉", reason: typo}   # train
+  - {query_id: q_치킨_09, query: "치킴", reason: typo}   # train
+  - {query_id: q_커피_14, query: "커치", reason: typo}   # train
+  - {query_id: q_피자_07, query: "피바", reason: typo}   # train
+  - {query_id: q_한식_12, query: "한싣", reason: typo}   # train
+  - {query_id: q_화장품_09, query: "화장푼", reason: typo}   # train
+  - {query_id: q_휴대폰_09, query: "휴대폼", reason: typo}   # train
+  - {query_id: q_공예_06, query: "공녜", reason: typo}   # val
+  - {query_id: q_과일_11, query: "과잉", reason: typo}   # val
+  - {query_id: q_꽃_11, query: "꽅", reason: typo}   # val
+  - {query_id: q_수산물_17, query: "수산뭉", reason: typo}   # val
+  - {query_id: q_식자재_13, query: "식자배", reason: typo}   # val
+  - {query_id: q_안경_10, query: "안견", reason: typo}   # val
+  - {query_id: q_야채_12, query: "야태", reason: typo}   # val
+  - {query_id: q_운동_13, query: "운돈", reason: typo}   # val
+  - {query_id: q_원단_05, query: "원담", reason: typo}   # val
+  - {query_id: q_자동차_06, query: "자동타", reason: typo}   # val
+  - {query_id: q_족발_06, query: "족방", reason: typo}   # val
+  - {query_id: q_편의점_08, query: "편의전", reason: typo}   # val

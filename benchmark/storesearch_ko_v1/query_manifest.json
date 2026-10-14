@@ -13,6 +13,13 @@
     "test": 28,
     "val": 15
   },
-  "queries_sha256": "605b17d74b36c0a861f76f899f4f91a76f19d3b890876999a86606cf7cea10ee",
-  "families_config_sha256": "a5dd738d37ba6ebe3737d0dd43b22effdd736f40c4a31b97aeae84c83bbd2aad"
+  "queries_sha256": "b5255026d254bcf9b488d6ed545b86e804e273bc517566fe62e9168587f61a02",
+  "families_config_sha256": "a5dd738d37ba6ebe3737d0dd43b22effdd736f40c4a31b97aeae84c83bbd2aad",
+  "active_queries": 499,
+  "active_queries_by_split": {
+    "train": 215,
+    "test": 160,
+    "val": 124
+  },
+  "inactive_queries": 49
 }

@@ -1,11 +1,11 @@
 {
   "stage": "final",
-  "queries": 548,
+  "queries": 499,
   "query_families": 72,
   "queries_by_split": {
-    "train": 237,
-    "test": 175,
-    "val": 136
+    "train": 215,
+    "test": 160,
+    "val": 124
   },
   "corpus_docs": 214043,
   "pool_rows": 65926,
@@ -25,10 +25,10 @@
     "snowflake_arctic_embed_l_v2_ko_query"
   ],
   "pool_system_count": 9,
-  "judgments": 65181,
-  "judgments_per_query_min": 26,
-  "judgments_per_query_median": 117.0,
-  "binary_relevant_documents": 49668,
+  "judgments": 59163,
+  "judgments_per_query_min": 55,
+  "judgments_per_query_median": 116.0,
+  "binary_relevant_documents": 46420,
   "agreement": {
     "human_double_annotation_required_rows": 28549,
     "human_double_annotation_completed_rows": 28223,
