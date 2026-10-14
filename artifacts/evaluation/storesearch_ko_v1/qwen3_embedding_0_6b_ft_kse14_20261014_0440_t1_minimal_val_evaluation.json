@@ -1,0 +1,218 @@
+{
+  "benchmark": "StoreSearch-KO v1",
+  "tag": "qwen3_embedding_0_6b_ft_kse14_20261014_0440_t1_minimal_val",
+  "qrels": "/content/drive/MyDrive/store-search-ai/data/qrels_val.trec",
+  "run": "/content/drive/MyDrive/store-search-ai/runs/model_eval/qwen3_embedding_0_6b_ft_kse14_20261014_0440/run_t1_minimal_val.csv",
+  "primary_metric": "nDCG@10",
+  "binary_relevance_threshold": 2,
+  "metrics": [
+    "nDCG@10",
+    "Precision@10",
+    "MRR@100",
+    "Recall@50",
+    "Recall@100",
+    "Bpref",
+    "Judged@10",
+    "Judged@100"
+  ],
+  "query_count": 124,
+  "run_query_count": 124,
+  "aggregate": {
+    "nDCG@10": 0.9481519496270793,
+    "Precision@10": 0.9451612903225808,
+    "MRR@100": 0.9666760658696143,
+    "Recall@50": 0.30466629790935246,
+    "Recall@100": 0.41836718071910267,
+    "Bpref": 0.4038469717094746,
+    "Judged@10": 0.9951612903225809,
+    "Judged@100": 0.47846774193548386
+  },
+  "query_bootstrap_ci95": {
+    "nDCG@10": {
+      "mean": 0.9481519496270793,
+      "ci95": [
+        0.9206238406138201,
+        0.9720982193628795
+      ]
+    },
+    "Precision@10": {
+      "mean": 0.9451612903225808,
+      "ci95": [
+        0.9137096774193549,
+        0.9717741935483872
+      ]
+    },
+    "MRR@100": {
+      "mean": 0.9666760658696142,
+      "ci95": [
+        0.9375686611775321,
+        0.9919354838709677
+      ]
+    },
+    "Recall@50": {
+      "mean": 0.30466629790935235,
+      "ci95": [
+        0.2871083473730293,
+        0.32218070958050504
+      ]
+    },
+    "Recall@100": {
+      "mean": 0.4183671807191026,
+      "ci95": [
+        0.3939795674121019,
+        0.443586329481105
+      ]
+    },
+    "Bpref": {
+      "mean": 0.4038469717094744,
+      "ci95": [
+        0.3778799201566001,
+        0.42998928954132637
+      ]
+    },
+    "Judged@10": {
+      "mean": 0.9951612903225807,
+      "ci95": [
+        0.9911290322580646,
+        0.9983870967741936
+      ]
+    },
+    "Judged@100": {
+      "mean": 0.4784677419354839,
+      "ci95": [
+        0.46298387096774196,
+        0.49435685483870967
+      ]
+    }
+  },
+  "run_validation": {
+    "rows": 12400,
+    "queries": 124,
+    "expected_queries": 124,
+    "missing_queries": 0,
+    "unknown_queries": 0,
+    "duplicate_query_doc_pairs": 0,
+    "invalid_rank_rows": 0
+  },
+  "comparison": {
+    "baseline_tag": "qwen3_embedding_0_6b",
+    "baseline_run": "/content/drive/MyDrive/store-search-ai/runs/model_eval/qwen3_embedding_0_6b/run_t1_minimal_val.csv",
+    "baseline_aggregate": {
+      "nDCG@10": 0.9195758866676331,
+      "Precision@10": 0.9177419354838713,
+      "MRR@100": 0.9386143386973558,
+      "Recall@50": 0.280637784934828,
+      "Recall@100": 0.37681991715915686,
+      "Bpref": 0.3573853761133733,
+      "Judged@10": 1.0,
+      "Judged@100": 0.4422580645161291
+    },
+    "metrics": {
+      "nDCG@10": {
+        "delta_mean": 0.02857606295944603,
+        "delta_ci95": [
+          0.015155861820467766,
+          0.043179007331549266
+        ],
+        "paired_permutation_pvalue": 9.999000099990002e-05,
+        "wins": 31,
+        "ties": 82,
+        "losses": 11
+      },
+      "Precision@10": {
+        "delta_mean": 0.027419354838709685,
+        "delta_ci95": [
+          0.01129032258064516,
+          0.04516129032258065
+        ],
+        "paired_permutation_pvalue": 0.0007999200079992001,
+        "wins": 23,
+        "ties": 92,
+        "losses": 9
+      },
+      "MRR@100": {
+        "delta_mean": 0.028061727172258483,
+        "delta_ci95": [
+          0.010174058626383107,
+          0.04987181402563279
+        ],
+        "paired_permutation_pvalue": 0.0064993500649935,
+        "wins": 9,
+        "ties": 114,
+        "losses": 1
+      },
+      "Recall@50": {
+        "delta_mean": 0.024028512974524435,
+        "delta_ci95": [
+          0.017214725871823426,
+          0.031114989465704634
+        ],
+        "paired_permutation_pvalue": 9.999000099990002e-05,
+        "wins": 81,
+        "ties": 13,
+        "losses": 30
+      },
+      "Recall@100": {
+        "delta_mean": 0.04154726355994583,
+        "delta_ci95": [
+          0.03288747192304951,
+          0.05039677040046669
+        ],
+        "paired_permutation_pvalue": 9.999000099990002e-05,
+        "wins": 106,
+        "ties": 7,
+        "losses": 11
+      },
+      "Bpref": {
+        "delta_mean": 0.04646159559610119,
+        "delta_ci95": [
+          0.03771775944427933,
+          0.05581534799209274
+        ],
+        "paired_permutation_pvalue": 9.999000099990002e-05,
+        "wins": 106,
+        "ties": 5,
+        "losses": 13
+      },
+      "Judged@10": {
+        "delta_mean": -0.004838709677419354,
+        "delta_ci95": [
+          -0.00887096774193548,
+          -0.0016129032258064512
+        ],
+        "paired_permutation_pvalue": 0.028997100289971003,
+        "wins": 0,
+        "ties": 118,
+        "losses": 6
+      },
+      "Judged@100": {
+        "delta_mean": 0.03620967741935484,
+        "delta_ci95": [
+          0.02903225806451613,
+          0.04379032258064516
+        ],
+        "paired_permutation_pvalue": 9.999000099990002e-05,
+        "wins": 100,
+        "ties": 10,
+        "losses": 14
+      }
+    }
+  },
+  "official": true,
+  "corpus_docs": 214043,
+  "model_id": "/content/drive/MyDrive/store-search-ai/runs/finetune/qwen3_embedding_0_6b_ft_kse14_20261014_0440",
+  "eval_dtype": "float16",
+  "evaluated_at": "2026-10-14T05:18:39.686079+00:00",
+  "library_versions": {
+    "torch": "2.11.0+cu130",
+    "transformers": "5.18.0",
+    "sentence-transformers": "5.7.0",
+    "peft": "0.21.1",
+    "datasets": "4.8.5",
+    "accelerate": "1.15.0",
+    "huggingface-hub": "1.33.0",
+    "ir-measures": "0.4.3",
+    "pytrec-eval-terrier": "0.5.10"
+  },
+  "evaluated_with": "colab/train_eval.ipynb"
+}
