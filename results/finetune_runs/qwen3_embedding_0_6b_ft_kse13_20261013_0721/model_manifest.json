@@ -1,0 +1,435 @@
+{
+  "tag": "qwen3_embedding_0_6b_ft_kse13_20261013_0721",
+  "owner": "kse13",
+  "base_model_id": "Qwen/Qwen3-Embedding-0.6B",
+  "base_model_config": {
+    "name": "qwen3_embedding_0_6b",
+    "model_id": "Qwen/Qwen3-Embedding-0.6B",
+    "query_prompt_name": "query",
+    "batch_size": 32,
+    "train": {
+      "lora_rank": 16,
+      "learning_rate": 0.0001,
+      "base_dtype": "float32",
+      "batch_size": 32,
+      "loss": "gist",
+      "mini_batch_size": 16
+    }
+  },
+  "framework": "sentence-transformers+peft-lora(merged)",
+  "hyperparameters": {
+    "num_epochs": 2,
+    "batch_size": 32,
+    "mini_batch_size": 16,
+    "learning_rate": 0.0001,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "max_seq_length": 128,
+    "num_hard_negatives": 3,
+    "typo_variants_per_query": 2,
+    "typo_positives_per_variant": 8,
+    "max_positives_per_query": 32,
+    "loss": "gist",
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "base_dtype": "float32",
+    "save_dtype": "float16",
+    "seed": 20260831,
+    "keep_last_runs": 3,
+    "note": "4. 학습 행: 오타 증강 query당 2개(positive 8)",
+    "resume_tag": null,
+    "save_mid_checkpoint": true
+  },
+  "precision": "fp16",
+  "training_data": {
+    "source": "/content/drive/MyDrive/store-search-ai/data/train_pairs.jsonl",
+    "sha256": "067e4aa48a1ca59c432a4f4e29b55ba023b6346e452f343e508ed28e1a2d262e",
+    "expansion": {
+      "n_queries_in_file": 711,
+      "n_queries_used": 711,
+      "n_skipped_few_negatives": 0,
+      "n_rows": 11056
+    },
+    "prepare_meta": {
+      "created_at": "2026-10-02T01:19:32.162173+00:00",
+      "git_commit": "40506ea0efa1fca67ed4f3a61411638ae99b7294",
+      "benchmark_version": "storesearch_ko_v1",
+      "corpus_version": "store_corpus_v002",
+      "qrels_path": "benchmark/storesearch_ko_v1/qrels_train.csv",
+      "qrels_sha256": "6a9c42466462e7b584b6d89d7fceca745debd7f968ec6ec0b121df8e20a0de97",
+      "qrels_kind": "final",
+      "template": "t1_minimal",
+      "binary_relevance_threshold": 2,
+      "max_negatives": 8,
+      "train_pairs_sha256": "067e4aa48a1ca59c432a4f4e29b55ba023b6346e452f343e508ed28e1a2d262e",
+      "stats": {
+        "n_written": 237,
+        "n_skipped_no_positive": 0,
+        "total_positives": 16671,
+        "total_negatives": 1885
+      }
+    },
+    "smoke": false
+  },
+  "data_version": {
+    "packed_at": "2026-10-13T02:36:15.280239+00:00",
+    "git_branch": "feature/dense-pooling-supplement",
+    "git_commit": "cb2fe58f7a9375972f9014b3e64af27f34017e78",
+    "benchmark_version": "storesearch_ko_v1",
+    "corpus_version": "store_corpus_v002",
+    "corpus_file": "store_corpus_v002.parquet",
+    "evaluation": {
+      "bootstrap_samples": 10000,
+      "random_seed": 20260831,
+      "binary_relevance_threshold": 2
+    },
+    "files": {
+      "train_pairs.jsonl": "067e4aa48a1ca59c432a4f4e29b55ba023b6346e452f343e508ed28e1a2d262e",
+      "train_pairs.meta.json": "dc77e5e0044a891065abdc968cb682108d711f7246a5133bbe4429ee0c0e29d6",
+      "store_corpus_v002.parquet": "93bd159a98207087a784434c7731cc8b059aa9d10a0dc71d226829cc2c270a87",
+      "queries.csv": "605b17d74b36c0a861f76f899f4f91a76f19d3b890876999a86606cf7cea10ee",
+      "qrels_val.trec": "9451f3a7928ee6273ba98928d3bde5f0e732b5923f26752fb3aa24f6332f7c27",
+      "qrels_test.trec": "f165eb6eabd689d07ed47ca469d061513f3153eb2f7d827462e2356f1e13155b"
+    }
+  },
+  "code": {
+    "notebook": "colab/train_eval.ipynb",
+    "snapshot": "notebook_code.py",
+    "snapshot_sha256": "ae5e0c28c85c3651d9267292d07a7da75df89411a112a8ec78484df6ec81fec2"
+  },
+  "training_result": {
+    "runtime_sec": 3043.9,
+    "resumed_from": null,
+    "mid_checkpoint_step": 346,
+    "global_steps": 692,
+    "peak_gpu_memory_gb": 6.49,
+    "final_loss": 0.00031,
+    "loss_history": [
+      {
+        "step": 10,
+        "loss": 0.74959
+      },
+      {
+        "step": 20,
+        "loss": 0.47409
+      },
+      {
+        "step": 30,
+        "loss": 0.37138
+      },
+      {
+        "step": 40,
+        "loss": 0.29099
+      },
+      {
+        "step": 50,
+        "loss": 0.31261
+      },
+      {
+        "step": 60,
+        "loss": 0.28416
+      },
+      {
+        "step": 70,
+        "loss": 0.30496
+      },
+      {
+        "step": 80,
+        "loss": 0.21851
+      },
+      {
+        "step": 90,
+        "loss": 0.24313
+      },
+      {
+        "step": 100,
+        "loss": 0.23028
+      },
+      {
+        "step": 110,
+        "loss": 0.231
+      },
+      {
+        "step": 120,
+        "loss": 0.22585
+      },
+      {
+        "step": 130,
+        "loss": 0.20561
+      },
+      {
+        "step": 140,
+        "loss": 0.13824
+      },
+      {
+        "step": 150,
+        "loss": 0.2178
+      },
+      {
+        "step": 160,
+        "loss": 0.17427
+      },
+      {
+        "step": 170,
+        "loss": 0.19793
+      },
+      {
+        "step": 180,
+        "loss": 0.15663
+      },
+      {
+        "step": 190,
+        "loss": 0.14063
+      },
+      {
+        "step": 200,
+        "loss": 0.15421
+      },
+      {
+        "step": 210,
+        "loss": 0.12705
+      },
+      {
+        "step": 220,
+        "loss": 0.13915
+      },
+      {
+        "step": 230,
+        "loss": 0.14167
+      },
+      {
+        "step": 240,
+        "loss": 0.13932
+      },
+      {
+        "step": 250,
+        "loss": 0.12465
+      },
+      {
+        "step": 260,
+        "loss": 0.10831
+      },
+      {
+        "step": 270,
+        "loss": 0.12568
+      },
+      {
+        "step": 280,
+        "loss": 0.1247
+      },
+      {
+        "step": 290,
+        "loss": 0.12215
+      },
+      {
+        "step": 300,
+        "loss": 0.11643
+      },
+      {
+        "step": 310,
+        "loss": 0.06247
+      },
+      {
+        "step": 320,
+        "loss": 0.08229
+      },
+      {
+        "step": 330,
+        "loss": 0.061
+      },
+      {
+        "step": 340,
+        "loss": 0.03577
+      },
+      {
+        "step": 350,
+        "loss": 0.03444
+      },
+      {
+        "step": 360,
+        "loss": 0.04829
+      },
+      {
+        "step": 370,
+        "loss": 0.04485
+      },
+      {
+        "step": 380,
+        "loss": 0.0529
+      },
+      {
+        "step": 390,
+        "loss": 0.09601
+      },
+      {
+        "step": 400,
+        "loss": 0.11784
+      },
+      {
+        "step": 410,
+        "loss": 0.04014
+      },
+      {
+        "step": 420,
+        "loss": 0.08548
+      },
+      {
+        "step": 430,
+        "loss": 0.053
+      },
+      {
+        "step": 440,
+        "loss": 0.06367
+      },
+      {
+        "step": 450,
+        "loss": 0.05587
+      },
+      {
+        "step": 460,
+        "loss": 0.04468
+      },
+      {
+        "step": 470,
+        "loss": 0.06398
+      },
+      {
+        "step": 480,
+        "loss": 0.07472
+      },
+      {
+        "step": 490,
+        "loss": 0.11809
+      },
+      {
+        "step": 500,
+        "loss": 0.09491
+      },
+      {
+        "step": 510,
+        "loss": 0.06593
+      },
+      {
+        "step": 520,
+        "loss": 0.05981
+      },
+      {
+        "step": 530,
+        "loss": 0.07293
+      },
+      {
+        "step": 540,
+        "loss": 0.06598
+      },
+      {
+        "step": 550,
+        "loss": 0.06404
+      },
+      {
+        "step": 560,
+        "loss": 0.03638
+      },
+      {
+        "step": 570,
+        "loss": 0.06855
+      },
+      {
+        "step": 580,
+        "loss": 0.04891
+      },
+      {
+        "step": 590,
+        "loss": 0.05614
+      },
+      {
+        "step": 600,
+        "loss": 0.03551
+      },
+      {
+        "step": 610,
+        "loss": 0.04449
+      },
+      {
+        "step": 620,
+        "loss": 0.05298
+      },
+      {
+        "step": 630,
+        "loss": 0.05797
+      },
+      {
+        "step": 640,
+        "loss": 0.03176
+      },
+      {
+        "step": 650,
+        "loss": 0.03183
+      },
+      {
+        "step": 660,
+        "loss": 0.05015
+      },
+      {
+        "step": 670,
+        "loss": 0.02235
+      },
+      {
+        "step": 680,
+        "loss": 0.0019
+      },
+      {
+        "step": 690,
+        "loss": 0.00031
+      }
+    ]
+  },
+  "serving": {
+    "document_template": "t1_minimal",
+    "query_prompt_name": "query",
+    "query_prompt": "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:",
+    "document_prompt": null,
+    "embedding_dim": 1024,
+    "full_embedding_dim": 1024,
+    "normalize_embeddings": true,
+    "similarity": "cosine",
+    "max_seq_length": 128,
+    "saved_dtype": "float16"
+  },
+  "environment": {
+    "packages": {
+      "torch": "2.11.0+cu130",
+      "transformers": "5.18.0",
+      "sentence-transformers": "5.7.0",
+      "peft": "0.21.1",
+      "datasets": "4.8.5",
+      "accelerate": "1.15.0",
+      "huggingface-hub": "1.33.0",
+      "ir-measures": "0.4.3",
+      "pytrec-eval-terrier": "0.5.10"
+    },
+    "gpu": "Tesla T4"
+  },
+  "created_at": "2026-10-13T08:13:30.586318+00:00",
+  "evaluations": [
+    {
+      "evaluated_at": "2026-10-13T08:22:12.465339+00:00",
+      "split": "val",
+      "template": "t1_minimal",
+      "tag": "qwen3_embedding_0_6b_ft_kse13_20261013_0721_t1_minimal_val",
+      "official": true,
+      "metrics": {
+        "nDCG@10": 0.9105848955980002,
+        "Precision@10": 0.9088235294117646,
+        "MRR@100": 0.9319685828877006,
+        "Recall@50": 0.2915200151911435,
+        "Recall@100": 0.40261497122142215,
+        "Bpref": 0.388093323625063,
+        "Judged@10": 0.9911764705882353,
+        "Judged@100": 0.4716176470588232
+      },
+      "baseline": "qwen3_embedding_0_6b",
+      "where": "colab"
+    }
+  ]
+}
