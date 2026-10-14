@@ -18,6 +18,7 @@ from store_search_ai.data.benchmark_init import (
     GUIDELINE,
     build_queries_frame,
     build_query_manifest,
+    load_inactive_queries,
 )
 from store_search_ai.pipeline.common import load_config, sha256_file
 
@@ -36,7 +37,9 @@ def main() -> None:
     benchmark_dir = Path(config["benchmark_dir"])
     benchmark_dir.mkdir(parents=True, exist_ok=True)
 
-    queries = build_queries_frame(query_cfg)
+    inactive_path = config["query_set"].get("inactive_queries_path")
+    inactive = load_inactive_queries(Path(inactive_path) if inactive_path else None)
+    queries = build_queries_frame(query_cfg, inactive)
 
     queries_path = benchmark_dir / "queries.csv"
     queries.to_csv(queries_path, index=False, encoding="utf-8-sig", lineterminator="\n")

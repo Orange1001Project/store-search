@@ -51,7 +51,9 @@ def test_annotation_sheets_match_checked_in_golden_files():
 
     pool = exclude_supplemental_rows(pd.read_csv(POOL_PATH), BENCHMARK_DIR / "annotations")
     queries = pd.read_csv(QUERIES_PATH)
-    queries = queries[queries["status"] == "active"].copy()
+    # 본 라운드 시트는 모든 쿼리가 active이던 때(2026-09) 만든 기록이다 — 그 뒤 비활성화된 쿼리(오타 변형, 2026-10)도 포함해
+    # 그때와 같은 입력으로 다시 만들어 비교한다(08번을 지금 다시 돌리면 비활성 쿼리는 빠진 새 시트가 된다).
+    queries = queries[queries["status"].isin(["active", "inactive"])].copy()
 
     pool = prepare_pool(pool, queries, "full_annotation_v1")
     seed = int(config["annotation"]["random_seed"])

@@ -190,3 +190,16 @@ def test_freeze_benchmark_copies_files_and_refuses_to_overwrite(tmp_path):
 
     with pytest.raises(FileExistsError):
         freeze_benchmark(frozen_dir, [source])
+
+
+def test_assemble_qrels_drops_inactive_queries_but_rejects_unknown_ones():
+    def frame(query_ids):
+        return pd.DataFrame({"query_id": query_ids, "doc_id": ["d1"] * len(query_ids),
+                             "relevance": [3] * len(query_ids), "query_family": ["fam"] * len(query_ids)})
+
+    result = assemble_qrels(frame(["q1"]), frame(["q2", "q_typo"]), frame(["q3"]),
+                            active_query_ids={"q1", "q2", "q3"}, inactive_query_ids={"q_typo"})
+    assert list(result["val"]["query_id"]) == ["q2"] and len(result["all"]) == 3
+    with pytest.raises(ValueError, match="not present in active"):
+        assemble_qrels(frame(["q1"]), frame(["q2", "q_unknown"]), frame(["q3"]),
+                       active_query_ids={"q1", "q2", "q3"}, inactive_query_ids={"q_typo"})

@@ -7,6 +7,8 @@
 
 모델·인코딩 정보(model_id, eval_dtype, library_versions, evaluated_at 등)는 그대로 두고, 지표와 `rescored`(언제, 어떤
 qrels로, 이전 지표)만 바꾼다. test 평가는 `--include-test`를 줄 때만 다시 채점한다(test 점수를 새로 보는 일이므로).
+쿼리를 비활성화한 뒤(queries.csv status=inactive)라면 run 파일에서 그 쿼리 행을 지우고 채점한다(공식 evaluator는 qrels에
+없는 쿼리가 run에 있으면 멈추므로). `--dry-run`은 run 파일을 건드리지 않는다.
 
 사용법:
     python scripts/rescore_evaluations.py --dry-run     # 무엇을 다시 채점할지만 출력
@@ -39,11 +41,29 @@ def local_run(repo_root: Path, run: str) -> Path:
     return repo_root / "results" / "model_eval" / path.parent.name / path.name
 
 
-def rescore_report(old: dict, repo_root: Path, benchmark_dir: Path, bootstrap: int, seed: int) -> tuple[dict, pd.DataFrame]:
+def drop_inactive_queries(run_path: Path, inactive: set[str]) -> int:
+    """run 파일에서 비활성 쿼리(queries.csv status=inactive) 행을 지우고 지운 쿼리 수를 돌려준다.
+
+    공식 evaluator는 qrels에 없는 query_id가 run에 있으면 멈춘다(엄격하게 두는 것이 의도). 쿼리를 비활성화하기 전에 만든
+    run에는 그 쿼리 결과가 들어 있으므로, 비활성 쿼리만 빼고 다시 저장한다 — 그 밖의 모르는 query_id는 그대로 둬서 에러가 난다.
+    """
+
+    # pandas로 읽고 쓰면 score의 마지막 자리가 바뀔 수 있어(evaluator는 score로 정렬) 줄 단위로 그대로 거른다
+    header, *lines = run_path.read_text(encoding="utf-8-sig").splitlines(keepends=True)
+    kept = [line for line in lines if line.split(",", 1)[0] not in inactive]
+    if len(kept) != len(lines):
+        run_path.write_text(header + "".join(kept), encoding="utf-8-sig", newline="")
+    return len({line.split(",", 1)[0] for line in lines} & inactive)
+
+
+def rescore_report(
+    old: dict, repo_root: Path, benchmark_dir: Path, bootstrap: int, seed: int, inactive: set[str] = frozenset()
+) -> tuple[dict, pd.DataFrame]:
     run_path = local_run(repo_root, old["run"])
     split = run_path.stem.rsplit("_", 1)[-1]
     comparison = old.get("comparison") or {}
     baseline = local_run(repo_root, comparison["baseline_run"]) if comparison.get("baseline_run") else None
+    dropped = {str(p.parent.name): n for p in filter(None, (run_path, baseline)) if (n := drop_inactive_queries(p, inactive))}
     qrels_path = benchmark_dir / f"qrels_{split}.trec"
     report, per_query = build_evaluation_report(
         qrels_path=qrels_path, run_path=run_path, tag=old["tag"], bootstrap_samples=bootstrap, seed=seed,
@@ -59,6 +79,8 @@ def rescore_report(old: dict, repo_root: Path, benchmark_dir: Path, bootstrap: i
         "previous_aggregate": old.get("aggregate"),
         "previous_rescored": old.get("rescored"),
     }
+    if dropped:
+        report["rescored"]["inactive_queries_dropped_from_runs"] = dropped
     return report, per_query
 
 
@@ -96,6 +118,8 @@ def main() -> None:
     eval_dir = repo_root / "artifacts" / "evaluation" / config["benchmark_version"]
     settings = config.get("evaluation", {})
     bootstrap, seed = int(settings.get("bootstrap_samples", 10000)), int(settings.get("random_seed", 20260831))
+    queries = pd.read_csv(benchmark_dir / "queries.csv", encoding="utf-8-sig")
+    inactive = set(queries.loc[queries["status"].astype(str).str.lower() != "active", "query_id"].astype(str))
 
     reports = []
     for path in sorted(eval_dir.glob("*_evaluation.json")):
@@ -109,7 +133,7 @@ def main() -> None:
         if args.dry_run:
             print(f"[예정] {path.name}  ← {run_path.relative_to(repo_root)}")
             continue
-        report, per_query = rescore_report(old, repo_root, benchmark_dir, bootstrap, seed)
+        report, per_query = rescore_report(old, repo_root, benchmark_dir, bootstrap, seed, inactive)
         save_evaluation_outputs(report, per_query, eval_dir, old["tag"])
         before, after = old["aggregate"], report["aggregate"]
         print(f"[재채점] {old['tag']}: nDCG@10 {before['nDCG@10']:.4f} → {after['nDCG@10']:.4f}, "

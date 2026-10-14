@@ -231,3 +231,14 @@ def test_notebook_typo_never_drops_first_syllable_of_a_word(ns):
     for _ in range(500):
         v = ns["make_typo"]("떡케이크", rng)
         assert v is None or v.startswith("떡") or v[0] != "케"   # 첫 음절을 지워 '케이크'가 되지 않음
+
+
+def test_notebook_service_metrics_ignores_queries_without_qrels(ns, tmp_path):
+    exec(compile(_cell("board").split("\nboard = leaderboard(")[0], "<notebook:board>", "exec"), ns)  # noqa: S102
+    ns["queries"] = pd.DataFrame({"query_id": ["q1", "q2"], "query": ["치킨", "빵"], "split": ["val", "val"],
+                                  "query_type": ["T1 정확표기", "T2 동의어"]})
+    run = tmp_path / "run.csv"
+    pd.DataFrame({"query_id": ["q1"] * 3 + ["q_typo"] * 3, "doc_id": ["d1", "d3", "d2", "d9", "d9", "d9"],
+                  "rank": [1, 2, 3, 1, 2, 3], "score": [3, 2, 1, 3, 2, 1], "system": "m"}).to_csv(run, index=False)
+    out = ns["service_metrics"](run, tmp_path / "data" / "qrels_val.trec")
+    assert out["top1_ok"] == 1.0 and out["bad@3"] == 1.0          # q_typo(비활성, qrels 없음)는 세지 않음

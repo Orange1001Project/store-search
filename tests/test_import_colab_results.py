@@ -168,3 +168,15 @@ def test_skips_evaluations_scored_with_old_qrels_and_rescores_locally(tmp_path):
     assert update_registry(registry, [report]) == 1
     row = pd.read_csv(registry, encoding="utf-8-sig").set_index("eval_tag").loc["good_t1_minimal_val"]
     assert row["nDCG@10"] == pytest.approx(report["aggregate"]["nDCG@10"])
+
+
+def test_drop_inactive_queries_removes_only_those_lines_verbatim(tmp_path):
+    from rescore_evaluations import drop_inactive_queries
+
+    run = tmp_path / "run_t1_minimal_val.csv"
+    text = ("\ufeffquery_id,doc_id,rank,score,system\n"
+            "q1,d1,1,0.49992889165878296,m\nq_typo,d2,1,0.5,m\nq2,d3,1,0.12345678901234567,m\n")
+    run.write_text(text, encoding="utf-8", newline="")
+    assert drop_inactive_queries(run, {"q_typo"}) == 1
+    assert run.read_text(encoding="utf-8") == text.replace("q_typo,d2,1,0.5,m\n", "")   # 점수 자릿수까지 그대로
+    assert drop_inactive_queries(run, {"q_typo"}) == 0

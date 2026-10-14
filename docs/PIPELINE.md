@@ -77,6 +77,14 @@ python scripts/05_init_benchmark.py
 `scripts/import_queryset_xlsx.py`가 `data/query/queryset_final.xlsx`로부터 생성하는 산출물입니다**
 (자세한 방법은 `docs/EXTENDING_DATA.md` 참고, 질의 원본은 문서 하단 "Query family 원본" 참고).
 
+**비활성 쿼리**: `query_set.inactive_queries_path`(`configs/benchmark/inactive_queries_v1.yaml`)에 적힌 쿼리는 `queries.csv`에
+`status=inactive`로 남고, qrels(11번은 그 판정을 뺌)·평가·학습 데이터에서 빠집니다. 판정 기록(`annotations/`)은 그대로라 목록에서
+빼고 05 → 11 → 12 → `prepare_finetune_dataset.py`를 다시 돌리면 재판정 없이 되살아납니다. 목록의 query_id·텍스트가 실제와
+다르면 05번이 멈춥니다.
+- 2026-10-14: 오타 변형 49개(train 22 / val 12 / test 15) 비활성화 — 오타는 철자 교정 단계(기본 성능 확정 뒤, 검색 로그와 함께)에서
+  다루기로 결정. 이유와 근거는 그 yaml 머리말. "~추천"·띄어쓰기 변형은 자연스러운 쿼리라 남김.
+  비활성화 뒤 active: train 215 / val 124 / test 160. 기존 평가는 `rescore_evaluations.py`가 run 파일에서 비활성 쿼리 행만 빼고 다시 채점.
+
 ## 3. Pooling (lexical) — 사람 개입 없음
 
 ```bash

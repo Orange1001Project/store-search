@@ -45,9 +45,9 @@
 ### 데이터 흐름
 
 ```
-Drive data/ ──[10]──▶ corpus(문서 21만) · queries(active: train 237·val 136·test 175, 평가는 val/test만) · QRELS(정답 경로) · RECORDS(학습 query 237개)
+Drive data/ ──[10]──▶ corpus(문서 21만) · queries(active: train 215·val 124·test 160, 평가는 val/test만) · QRELS(정답 경로) · RECORDS(학습 query 215개)
                                                           │
-RECORDS ──[12] expand_training_rows──▶ rows 7,270행 {anchor, positive, negative_1..3}
+RECORDS ──[12] expand_training_rows──▶ rows 6,650행 {anchor, positive, negative_1..3}
                                                           │
 preset·HP ──[14] build_model / build_loss──▶ model(+LoRA) · loss(GIST/MNRL, Cached)
                                                           │
@@ -154,7 +154,7 @@ Drive에 쓴 결과(모델·평가)는 남습니다.
 | `weight_decay` | 0.01 | |
 | `max_seq_length` | 128 | 문서 평균 24자라 충분 |
 | `num_hard_negatives` | 3 | 행마다 붙는 hard negative 수. 학습 데이터에 query당 최대 8개. 7 이상이면 negative가 적은 query가 빠짐 |
-| `typo_variants_per_query` | 0 | 오타 증강. query마다 오타 변형 query를 몇 개 더할지(0=끔). 2면 237 → +474 query, 7,270 → 11,056행 |
+| `typo_variants_per_query` | 0 | 오타 증강. query마다 오타 변형 query를 몇 개 더할지(0=끔). 2면 215 → +430 query, 6,650 → 10,084행 |
 | `typo_positives_per_variant` | 8 | 오타 변형 query 하나에 붙일 정답 수(relevance 높은 순). negative는 원래 query와 같음 |
 | `max_positives_per_query` | 32 | query당 positive 상한(넓은 query 독점 방지) |
 | `loss` | preset | `"gist"` / `"mnrl"` |
@@ -242,7 +242,7 @@ def expand_training_rows(records, num_hard_negatives, max_positives_per_query):
             rows.append({"anchor": query, "positive": positive, "negative_1": ..., "negative_2": ..., "negative_3": ...})
 ```
 
-- query 하나가 positive 수만큼 행으로 늘어납니다(237 query → 7,270행).
+- query 하나가 positive 수만큼 행으로 늘어납니다(215 query → 6,650행).
 - **모든 행의 컬럼 수가 같아야** sentence-transformers가 받습니다. 그래서 negative가 부족한 query는 버립니다.
 - 같은 query의 행들은 같은 negative를 공유합니다.
 - 반환하는 `stats`는 manifest `training_data.expansion`에 기록됩니다.
