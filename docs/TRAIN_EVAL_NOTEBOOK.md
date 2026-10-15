@@ -261,7 +261,8 @@ def expand_training_rows(records, num_hard_negatives, max_positives_per_query):
 | 띄어쓰기 넣기·빼기 | 건강식품 → 건강 식품 |
 | 접미어(추천·근처·어디) | 공구점 → 공구점추천 |
 
-벤치마크 T6는 "마지막 음절 받침 + 추천" 패턴으로 만들어졌습니다. 그 패턴만 흉내 내면 val 점수만 오르고 실제 오타에는 약할 수 있어 위치·종류를
+**현재 상태(2026-10-14)**: 효과가 없어(kse13 대비 Δ +0.001, p=0.70) 기본값 0으로 끄고, 벤치마크의 오타 쿼리도 비활성화했습니다(`configs/benchmark/inactive_queries_v1.yaml`).
+코드는 철자 교정 단계에서 다시 쓸 수 있게 남겨 둡니다. 벤치마크 T6(오타 부분)는 "마지막 음절 받침 + 추천" 패턴으로 만들어졌습니다. 그 패턴만 흉내 내면 val 점수만 오르고 실제 오타에는 약할 수 있어 위치·종류를
 섞습니다. 쿼리별로 seed를 고정해(`seed + crc32(query)`) 다시 돌려도 같은 변형이 나옵니다.
 
 **실험 아이디어**: negative를 행마다 다르게 섞기(무작위 샘플), positive 상한을 query 크기에 따라 다르게, relevance=3인 positive만 쓰기. 바꾸면 `NOTE`에 적으세요. 테스트(`tests/test_train_eval_notebook.py`)는 이 함수가 저장소의 기준 구현과
@@ -438,10 +439,12 @@ if not EVAL_RUN_TAG:
 
 `leaderboard("val")` 결과에서 주요 열만 출력. Δ·p는 기준 모델과의 비교값이라 **기준 모델 행 자신은 `-`**.
 
-이어서 **서비스 지표**(`service_metrics`, 공식 채점과 별개)를 run 파일과 val qrels로 계산해 출력합니다:
+이어서 **서비스 지표**(`service_metrics`, 공식 채점과 별개)를 run 파일과 val qrels로 계산해 출력합니다(qrels가 있는 active 쿼리만):
+- `nDCG@10(판정만)`: 판정 없는 문서를 빼고 매긴 nDCG(condensed, Sakai 2007). Judged@10이 0.95 미만인 새 계열 모델은 이 값으로 고른다
+  (`docs/EVALUATION_POLICY.md` 2절)
 - `bad@3`: 상위 3개에 오답(relevance ≤ 1 또는 판정 없음)이 하나라도 섞인 쿼리 비율 — **서비스 목표 ≤ 0.05**
 - `top1_ok`: 1위가 정답(relevance ≥ 2)인 비율
-- `bad@3 T1`…`bad@3 T6`: 쿼리 유형별 `bad@3`. 판정 없는 문서도 오답으로 세서 실제보다 약간 나쁘게 나옵니다.
+- `bad@3 T1`…`bad@3 T6`: 쿼리 유형별 `bad@3`(T6는 오타 비활성 뒤 "~추천" 변형만 남음). 판정 없는 문서도 오답으로 세서 실제보다 약간 나쁘게 나옵니다.
 
 ## [27] 11. zero-shot 비교표
 
@@ -464,7 +467,7 @@ if not EVAL_RUN_TAG:
 
 ## [35] 15. 보충 pooling run `# @cell pool`
 
-벤치마크 담당이 **한 번만** 씁니다. `POOL_RUN_MODELS`(preset 키)와 `POOL_RUN_FINETUNED`(Drive `runs/finetune/` TAG)에 적은 모델마다
+보충 pooling(벤치마크 담당)과 **일괄 판정 후보의 test run 만들기**(`docs/EMBEDDING_V1_PLAN.md` 3절)에 씁니다. `POOL_RUN_MODELS`(preset 키)와 `POOL_RUN_FINETUNED`(Drive `runs/finetune/` TAG)에 적은 모델마다
 val+test 쿼리의 상위 `POOL_DEPTH`(기본 100)개를 `runs/pooling_runs/<이름>.csv`로 저장합니다. 지표를 계산하지 않으므로 test 점수를 보는
 것이 아닙니다. 이미 있는 파일은 건너뛰고, prompt만 다른 변형은 문서 임베딩을 재사용합니다. 저장소에서
 `scripts/16_supplemental_round.py make-runs`가 이 파일로 판정 시트를 만듭니다(`docs/PIPELINE.md` 6-2).

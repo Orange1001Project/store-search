@@ -16,6 +16,7 @@
 | 판정은 (쿼리, 문서) 단위로 고정, 순위·시스템과 무관 | 같은 문서는 어느 시스템이 가져와도 같은 점수 | 기존 판정은 바꾸지 않고 새 쌍만 추가 |
 | 판정 → 튜닝 → 판정을 같은 쿼리로 반복하지 않는다 | val을 외우게 됨(adaptive overfitting) | 일괄 판정은 결정 주기마다 한 번 |
 | test는 판정을 먼저 끝내고 점수는 마지막에 한 번 | 점수를 보고 판정·구성을 바꾸면 test가 오염 | test run은 채점 없이 만든다 |
+| AI 초안은 참고만, 점수는 사람이 확정 | 가이드라인 v1.2 "AI 보조 사용 원칙" — AI 판정을 A·B 점수로 계산하지 않음 | A·B가 **같은 AI 초안**을 보면 서로 독립이 아니어서 일치도(kappa)가 부풀려진다 → AI 초안은 A·B 중 한 명만 쓰거나 각자 따로 만든다 |
 
 ## 2. 탐색 단계 — 판정하지 않고 고른다
 
@@ -67,4 +68,5 @@ nDCG@10이 ±0.005 정도 흔들린다(kse1·kse13, 2026-10) — 차이가 그 �
   (condensed list) — 판정 누락에 강한 지표.
 - Craswell et al. (2020~), *Overview of the TREC Deep Learning Track* — 참가 run 기반 pooling + 사람 판정.
 - Dwork et al. (2015), *The reusable holdout*, Science — 평가 데이터를 반복해서 보며 맞추면 생기는 과적합.
-- Upadhyay et al. (2024), *UMBRELA* / TREC RAG 2024 — 판정 누락분을 LLM이 판정하고 사람 판정과의 일치도로 검증(비용 절감 선택지).
+- Upadhyay et al. (2024), *UMBRELA* / TREC RAG 2024 — 판정 누락분을 LLM이 판정하고 사람 판정과의 일치도로 검증. 이 저장소의 val/test gold에서는
+  가이드라인 v1.2에 따라 LLM 판정을 사람 점수로 대신하지 않고, 사람이 확정하는 초안으로만 쓴다.
