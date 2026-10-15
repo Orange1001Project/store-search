@@ -64,6 +64,7 @@ scripts/rescore_evaluations.py       qrels가 바뀐 뒤 기존 평가를 같은
 scripts/eval_retrieval_stack.py     하이브리드(BM25 RRF)·reranker 구성 비교(+ Colab GPU 채점용 colab/rerank_scores.ipynb)
 scripts/collect_judging_candidates.py  등록된 판정 후보 일괄 판정 시트 생성 (docs/EVALUATION_POLICY.md — 평가·판정 공식 규칙)
 docs/SERVICE_READINESS.md            서비스 적용 판단 로드맵(실제 쿼리 평가셋, side-by-side, 온라인 검증, 외부 API 비교)
+docs/EMBEDDING_V1_PLAN.md            임베딩 v1 확정 계획(후보 수집 → 일괄 판정 → 선택 → 파이프라인), main 대비 변경점(회의용 요약)
 data/
   raw/stores_20260907.xlsx       원본 전국 데이터 (수정 금지)
   query/queryset_final.xlsx      팀이 작성한 최종 query family/질의 원본 (수정 금지, import_queryset_xlsx.py가 읽음)
