@@ -122,8 +122,11 @@ def service_metrics(run: pd.DataFrame, rel: dict, query_types: pd.Series) -> dic
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
-    parser.add_argument("--split", default="val", choices=["val"], help="test는 최종 구성을 정한 뒤 별도로")
-    parser.add_argument("--dense", nargs="+", required=True, help="results/model_eval/ 아래 dense run 폴더 이름")
+    parser.add_argument("--split", default="val", choices=["val", "test"],
+                        help="test는 run 파일만 만들고 채점하지 않는다(판정 후보 등록용 — test 점수는 일괄 판정 뒤 한 번만)")
+    parser.add_argument("--dense", nargs="+", required=True, help="dense run 이름(results/model_eval/<이름>/ 또는 --dense-dir/<이름>.csv)")
+    parser.add_argument("--dense-dir", default=None,
+                        help="dense run을 <dir>/<이름>.csv에서 읽는다(노트북 15번 runs/pooling_runs처럼 val+test가 한 파일인 경우)")
     parser.add_argument("--rerankers", nargs="*", default=["BAAI/bge-reranker-v2-m3"])
     parser.add_argument("--rerank-depth", type=int, default=50)
     parser.add_argument("--rrf-k", type=int, default=60)
@@ -136,19 +139,22 @@ def main() -> None:
     benchmark_dir = Path(config["benchmark_dir"])
     out_dir = Path("results/stack_eval") / args.split
     out_dir.mkdir(parents=True, exist_ok=True)
-    qrels_path = benchmark_dir / f"qrels_{args.split}.trec"
     queries = load_active_queries(benchmark_dir)
     queries = queries[queries["split"] == args.split].reset_index(drop=True)
     qids = set(queries["query_id"].astype(str))
     corpus = pd.read_parquet(config["corpus_path"])
     doc_text = corpus.set_index("doc_id")["search_text_t1_minimal"].fillna("").astype(str)
-    rel = {(q.query_id, q.doc_id): q.relevance for q in load_qrels(qrels_path)}
-    judged = set(rel)
 
     runs: dict[str, pd.DataFrame] = {}
     for tag in args.dense:
-        run = pd.read_csv(Path("results/model_eval") / tag / f"run_t1_minimal_{args.split}.csv", encoding="utf-8-sig")
-        runs[tag] = run[run["query_id"].astype(str).isin(qids)][RUN_COLUMNS]
+        path = (Path(args.dense_dir) / f"{tag}.csv" if args.dense_dir
+                else Path("results/model_eval") / tag / f"run_t1_minimal_{args.split}.csv")
+        run = pd.read_csv(path, encoding="utf-8-sig")
+        run = run[run["query_id"].astype(str).isin(qids)][RUN_COLUMNS]
+        missing = qids - set(run["query_id"].astype(str))
+        if missing:
+            raise SystemExit(f"{path}: {args.split} 쿼리 {len(missing)}개가 없습니다(예: {sorted(missing)[:3]})")
+        runs[tag] = run.assign(system=tag)
 
     bm25_path = out_dir / "char_bm25_v1.csv"
     if bm25_path.exists():
@@ -172,7 +178,8 @@ def main() -> None:
         pd.DataFrame([(q, d, text[q], doc_text[d]) for q, d in sorted(pairs)],
                      columns=["query_id", "doc_id", "query", "doc_text"]).to_csv(
             path, index=False, encoding="utf-8-sig", lineterminator="\n")
-        print(f"[내보냄] {path} ({len(pairs)}쌍) — Drive store-search-ai/stack_eval/에 올리고 colab/rerank_scores.ipynb 실행")
+        print(f"[내보냄] {path} ({len(pairs)}쌍) — Drive store-search-ai/stack_eval/{args.split}/에 올리고 "
+              "colab/rerank_scores.ipynb 실행(SPLIT 맞추기)")
         return
     for name in args.rerankers:
         short = name.split("/")[-1]
@@ -190,12 +197,19 @@ def main() -> None:
         for t in bases:
             runs[f"{t}+rerank_{short}"] = rerank(runs[t], cache, args.rerank_depth, f"{t}+rerank_{short}")
 
+    for tag, run in runs.items():
+        if tag != "char_bm25_v1":   # BM25는 위에서 만든 캐시 그대로(다시 쓰면 점수 자릿수만 바뀐다)
+            run.to_csv(out_dir / f"{tag}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    if args.split == "test":
+        print(f"[test] run {len(runs)}개를 {out_dir}에 저장(채점 안 함 — docs/EVALUATION_POLICY.md: 일괄 판정 뒤 한 번만)")
+        return
+
+    qrels_path = benchmark_dir / f"qrels_{args.split}.trec"
+    rel = {(q.query_id, q.doc_id): q.relevance for q in load_qrels(qrels_path)}
+    judged = set(rel)
     baseline = args.baseline or args.dense[-1]
     base_path = out_dir / f"{baseline}.csv"
     rows = []
-    for tag, run in runs.items():
-        path = out_dir / f"{tag}.csv"
-        run.to_csv(path, index=False, encoding="utf-8-sig", lineterminator="\n")
     for tag, run in runs.items():
         path = out_dir / f"{tag}.csv"
         report, _ = build_evaluation_report(qrels_path, path, tag, 10000, 20260831,

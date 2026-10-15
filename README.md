@@ -60,6 +60,10 @@ scripts/import_queryset_xlsx.py    data/query/queryset_final.xlsx → query_fami
 scripts/prepare_finetune_dataset.py  train qrels+corpus → fine-tuning용 jsonl (번호 없음, docs/TRAINING.md 참고)
 scripts/pack_for_colab.py            Colab(Drive)에 올릴 data/ 폴더 생성 + 데이터 버전 기록 (docs/TRAINING_TEAM.md 참고)
 scripts/import_colab_results.py      Colab 실험 결과(Drive runs/)를 저장소로 가져오기 + 로컬 재채점 검증(--verify) + 실험 기록표(results/experiments.csv)
+scripts/rescore_evaluations.py       qrels가 바뀐 뒤 기존 평가를 같은 run으로 다시 채점
+scripts/eval_retrieval_stack.py     하이브리드(BM25 RRF)·reranker 구성 비교(+ Colab GPU 채점용 colab/rerank_scores.ipynb)
+scripts/collect_judging_candidates.py  등록된 판정 후보 일괄 판정 시트 생성 (docs/EVALUATION_POLICY.md — 평가·판정 공식 규칙)
+docs/SERVICE_READINESS.md            서비스 적용 판단 로드맵(실제 쿼리 평가셋, side-by-side, 온라인 검증, 외부 API 비교)
 data/
   raw/stores_20260907.xlsx       원본 전국 데이터 (수정 금지)
   query/queryset_final.xlsx      팀이 작성한 최종 query family/질의 원본 (수정 금지, import_queryset_xlsx.py가 읽음)

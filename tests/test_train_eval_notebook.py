@@ -242,3 +242,18 @@ def test_notebook_service_metrics_ignores_queries_without_qrels(ns, tmp_path):
                   "rank": [1, 2, 3, 1, 2, 3], "score": [3, 2, 1, 3, 2, 1], "system": "m"}).to_csv(run, index=False)
     out = ns["service_metrics"](run, tmp_path / "data" / "qrels_val.trec")
     assert out["top1_ok"] == 1.0 and out["bad@3"] == 1.0          # q_typo(비활성, qrels 없음)는 세지 않음
+
+
+def test_notebook_service_metrics_condensed_ndcg_ignores_unjudged_docs(ns, tmp_path):
+    exec(compile(_cell("board").split("\nboard = leaderboard(")[0], "<notebook:board>", "exec"), ns)  # noqa: S102
+    ns["queries"] = pd.DataFrame({"query_id": ["q1", "q2"], "query": ["치킨", "빵"], "split": ["val", "val"],
+                                  "query_type": ["T1 정확표기", "T2 동의어"]})
+    with_unjudged, judged_only = tmp_path / "a.csv", tmp_path / "b.csv"
+    rows = [("q1", "x9", 1), ("q1", "d1", 2), ("q1", "d3", 3), ("q2", "d2", 1), ("q2", "x8", 2), ("q2", "d1", 3)]
+    pd.DataFrame([{"query_id": q, "doc_id": d, "rank": r, "score": 10 - r, "system": "m"} for q, d, r in rows]).to_csv(
+        with_unjudged, index=False)
+    pd.DataFrame([{"query_id": q, "doc_id": d, "rank": r, "score": 10 - r, "system": "m"} for q, d, r in rows
+                  if not d.startswith("x")]).to_csv(judged_only, index=False)
+    a = ns["service_metrics"](with_unjudged, tmp_path / "data" / "qrels_val.trec")
+    b = ns["service_metrics"](judged_only, tmp_path / "data" / "qrels_val.trec")
+    assert a["nDCG@10(판정만)"] == pytest.approx(b["nDCG@10(판정만)"])   # 판정 없는 문서는 빼고 매김

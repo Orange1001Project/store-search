@@ -5,8 +5,12 @@
     "qwen3_embedding_0_6b",
     "qwen3_embedding_0_6b_ft_kse14_20261014_0440"
   ],
-  "rerankers": [],
+  "dense_dir": null,
+  "rerankers": [
+    "BAAI/bge-reranker-v2-m3"
+  ],
   "rerank_depth": 50,
   "rrf_k": 60,
-  "baseline": null
+  "baseline": null,
+  "export_pairs": false
 }
