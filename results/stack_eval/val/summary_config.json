@@ -7,7 +7,8 @@
   ],
   "dense_dir": null,
   "rerankers": [
-    "BAAI/bge-reranker-v2-m3"
+    "BAAI/bge-reranker-v2-m3",
+    "Qwen/Qwen3-Reranker-0.6B"
   ],
   "rerank_depth": 50,
   "rrf_k": 60,
