@@ -24,13 +24,13 @@
 
 | 지표 | 어디서 | 쓰는 법 |
 |---|---|---|
-| 공식 nDCG@10 (+95% CI, 기준 대비 Δ·p) | 노트북 리더보드, `eval_retrieval_stack.py` | Judged@10 ≥ 0.95일 때만 그대로 믿는다 |
+| 공식 nDCG@10 (+95% CI, 기준 대비 Δ·p) | 노트북 리더보드(파이프라인 구성 탐색은 `eval_retrieval_stack.py`) | Judged@10 ≥ 0.95일 때만 그대로 믿는다 |
 | **Judged@10** | 같음 | 0.95 미만이면 판정 누락이 점수를 깎고 있다 → 공식 nDCG로 "나빠졌다"고 하지 않는다 |
 | **nDCG@10(판정만)** (condensed nDCG, Sakai 2007) | 노트북 서비스 지표, `eval_retrieval_stack.py` | 판정된 문서만 남겨 매긴 값. 판정 누락에 강해 탐색의 주 지표 |
 | bad@3, top1_ok | 같음 | 서비스 체감(상위 3개 오답 쿼리 비율, 목표 ≤ 0.05). 판정 없음도 오답으로 세므로 보수적 |
 
 **후보 등록 기준**: 기준 모델 대비 nDCG@10(판정만)이 떨어지지 않고(−0.005 이내) bad@3·top1_ok 중 하나 이상이 좋아진 구성,
-또는 성격이 다른 계열(새 모델 계열·새 검색 구성)이라 판정 없이는 비교가 안 되는 구성. 등록은
+또는 성격이 다른 **임베딩 모델 계열**이라 판정 없이는 비교가 안 되는 run. (하이브리드·reranker 같은 검색 구성은 파이프라인 단계에서 따로 판정한다) 등록은
 `configs/benchmark/judging_candidates.yaml`에 적기만 한다.
 
 val 실패 쿼리를 보고 그 쿼리에 맞춘 데이터·규칙을 만들지 않는다. 실패는 **유형**을 파악하는 데만 쓰고, 해결책은 특정 쿼리와 무관한
@@ -41,9 +41,10 @@ val 실패 쿼리를 보고 그 쿼리에 맞춘 데이터·규칙을 만들지 
 결정을 내려야 할 때(최종 후보를 고를 때, test를 보기 전) **등록된 후보 전부를 한 라운드에서** 판정한다.
 
 1. 후보마다 val·test run을 만든다(test는 채점하지 않음).
-   - dense 모델: 노트북 15번(`runs/pooling_runs/<이름>.csv`, val+test 상위 100)
-   - 하이브리드·reranker: `python scripts/eval_retrieval_stack.py --split test --dense-dir <pooling_runs> --dense <이름> ...`
-     (reranker 점수는 `--export-pairs` → `colab/rerank_scores.ipynb`)
+   - 임베딩 모델: 노트북 15번(`runs/pooling_runs/<이름>.csv`, val+test 상위 100)
+   - (검색 파이프라인 단계에서 하이브리드·reranker 구성을 판정할 때) `python scripts/eval_retrieval_stack.py --split test --dense-dir <pooling_runs>
+     --dense <이름> ...`, reranker 점수는 `--export-pairs` → `colab/rerank_scores.ipynb`. 임베딩 v1 판정 라운드에는 넣지 않는다
+     (`docs/EMBEDDING_V1_PLAN.md` 0절)
 2. `configs/benchmark/judging_candidates.yaml`에 등록(name, note, val, test).
 3. `python scripts/collect_judging_candidates.py` — 후보 검증 + depth별 판정 건수 표(아무것도 쓰지 않음).
 4. depth를 정해(기본 10) `python scripts/collect_judging_candidates.py --make --reason "..."` → `annotations/<round>/` A·B 시트.

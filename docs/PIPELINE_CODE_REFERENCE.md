@@ -5,10 +5,11 @@
 스크립트 단위로 뜯어봅니다. 회의에서 "이 단계가 왜 이렇게 동작하나요", "이 파일은 어디서
 나온 거예요" 같은 질문에 코드 근거를 대면서 답할 수 있도록 만든 문서입니다.
 
-번호 순서(01~15)대로 정리했고(16번 보충 pooling은 `docs/PIPELINE.md` 6-1절, Colab 도구 `pack_for_colab.py`·
-`import_colab_results.py`와 노트북은 `docs/TRAINING_TEAM.md`·`docs/TRAIN_EVAL_NOTEBOOK.md`), 번호 없는 유틸리티 3개를 실제 실행 순서상 자리에 끼워 넣었습니다:
+번호 순서(01~16)대로 정리했고, 번호 없는 유틸리티를 실제 실행 순서상 자리에 끼워 넣었습니다:
 `import_queryset_xlsx.py`(05번 이전), `split_completed_annotations.py`(08번과 09번 사이),
-`prepare_finetune_dataset.py`(15번 이후, fine-tuning 준비 단계). 각 절은 다음 다섯 항목으로
+`prepare_finetune_dataset.py`(15번 이후, fine-tuning 준비 단계). 그 뒤에 qrels 확정 이후 도구를 모았습니다:
+`16_supplemental_round.py`(보충 판정), `pack_for_colab.py`·`import_colab_results.py`(Colab 연동), `rescore_evaluations.py`(재채점),
+`collect_judging_candidates.py`(일괄 판정), `eval_retrieval_stack.py`(검색 구성 탐색). 노트북 셀 설명은 `docs/TRAIN_EVAL_NOTEBOOK.md`. 각 절은 다음 다섯 항목으로
 구성됩니다: **한 줄 요약 / 입력 파일 / 핵심 로직 / 출력 파일 / 사용하는 src/ 코드**.
 
 모든 경로·설정값은 현재 저장소의 `configs/data/default.yaml`(`dataset_version: stores_v003`),
@@ -180,7 +181,7 @@ registry에 추가한다 — 그래서 데이터가 늘어나도 기존 매장�
 
 **한 줄 요약**: 팀이 작성한 `data/query/queryset_final.xlsx`(질의 원본)를
 `configs/benchmark/query_families_v1.yaml`(05번이 실제로 읽는 파일)로 변환한다. 이 xlsx가 바뀔
-때마다 05번보다 먼저, 사람이 검토 후 재실행하는 저작 도구다 — 01~15 실행 순서 자체에는
+때마다 05번보다 먼저, 사람이 검토 후 재실행하는 저작 도구다 — 번호 실행 순서 자체에는
 속하지 않는다.
 
 **입력 파일**
@@ -246,17 +247,22 @@ variant 필요**(원래는 3개 이상이었다가 팀 결정으로 완화됨). 
 **06~07단계의 pooling 후보 발굴에만 쓰이고 relevance 판정 자체에는 영향을 주지 않는다**(모든
 split에서 relevance는 사람이 직접 판정).
 
+**비활성 쿼리**: config의 `query_set.inactive_queries_path`(`configs/benchmark/inactive_queries_v1.yaml`,
+`{query_id, query, reason}` 목록)를 `load_inactive_queries()`로 읽어, 해당 쿼리를 `status=inactive`로 남긴다(행은 지우지 않음 —
+판정 기록과의 연결 유지). 목록의 query_id가 없거나 쿼리 텍스트가 실제와 다르면 에러(번호가 밀린 채 엉뚱한 쿼리를 끄지 않게).
+이후 단계는 전부 `status == active`만 쓴다(`load_active_queries`, 11번). 2026-10-14부터 오타 변형 49개가 비활성.
+
 **출력 파일** (전부 `benchmark_dir` = `benchmark/storesearch_ko_v1/` 밑)
 - `queries.csv` — 스키마: `query_id, query, split, query_family, query_type, intent_definition,
   pool_positive_terms, pool_boundary_terms, query_set_version, status`
 - `annotation_guideline.md` — 스크립트에 하드코딩된 `GUIDELINE` 문자열을 그대로 저장(0~3 등급
   정의, 판단 원칙, blind annotation 규칙, AI 보조 사용 범위)
 - `query_manifest.json` — 총 쿼리/family 수, split별 분포, `queries.csv`와 families yaml의
-  sha256(재현성 추적용)
+  sha256(재현성 추적용). 비활성 쿼리가 있으면 `active_queries`, `active_queries_by_split`, `inactive_queries`도 기록
 
 **사용하는 src/ 코드**
 - `store_search_ai.data.benchmark_init` — 위 핵심 로직 전체(`GUIDELINE`, `build_queries_frame`,
-  `build_query_manifest`)가 여기 있다. `05_init_benchmark.py`는 인자 파싱 + 파일 IO + 콘솔
+  `build_query_manifest`, `load_inactive_queries`)가 여기 있다. `05_init_benchmark.py`는 인자 파싱 + 파일 IO + 콘솔
   출력만 담당하는 얇은 CLI다.
 - `store_search_ai.pipeline.common.load_config`, `sha256_file`
 
@@ -560,6 +566,12 @@ final_relevance가 여전히 비어있는 행"**(`unresolved_non_excluded`)이 �
 train/val/test를 합쳐 `qrels_all`을 만들고 split을 넘나드는 (query_id,doc_id) 중복이 없는지
 마지막으로 한 번 더 검사한다(family/split leakage 방지의 2차 방어선, 1차는 12번).
 
+보충 판정 라운드(16번)의 최종 판정은 본 라운드 파일에 쓰지 않으므로, 11번이 매번 `annotations/*/supplemental_manifest.json`을
+찾아(`supplemental_adjudication_paths`, base_round가 같은 것만) 본 라운드 판정과 합친다(`combine_with_supplemental` — 같은
+judgment_id가 겹치면 에러). merge 전인 라운드는 경고만 하고 뺀다. 합친 경로는 `benchmark_manifest.json`의
+`source.supplemental_adjudication`에 남는다. **비활성 쿼리**의 판정은 qrels에서 빼고(`assemble_qrels(..., inactive_query_ids)`)
+몇 행을 뺐는지 출력한다 — 판정 원본(`annotations/`)은 그대로. `queries.csv`에 아예 없는 query_id는 여전히 에러.
+
 **출력 파일** (`benchmark_dir` 바로 밑, 서브폴더 없음 — "이제 provisional이 아니라 최종"이라는
 신호)
 - `qrels_train.csv/.trec`, `qrels_val.csv/.trec`, `qrels_test.csv/.trec`, `qrels.csv/.trec`(전체)
@@ -598,8 +610,9 @@ qrels가 있으면 중복 쌍/등급 범위/미지의 query_id·doc_id 검사, `
 하나도 없는 쿼리를 찾아낸다.
 
 `--stage final`에서만 추가로: 전체 쿼리 수 ≥ `min_total_queries_final`(=120), test 쿼리 수 ≥
-`min_test_queries_final`(=50), **pool 시스템 다양성** ≥ `min_pool_systems_final`(현재 3 —
-lexical 3개로 확정, 원래는 dense pooling까지 염두에 둔 6이었음), `agreement_report.json`이
+`min_test_queries_final`(=50), **pool 시스템 다양성** ≥ `min_pool_systems_final`(현재 9 —
+lexical 3개 + supplement_v2 임베딩 모델 6개. 처음엔 lexical 3개로 확정했다가 2026-10 보충 판정 후 올림 — dense pool이 빠진 채
+qrels를 다시 만드는 실수를 막는다), `agreement_report.json`이
 존재하고 그 안의 `double_annotation_coverage` ≥ `target_double_annotation_coverage`(=1.0).
 
 **출력 파일**
@@ -771,6 +784,88 @@ expand_training_rows`, `docs/TRAINING.md` 1절)이 한다.
 
 ---
 
+## `16_supplemental_round.py` *(qrels 확정 뒤 보충 판정 라운드)*
+
+**한 줄 요약**: 확정된 pool에 후보를 추가하고 **새로 들어온 (쿼리, 문서)만** A·B 판정 → 조정해서 보충 라운드 폴더에 남긴다.
+기존 판정은 절대 바꾸지 않는다.
+
+**입력 / 명령**
+- `make --round <이름> --query <id> --terms "a|b|c"` — 지정한 쿼리만 용어로 pool을 넓힌다(supplement_v1, q_수선_01)
+- `make-runs --round <이름> --runs-dir <폴더> --depth k [--splits val test] [--dry-run]` — 모델 run(노트북 15번) 상위 k개 중
+  pool에 없던 쌍만 시트로(supplement_v2: 임베딩 6종 depth 20, 13,759쌍). `--dry-run`은 depth 10/20/30별 새 쌍 수 표만
+- `merge --round <이름>` — `completed/annotation_A·B_completed.csv` 비교 → 불일치는 `analysis/adjudication_needed_only.csv`
+  → 조정본(`..._completed.csv`) 반영 → `analysis/adjudication_full_completed.csv`
+- `benchmark_dir/candidate_pool_internal.csv`(git 제외 — 이 파일이 있는 곳에서 실행)
+
+**핵심 로직** (`store_search_ai.data.supplemental_round`)
+- `select_new_pairs`: 이번 라운드에 처음 들어온 쌍 중 이전에 판정한 적 없는 것만.
+- `load_supplement_runs`: 파일 하나 = 시스템 하나, 기존 pool 시스템 이름과 겹치면 에러(어느 run이 넣었는지 보존), 대상 쿼리가 빠진 run은 에러.
+- 시트는 08번과 같은 컬럼(시스템·순위 없음, 무작위 순서). 같은 `--round`로 다시 만들면 멈춤(채우는 중인 시트 보호).
+- 11·12번이 `supplemental_manifest.json`으로 라운드를 찾아 본 라운드와 매번 합친다(본 라운드 파일에 쓰지 않으므로 10번을 다시 돌려도 안전).
+
+**출력 파일**: `annotations/<round>/annotation_A.csv`, `annotation_B.csv`, `supplemental_manifest.json`(이유, 시스템별 sha256,
+depth, 쌍 수), `runs/`(make-runs가 쓴 run 사본), `analysis/`(merge 결과). `candidate_pool_internal.csv`·`pool_stats.json`·`pool_history.csv` 갱신.
+
+---
+
+## `pack_for_colab.py` / `import_colab_results.py` *(Colab 연동)*
+
+**`pack_for_colab.py`**: Colab이 읽는 `colab_upload/data/`(학습 데이터·meta, corpus, queries.csv, val/test qrels)와
+`data_version.json`(git 커밋, 파일별 sha256, 채점 설정)을 만든다. 노트북 3번 셀이 이 sha256과 Drive 파일을 전부 비교해 다르면 멈춘다.
+`--output` 경로가 작업 폴더·상위 폴더이거나 이 스크립트가 만든 폴더(`data/data_version.json`)가 아니면 지우지 않고 멈춘다.
+
+**`import_colab_results.py --drive-dir <내려받은 store-search-ai> [--verify] [--models TAG ...] [--dry-run]`**: Drive `runs/`를
+저장소 자리로 옮긴다 — 평가 json·per_query → `artifacts/evaluation/<버전>/`, run → `results/model_eval/<tag>/`(정식 이름
+`run_<template>_<split>.csv`만), 학습 기록 3개 → `results/finetune_runs/<TAG>/`, KEEP·`--models` 모델 → `models/<TAG>/` +
+`configs/models/<TAG>.yaml`, 공식 평가마다 `results/experiments.csv` 한 줄. 비공식(SMOKE) 평가는 제외.
+- **예전 qrels로 채점된 평가는 가져오지 않는다**(`stale_evaluations`: Drive run을 저장소 qrels로 다시 매겨 지표가 다르면 건너뜀 — 노트북 16번 후 가져옴).
+- 가져온 run 파일에서 **비활성 쿼리 행을 줄 단위로 뺀다**(점수 값 그대로).
+- 정리(prune)돼 Drive에 run 폴더가 없는 학습 모델은 저장소의 `results/finetune_runs/<TAG>/model_manifest.json`을 대신 읽고,
+  그것도 없으면 기록표 줄을 새로 만들지 않는다(zero-shot으로 잘못 덮지 않게).
+- `--verify`: 가져온 평가를 로컬 공식 evaluator로 다시 채점해 같은지 확인(다르면 종료코드 1).
+
+---
+
+## `rescore_evaluations.py` *(qrels가 바뀐 뒤)*
+
+**한 줄 요약**: 보충 판정·쿼리 비활성화로 qrels가 바뀌면, `artifacts/evaluation/`의 공식 평가를 **같은 run 파일로 다시 채점**한다(모델 재실행 없음).
+
+**핵심 로직**: 평가 json의 `run` 경로 → `results/model_eval/<tag>/<file>`. 비활성 쿼리 행을 run에서 줄 단위로 지운 뒤(공식 evaluator는
+qrels에 없는 쿼리가 있으면 멈추므로) `build_evaluation_report`로 채점. 모델·인코딩 정보(`model_id`, `eval_dtype`, `library_versions`,
+`evaluated_at` 등)는 유지하고 `rescored`(시각, qrels sha256, 이전 지표, 지운 쿼리 수)를 붙인다. `results/experiments.csv`의 같은 eval_tag
+줄 지표도 갱신. test 평가는 `--include-test`일 때만. 노트북 16번이 Drive 쪽에서 같은 일을 한다.
+
+---
+
+## `collect_judging_candidates.py` *(일괄 판정, `docs/EVALUATION_POLICY.md` 3절)*
+
+**한 줄 요약**: `configs/benchmark/judging_candidates.yaml`에 등록된 후보(name, note, val·test run 경로)를 모아 검증하고,
+`16_supplemental_round.py make-runs`로 **한 번에** 판정 시트를 만든다.
+
+**핵심 로직**: 후보 이름 형식·중복 검사, split마다 active 쿼리 전부가 상위 depth개 이상 있는지 확인, val+test를 한 파일로 합쳐 시스템 이름을
+후보 name으로 바꿔 `results/judging_candidates/<round>/<name>.csv`에 쓴다(판정 비용 표용으로 상위 30개까지). 기본은 `--dry-run`(건수 표만),
+`--make`로 시트 생성. 이미 pool에 있는 쌍은 다시 판정하지 않는다. 임베딩 v1 라운드 후보는 임베딩 모델 run만(`docs/EMBEDDING_V1_PLAN.md`).
+
+---
+
+## `eval_retrieval_stack.py` *(검색 파이프라인 구성 탐색 — 판정 후보 아님)*
+
+**한 줄 요약**: 임베딩 run 위에 BM25 하이브리드·cross-encoder reranker를 얹은 구성을 학습 없이 비교한다.
+
+**핵심 로직**
+- BM25: 06번 pooling의 `char_bm25_v1`과 같은 텍스트·채점기(`fit_bm25_scorer`), 상위 100. `results/stack_eval/<split>/char_bm25_v1.csv`에 캐시.
+- 하이브리드: RRF(Cormack et al. 2009) — `Σ 1/(60 + rank)`로 dense와 BM25 순위를 합침(`rrf_fuse`, 같은 점수는 doc_id 순).
+- reranker: 각 run 상위 `--rerank-depth`(50)개를 cross-encoder 점수로 다시 정렬(`rerank`). `bge-reranker-v2-m3`는 CrossEncoder,
+  `Qwen3-Reranker-0.6B`는 마지막 토큰의 yes/no 확률(출력층은 yes/no 두 행만 계산). 점수는 `rerank_scores_<모델>.csv`에 캐시 —
+  GPU 채점은 `--export-pairs` → `colab/rerank_scores.ipynb`(같은 함수, 테스트로 확인).
+- 채점: 공식 evaluator + **판정만 nDCG@10**(판정 문서만 남긴 condensed list) + Judged@10 + bad@3·top1_ok. reranker는 판정 안 된 문서를
+  올리므로 공식 점수가 낮게 나온다 — Judged@10을 같이 본다.
+- `--split test`: run만 만들고 채점하지 않는다. `--dense-dir`: 노트북 15번처럼 val+test가 한 파일인 run을 `<dir>/<이름>.csv`에서 읽는다.
+
+**출력**: `results/stack_eval/<split>/summary.csv`, 각 구성 run(다시 만들 수 있는 사본은 git 제외 — `results/README.md`).
+
+---
+
 ## 자주 나올 질문
 
 **Q1. train qrels랑 val/test qrels는 왜 만드는 방식이 다른가요?**
@@ -828,7 +923,7 @@ zero-shot 리더보드에서도(`14_run_model_eval.py`로 여러 모델 비교) 
 된다(`docs/TRAINING.md` 5절, 팀 규칙은 `docs/TRAINING_TEAM.md`).
 
 **Q9. 쿼리 원본은 어디서 오고, fine-tuning 데이터는 어떻게 만드나요?**
-→ `import_queryset_xlsx.py` 절 + `prepare_finetune_dataset.py` 절. 둘 다 01~15 실행 순서에
+→ `import_queryset_xlsx.py` 절 + `prepare_finetune_dataset.py` 절. 둘 다 번호 실행 순서에
 속하지 않는 번호 없는 유틸리티지만 실제 워크플로우에서는 필수다: 전자는 `queryset_final.xlsx`
 (팀이 편집)를 `query_families_v1.yaml`(05번이 읽는 파일)로 바꾸고, 후자는 09/11번이 만든
 train qrels를 Colab 학습(`docs/TRAINING.md`)이 바로 쓸 수 있는 jsonl로 바꾼다.

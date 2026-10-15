@@ -4,7 +4,7 @@
 작업 절차(올리기·실행 순서·기록)는 `docs/TRAINING_TEAM.md`, 학습 설계 배경은 `docs/TRAINING.md`를 보세요.
 
 > 표기: `[n]`은 노트북에서 위에서 n번째(0부터) 셀, "1. 설정"처럼 번호가 붙은 것은 노트북의 마크다운 제목입니다.
-> 셀 맨 첫 줄에 `# @cell 이름`이 있는 셀(settings, compat, rows, runs, eval)은 `tests/test_train_eval_notebook.py`가 이름으로 찾아
+> 셀 맨 첫 줄에 `# @cell 이름`이 있는 셀(settings, compat, rows, runs, eval, board, pool, rescore)은 `tests/test_train_eval_notebook.py`가 이름으로 찾아
 > 실제로 실행해 보는 셀입니다 — **이 첫 줄은 지우지 마세요.**
 
 ---
@@ -35,7 +35,7 @@
 | [29] | 12. SMOKE 확인 | 실행 | 전체 흐름 자동 점검 | 안 함 |
 | [31] | 13. KEEP | 실행 | 남길 run 표시 | TAG만 |
 | [33] | 14. test | 실행 | 최종 후보만 test 채점 | 안 함 |
-| [35] | 15. 보충 pooling run | 실행 | val+test 검색 결과만 저장(채점 없음) | 목록만 |
+| [35] | 15. 판정용 검색 결과 | 실행 | val+test 검색 결과만 저장(채점 없음) — 보충 pooling·판정 후보 | 목록만 |
 | [37] | 16. 재채점 | 실행 | qrels가 바뀐 뒤 Drive 평가를 같은 run으로 다시 채점 | 안 함 |
 
 **정의 셀과 실행 셀**: [7]·[12]·[14]·[16]·[17]·[19]는 함수만 정의하고 아무것도 실행하지 않습니다. 실제 일은 [21] 이후 셀이
@@ -212,6 +212,9 @@ queries = ...status == "active"...                   # val/test 평가 query
 QRELS = {"val": .../qrels_val.trec, "test": .../qrels_test.trec}          # 정답(경로만)
 ```
 
+- **파일 버전 확인**: `data_version.json`에 적힌 파일별 sha256(corpus, queries.csv, qrels, 학습 데이터)과 Drive의 실제 파일을 전부 비교해서,
+  하나라도 다르면 멈춥니다 — `data/`를 일부만 다시 올린 경우(예: 새 qrels + 예전 queries.csv) 방지. `queries.csv`에 `status` 열이 없어도
+  (오타 비활성 전 데이터) 멈춥니다. 둘 다 `pack_for_colab.py`로 `data/`를 통째로 다시 올리면 해결됩니다.
 - **실제 데이터**(`SMOKE=False`): `train_pairs.jsonl`의 sha256이 `train_pairs.meta.json`의 값과 다르면 멈춥니다(학습 데이터와 그 설명서가
   서로 다른 버전으로 올라간 사고 방지).
 - **SMOKE**: 코퍼스를 "val 정답이 있는 문서 + 무작위 2,000개"로 줄이고(약 8,500개), 학습 데이터는 가짜 query 40개 × positive 4개 = 160행을
@@ -424,7 +427,7 @@ final_dir = None
 if not EVAL_RUN_TAG:
     final_dir = train_model(preset, HP, OWNER, NOTE, resume_tag=RESUME_TAG, save_mid_checkpoint=SAVE_MID_CHECKPOINT)
 ```
-로그에서 볼 것: `[INFO] 학습 데이터: {... 'n_rows': 7270}`(팀원과 같아야 같은 데이터), `[INFO] query prompt`, `[INFO] loss`,
+로그에서 볼 것: `[INFO] 학습 데이터: {... 'n_rows': 6650}`(팀원과 같아야 같은 데이터), `[INFO] query prompt`, `[INFO] loss`,
 `[체크포인트]`, `[INFO] 학습 시간 … GPU 최대 사용 …`, `[검증] … 일치 확인`, `[완료] 최종 모델: …`.
 
 ## [23] 9. 평가 (val)
@@ -437,7 +440,8 @@ if not EVAL_RUN_TAG:
 
 ## [25] 10. 리더보드
 
-`leaderboard("val")` 결과에서 주요 열만 출력. Δ·p는 기준 모델과의 비교값이라 **기준 모델 행 자신은 `-`**.
+`leaderboard("val")` 결과에서 주요 열만 출력. Δ·p는 기준 모델과의 비교값이라 **기준 모델 행 자신은 `-`**. `query_count`가 지금 val 쿼리 수(124)와
+다른 행은 qrels가 바뀌기 전 점수이므로 16번(재채점)을 먼저 돌립니다.
 
 이어서 **서비스 지표**(`service_metrics`, 공식 채점과 별개)를 run 파일과 val qrels로 계산해 출력합니다(qrels가 있는 active 쿼리만):
 - `nDCG@10(판정만)`: 판정 없는 문서를 빼고 매긴 nDCG(condensed, Sakai 2007). Judged@10이 0.95 미만인 새 계열 모델은 이 값으로 고른다
@@ -465,7 +469,7 @@ if not EVAL_RUN_TAG:
 `FINAL_TEST=True`일 때만. 기준 zero-shot의 test run이 없으면 먼저 만들고, 9번에서 정한 `eval_cfg` 모델을 test로 채점해 비교합니다.
 팀이 최종 후보를 정한 뒤 **한 번만** 실행합니다(여러 번 보고 고르면 test가 val처럼 오염됨).
 
-## [35] 15. 보충 pooling run `# @cell pool`
+## [35] 15. 판정용 val/test 검색 결과 `# @cell pool`
 
 보충 pooling(벤치마크 담당)과 **일괄 판정 후보의 test run 만들기**(`docs/EMBEDDING_V1_PLAN.md` 3절)에 씁니다. `POOL_RUN_MODELS`(preset 키)와 `POOL_RUN_FINETUNED`(Drive `runs/finetune/` TAG)에 적은 모델마다
 val+test 쿼리의 상위 `POOL_DEPTH`(기본 100)개를 `runs/pooling_runs/<이름>.csv`로 저장합니다. 지표를 계산하지 않으므로 test 점수를 보는
@@ -477,6 +481,9 @@ val+test 쿼리의 상위 `POOL_DEPTH`(기본 100)개를 `runs/pooling_runs/<이
 보충 판정 라운드로 qrels가 바뀌어 새 `data/`를 올린 뒤 한 번 실행합니다. Drive `runs/evaluation/`의 공식 평가마다 같은 run 파일을 새
 `QRELS`로 `score_run`해 json·per_query를 덮어씁니다(모델·인코딩 정보는 유지, `rescored`에 이전 지표). 지표가 그대로면 건드리지 않고,
 test 평가는 `FINAL_TEST=True`일 때만 다시 채점합니다. 실행하지 않으면 저장소 `import_colab_results.py`가 그 평가를 가져오지 않습니다.
+쿼리 비활성화 전에 만든 run 파일에서는 qrels에 없는 쿼리(비활성 쿼리) 행을 줄 단위로 지우고 채점합니다(점수 값은 그대로 — 저장소
+`scripts/rescore_evaluations.py`와 같은 규칙, `rescored.inactive_queries_dropped_from_runs`에 기록). `model_manifest.json`의 `evaluations`
+기록은 학습 직후 점수라 그대로 둡니다 — 현재 점수는 평가 json·리더보드를 봅니다.
 
 ---
 
