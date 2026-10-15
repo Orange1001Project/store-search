@@ -257,3 +257,17 @@ def test_notebook_service_metrics_condensed_ndcg_ignores_unjudged_docs(ns, tmp_p
     a = ns["service_metrics"](with_unjudged, tmp_path / "data" / "qrels_val.trec")
     b = ns["service_metrics"](judged_only, tmp_path / "data" / "qrels_val.trec")
     assert a["nDCG@10(판정만)"] == pytest.approx(b["nDCG@10(판정만)"])   # 판정 없는 문서는 빼고 매김
+
+
+def test_notebook_rescore_drops_rows_of_queries_without_qrels(ns, tmp_path):
+    ns["evaluate"]({"name": "base", "model_id": "x"}, model=_FakeModel())
+    run = tmp_path / "runs" / "model_eval" / "base" / "run_t1_minimal_val.csv"
+    text = run.read_text(encoding="utf-8-sig")
+    run.write_text(text + "q_typo,d1,1,0.9,base_t1_minimal\n", encoding="utf-8-sig")   # 비활성화 전에 만든 run 흉내
+    (tmp_path / "data" / "qrels_val.trec").write_text("q1 0 d3 3\nq1 0 d1 1\nq2 0 d2 3\nq2 0 d1 1\n", encoding="utf-8")
+    ns["FINAL_TEST"] = False
+    exec(compile(_cell("rescore"), "<notebook:rescore>", "exec"), ns)  # noqa: S102
+    assert "q_typo" not in run.read_text(encoding="utf-8-sig") and run.read_text(encoding="utf-8-sig") == text
+    report = json.loads((tmp_path / "runs" / "evaluation" / "base_t1_minimal_val_evaluation.json").read_text(encoding="utf-8"))
+    assert report["rescored"]["inactive_queries_dropped_from_runs"] == {"base": 1}
+    assert report["run_validation"]["unknown_queries"] == 0 and len(report["rescored"]["qrels_sha256"]) == 64
