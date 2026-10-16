@@ -8,10 +8,10 @@
     "val": 124
   },
   "corpus_docs": 214043,
-  "pool_rows": 59876,
-  "pool_size_min": 57,
-  "pool_size_median": 117.0,
-  "pool_size_mean": 119.99198396793587,
+  "pool_rows": 66146,
+  "pool_size_min": 27,
+  "pool_size_median": 118.0,
+  "pool_size_mean": 120.7043795620438,
   "pool_size_max": 212,
   "pool_systems": [
     "arctic_ko_ft_lee",
