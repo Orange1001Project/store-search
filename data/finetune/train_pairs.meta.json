@@ -1,19 +1,19 @@
 {
-  "created_at": "2026-10-02T01:19:32.162173+00:00",
-  "git_commit": "40506ea0efa1fca67ed4f3a61411638ae99b7294",
+  "created_at": "2026-10-14T02:25:43.132575+00:00",
+  "git_commit": "a109065f70ee7f2744cee08c74794a794d029a7c",
   "benchmark_version": "storesearch_ko_v1",
   "corpus_version": "store_corpus_v002",
   "qrels_path": "benchmark/storesearch_ko_v1/qrels_train.csv",
-  "qrels_sha256": "6a9c42466462e7b584b6d89d7fceca745debd7f968ec6ec0b121df8e20a0de97",
+  "qrels_sha256": "016365360b59bda2447daad31fb03199551f1690544a26fbf4d6371d0d177621",
   "qrels_kind": "final",
   "template": "t1_minimal",
   "binary_relevance_threshold": 2,
   "max_negatives": 8,
-  "train_pairs_sha256": "067e4aa48a1ca59c432a4f4e29b55ba023b6346e452f343e508ed28e1a2d262e",
+  "train_pairs_sha256": "ec3a9b619d54f56d31086714b420f4878a29fb686cb98f1b4897c193f4f57cde",
   "stats": {
-    "n_written": 237,
+    "n_written": 215,
     "n_skipped_no_positive": 0,
-    "total_positives": 16671,
-    "total_negatives": 1885
+    "total_positives": 15543,
+    "total_negatives": 1709
   }
 }

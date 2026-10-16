@@ -287,6 +287,15 @@ def main() -> None:
         return
     apply_plan(plan)
     print(f"[완료] {len(plan)}개 항목 복사")
+    # 쿼리 비활성화(queries.csv status=inactive) 전에 Colab에서 만든 run에는 그 쿼리 결과가 남아 있다 — 공식 evaluator가
+    # qrels에 없는 쿼리에서 멈추므로 가져온 run 파일에서 그 행만 뺀다(점수 값은 그대로)
+    from rescore_evaluations import drop_inactive_queries
+
+    queries = pd.read_csv(Path(config["benchmark_dir"]) / "queries.csv", encoding="utf-8-sig")
+    inactive = set(queries.loc[queries["status"].astype(str).str.lower() != "active", "query_id"].astype(str))
+    for _, dst in plan:
+        if dst.suffix == ".csv" and RUN_FILE_PATTERN.fullmatch(dst.name) and (n := drop_inactive_queries(dst, inactive)):
+            print(f"[정리] {dst.relative_to(repo_root)}: 비활성 쿼리 {n}개 행 제외")
     table = update_experiment_registry(registry, rows)
     print(f"[기록] {registry.relative_to(repo_root)} — 평가 {len(rows)}줄 갱신(전체 {len(table)}줄)")
 

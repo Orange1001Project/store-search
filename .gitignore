@@ -40,3 +40,16 @@ __pycache__/
 # 노트북 15번이 만든 보충 pooling용 원본 run(top 100, 약 18MB). 실제로 pool에 넣은 depth까지의 사본은
 # benchmark/storesearch_ko_v1/annotations/<round>/runs/에 커밋된다.
 /results/pooling_runs/
+
+# 모델 가중치는 models/(위)에만 둔다 — Drive 폴더를 통째로 results/ 아래에 풀었을 때 1GB대 파일이 커밋되지 않게
+/results/**/*.safetensors
+/results/**/*.bin
+
+# 검색 구성 비교(eval_retrieval_stack.py) 산출물 중 다시 만들 수 있는 것(dense run 사본, reranker로 재정렬한 run)은 커밋하지 않는다.
+# 남기는 것: summary, BM25 캐시, reranker 점수 캐시·채점 쌍, 하이브리드 run(이미 추적 중) — results/README.md
+/results/stack_eval/*/*.csv
+!/results/stack_eval/*/summary.csv
+!/results/stack_eval/*/char_bm25_v1.csv
+!/results/stack_eval/*/rerank_pairs.csv
+!/results/stack_eval/*/rerank_scores_*.csv
+!/results/stack_eval/*/*+bm25_rrf.csv

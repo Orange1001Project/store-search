@@ -1,7 +1,7 @@
 # StoreSearch-KO v1 — 파이프라인 실행 순서
 
-`scripts/01_*.py` ~ `scripts/15_*.py`를 어떤 순서·인자로 실행해야 하는지 정의합니다. 번호 = 실행
-순서 = 1회 실행입니다.
+`scripts/01_*.py` ~ `scripts/16_*.py`와 번호 없는 도구(학습 데이터·Colab 연동·재채점·일괄 판정·검색 구성 탐색)를 어떤 순서·인자로
+실행해야 하는지 정의합니다. 번호 = 실행 순서 = 1회 실행이고, 16번은 qrels 확정 뒤 보충 판정 때만 씁니다.
 
 ## 0. 환경 준비 (최초 1회)
 
@@ -76,6 +76,14 @@ python scripts/05_init_benchmark.py
 `annotation_guideline.md`를 생성합니다. **이 yaml은 직접 편집하는 파일이 아니라
 `scripts/import_queryset_xlsx.py`가 `data/query/queryset_final.xlsx`로부터 생성하는 산출물입니다**
 (자세한 방법은 `docs/EXTENDING_DATA.md` 참고, 질의 원본은 문서 하단 "Query family 원본" 참고).
+
+**비활성 쿼리**: `query_set.inactive_queries_path`(`configs/benchmark/inactive_queries_v1.yaml`)에 적힌 쿼리는 `queries.csv`에
+`status=inactive`로 남고, qrels(11번은 그 판정을 뺌)·평가·학습 데이터에서 빠집니다. 판정 기록(`annotations/`)은 그대로라 목록에서
+빼고 05 → 11 → 12 → `prepare_finetune_dataset.py`를 다시 돌리면 재판정 없이 되살아납니다. 목록의 query_id·텍스트가 실제와
+다르면 05번이 멈춥니다.
+- 2026-10-14: 오타 변형 49개(train 22 / val 12 / test 15) 비활성화 — 오타는 철자 교정 단계(기본 성능 확정 뒤, 검색 로그와 함께)에서
+  다루기로 결정. 이유와 근거는 그 yaml 머리말. "~추천"·띄어쓰기 변형은 자연스러운 쿼리라 남김.
+  비활성화 뒤 active: train 215 / val 124 / test 160. 기존 평가는 `rescore_evaluations.py`가 run 파일에서 비활성 쿼리 행만 빼고 다시 채점.
 
 ## 3. Pooling (lexical) — 사람 개입 없음
 
@@ -265,8 +273,38 @@ python scripts/pack_for_colab.py
    ```
    → `results/model_eval/`, `artifacts/evaluation/`(공식 evaluator로 재채점 확인), `results/experiments.csv`(실험 기록표),
    `results/finetune_runs/<TAG>/`(학습 run 기록), KEEP한 모델은 `models/` + `configs/models/`. (`docs/TRAINING_TEAM.md` 7~9절)
+   예전 qrels로 채점된 Drive 평가는 가져오지 않고(지표가 다르면 건너뜀), 비활성 쿼리 행은 run 파일에서 뺍니다.
+5. **qrels가 바뀌었을 때**(보충 판정, 쿼리 비활성화): 로컬 `python scripts/rescore_evaluations.py` → `pack_for_colab.py`로 `data/` 교체 →
+   노트북 **16번**(Drive 평가 다시 채점). 노트북 3번 셀은 `data_version.json`의 파일별 sha256과 Drive 파일이 다르면 멈춥니다.
+6. **판정용 val/test run**: 노트북 **15번**(`runs/pooling_runs/<이름>.csv`, 채점 없음) — 보충 pooling(6-2)과 일괄 판정 후보(9절)에 씁니다.
 
 규칙·기록: `docs/TRAINING_TEAM.md`, 학습 설계: `docs/TRAINING.md`, 노트북 셀별 코드 설명: `docs/TRAIN_EVAL_NOTEBOOK.md`.
+
+## 9. 일괄 판정 — 후보를 모아 한 번에 (`docs/EVALUATION_POLICY.md` 3절)
+
+탐색 중에는 판정하지 않고, 결정을 내릴 때 등록된 후보 전부를 한 라운드에서 판정합니다. 임베딩 v1 라운드의 후보는 **임베딩 모델 run만**입니다.
+
+```bash
+# configs/benchmark/judging_candidates.yaml에 후보(name, note, val, test run 경로) 등록 후
+python scripts/collect_judging_candidates.py                      # 후보 검증 + depth별 판정 건수(아무것도 안 씀)
+python scripts/collect_judging_candidates.py --make --reason "..."  # → annotations/<round>/ A·B 시트(16 make-runs 호출)
+# 이후 6-1과 같다: A·B 판정 → 16 merge → 조정 → 11 → 12 → rescore_evaluations.py → pack_for_colab.py → 노트북 16번
+```
+
+`candidate_pool_internal.csv`(git 제외)가 있는 곳에서 실행해야 합니다.
+
+## 10. 검색 파이프라인 구성 탐색 — 하이브리드·reranker (판정 후보 아님)
+
+임베딩 위에 얹는 검색 구성(BM25 하이브리드 RRF, cross-encoder reranker)을 학습 없이 val에서 비교합니다. **임베딩 v1 선택과 분리**된
+파이프라인 설계용 사전 탐색이며, 본 평가는 실제형 평가셋에서 합니다(`docs/EMBEDDING_V1_PLAN.md` 2·7절).
+
+```bash
+python scripts/eval_retrieval_stack.py --dense bge_m3_ft_mj_20261014_0743 --rerankers
+# reranker는 GPU에서: --export-pairs → colab/rerank_scores.ipynb → 점수 파일을 results/stack_eval/<split>/에 → --rerankers <모델>로 재실행
+# test run(채점 없음): --split test --dense-dir <노트북 15번 pooling_runs 폴더>
+```
+
+결과: `results/stack_eval/<split>/summary.csv`(공식 nDCG@10, 판정만 nDCG@10, Judged@10, bad@3 등).
 
 ## 사람 개입이 필요한 범위
 

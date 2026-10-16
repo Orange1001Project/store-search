@@ -178,3 +178,96 @@ def test_notebook_rescore_updates_drive_evaluations_after_qrels_change(ns, tmp_p
     assert report["aggregate"] == pytest.approx(expected["aggregate"])
     assert report["model_id"] == "y" and "previous_aggregate" in report["rescored"]
     assert report["comparison"]["baseline_tag"] == "base"
+
+
+def test_notebook_typo_augmentation_is_deterministic_and_keeps_labels(ns):
+    records = [
+        {"query_id": "a", "query": "치킨 먹을 곳", "positives": [f"p{i}" for i in range(20)], "negatives": ["n1", "n2", "n3"]},
+        {"query_id": "b", "query": "떡", "positives": ["p"], "negatives": ["n4", "n5", "n6"]},
+    ]
+    augmented = ns["augment_typo_records"](records, 3, 8, seed=7)
+    assert augmented == ns["augment_typo_records"](records, 3, 8, seed=7)          # 다시 돌려도 같음
+    by_source = {}
+    for r in augmented:
+        by_source.setdefault(r["augmented_from"], []).append(r)
+    assert len(by_source["치킨 먹을 곳"]) == 3                                      # 요청한 개수만큼
+    for source, variants in by_source.items():
+        original = next(x for x in records if x["query"] == source)
+        assert len({v["query"] for v in variants}) == len(variants)                # 서로 다른 변형
+        for v in variants:
+            assert v["query"] != source and v["query"].strip()
+            assert v["positives"] == original["positives"][:8] and v["negatives"] == original["negatives"]
+
+    rows, stats = ns["expand_training_rows"](records + augmented, 3, None)
+    base_rows, _ = ns["expand_training_rows"](records, 3, None)
+    assert rows[: len(base_rows)] == base_rows                                     # 원래 행은 그대로, 뒤에 덧붙음
+    assert stats["n_queries_used"] == len(records) + len(augmented)
+
+
+def test_notebook_make_typo_produces_korean_typos(ns):
+    rng = np.random.default_rng(0)
+    variants = {ns["make_typo"]("수산물", rng) for _ in range(300)} - {None}
+    assert "수산물" not in variants and len(variants) > 20
+    assert any(v.endswith(("추천", "근처", "어디")) for v in variants)            # 접미어
+    assert any(len(v) == 3 and v[:2] == "수산" and v != "수산물" for v in variants)  # 마지막 음절 변형(받침·자모)
+    assert any(v[0] != "수" for v in variants if len(v) == 3)                       # 첫 음절도 바뀜(마지막 글자만이 아님)
+
+
+def test_notebook_service_metrics_counts_bad_top3(ns, tmp_path):
+    exec(compile(_cell("board").split("\nboard = leaderboard(")[0], "<notebook:board>", "exec"), ns)  # noqa: S102
+    ns["queries"] = pd.DataFrame({"query_id": ["q1", "q2"], "query": ["치킨", "빵"], "split": ["val", "val"],
+                                  "query_type": ["T1 정확표기", "T6 기계변형"]})
+    run = tmp_path / "run.csv"
+    pd.DataFrame({"query_id": ["q1"] * 3 + ["q2"] * 3, "doc_id": ["d1", "d3", "d2", "d2", "d9", "d1"],
+                  "rank": [1, 2, 3, 1, 2, 3], "score": [3, 2, 1, 3, 2, 1], "system": "m"}).to_csv(run, index=False)
+    out = ns["service_metrics"](run, tmp_path / "data" / "qrels_val.trec")
+    # q1: d3(rel 1)·d2(판정 없음)가 상위 3개에 있어 bad, 1위 d1(3) 정답. q2: d9(판정 없음) → bad, 1위 d2(3) 정답
+    assert out["bad@3"] == 1.0 and out["top1_ok"] == 1.0
+    assert out["bad@3 T1"] == 1.0 and out["bad@3 T6"] == 1.0
+
+
+def test_notebook_typo_never_drops_first_syllable_of_a_word(ns):
+    rng = np.random.default_rng(1)
+    for _ in range(500):
+        v = ns["make_typo"]("떡케이크", rng)
+        assert v is None or v.startswith("떡") or v[0] != "케"   # 첫 음절을 지워 '케이크'가 되지 않음
+
+
+def test_notebook_service_metrics_ignores_queries_without_qrels(ns, tmp_path):
+    exec(compile(_cell("board").split("\nboard = leaderboard(")[0], "<notebook:board>", "exec"), ns)  # noqa: S102
+    ns["queries"] = pd.DataFrame({"query_id": ["q1", "q2"], "query": ["치킨", "빵"], "split": ["val", "val"],
+                                  "query_type": ["T1 정확표기", "T2 동의어"]})
+    run = tmp_path / "run.csv"
+    pd.DataFrame({"query_id": ["q1"] * 3 + ["q_typo"] * 3, "doc_id": ["d1", "d3", "d2", "d9", "d9", "d9"],
+                  "rank": [1, 2, 3, 1, 2, 3], "score": [3, 2, 1, 3, 2, 1], "system": "m"}).to_csv(run, index=False)
+    out = ns["service_metrics"](run, tmp_path / "data" / "qrels_val.trec")
+    assert out["top1_ok"] == 1.0 and out["bad@3"] == 1.0          # q_typo(비활성, qrels 없음)는 세지 않음
+
+
+def test_notebook_service_metrics_condensed_ndcg_ignores_unjudged_docs(ns, tmp_path):
+    exec(compile(_cell("board").split("\nboard = leaderboard(")[0], "<notebook:board>", "exec"), ns)  # noqa: S102
+    ns["queries"] = pd.DataFrame({"query_id": ["q1", "q2"], "query": ["치킨", "빵"], "split": ["val", "val"],
+                                  "query_type": ["T1 정확표기", "T2 동의어"]})
+    with_unjudged, judged_only = tmp_path / "a.csv", tmp_path / "b.csv"
+    rows = [("q1", "x9", 1), ("q1", "d1", 2), ("q1", "d3", 3), ("q2", "d2", 1), ("q2", "x8", 2), ("q2", "d1", 3)]
+    pd.DataFrame([{"query_id": q, "doc_id": d, "rank": r, "score": 10 - r, "system": "m"} for q, d, r in rows]).to_csv(
+        with_unjudged, index=False)
+    pd.DataFrame([{"query_id": q, "doc_id": d, "rank": r, "score": 10 - r, "system": "m"} for q, d, r in rows
+                  if not d.startswith("x")]).to_csv(judged_only, index=False)
+    a = ns["service_metrics"](with_unjudged, tmp_path / "data" / "qrels_val.trec")
+    b = ns["service_metrics"](judged_only, tmp_path / "data" / "qrels_val.trec")
+    assert a["nDCG@10(판정만)"] == pytest.approx(b["nDCG@10(판정만)"])   # 판정 없는 문서는 빼고 매김
+
+
+def test_notebook_rescore_drops_rows_of_queries_without_qrels(ns, tmp_path):
+    ns["evaluate"]({"name": "base", "model_id": "x"}, model=_FakeModel())
+    run = tmp_path / "runs" / "model_eval" / "base" / "run_t1_minimal_val.csv"
+    text = run.read_text(encoding="utf-8-sig")
+    run.write_text(text + "q_typo,d1,1,0.9,base_t1_minimal\n", encoding="utf-8-sig")   # 비활성화 전에 만든 run 흉내
+    (tmp_path / "data" / "qrels_val.trec").write_text("q1 0 d3 3\nq1 0 d1 1\nq2 0 d2 3\nq2 0 d1 1\n", encoding="utf-8")
+    ns["FINAL_TEST"] = False
+    exec(compile(_cell("rescore"), "<notebook:rescore>", "exec"), ns)  # noqa: S102
+    assert "q_typo" not in run.read_text(encoding="utf-8-sig") and run.read_text(encoding="utf-8-sig") == text
+    report = json.loads((tmp_path / "runs" / "evaluation" / "base_t1_minimal_val_evaluation.json").read_text(encoding="utf-8"))
+    assert report["rescored"]["inactive_queries_dropped_from_runs"] == {"base": 1}
+    assert report["run_validation"]["unknown_queries"] == 0 and len(report["rescored"]["qrels_sha256"]) == 64

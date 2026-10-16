@@ -99,7 +99,11 @@ def main() -> None:
     )
     qrels_train = load_train_qrels(train_path)
 
-    qrels_frames = assemble_qrels(qrels_train, qrels_val, qrels_test, active_query_ids)
+    inactive_query_ids = set(queries["query_id"].astype(str)) - active_query_ids
+    if inactive_query_ids:
+        dropped = sum(int(q["query_id"].astype(str).isin(inactive_query_ids).sum()) for q in (qrels_train, qrels_val, qrels_test))
+        print(f"[INFO] 비활성 쿼리 {len(inactive_query_ids)}개의 판정 {dropped}행은 qrels에서 뺌(annotations/에는 그대로)")
+    qrels_frames = assemble_qrels(qrels_train, qrels_val, qrels_test, active_query_ids, inactive_query_ids)
 
     csv_paths, trec_paths = save_qrels_outputs(benchmark_dir, qrels_frames)
 

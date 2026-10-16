@@ -43,6 +43,8 @@ configs/
   benchmark/storesearch_ko_v1.yaml   벤치마크 경로/버전/파라미터(pooling, annotation, validation, evaluation)
   benchmark/query_families_v1.yaml   query family 정의 (생성물 — data/query/queryset_final.xlsx에서
                                   import_queryset_xlsx.py로 생성, 직접 편집 금지. docs/EXTENDING_DATA.md 참고)
+  benchmark/inactive_queries_v1.yaml 비활성 쿼리 목록(오타 변형 49개, 2026-10-14) — 05번이 status=inactive로 표시
+  benchmark/judging_candidates.yaml  일괄 판정 후보 등록부 (docs/EVALUATION_POLICY.md 3절)
   evaluation/default.yaml        공식 metric 목록 (문서화용 — 13_evaluate_run.py는 metric을 자체 상수로 갖고 있음)
   models/*.yaml                  비교 대상 임베딩 모델 설정 (zero-shot 비교/파인튜닝 후보)
 src/store_search_ai/
@@ -54,12 +56,17 @@ src/store_search_ai/
   evaluation/                    공식 evaluator(13번 본체) + 모델 평가·리더보드 헬퍼
   training/                      fine-tuning 로컬 참조 구현(Colab은 colab/train_eval.ipynb)
   common/hf_compat.py            transformers / sentence-transformers 버전 차이 흡수
-results/                         모델 평가 run CSV(model_eval/), 실험 기록표(experiments.csv), 학습 run 기록(finetune_runs/)
+results/                         실험 결과 — experiments.csv(기록표), model_eval/(평가 run), finetune_runs/(학습 기록),
+                                  stack_eval/(하이브리드·reranker 탐색), pooling_runs/(git 제외) — results/README.md
 scripts/01_*.py ~ scripts/16_*.py   파이프라인 본체 (16 = 보충 pooling, docs/PIPELINE.md 참고)
 scripts/import_queryset_xlsx.py    data/query/queryset_final.xlsx → query_families_v1.yaml 변환기(번호 없음, 05 이전에 1회성 실행)
+scripts/split_completed_annotations.py  애노테이션 완료본을 split별로 나누기(번호 없음, docs/PIPELINE.md 4절)
 scripts/prepare_finetune_dataset.py  train qrels+corpus → fine-tuning용 jsonl (번호 없음, docs/TRAINING.md 참고)
 scripts/pack_for_colab.py            Colab(Drive)에 올릴 data/ 폴더 생성 + 데이터 버전 기록 (docs/TRAINING_TEAM.md 참고)
 scripts/import_colab_results.py      Colab 실험 결과(Drive runs/)를 저장소로 가져오기 + 로컬 재채점 검증(--verify) + 실험 기록표(results/experiments.csv)
+scripts/rescore_evaluations.py       qrels가 바뀐 뒤 기존 평가를 같은 run으로 다시 채점
+scripts/eval_retrieval_stack.py     하이브리드(BM25 RRF)·reranker 구성 비교(+ Colab GPU 채점용 colab/rerank_scores.ipynb)
+scripts/collect_judging_candidates.py  등록된 판정 후보 일괄 판정 시트 생성 (docs/EVALUATION_POLICY.md — 평가·판정 공식 규칙)
 data/
   raw/stores_20260907.xlsx       원본 전국 데이터 (수정 금지)
   query/queryset_final.xlsx      팀이 작성한 최종 query family/질의 원본 (수정 금지, import_queryset_xlsx.py가 읽음)
@@ -67,11 +74,12 @@ data/
   corpus/store_corpus_v002.parquet   검색 대상 corpus (T1/T2/T3 템플릿 포함)
   finetune/train_pairs.jsonl     fine-tuning 학습쌍 (prepare_finetune_dataset.py 산출물, 재생성 가능)
 benchmark/storesearch_ko_v1/
-  queries.csv, annotation_guideline.md, qrels*.csv/.trec, benchmark_manifest.json
+  queries.csv(status active/inactive), query_manifest.json, annotation_guideline.md, qrels*.csv/.trec, benchmark_manifest.json
+  annotations/{full_annotation_v1, supplement_v1, supplement_v2}/   사람 판정 시트·완료본·조정 결과(본 라운드 + 보충 라운드)
 archive/rule_based_train_labeling/ 한때 썼던 규칙 기반 train 자동 라벨링 스크립트 (재현율 문제로 보류, 참고용)
 models/                         fine-tuned 모델 가중치 (.gitignore 처리 — Colab에서 내려받은 걸 로컬에 둠)
 tests/                          단위 테스트 (pytest)
-colab/                          Colab(GPU) 학습·평가 노트북 train_eval.ipynb 하나 (colab/README.md 참고)
+colab/                          Colab(GPU) 노트북 — train_eval.ipynb(학습·평가), rerank_scores.ipynb(reranker 채점) (colab/README.md 참고)
 docs/
   PIPELINE.md                    01~16단계 실행 순서·인자·사람 개입 지점 + Colab 학습 순서 (필독)
   PIPELINE_CODE_REFERENCE.md     스크립트별 코드 상세(무엇을 읽고 계산해서 어디에 쓰는지)
@@ -80,6 +88,9 @@ docs/
   TRAINING.md                    Colab fine-tuning 설계·설정 (sentence-transformers; Qwen3=LoRA, 나머지=full)
   TRAINING_TEAM.md               팀 학습 절차 — 데이터 올리기·노트북 고치기·실행 순서·기록 (학습 담당 필독)
   TRAIN_EVAL_NOTEBOOK.md         colab/train_eval.ipynb 셀별 코드 해설
+  EVALUATION_POLICY.md           평가·판정 공식 규칙(판정 없이 탐색 → 후보 등록 → 일괄 판정 1회 → test 1회)
+  EMBEDDING_V1_PLAN.md           임베딩 v1 확정 계획, 실제형 평가셋 계획, main 대비 변경점(회의용 요약)
+  SERVICE_READINESS.md           서비스 적용 판단 로드맵(실제형 평가셋, side-by-side, 온라인 검증, 외부 API 비교)
 ```
 
 ## 빠른 시작
@@ -122,6 +133,9 @@ python scripts/04_build_corpus.py
 | 13 | `13_evaluate_run.py` | 없음 | 공식 evaluator (nDCG@10 등) |
 | 14 | `14_run_model_eval.py` | 없음(GPU 필요) | 임베딩 모델(zero-shot/fine-tuned 공통) 인코딩 → 검색 → 13번 호출 |
 | 15 | `15_score_model_runs.py` | 없음 | 여러 run을 모아 리더보드 생성 |
+| 16 | `16_supplemental_round.py` | **판정 필요** | 보충 판정 라운드 — `make`(용어로 특정 쿼리 보충), `make-runs`(모델 run 상위 k개), `merge`(A·B 비교·조정 반영) |
+| — | `rescore_evaluations.py` | 없음 | qrels가 바뀐 뒤 기존 평가 다시 채점 |
+| — | `collect_judging_candidates.py` | 없음(시트만 생성) | 등록된 후보를 모아 일괄 판정 시트 생성(16 make-runs 호출) |
 
 01~07은 사람 개입 없이 끝까지 자동 재실행됩니다(`make pool`). 08~10은 train/val/test 본 애노테이션 +
 adjudication을 위한 실제 사람 작업이 필요한 구간입니다 — 이 구간을 건너뛰고 자동으로 생성하는 방법은
@@ -131,9 +145,9 @@ family 목록이 낡아서 삭제했습니다 — 필요하면 git 이력에서 
 
 ## Query family 추가/재정의
 
-`configs/benchmark/query_families_v1.yaml`을 편집하세요. 현재 `gas_station`, `academy` family는 전국
-데이터 전환 후 파이프라인이 끝까지 도는지 확인하기 위한 임시 추가분이며, 최종 구성은 팀 회의로 다시
-정합니다. 편집 방법은 `docs/EXTENDING_DATA.md`를 참고하세요.
+`configs/benchmark/query_families_v1.yaml`은 직접 편집하지 않습니다. `data/query/queryset_final.xlsx`를 고친 뒤
+`scripts/import_queryset_xlsx.py`로 다시 생성합니다(현재 72개 family, `docs/EXTENDING_DATA.md`). 쿼리를 평가·학습에서만 빼려면
+`configs/benchmark/inactive_queries_v1.yaml`에 추가합니다(판정 기록 보존, `docs/PIPELINE.md` 2절).
 
 ## Train/Val/Test 분할 방식
 

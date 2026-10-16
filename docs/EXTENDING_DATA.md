@@ -73,7 +73,8 @@ python scripts/12_validate_benchmark.py --stage pilot
 ```
 
 `import_queryset_xlsx.py`가 하는 일(스크립트 상단 docstring에 상세 설명):
-- family당 최소 variant 개수 제한 없음(팀 결정 — 548개 질의 전부 유지)
+- family당 최소 variant 개수 제한 없음(팀 결정 — 548개 질의 전부 유지). 평가·학습에서만 빼려면 xlsx를 고치지 말고
+  `configs/benchmark/inactive_queries_v1.yaml`에 추가(현재 오타 변형 49개 비활성, `docs/PIPELINE.md` 2절)
 - 기존 yaml에 이미 있는 family 이름은 **split을 그대로 물려받음**(재실행해도 train/val/test가 안 흔들림).
   완전히 새로운 family만 대분류별 균형 + 무작위로 새 split을 배정
 - `intent_definition`은 "{대분류} 중 '{family}'을(를) 판매·제공하는 매장" 형태로 초안만 자동 생성 —

@@ -59,7 +59,8 @@ def test_qrels_and_manifest_match_checked_in_golden_files(tmp_path):
     qrels_test = build_split_qrels(adj, "test")
     qrels_train = load_train_qrels(TRAIN_QRELS_PATH)
 
-    qrels_frames = assemble_qrels(qrels_train, qrels_val, qrels_test, active_query_ids)
+    inactive_query_ids = set(queries["query_id"].astype(str)) - active_query_ids   # 11번과 같게: 비활성 쿼리 판정은 뺀다
+    qrels_frames = assemble_qrels(qrels_train, qrels_val, qrels_test, active_query_ids, inactive_query_ids)
 
     # 산출물은 tmp_path에 쓴다 — 체크인된 benchmark/ 파일을 건드리지 않기 위함.
     csv_paths, trec_paths = save_qrels_outputs(tmp_path, qrels_frames)

@@ -13,6 +13,7 @@ from store_search_ai.data.benchmark_init import (
     GUIDELINE,
     build_queries_frame,
     build_query_manifest,
+    load_inactive_queries,
 )
 from store_search_ai.pipeline.common import load_config, sha256_file
 
@@ -34,7 +35,8 @@ def test_init_benchmark_matches_checked_in_golden_files(tmp_path):
     config = load_config(CONFIG_PATH)
     query_cfg = load_config(FAMILIES_PATH)
 
-    queries = build_queries_frame(query_cfg)
+    inactive_path = config["query_set"].get("inactive_queries_path")
+    queries = build_queries_frame(query_cfg, load_inactive_queries(REPO_ROOT / inactive_path if inactive_path else None))
 
     written_queries_path = tmp_path / "queries.csv"
     queries.to_csv(written_queries_path, index=False, encoding="utf-8-sig", lineterminator="\n")

@@ -17,7 +17,7 @@ Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실
 
 ## 1. 처음 한 번 — 준비 (데이터는 한 번만 올림)
 
-1. 최신 코드 받기(로컬 VS Code 터미널): `git fetch && git switch main && git pull` (PR #2 머지 전이면 `main` 대신 `feature/pooling2-zeroshot`)
+1. 최신 코드 받기(로컬 VS Code 터미널): `git fetch && git switch main && git pull` (지금 작업 브랜치가 main에 머지되기 전이면 `main` 대신 `feature/hybrid-rerank`)
 2. 데이터 폴더 만들기:
    ```bash
    python scripts/pack_for_colab.py
@@ -36,7 +36,9 @@ Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실
   Colab Notebooks/train_eval.ipynb   ← Colab이 쓰는 노트북 사본(업로드할 때 생김)
   store-search-ai/
     data/         ← pack_for_colab.py 결과 (처음 한 번, 데이터가 바뀔 때만)
-    runs/         ← 노트북이 씀: finetune/<TAG>/(모델+기록), model_eval/(검색 결과), evaluation/(지표)
+    runs/         ← 노트북이 씀: finetune/<TAG>/(모델+기록), model_eval/(검색 결과), evaluation/(지표),
+                     pooling_runs/(15번: 판정용 val+test 검색 결과, 채점 없음)
+    stack_eval/   ← colab/rerank_scores.ipynb용 reranker 채점 쌍·점수(검색 파이프라인 탐색, 데이터 담당)
     runs_smoke/   ← SMOKE=True 결과(지워도 됨)
 ```
 
@@ -225,7 +227,16 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 - Drive 다운로드 zip에는 빈 파일(`KEEP`)이 빠질 수 있습니다 — 가져올 때 KEEP이 안 잡히면 `--models <TAG>`로 지정하세요.
 
 **숫자 읽는 법**
-- val은 136개 쿼리라 nDCG@10에 ±0.05 정도 오차가 있습니다. **차이가 0.03보다 작거나 p가 크면 "개선"이라 하지 않습니다.**
+- val은 124개 쿼리라 nDCG@10의 95% 신뢰구간이 ±0.025 정도입니다(kse16 0.950 → [0.923, 0.974]). 같은 설정도 다시 돌리면 ±0.005 흔들립니다.
+  **차이가 0.03보다 작거나 p가 크면 "개선"이라 하지 않습니다.**
+- 리더보드 아래 **서비스 지표** `bad@3`(상위 3개에 오답이 섞인 쿼리 비율)이 서비스 기준입니다(목표 ≤ 0.05).
+  nDCG@10이 비슷해도 `bad@3`이 낮은 쪽이 사용자에게 더 낫습니다.
+- **오타 쿼리는 2026-10-14부터 벤치마크에서 비활성**입니다(val 136 → 124개). 오타는 나중에 철자 교정 단계에서 다룹니다 — 그 전 점수(val 136개 기준)와
+  직접 비교하지 마세요. 오타 증강(`typo_variants_per_query`)은 효과가 없어(Δ +0.001, p=0.70) 기본값 0으로 둡니다.
+  예전 학습 데이터(오타 학습 쿼리 22개 포함, sha `067e4aa4`)로 학습한 run도 평가·비교할 수 있지만(학습은 train 업종만 써서 누설 없음),
+  최종 후보는 가능하면 현재 데이터(sha `ec3a9b61`)로 다시 학습해 데이터 차이를 없앱니다(`docs/EMBEDDING_V1_PLAN.md` 3-2).
+- 서비스 지표의 **nDCG@10(판정만)**은 판정 없는 문서를 빼고 매긴 값입니다. 새 계열 모델처럼 Judged@10이 0.95 미만이면 이 값으로 고르고,
+  사람 판정은 후보가 모였을 때 한 번에 합니다(`docs/EVALUATION_POLICY.md`). 괜찮은 run은 `configs/benchmark/judging_candidates.yaml`에 등록하세요.
 - **Judged@10**(상위 10개 중 정답 판정이 있는 비율)을 같이 봅니다. 판정이 없는 문서는 오답으로 계산되므로 0.9보다 낮으면 점수가 실제보다
   낮게 나온 것입니다. val/test 정답은 키워드 검색 3종 + 임베딩 모델 6종(Qwen3 0.6B·BGE-M3·Arctic-KO 계열과 학습 모델)의 상위 결과로
   판정했습니다(supplement_v2). 이 계열을 학습한 모델은 보통 0.9 이상이고, 다른 계열 모델은 낮을 수 있습니다 — 그때는 데이터 담당에게
@@ -274,25 +285,26 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 |---|---|---|
 | **Arctic-ko** (`arctic_ko`, `arctic_ko_query`) | 예전(gold 이전) zero-shot에서는 셋 중 가장 높았음 — 지금 데이터로 미측정 | ① `arctic_ko_query`(학습 때 쓴 `query: ` 접두어)와 비교 ② 이미 강하므로 **망가뜨리지 않게** lr 1e-5·epoch 1 ③ negative 3→5 |
 | **BGE-M3** (`bge_m3`) | 지금 데이터로 미측정 | ① lr 1e-5~2e-5, epoch 1~3 ② negative 3→5 ③ 서비스에서 dense만 쓸지, sparse(키워드형)까지 쓸지 결정(벡터DB 구조가 달라짐 — 팀 공유) |
-| **Qwen3-0.6B** (`qwen3_0_6b`, `_store`) | zero-shot 0.392 → **baseline 학습 0.504**(`results/experiments.csv`) | ① **prompt**: `qwen3_0_6b_store`(매장 검색용 지시문) — 지시문 모델이라 효과가 큼 ② LoRA r 16→32/64, lr 5e-5~2e-4 ③ `loss="mnrl"`과 GIST 비교 |
+| **Qwen3-0.6B** (`qwen3_0_6b`, `_store`) | zero-shot 0.920 → kse14 0.948 → **kse16 0.950**(hard negative 3→6, bad@3 12→7/124; val 124, 오타 비활성·supplement_v2 이후, `results/experiments.csv`) — **Qwen3 0.6B 후보로 확정** | ① **prompt**: `qwen3_0_6b_store`(매장 검색용 지시문) — 지시문 모델이라 효과가 큼 ② LoRA r 16→32/64, lr 5e-5~2e-4 ③ `loss="mnrl"`과 GIST 비교 |
 | **Qwen3-4B** (`qwen3_4b`, `_store`) | – | T4는 빠듯함 → 가능하면 **L4/A100**(bf16, batch 키움). 0.6B에서 효과 있던 설정을 옮겨서 |
 
-(Qwen3-0.6B 숫자는 지금 gold qrels·val 전체 코퍼스·fp16 평가 기준. Arctic·BGE는 gold 확정 이전 정답으로 채점한 예전 결과만 있어서 지웠습니다 —
+(Qwen3-0.6B 숫자는 지금 qrels(supplement_v2 보충 판정, 오타 쿼리 비활성)·val 124개·전체 코퍼스·fp16 평가 기준. Arctic·BGE는 gold 확정 이전 정답으로 채점한 예전 결과만 있어서 지웠습니다 —
 각자 모델로 먼저 `11. zero-shot 비교표`를 돌려 출발점을 확인하세요.)
 
 **모든 모델 공통 — 효과가 클 것으로 보는 순서**
-1. **학습 query 늘리기**: 지금 학습 query는 237개뿐(행은 7,270개로 충분하지만 표현이 다양하지 않음). 가맹점 문서로 LLM이 검색어를
+1. **학습 query 늘리기**: 지금 학습 query는 215개뿐(행은 6,650개로 충분하지만 표현이 다양하지 않음). 가맹점 문서로 LLM이 검색어를
    만들게 하는 합성 query가 가장 큰 개선 수단 → 데이터 담당과 상의(학습 데이터를 바꾸는 일이라 모두의 비교 기준이 바뀜).
 2. **hard negative**: 학습된 모델이 상위에 올리는 오답을 다시 negative로 쓰기(정답인데 판정이 없는 문서가 섞일 수 있어 GIST와 함께).
 3. **하이퍼파라미터**: epoch(1~3), lr, batch(L4/A100에서 64), negative 수.
-4. **검색 시스템**: 키워드 검색(BM25)과 섞는 hybrid, 상위 결과를 다시 정렬하는 reranker — 모델 밖 처리라 `NOTE`를 `서비스도 필요:`로.
+4. (임베딩 학습이 아님) **검색 시스템**: 키워드 검색(BM25)과 섞는 hybrid, 상위 결과를 다시 정렬하는 reranker는 **검색 파이프라인 단계**에서
+   데이터 담당이 구성·평가합니다(`docs/EMBEDDING_V1_PLAN.md`). 임베딩 run 비교·후보 선정에는 넣지 않습니다.
 
 **데이터 쪽 보강(데이터 담당과 상의)**
 - **평가 정답 보강(모델 결과로 추가 pooling)**: 2026-10에 임베딩 모델 6종의 val/test 상위 20개를 추가 판정했습니다(supplement_v2,
   13,759쌍). 그 전에는 키워드 검색 결과로만 판정해 임베딩 모델 상위 10개의 절반 이상이 판정 없음(Judged@10 0.4~0.5)이었습니다.
   새 계열 모델을 추가해 Judged@10이 0.9 아래로 떨어지면 그 모델 run만 같은 방식으로 보충합니다.
-- **학습 데이터 보강**: 학습 쿼리 237개·29개 업종(val·test 업종과 겹치지 않음)이고 대부분 4~5자 업종 키워드입니다. 서비스형(T5) 쿼리는 학습 6개·val 0개뿐이고,
-  positive 7,270행 중 서로 다른 취급품목 문자열(`취급품목:` 뒤)은 1,099개라 반복이 많습니다. 업종·쿼리 표현을 넓히는 합성 쿼리가 가장 큰 보강 수단입니다.
+- **학습 데이터 보강**: 학습 쿼리 215개·29개 업종(val·test 업종과 겹치지 않음)이고 대부분 4~5자 업종 키워드입니다. 서비스형(T5) 쿼리는 학습 6개·val 0개뿐이고,
+  positive 행(당시 7,270행) 중 서로 다른 취급품목 문자열(`취급품목:` 뒤)은 1,099개라 반복이 많습니다. 업종·쿼리 표현을 넓히는 합성 쿼리가 가장 큰 보강 수단입니다.
 
 **점수 읽을 때**: Judged@10이 0.9보다 낮으면(상위 10개 중 판정 없는 문서가 많음) 실제보다 낮게 나옵니다. **같은 조건에서 기준 대비 Δ**로
 판단하고, 서비스 후보는 상위 결과를 사람이 직접 훑어보는 확인도 합니다.

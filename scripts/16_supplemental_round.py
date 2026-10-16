@@ -81,6 +81,7 @@ from store_search_ai.pipeline.common import (
     DEFAULT_ANNOTATION_ROUND,
     get_annotation_round_dirs,
     load_active_queries,
+    load_all_queries,
     load_config,
     sha256_file,
 )
@@ -106,7 +107,7 @@ def make(args, config: dict, benchmark_dir: Path) -> None:
     accumulate_targeted_candidates(
         candidates, target, corpus, item_parts_list, store_name_norm, args.per_term, args.round
     )
-    pool = build_pool_frame(candidates, queries, corpus, args.round)
+    pool = build_pool_frame(candidates, load_all_queries(benchmark_dir), corpus, args.round)   # 비활성 쿼리 행도 보존
 
     base_dir, _ = get_annotation_round_dirs(benchmark_dir, args.base_round)
     new_pairs = select_new_pairs(pool, args.round, args.query, _judged_ids(base_dir))
@@ -187,7 +188,7 @@ def make_runs(args, config: dict, benchmark_dir: Path) -> None:
     chosen = runs[runs["rank"] <= args.depth]
     accumulate_run_candidates(candidates, chosen, args.round)
     corpus = pd.read_parquet(config["corpus_path"])
-    pool = build_pool_frame(candidates, queries, corpus, args.round)
+    pool = build_pool_frame(candidates, load_all_queries(benchmark_dir), corpus, args.round)   # 비활성 쿼리 행도 보존
     base_dir, _ = get_annotation_round_dirs(benchmark_dir, args.base_round)
     new_pairs = select_new_pairs(pool, args.round, sorted(target_ids), _judged_ids(base_dir))
     if new_pairs.empty:
