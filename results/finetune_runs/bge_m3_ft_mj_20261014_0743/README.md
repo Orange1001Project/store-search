@@ -1,16 +1,15 @@
-# bge_m3_ft_mj_20261014_0743 — bge-m3 full fine-tuning, 노트북 기본값 (임베딩 v1 후보)
+# bge_m3_ft_mj_20261014_0743 — bge-m3 full fine-tuning, 노트북 기본값 (임베딩 v1 선택)
 
-**manifest·체크포인트가 저장소에 없다.** 아래 값은 담당자가 넘긴 노트북 `train_eval_bge.ipynb`(이 폴더)의 설정 셀과 실행 출력에서 옮겼다.
-Drive `runs/finetune/bge_m3_ft_mj_20261014_0743/`에 모델이 저장됐고 KEEP 표시 셀도 실행돼 있다 — v1으로 고르려면 그 폴더를 받아
-`import_colab_results.py --models bge_m3_ft_mj_20261014_0743`으로 가져온다.
+**임베딩 v1 선택 모델**(2026-10-16, val 동률 → 출처·보안 기준으로 선택 — `docs/EMBEDDING_V1_PLAN.md` 1-1절). 모델은 `models/bge_m3_ft_mj_20261014_0743/`(git 제외),
+기록은 이 폴더(`model_manifest.json`, `eval_config.yaml`, `notebook_code.py`, 학습 노트북 `train_eval_bge.ipynb`).
 
 | 항목 | 값 |
 |---|---|
 | 노트북 | 저장소 `colab/train_eval.ipynb` @ `ccead76`(2026-10-14)와 셀 코드 동일 — 바꾼 건 `OWNER="mj"`, `MODEL="bge_m3"`, `NOTE`, KEEP 한 줄뿐 |
 | 학습 | 2026-10-14, Colab Tesla T4, `precision: fp16`, 416 step(2 epoch), 917초, 최대 GPU 10.93GB |
 | 설정 | preset `bge_m3` 기본값: full FT, lr 2e-5, batch 32(mini 16), CachedGIST(guide = bge-m3), hard negative 3, positive 상한 32, warmup 0.1 |
-| 학습 데이터 | 215 쿼리, 6,650행(오타 비활성 후) — kse14·kse16과 같은 데이터로 보이지만 sha는 manifest가 없어 확인 못 함 |
-| 저장 | float16, 재로드 검증 통과(최소 cosine 1.00000) |
+| 학습 데이터 | `train_pairs.jsonl` sha256 `ec3a9b61…`(215 쿼리, 6,650행, 오타 비활성 후) — kse14·kse16과 같음 |
+| 저장 | float16, 재로드 검증 통과(최소 cosine 1.00000), final loss 0.097 |
 | HP 탐색 | 없음(기본값 1회) |
 
 ## val (124 쿼리, final_v1_val 판정 후 qrels)

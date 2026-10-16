@@ -24,7 +24,7 @@ Colab 결과는 손으로 복사하지 말고 `scripts/import_colab_results.py -
 | `..._ft_kse13_20261013_0721` | `067e4aa4` | 0.950 | 0.950 | 0.963 | 0.423 | 0.408 | 오타 증강 ×2 — 채택 안 함 |
 | `..._ft_kse14_20261014_0440` | `ec3a9b61`(215 쿼리) | 0.949 | 0.946 | 0.967 | 0.417 | 0.402 | 이전 기준선(2 epoch, LoRA r16, GIST), KEEP |
 | `..._ft_kse16_20261016_0012` | `ec3a9b61` | 0.953 | 0.951 | 0.973 | 0.429 | 0.414 | **Qwen3 기준선**(kse14 + hard negative 6), KEEP |
-| `bge_m3_ft_mj_20261014_0743` | 215 쿼리(sha 미확인) | 0.960 | 0.963 | 0.974 | 0.444 | 0.437 | bge-m3 full FT 기본값, manifest 없음 |
+| `bge_m3_ft_mj_20261014_0743` | `ec3a9b61` | 0.960 | 0.963 | 0.974 | 0.444 | 0.437 | **임베딩 v1 선택**(bge-m3 full FT 기본값), KEEP |
 | `snowflake_arctic_embed_l_v2_ko_ft_lee_20261015_1434` | `067e4aa4` | 0.961 | 0.965 | 0.981 | 0.458 | 0.447 | Arctic-KO, val HP 탐색 11회 중 1등(30 step), KEEP |
 
 **임베딩 v1 후보 3종 비교**(final_v1_val 판정 후, zero-shot 포함): `model_comparison/final_v1_val/summary.csv`(지표·bad@3·95% CI),

@@ -21,7 +21,7 @@ candidates:
     note: Qwen3-Embedding-0.6B LoRA kse16(hard negative 6, train data ec3a9b61 215 queries, T4 fp16)
     val: results/model_eval/qwen3_embedding_0_6b_ft_kse16_20261016_0012/run_t1_minimal_val.csv
   - name: bge_m3_ft_mj
-    note: bge-m3 full FT bge_m3_ft_mj_20261014_0743 — val run만 받음(manifest·체크포인트 없음, 설정·학습 데이터 sha 미확인)
+    note: bge-m3 full FT bge_m3_ft_mj_20261014_0743 — 노트북 기본값, train data ec3a9b61, T4 fp16. 임베딩 v1 선택(2026-10-16)
     val: results/model_eval/bge_m3_ft_mj_20261014_0743/run_t1_minimal_val.csv
   - name: arctic_ko_ft_lee
     note: Snowflake Arctic-KO full FT lee_20261015_1434(lr 5e-6, epoch 1, positive 4, train data 067e4aa4 237 queries, L4 bf16)

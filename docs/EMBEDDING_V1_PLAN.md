@@ -98,9 +98,13 @@
 - 유형별(nDCG@10): 구어·문장(T4, 37개) Arctic 0.944 > bge 0.923 ≈ kse16 0.922 / 개념확장(T3, 12개) bge 0.948 > kse16 0.933 > Arctic 0.926 — 쿼리 수가 적어 방향만 참고.
 
 **후보 조건 차이**: kse16·bge-m3는 현재 학습 데이터(215 쿼리, T4 fp16), Arctic lee는 오타 비활성 전 데이터(sha `067e4aa4`, 237 쿼리)·L4 bf16.
-bge-m3 mj는 manifest·체크포인트가 저장소에 없다(노트북 출력으로 기록, `results/finetune_runs/bge_m3_ft_mj_20261014_0743/README.md`).
+bge-m3 mj의 run 폴더(manifest·가중치)는 2026-10-16에 받아 `models/`·`results/finetune_runs/`에 가져왔다(train data `ec3a9b61`, 416 step, T4 fp16).
 
-**남은 일(③)**: 팀이 운영 기준으로 1개를 고른다 → 그 모델만 노트북 15번으로 test run → `final_v1_test` 라운드(test 상위 10개 미판정만) 판정
+**선택(③, 2026-10-16): 임베딩 v1 = bge-m3 mj** (`bge_m3_ft_mj_20261014_0743`). val 품질은 세 후보가 같은 수준이라 운영 기준으로 골랐다 —
+기관 공개 베이스(BAAI, MIT)에 우리 판정 데이터로만 학습해 출처를 끝까지 추적할 수 있고(Arctic-KO는 개인 파인튜닝판·AI Hub 학습 데이터 약관 미확인),
+선택 과정의 편향이 가장 작다(기본값 1회). 인코더(XLM-R large)라 query 지시문이 없고, Arctic과 계산 비용은 같다.
+
+**남은 일**: 이 모델만 노트북 15번으로 test run → `final_v1_test` 라운드(test 상위 10개 미판정만) 판정
 → test 1회 채점·보고. test 결과를 보고 다시 고르지 않는다.
 
 ## 2. 전체 진행 순서와 통과 기준
