@@ -153,7 +153,7 @@ Drive에 쓴 결과(모델·평가)는 남습니다.
 | `warmup_ratio` | 0.1 | 처음 10% step 동안 lr을 0에서 올림 |
 | `weight_decay` | 0.01 | |
 | `max_seq_length` | 128 | 문서 평균 24자라 충분 |
-| `num_hard_negatives` | 3 | 행마다 붙는 hard negative 수. 학습 데이터에 query당 최대 8개. 7 이상이면 negative가 적은 query가 빠짐 |
+| `num_hard_negatives` | preset(기본 3, Qwen3 0.6B는 6) | 행마다 붙는 hard negative 수. 학습 데이터에 query당 최대 8개. 7 이상이면 negative가 적은 query가 빠짐 |
 | `typo_variants_per_query` | 0 | 오타 증강. query마다 오타 변형 query를 몇 개 더할지(0=끔). 2면 215 → +430 query, 6,650 → 10,084행 |
 | `typo_positives_per_variant` | 8 | 오타 변형 query 하나에 붙일 정답 수(relevance 높은 순). negative는 원래 query와 같음 |
 | `max_positives_per_query` | 32 | query당 positive 상한(넓은 query 독점 방지) |

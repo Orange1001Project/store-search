@@ -227,7 +227,7 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 - Drive 다운로드 zip에는 빈 파일(`KEEP`)이 빠질 수 있습니다 — 가져올 때 KEEP이 안 잡히면 `--models <TAG>`로 지정하세요.
 
 **숫자 읽는 법**
-- val은 124개 쿼리라 nDCG@10의 95% 신뢰구간이 ±0.025 정도입니다(kse14 0.948 → [0.921, 0.972]). 같은 설정도 다시 돌리면 ±0.005 흔들립니다.
+- val은 124개 쿼리라 nDCG@10의 95% 신뢰구간이 ±0.025 정도입니다(kse16 0.950 → [0.923, 0.974]). 같은 설정도 다시 돌리면 ±0.005 흔들립니다.
   **차이가 0.03보다 작거나 p가 크면 "개선"이라 하지 않습니다.**
 - 리더보드 아래 **서비스 지표** `bad@3`(상위 3개에 오답이 섞인 쿼리 비율)이 서비스 기준입니다(목표 ≤ 0.05).
   nDCG@10이 비슷해도 `bad@3`이 낮은 쪽이 사용자에게 더 낫습니다.
@@ -285,7 +285,7 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 |---|---|---|
 | **Arctic-ko** (`arctic_ko`, `arctic_ko_query`) | 예전(gold 이전) zero-shot에서는 셋 중 가장 높았음 — 지금 데이터로 미측정 | ① `arctic_ko_query`(학습 때 쓴 `query: ` 접두어)와 비교 ② 이미 강하므로 **망가뜨리지 않게** lr 1e-5·epoch 1 ③ negative 3→5 |
 | **BGE-M3** (`bge_m3`) | 지금 데이터로 미측정 | ① lr 1e-5~2e-5, epoch 1~3 ② negative 3→5 ③ 서비스에서 dense만 쓸지, sparse(키워드형)까지 쓸지 결정(벡터DB 구조가 달라짐 — 팀 공유) |
-| **Qwen3-0.6B** (`qwen3_0_6b`, `_store`) | zero-shot 0.920 → **kse14 학습 0.948**(val 124, 오타 비활성·supplement_v2 이후, `results/experiments.csv`) | ① **prompt**: `qwen3_0_6b_store`(매장 검색용 지시문) — 지시문 모델이라 효과가 큼 ② LoRA r 16→32/64, lr 5e-5~2e-4 ③ `loss="mnrl"`과 GIST 비교 |
+| **Qwen3-0.6B** (`qwen3_0_6b`, `_store`) | zero-shot 0.920 → kse14 0.948 → **kse16 0.950**(hard negative 3→6, bad@3 12→7/124; val 124, 오타 비활성·supplement_v2 이후, `results/experiments.csv`) — **Qwen3 0.6B 후보로 확정** | ① **prompt**: `qwen3_0_6b_store`(매장 검색용 지시문) — 지시문 모델이라 효과가 큼 ② LoRA r 16→32/64, lr 5e-5~2e-4 ③ `loss="mnrl"`과 GIST 비교 |
 | **Qwen3-4B** (`qwen3_4b`, `_store`) | – | T4는 빠듯함 → 가능하면 **L4/A100**(bf16, batch 키움). 0.6B에서 효과 있던 설정을 옮겨서 |
 
 (Qwen3-0.6B 숫자는 지금 qrels(supplement_v2 보충 판정, 오타 쿼리 비활성)·val 124개·전체 코퍼스·fp16 평가 기준. Arctic·BGE는 gold 확정 이전 정답으로 채점한 예전 결과만 있어서 지웠습니다 —

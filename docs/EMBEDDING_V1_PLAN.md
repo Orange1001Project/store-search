@@ -1,4 +1,4 @@
-# 임베딩 v1 확정 계획 — 후보 수집 → 일괄 판정 → 선택 → 검색 파이프라인 (2026-10-15)
+# 임베딩 v1 확정 계획 — 후보 수집 → 일괄 판정 → 선택 → 검색 파이프라인 (2026-10-15, kse16 반영 2026-10-16)
 
 회의·인수인계용 요약 문서. 규칙의 근거는 `docs/EVALUATION_POLICY.md`(평가·판정 공식 규칙), 서비스 적용 전체 그림은
 `docs/SERVICE_READINESS.md`.
@@ -9,7 +9,7 @@
   (후보 생성/순위 분리: Covington et al. RecSys 2016, 임베딩 상품 검색: Nigam et al. KDD 2019). 위치·거리 정렬은 뒤 단계의 일이다.
 - **임베딩은 이번 일괄 판정 1회로 v1을 고정한다.** 현재 벤치마크는 천장 근처(판정 문서만 nDCG 0.95~0.96)이고, 남은 차이(0.01)는 val 124개로
   구분이 안 된다(필요 쿼리 약 515개). 더 튜닝해도 개선인지 잡음인지 판별할 수 없다.
-- **임베딩 모델만 후보로 모은다**: kse14와 팀원들이 학습한 bge-m3·Snowflake Arctic 최고 run → 한 번에 보충 판정 → val로 하나 선택 → test 1회.
+- **임베딩 모델만 후보로 모은다**: kse16(Qwen3 0.6B 확정 run)과 팀원들이 학습한 bge-m3·Snowflake Arctic 최고 run → 한 번에 보충 판정 → val로 하나 선택 → test 1회.
 - **하이브리드·reranker는 후보에서 뺀다.** 어떤 임베딩 위에든 얹는 검색 구성 요소라 임베딩 선택과 분리되고, 효과는 실제형 쿼리·위치가 붙은
   ④⑤ 단계에서 재야 의미가 있다. 지금까지의 측정(1절 아래 표)은 파이프라인 설계용 사전 탐색으로 남긴다.
 - 그 다음 **검색 파이프라인(위치 필터·정렬, 하이브리드, reranker 여부, 벡터 DB/ANN 색인)을 구현**하고, 실제 쿼리+위치로 전체 성능을 잰다.
@@ -20,7 +20,8 @@
 | 임베딩 모델 | 공식 nDCG@10 | 판정 문서만 nDCG@10 | Judged@10 | 1위 정답률 | bad@3 |
 |---|---|---|---|---|---|
 | Qwen3-Embedding-0.6B zero-shot | 0.920 | 0.920 | 1.000 | 0.903 | 21/124 |
-| **kse14** (기준선) | 0.948 | 0.952 | 0.995 | 0.952 | 12/124 |
+| kse14 (이전 기준선) | 0.948 | 0.952 | 0.995 | 0.952 | 12/124 |
+| **kse16** (기준선, Qwen3 0.6B 확정) | 0.950 | 0.953 | 0.994 | 0.968 | 7/124 |
 
 **공식 지표 전체** (val 124, 보충 판정·오타 비활성 후 qrels, `artifacts/evaluation/storesearch_ko_v1/`)
 
@@ -30,7 +31,8 @@
 | kse1 (구 데이터) | 0.954 | 0.955 | 0.969 | 0.309 | 0.429 | 0.415 | 1.000 |
 | kse13 기준선 (구 데이터) | 0.953 | 0.952 | 0.968 | 0.309 | 0.428 | 0.413 | 1.000 |
 | kse13 오타 증강 (구 데이터) | 0.949 | 0.949 | 0.963 | 0.305 | 0.424 | 0.410 | 0.996 |
-| **kse14 (기준선)** | 0.948 | 0.945 | 0.967 | 0.305 | 0.418 | 0.404 | 0.995 |
+| kse14 (이전 기준선) | 0.948 | 0.945 | 0.967 | 0.305 | 0.418 | 0.404 | 0.995 |
+| **kse16 (기준선)** | 0.950 | 0.946 | 0.973 | 0.310 | 0.431 | 0.416 | 0.994 |
 
 읽는 법 — 우리 데이터는 쿼리 하나에 정답(2점 이상)이 중앙값 115개라 지표마다 성격이 다르다:
 - **nDCG@10(주 지표)·Precision@10**: 상위 10개가 맞는 업종인가. 둘이 거의 같이 움직인다.
@@ -44,12 +46,17 @@
 | 구성 | 공식 nDCG@10 | 판정 문서만 nDCG@10 | Judged@10 | 1위 정답률 | bad@3 |
 |---|---|---|---|---|---|
 | kse14 + BM25 하이브리드(RRF) | 0.943 | 0.960 | 0.977 | 0.976 | 9/124 |
+| kse16 + BM25 하이브리드(RRF) | 0.947 | 0.963 | 0.977 | 0.984 | 6/124 |
 | kse14 + 하이브리드 + Qwen3-Reranker | (파이프라인 단계에서 판정) | 0.963 | 0.920 | (같음) | (같음) |
 | kse14 + Qwen3-Reranker | (파이프라인 단계에서 판정) | 0.959 | 0.817 | (같음) | (같음) |
 | kse14 + 하이브리드 + bge-reranker | (파이프라인 단계에서 판정) | 0.958 | 0.929 | (같음) | (같음) |
 
 - kse14 = `qwen3_embedding_0_6b_ft_kse14_20261014_0440`: LoRA rank 16, GIST loss, lr 1e-4, batch 32, **2 epoch**, 학습 쿼리 215개(6,650행),
-  T4 fp16, 오타 증강 끔. 모델은 `models/`(git 제외), 기록은 `results/finetune_runs/`.
+  T4 fp16, 오타 증강 끔, hard negative 3. 모델은 `models/`(git 제외), 기록은 `results/finetune_runs/`.
+- **kse16** = `qwen3_embedding_0_6b_ft_kse16_20261016_0012`: kse14와 같은 설정에서 **hard negative만 3 → 6**(학습 데이터 sha `ec3a9b61` 동일, T4 43분).
+  kse14 대비 nDCG@10 +0.002(p=0.45, 같은 수준), MRR@100 +0.007(p=0.38), **Recall@100 +0.012(p=0.0001)**, bad@3 12 → 7(6개 해결·1개 악화,
+  부호 검정 p≈0.13 — 방향은 맞지만 val 124개로는 확정 불가). 2026-10-16 Qwen3 0.6B 후보로 확정하고 기준선을 kse16으로 바꿈.
+  kse16 + 하이브리드 행은 `eval_retrieval_stack.py`와 같은 RRF(k=60)·채점으로 계산(reranker 조합은 미측정).
 - reranker 구성은 판정 안 된 문서를 위로 올려 공식 점수·bad@3이 낮게 나온다(Judged@10 0.82~0.93) → ⑤의 실제형 평가셋에서 판정과 함께 잰다.
 - **하이브리드**: 키워드 검색(BM25)과 임베딩 검색의 순위를 합친다(RRF: 각 결과의 순위 역수를 더함). 상호명·정확한 단어는 BM25가, 뜻이 비슷한 표현은
   임베딩이 잡아서 서로 보완한다. **reranker**: 1차 검색 상위 수십 개를 쿼리와 가맹점 문장을 함께 읽는 더 무거운 모델(cross-encoder)로 다시 정렬한다.
@@ -60,7 +67,7 @@
 
 | 단계 | 할 일 | 통과 기준 / 산출물 |
 |---|---|---|
-| ① 후보 수집 | **임베딩 모델만**: kse14, 팀원 bge-m3·Arctic 최고 run의 **val+test run** 수집 | `configs/benchmark/judging_candidates.yaml` 등록 |
+| ① 후보 수집 | **임베딩 모델만**: kse16, 팀원 bge-m3·Arctic 최고 run의 **val+test run** 수집 | `configs/benchmark/judging_candidates.yaml` 등록 |
 | ② 일괄 판정 1회 | 후보 상위 10개 중 판정 안 된 (쿼리, 가맹점)만 A·B 판정 → 조정 → qrels 갱신 | val·test Judged@10 ≥ 0.95(모든 후보) |
 | ③ 임베딩 v1 선택 | val 공식 지표로 1개 선택, **test는 그 1개만 1회** 채점 | 선택 근거·test 결과 보고, v1 고정 |
 | ④ 검색 파이프라인 | 위치 필터·정렬(거리, 필요시 인지도), **하이브리드 결합, reranker 여부(지연 예산)** — 사전 탐색 결과(1절)를 출발점으로, **벡터 DB/ANN 색인**, BM25 폴백 | ANN recall(exact 대비), 지연 p95 측정 |
@@ -75,7 +82,7 @@
 ### 3-1. 누가 무엇을
 | 후보 | 담당 | 방법 |
 |---|---|---|
-| kse14 | 데이터 담당 | 노트북 15번 `POOL_RUN_FINETUNED = ["qwen3_embedding_0_6b_ft_kse14_20261014_0440"]` |
+| kse16 | 데이터 담당 | 노트북 15번 `POOL_RUN_FINETUNED = ["qwen3_embedding_0_6b_ft_kse16_20261016_0012"]` |
 | bge-m3 / Snowflake Arctic 학습 run | 각 담당 팀원 | 자기 run 중 **val 기준 1~2개**를 골라(아래 기준) KEEP 표시 → 노트북 15번 `POOL_RUN_FINETUNED`에 TAG |
 
 노트북 15번은 val+test 상위 100개 검색 결과를 **채점하지 않고** Drive `runs/pooling_runs/<TAG>.csv`로 저장한다(test 점수를 미리 보지 않음).
@@ -111,13 +118,13 @@ python scripts/pack_for_colab.py                                     # Drive dat
 - 판정 시트에는 시스템 이름·순위가 없고 행 순서가 섞여 있다(판정자 편향 방지). 판정 기준은 기존 가이드라인 그대로.
 - AI 초안은 가이드라인 v1.2대로 참고만 하고 점수는 사람이 확정한다. **A·B가 같은 AI 초안을 함께 보지 않는다** — 둘이 독립이 아니면
   일치도가 부풀려지고 조정할 행이 빠진다(supplement_v2 때처럼 한 명만 쓰거나, 각자 따로 만든 초안을 쓴다).
-- 규모 예상: kse14는 이미 거의 판정돼 있다(val depth 10에서 새 쌍 6개). 다른 계열 학습 run(bge-m3·Arctic)은 zero-shot이 pool에 있어서 대부분
+- 규모 예상: kse14는 이미 거의 판정돼 있었다(val depth 10에서 새 쌍 6개). kse16도 Judged@10 0.994로 거의 판정돼 있다(val 상위 10개 중 미판정 8쌍). 다른 계열 학습 run(bge-m3·Arctic)은 zero-shot이 pool에 있어서 대부분
   덮이지만 쿼리당 몇 개씩 새로 나온다 — 정확한 수는 `collect_judging_candidates.py` 표로 확정한다. (참고: 하이브리드·reranker까지 넣었다면 val만 284쌍)
 - 판정은 이 라운드 한 번. 끝난 뒤 판정을 고치거나 val을 보며 다시 판정하지 않는다.
 
 ## 5. 선택 규칙 (③)
 
-1. 판정 뒤 val 공식 지표로 비교: nDCG@10(95% CI), Judged@10, bad@3, 1위 정답률, 기준(kse14) 대비 Δ·p.
+1. 판정 뒤 val 공식 지표로 비교: nDCG@10(95% CI), Judged@10, bad@3, 1위 정답률, 기준(kse16) 대비 Δ·p.
 2. "더 낫다"는 Δ ≥ 0.03이고 p < 0.05일 때만. 그보다 작은 차이는 **같은 수준**으로 본다.
 3. 같은 수준이면 서비스 지표(bad@3, 1위 정답률)가 나은 쪽, 그것도 비슷하면 **작고 빠른 모델**(추론 지연·메모리)을 고른다.
 4. 고른 모델 1개만 test 1회 채점해 보고한다. test를 보고 다시 고르지 않는다.
@@ -130,13 +137,13 @@ python scripts/pack_for_colab.py                                     # Drive dat
 |---|---|---|
 | 벤치마크 데이터 | 오타 쿼리 49개 비활성(`configs/benchmark/inactive_queries_v1.yaml`, train 22/val 12/test 15). active 499개(train 215/val 124/test 160). qrels에서 그 판정 6,018행 제외(판정 기록은 보존) | 오타는 검색 앞단 철자 교정의 일 — 기본 성능 확정 뒤 다룸(팀 결정 2026-10-14) |
 | 학습 데이터 | `train_pairs.jsonl` 237 → 215 쿼리(sha `ec3a9b61`) | 위와 같음 |
-| 기준선 | kse13(구 데이터) → **kse14**(새 데이터) | 학습·평가 조건을 맞춤 |
+| 기준선 | kse13(구 데이터) → kse14(새 데이터) → **kse16**(hard negative 6) | 학습·평가 조건을 맞춤 / 상위권 오답 감소 |
 | 노트북 | 오타 증강 옵션(`typo_variants_per_query`, 기본 0 — 효과 없어 끔), 리더보드 서비스 지표(bad@3, 1위 정답률, **nDCG@10(판정만)**) | 서비스 체감 지표, 판정 없이 탐색 |
 | 평가 도구 | `rescore_evaluations.py`(qrels 변경 후 재채점, 비활성 쿼리 행 정리), `import_colab_results.py`(예전 qrels 평가·비활성 쿼리 자동 처리) | 데이터 변경 뒤 기록 일관성 |
 | 검색 구성 비교 | `eval_retrieval_stack.py`(BM25 하이브리드 RRF, bge/Qwen3 reranker, test run 생성), `colab/rerank_scores.ipynb`(GPU 채점) | 학습 없이 시스템 구성 효과 측정 |
 | 일괄 판정 | `configs/benchmark/judging_candidates.yaml`, `scripts/collect_judging_candidates.py` | 중간 판정 없이 후보를 모아 한 번에 |
 | 문서 | `EVALUATION_POLICY.md`(공식 규칙), `SERVICE_READINESS.md`, 이 문서 | 회의·인수인계 |
-| 결과 | `results/experiments.csv`에 kse13·kse14, `results/stack_eval/val/` | |
+| 결과 | `results/experiments.csv`에 kse13·kse14·kse16, `results/stack_eval/val/` | |
 
 머지 순서: 두 브랜치를 하나의 PR로 올리거나(`feature/hybrid-rerank` → main, 앞 브랜치 커밋 포함) 순서대로 두 PR. 머지 후 Drive `data/`는
 `pack_for_colab.py` 결과로 교체돼 있어야 한다(오타 비활성 반영).

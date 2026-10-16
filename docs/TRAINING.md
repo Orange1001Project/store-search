@@ -62,7 +62,7 @@ python scripts/prepare_finetune_dataset.py
 학습 쪽(`store_search_ai.training.finetune.expand_training_rows`)에서 (query, positive)마다 한 행으로
 펼칩니다. query당 positive는 `max_positives_per_query`(기본 32)개까지 — "한식"처럼 positive가 수백 개인
 넓은 query가 학습을 독점하지 않게 하기 위해서입니다. hard negative는 모든 행이
-`num_hard_negatives`(기본 3)개로 같아야 해서, 그보다 적은 query는 제외됩니다(개수는 로그와 manifest에 남음).
+`num_hard_negatives`(기본 3, Qwen3 0.6B preset은 6 — kse16)개로 같아야 해서, 그보다 적은 query는 제외됩니다(개수는 로그와 manifest에 남음).
 
 ## 2. Colab에서 학습 (T4 기준)
 

@@ -15,11 +15,11 @@ depth: 10            # 후보마다 상위 몇 개를 판정 대상으로 넣을
 splits: [val, test]
 
 candidates: []
-# 예(2026-10-15 기준 유망 후보 — test run을 만든 뒤 주석을 풀어 등록):
-#  - name: kse14_dense
-#    note: Qwen3-Embedding-0.6B LoRA kse14(215 train queries)
-#    val: results/model_eval/qwen3_embedding_0_6b_ft_kse14_20261014_0440/run_t1_minimal_val.csv
-#    test: <노트북 15번 runs/pooling_runs/qwen3_embedding_0_6b_ft_kse14_20261014_0440.csv>
+# 예(2026-10-16 기준 유망 후보 — test run을 만든 뒤 주석을 풀어 등록):
+#  - name: kse16_dense
+#    note: Qwen3-Embedding-0.6B LoRA kse16(215 train queries, hard negative 6) — Qwen3 0.6B 확정 run
+#    val: results/model_eval/qwen3_embedding_0_6b_ft_kse16_20261016_0012/run_t1_minimal_val.csv
+#    test: <노트북 15번 runs/pooling_runs/qwen3_embedding_0_6b_ft_kse16_20261016_0012.csv>
 #  - name: bge_m3_ft_<owner>
 #    note: bge-m3 full FT — 담당자가 고른 최고 run(학습 데이터 sha, 핵심 설정)
 #    val: <노트북 15번 runs/pooling_runs/<TAG>.csv>
