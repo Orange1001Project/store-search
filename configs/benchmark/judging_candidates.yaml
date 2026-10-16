@@ -12,7 +12,7 @@
 
 round: final_v1_val  # 판정 라운드 이름 → benchmark/storesearch_ko_v1/annotations/<round>/
 depth: 10            # 후보마다 상위 몇 개를 판정 대상으로 넣을지(TREC 관례 10~20, 비용은 --dry-run 표로 확인)
-# 2026-10-16: 세 후보 모두 test run이 아직 없어 val만 먼저 판정한다(선택은 val로 하므로 이것으로 공정 비교가 된다).
+# 2026-10-16: val 판정 완료(A·B 220쌍 + 조정 22행 → qrels_val +217). 세 후보 모두 test run이 아직 없어 val만 먼저 판정했다(선택은 val로 하므로 이것으로 공정 비교가 된다).
 # 고른 1개의 test run(노트북 15번)이 오면 그 모델만 test 상위 10개를 별도 라운드(final_v1_test)로 판정한 뒤 test를 1회 채점한다.
 splits: [val]
 
