@@ -1,4 +1,4 @@
-# 임베딩 v1 확정 계획 — 후보 수집 → 일괄 판정 → 선택 → 검색 파이프라인 (2026-10-15, kse16 반영 2026-10-16)
+# 임베딩 v1 확정 계획 — 후보 수집 → 일괄 판정 → 선택 → 검색 파이프라인 (2026-10-15 작성, 2026-10-16 v1 선택: bge-m3 mj)
 
 회의·인수인계용 요약 문서. 규칙의 근거는 `docs/EVALUATION_POLICY.md`(평가·판정 공식 규칙), 서비스 적용 전체 그림은
 `docs/SERVICE_READINESS.md`.
@@ -9,7 +9,8 @@
   (후보 생성/순위 분리: Covington et al. RecSys 2016, 임베딩 상품 검색: Nigam et al. KDD 2019). 위치·거리 정렬은 뒤 단계의 일이다.
 - **임베딩은 이번 일괄 판정 1회로 v1을 고정한다.** 현재 벤치마크는 천장 근처(판정 문서만 nDCG 0.95~0.96)이고, 남은 차이(0.01)는 val 124개로
   구분이 안 된다(필요 쿼리 약 515개). 더 튜닝해도 개선인지 잡음인지 판별할 수 없다.
-- **임베딩 모델만 후보로 모은다**: kse16(Qwen3 0.6B 확정 run)과 팀원들이 학습한 bge-m3·Snowflake Arctic 최고 run → 한 번에 보충 판정 → val로 하나 선택 → test 1회.
+- **임베딩 v1 = bge-m3 mj(`bge_m3_ft_mj_20261014_0743`)**(2026-10-16): 후보 3종(Qwen3 kse16, bge-m3 mj, Arctic-KO lee)을 val 일괄 판정(`final_v1_val`)
+  뒤 비교 → 같은 수준(Δ ≤ 0.008) → 출처·보안 기준으로 선택(1-1절, 8절). 남은 일: 이 모델만 test 1회.
 - **하이브리드·reranker는 후보에서 뺀다.** 어떤 임베딩 위에든 얹는 검색 구성 요소라 임베딩 선택과 분리되고, 효과는 실제형 쿼리·위치가 붙은
   ④⑤ 단계에서 재야 의미가 있다. Qwen3(kse14) 위에서 한 사전 탐색 수치는 v1(bge-m3)과 맞지 않아 지웠다(2026-10-16) — ④에서 v1으로 다시 잰다
   (도구 `scripts/eval_retrieval_stack.py`, BM25 run·reranker 점수 캐시 `results/stack_eval/val/`는 남김).
@@ -101,17 +102,17 @@ bge-m3 mj의 run 폴더(manifest·가중치)는 2026-10-16에 받아 `models/`·
 
 | 단계 | 할 일 | 통과 기준 / 산출물 |
 |---|---|---|
-| ① 후보 수집 | **임베딩 모델만**: kse16, 팀원 bge-m3·Arctic 최고 run의 **val+test run** 수집 | `configs/benchmark/judging_candidates.yaml` 등록 |
-| ② 일괄 판정 1회 (val 완료 2026-10-16, `final_v1_val`) | 후보 상위 10개 중 판정 안 된 (쿼리, 가맹점)만 A·B 판정 → 조정 → qrels 갱신 | val·test Judged@10 ≥ 0.95(모든 후보) |
-| ③ 임베딩 v1 선택 | val 공식 지표로 1개 선택, **test는 그 1개만 1회** 채점 | 선택 근거·test 결과 보고, v1 고정 |
-| ④ 검색 파이프라인 | 위치 필터·정렬(거리, 필요시 인지도), **하이브리드 결합, reranker 여부(지연 예산)** — 사전 탐색 결과(1절)를 출발점으로, **벡터 DB/ANN 색인**, BM25 폴백 | ANN recall(exact 대비), 지연 p95 측정 |
+| ① 후보 수집 (완료 2026-10-16) | **임베딩 모델만**: kse16, 팀원 bge-m3·Arctic 최고 run의 val run 수집(test run은 선택한 1개만) | `configs/benchmark/judging_candidates.yaml` 등록 |
+| ② 일괄 판정 1회 (val 완료 2026-10-16, `final_v1_val`) | 후보 상위 10개 중 판정 안 된 (쿼리, 가맹점)만 A·B 판정 → 조정 → qrels 갱신. test는 선택한 1개만 `final_v1_test` | val Judged@10 ≥ 0.95(모든 후보, 달성 0.994~0.999), test는 선택 모델 |
+| ③ 임베딩 v1 선택 (val 선택 완료 2026-10-16: bge-m3 mj, test 남음) | val 공식 지표로 1개 선택, **test는 그 1개만 1회** 채점 | 선택 근거·test 결과 보고, v1 고정 |
+| ④ 검색 파이프라인 | 위치 필터·정렬(거리, 필요시 인지도), **하이브리드 결합, reranker 여부(지연 예산)**, **벡터 DB/ANN 색인**, BM25 폴백 | ANN recall(exact 대비), 지연 p95 측정 |
 | ⑤ 전체 성능 측정 | 실제형 쿼리(로그가 없으므로 팀이 시나리오 기반으로 새로 작성, 7절) + 검색 위치. 반경 안 정답은 소수라 업종·키워드 필터 + 여러 시스템 pooling으로 **거의 빠짐없이** 판정 → 정밀도·재현율 | 쿼리 500개 이상에서 bad@3 상한 ≤ 목표, 현행 대비 우위 |
 | ⑥ 부족하면 재학습 | ⑤의 실패 **유형**에 맞춰 실제 쿼리 기반 데이터·코퍼스 기반 합성 데이터로 v2 학습 | ⑤ 지표로 비교 |
 | ⑦ 서비스 연결 | 운영 색인·모니터링·폴백 → shadow → interleaving/A/B → 단계적 확대 | 온라인 지표(클릭률, 결과 없음 비율, 재검색률) |
 
 벡터 DB는 ⑦이 아니라 ④에 넣는다 — ANN 색인은 exact 검색과 결과가 조금 달라서, ⑤의 전체 성능은 ANN을 붙인 상태로 재야 한다.
 
-## 3. 후보 모으기 (①)
+## 3. 후보 모으기 (①) — 2026-10-16 완료, 기록용
 
 ### 3-1. 누가 무엇을
 | 후보 | 담당 | 방법 |
@@ -165,22 +166,22 @@ python scripts/pack_for_colab.py                                     # Drive dat
 
 ## 6. main 브랜치와 달라진 점
 
-두 브랜치가 아직 main에 머지되지 않았다: `feature/qwen3-embedding-finetuning` → 그 위에 `feature/hybrid-rerank`.
+PR #4(`feature/embedding-v1` → main, 2026-10-16)에 들어간 변경. 예전 브랜치 `feature/qwen3-embedding-finetuning`·`feature/hybrid-rerank`의 작업을 모두 포함한다.
 
 | 구분 | 변경 | 이유 |
 |---|---|---|
 | 벤치마크 데이터 | 오타 쿼리 49개 비활성(`configs/benchmark/inactive_queries_v1.yaml`, train 22/val 12/test 15). active 499개(train 215/val 124/test 160). qrels에서 그 판정 6,018행 제외(판정 기록은 보존) | 오타는 검색 앞단 철자 교정의 일 — 기본 성능 확정 뒤 다룸(팀 결정 2026-10-14) |
 | 학습 데이터 | `train_pairs.jsonl` 237 → 215 쿼리(sha `ec3a9b61`) | 위와 같음 |
-| 기준선 | kse13(구 데이터) → kse14(새 데이터) → **kse16**(hard negative 6) | 학습·평가 조건을 맞춤 / 상위권 오답 감소 |
+| 기준선·선택 | Qwen3 기준선 kse13 → kse14 → kse16(hard negative 6). **임베딩 v1 = bge-m3 mj** | 학습·평가 조건을 맞춤 / 후보 3종 동률 → 출처·보안 기준 |
 | 노트북 | 오타 증강 옵션(`typo_variants_per_query`, 기본 0 — 효과 없어 끔), 리더보드 서비스 지표(bad@3, 1위 정답률, **nDCG@10(판정만)**) | 서비스 체감 지표, 판정 없이 탐색 |
 | 평가 도구 | `rescore_evaluations.py`(qrels 변경 후 재채점, 비활성 쿼리 행 정리), `import_colab_results.py`(예전 qrels 평가·비활성 쿼리 자동 처리) | 데이터 변경 뒤 기록 일관성 |
-| 검색 구성 비교 | `eval_retrieval_stack.py`(BM25 하이브리드 RRF, bge/Qwen3 reranker, test run 생성), `colab/rerank_scores.ipynb`(GPU 채점) | 학습 없이 시스템 구성 효과 측정 |
-| 일괄 판정 | `configs/benchmark/judging_candidates.yaml`, `scripts/collect_judging_candidates.py` | 중간 판정 없이 후보를 모아 한 번에 |
+| 검색 구성 도구 | `eval_retrieval_stack.py`(BM25 하이브리드 RRF, bge/Qwen3 reranker, test run 생성), `colab/rerank_scores.ipynb`(GPU 채점). Qwen3 기준 탐색 수치는 삭제 | ④에서 v1으로 측정 |
+| 일괄 판정 | `configs/benchmark/judging_candidates.yaml`, `scripts/collect_judging_candidates.py`, 라운드 `final_v1_val`(val 220쌍 → qrels_val +217) | 중간 판정 없이 후보를 모아 한 번에 |
 | 문서 | `EVALUATION_POLICY.md`(공식 규칙), `SERVICE_READINESS.md`, 이 문서 | 회의·인수인계 |
 | 결과 | `results/experiments.csv`, `results/model_comparison/final_v1_val/` | |
+| 버그 수정 | 16·07번이 pool을 다시 쓸 때 비활성 쿼리 행이 사라지던 문제(`load_all_queries`) | 로컬 pool 6,270행 복원 |
 
-머지 순서: 두 브랜치를 하나의 PR로 올리거나(`feature/hybrid-rerank` → main, 앞 브랜치 커밋 포함) 순서대로 두 PR. 머지 후 Drive `data/`는
-`pack_for_colab.py` 결과로 교체돼 있어야 한다(오타 비활성 반영).
+머지 후 Drive `data/`는 `pack_for_colab.py` 결과로 교체한다(오타 비활성 + `final_v1_val` qrels 반영 — 노트북 16번으로 Drive 평가도 다시 채점).
 
 ## 7. 실제형 평가셋 만들기 (⑤, 검색 로그가 없으므로 팀이 직접 작성)
 
@@ -231,3 +232,7 @@ python scripts/pack_for_colab.py                                     # Drive dat
 | 2026-10-15 | 평가·판정 공식 규칙 채택, 일괄 판정 | `EVALUATION_POLICY.md` |
 | 2026-10-15 | 임베딩은 일괄 판정 1회로 v1 고정, 위치는 파이프라인 단계에서 | 단계별 개발·평가가 업계 표준, 현재 벤치마크로 0.01 차이 측정 불가 |
 | 2026-10-15 | 하이브리드·reranker는 임베딩 판정 후보에서 빼고 파이프라인 단계(④⑤)에서 구성·평가 | 임베딩과 독립인 구성 요소, 효과는 실제형 쿼리·위치에서 재야 함 |
+| 2026-10-16 | Qwen3 hard negative 3 → 6 채택(kse16) | kse14 대비 bad@3 12→7, Recall@100 +0.012(p=0.0001), nDCG 같은 수준 |
+| 2026-10-16 | 일괄 판정은 val만(`final_v1_val`), test는 선택한 1개만 별도 라운드(`final_v1_test`) | 선택은 val로 한다. test를 채점하는 모델이 하나라 pool 편향이 없고 판정량이 준다 |
+| 2026-10-16 | **임베딩 v1 = bge-m3 mj(`bge_m3_ft_mj_20261014_0743`)** | val 3종 동률(Δ ≤ 0.008, p ≥ 0.28, 1-1절). 기관 공개 베이스(BAAI, MIT) + 우리 판정 데이터만으로 학습해 출처 추적 가능, 선택 편향 최소(기본값 1회). Arctic-KO는 개인 파인튜닝판·AI Hub 학습 데이터 약관 미확인, Qwen3는 디코더·지시문으로 서빙이 번거로움 |
+| 2026-10-16 | 추가 HP 탐색·Colab 학습 안 함, Qwen3 기준 파이프라인 사전 탐색 수치 삭제 | val로 10회 탐색하면 편향(≈ +0.008)이 후보 차이와 같아 판별 불가 / 사전 탐색은 v1과 다른 모델 |
