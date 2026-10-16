@@ -299,7 +299,7 @@ python scripts/collect_judging_candidates.py --make --reason "..."  # → annota
 파이프라인 설계용 사전 탐색이며, 본 평가는 실제형 평가셋에서 합니다(`docs/EMBEDDING_V1_PLAN.md` 2·7절).
 
 ```bash
-python scripts/eval_retrieval_stack.py --dense qwen3_embedding_0_6b qwen3_embedding_0_6b_ft_kse14_20261014_0440 --rerankers
+python scripts/eval_retrieval_stack.py --dense bge_m3_ft_mj_20261014_0743 --rerankers
 # reranker는 GPU에서: --export-pairs → colab/rerank_scores.ipynb → 점수 파일을 results/stack_eval/<split>/에 → --rerankers <모델>로 재실행
 # test run(채점 없음): --split test --dense-dir <노트북 15번 pooling_runs 폴더>
 ```

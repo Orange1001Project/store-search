@@ -11,7 +11,8 @@
   구분이 안 된다(필요 쿼리 약 515개). 더 튜닝해도 개선인지 잡음인지 판별할 수 없다.
 - **임베딩 모델만 후보로 모은다**: kse16(Qwen3 0.6B 확정 run)과 팀원들이 학습한 bge-m3·Snowflake Arctic 최고 run → 한 번에 보충 판정 → val로 하나 선택 → test 1회.
 - **하이브리드·reranker는 후보에서 뺀다.** 어떤 임베딩 위에든 얹는 검색 구성 요소라 임베딩 선택과 분리되고, 효과는 실제형 쿼리·위치가 붙은
-  ④⑤ 단계에서 재야 의미가 있다. 지금까지의 측정(1절 아래 표)은 파이프라인 설계용 사전 탐색으로 남긴다.
+  ④⑤ 단계에서 재야 의미가 있다. Qwen3(kse14) 위에서 한 사전 탐색 수치는 v1(bge-m3)과 맞지 않아 지웠다(2026-10-16) — ④에서 v1으로 다시 잰다
+  (도구 `scripts/eval_retrieval_stack.py`, BM25 run·reranker 점수 캐시 `results/stack_eval/val/`는 남김).
 - 그 다음 **검색 파이프라인(위치 필터·정렬, 하이브리드, reranker 여부, 벡터 DB/ANN 색인)을 구현**하고, 실제 쿼리+위치로 전체 성능을 잰다.
   부족하면 그때 실제 쿼리 기반 데이터로 재학습한다(현재 val에 맞추는 학습은 하지 않음).
 
@@ -49,23 +50,12 @@
   최대 약 0.85(평균)까지만 가능하고, 실제 코퍼스의 정답(예: 치킨집 3,000여 개)은 더 많아 **낮게 나오는 게 정상**이다. 절대값보다 모델 간 차이로 본다.
 - 모델 선택은 nDCG@10과 기준 대비 Δ·p(Δ ≥ 0.03, p < 0.05)로 한다(`docs/EVALUATION_POLICY.md` 4절).
 
-**파이프라인 사전 탐색(참고, 임베딩 v1 선택에는 쓰지 않음 — `results/stack_eval/val/summary.csv`)**
-
-| 구성 | 공식 nDCG@10 | 판정 문서만 nDCG@10 | Judged@10 | 1위 정답률 | bad@3 |
-|---|---|---|---|---|---|
-| kse14 + BM25 하이브리드(RRF) | 0.943 | 0.960 | 0.977 | 0.976 | 9/124 |
-| kse16 + BM25 하이브리드(RRF) | 0.947 | 0.963 | 0.977 | 0.984 | 6/124 |
-| kse14 + 하이브리드 + Qwen3-Reranker | (파이프라인 단계에서 판정) | 0.963 | 0.920 | (같음) | (같음) |
-| kse14 + Qwen3-Reranker | (파이프라인 단계에서 판정) | 0.959 | 0.817 | (같음) | (같음) |
-| kse14 + 하이브리드 + bge-reranker | (파이프라인 단계에서 판정) | 0.958 | 0.929 | (같음) | (같음) |
-
 - kse14 = `qwen3_embedding_0_6b_ft_kse14_20261014_0440`: LoRA rank 16, GIST loss, lr 1e-4, batch 32, **2 epoch**, 학습 쿼리 215개(6,650행),
   T4 fp16, 오타 증강 끔, hard negative 3. 모델은 `models/`(git 제외), 기록은 `results/finetune_runs/`.
 - **kse16** = `qwen3_embedding_0_6b_ft_kse16_20261016_0012`: kse14와 같은 설정에서 **hard negative만 3 → 6**(학습 데이터 sha `ec3a9b61` 동일, T4 43분).
   kse14 대비 nDCG@10 +0.002(p=0.45, 같은 수준), MRR@100 +0.007(p=0.38), **Recall@100 +0.012(p=0.0001)**, bad@3 12 → 7(6개 해결·1개 악화,
   부호 검정 p≈0.13 — 방향은 맞지만 val 124개로는 확정 불가). 2026-10-16 Qwen3 0.6B 후보로 확정하고 기준선을 kse16으로 바꿈.
-  kse16 + 하이브리드 행은 `eval_retrieval_stack.py`와 같은 RRF(k=60)·채점으로 계산(reranker 조합은 미측정).
-- reranker 구성은 판정 안 된 문서를 위로 올려 공식 점수·bad@3이 낮게 나온다(Judged@10 0.82~0.93) → ⑤의 실제형 평가셋에서 판정과 함께 잰다.
+- reranker는 1차 검색이 못 가져온(판정 안 된) 문서를 위로 올리므로 공식 점수·bad@3만으로는 평가할 수 없다 → ⑤의 실제형 평가셋에서 판정과 함께 잰다.
 - **하이브리드**: 키워드 검색(BM25)과 임베딩 검색의 순위를 합친다(RRF: 각 결과의 순위 역수를 더함). 상호명·정확한 단어는 BM25가, 뜻이 비슷한 표현은
   임베딩이 잡아서 서로 보완한다. **reranker**: 1차 검색 상위 수십 개를 쿼리와 가맹점 문장을 함께 읽는 더 무거운 모델(cross-encoder)로 다시 정렬한다.
   더 정확할 수 있지만 쿼리마다 수십 번 계산해서 지연·GPU 비용이 든다. 둘 다 "검색 → (결합) → 재정렬" 파이프라인의 부품이다.
@@ -187,7 +177,7 @@ python scripts/pack_for_colab.py                                     # Drive dat
 | 검색 구성 비교 | `eval_retrieval_stack.py`(BM25 하이브리드 RRF, bge/Qwen3 reranker, test run 생성), `colab/rerank_scores.ipynb`(GPU 채점) | 학습 없이 시스템 구성 효과 측정 |
 | 일괄 판정 | `configs/benchmark/judging_candidates.yaml`, `scripts/collect_judging_candidates.py` | 중간 판정 없이 후보를 모아 한 번에 |
 | 문서 | `EVALUATION_POLICY.md`(공식 규칙), `SERVICE_READINESS.md`, 이 문서 | 회의·인수인계 |
-| 결과 | `results/experiments.csv`에 kse13·kse14·kse16, `results/stack_eval/val/` | |
+| 결과 | `results/experiments.csv`, `results/model_comparison/final_v1_val/` | |
 
 머지 순서: 두 브랜치를 하나의 PR로 올리거나(`feature/hybrid-rerank` → main, 앞 브랜치 커밋 포함) 순서대로 두 PR. 머지 후 Drive `data/`는
 `pack_for_colab.py` 결과로 교체돼 있어야 한다(오타 비활성 반영).

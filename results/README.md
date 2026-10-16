@@ -9,7 +9,7 @@ Colab 결과는 손으로 복사하지 말고 `scripts/import_colab_results.py -
 | `experiments.csv` | **실험 기록표** — 공식 평가 하나당 한 줄(모델, 누가, NOTE, 학습 데이터 sha, GPU, precision, 지표, 기준 대비 Δ·p, KEEP) | `import_colab_results.py`, 지표 갱신은 `rescore_evaluations.py` | 추적 |
 | `model_eval/<run 이름>/run_t1_minimal_val.csv` | 공식 평가에 쓴 검색 결과(쿼리별 상위 100). 평가 json은 `artifacts/evaluation/storesearch_ko_v1/` | `import_colab_results.py` | 추적 |
 | `finetune_runs/<TAG>/` | 학습 run 기록(`model_manifest.json`, `eval_config.yaml`, `notebook_code.py`) — 가중치 없이 어떤 설정·데이터·코드로 학습했는지 | `import_colab_results.py` | 추적 |
-| `stack_eval/<split>/` | **검색 파이프라인 사전 탐색**(하이브리드·reranker, 학습 없음) — `summary.csv`, BM25 캐시, reranker 점수 캐시·채점 쌍, 하이브리드 run | `scripts/eval_retrieval_stack.py` | 일부 추적(다시 만들 수 있는 run 사본은 제외) |
+| `stack_eval/<split>/` | **검색 파이프라인 사전 탐색**(하이브리드·reranker, 학습 없음) — BM25 run·reranker 점수 캐시만 추적(Qwen3 기준 요약·하이브리드 run은 2026-10-16 삭제, ④에서 v1으로 다시 만든다) | `scripts/eval_retrieval_stack.py` | 일부 추적(다시 만들 수 있는 run 사본은 제외) |
 | `judging_candidates/<round>/` | 일괄 판정 후보 run 모음(val+test, 시스템 이름 = 후보 name) | `scripts/collect_judging_candidates.py` | 판정 라운드 때 생성 |
 | `model_comparison/<round>/` | 판정 라운드 뒤 후보 비교표(`summary.csv`, `pairs.csv`) | 판정 반영 후 채점(이 라운드는 세션 스크립트, 공식 evaluator 함수 사용) | 추적 |
 | `pooling_runs/` | supplement_v2 보충 판정에 쓴 원본 run(top 100). 실제로 넣은 depth까지의 사본은 `benchmark/.../annotations/supplement_v2/runs/` | 노트북 15번 결과를 내려받음 | 제외 |
@@ -35,5 +35,4 @@ Recall@100·Bpref가 낮은 건 쿼리 하나에 정답이 평균 114개(100개 
 (`docs/EMBEDDING_V1_PLAN.md` 1절). 전체 지표와 신뢰구간은 `artifacts/evaluation/storesearch_ko_v1/*_evaluation.json`.
 
 kse1·kse13은 오타 비활성 전 데이터로 학습했다(평가는 모두 현재 qrels로 다시 채점됨). 같은 설정도 다시 돌리면 ±0.005 흔들리므로
-kse1·kse13·kse14 사이 차이는 잡음 수준이다. `stack_eval/val/summary.csv`의 하이브리드·reranker 수치는 파이프라인 설계용 사전 탐색이며
-임베딩 v1 선택에는 쓰지 않는다(`docs/EMBEDDING_V1_PLAN.md`).
+kse1·kse13·kse14 사이 차이는 잡음 수준이다.
