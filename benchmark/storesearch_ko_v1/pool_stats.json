@@ -1,22 +1,19 @@
 {
-  "round": "supplement_v2",
-  "pool_rows": 65926,
-  "queries": 548,
+  "round": "final_v1_val",
+  "pool_rows": 59876,
+  "queries": 499,
   "pool_systems": [
-    "bge_m3",
+    "arctic_ko_ft_lee",
+    "bge_m3_ft_mj",
     "char_bm25_v1",
     "char_tfidf_v1",
     "char_tfidf_v2",
-    "qwen3_embedding_0_6b",
-    "qwen3_embedding_0_6b_ft_kse1_20261006_0708",
-    "qwen3_embedding_0_6b_store",
-    "snowflake_arctic_embed_l_v2_ko",
-    "snowflake_arctic_embed_l_v2_ko_query"
+    "kse16_dense"
   ],
-  "pool_system_count": 9,
-  "mean_pool_size": 120.3029197080292,
-  "min_pool_size": 27,
-  "median_pool_size": 118.0,
+  "pool_system_count": 6,
+  "mean_pool_size": 119.99198396793587,
+  "min_pool_size": 57,
+  "median_pool_size": 117.0,
   "max_pool_size": 212,
-  "first_seen_in_this_round": 13759
+  "first_seen_in_this_round": 220
 }

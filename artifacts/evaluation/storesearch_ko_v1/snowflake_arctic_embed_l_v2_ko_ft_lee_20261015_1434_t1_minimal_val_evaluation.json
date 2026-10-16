@@ -1,0 +1,202 @@
+{
+  "benchmark": "StoreSearch-KO v1",
+  "tag": "snowflake_arctic_embed_l_v2_ko_ft_lee_20261015_1434_t1_minimal_val",
+  "qrels": "benchmark\\storesearch_ko_v1\\qrels_val.trec",
+  "run": "results\\model_eval\\snowflake_arctic_embed_l_v2_ko_ft_lee_20261015_1434\\run_t1_minimal_val.csv",
+  "primary_metric": "nDCG@10",
+  "binary_relevance_threshold": 2,
+  "metrics": [
+    "nDCG@10",
+    "Precision@10",
+    "MRR@100",
+    "Recall@50",
+    "Recall@100",
+    "Bpref",
+    "Judged@10",
+    "Judged@100"
+  ],
+  "query_count": 124,
+  "run_query_count": 124,
+  "aggregate": {
+    "nDCG@10": 0.9472196937284351,
+    "Precision@10": 0.945967741935484,
+    "MRR@100": 0.980360320739665,
+    "Recall@50": 0.3163024358795537,
+    "Recall@100": 0.45689213047206195,
+    "Bpref": 0.4458099607814909,
+    "Judged@10": 0.9782258064516133,
+    "Judged@100": 0.5081451612903224
+  },
+  "query_bootstrap_ci95": {
+    "nDCG@10": {
+      "mean": 0.9472196937284352,
+      "ci95": [
+        0.9217134124419789,
+        0.9685205091697213
+      ]
+    },
+    "Precision@10": {
+      "mean": 0.9459677419354839,
+      "ci95": [
+        0.9161290322580646,
+        0.970967741935484
+      ]
+    },
+    "MRR@100": {
+      "mean": 0.980360320739665,
+      "ci95": [
+        0.9562606112054329,
+        1.0
+      ]
+    },
+    "Recall@50": {
+      "mean": 0.31630243587955376,
+      "ci95": [
+        0.2960759140009061,
+        0.3366692141326196
+      ]
+    },
+    "Recall@100": {
+      "mean": 0.45689213047206195,
+      "ci95": [
+        0.42805962318827806,
+        0.48509093500287404
+      ]
+    },
+    "Bpref": {
+      "mean": 0.44580996078149077,
+      "ci95": [
+        0.41642984321581233,
+        0.4750597095590361
+      ]
+    },
+    "Judged@10": {
+      "mean": 0.978225806451613,
+      "ci95": [
+        0.9669354838709678,
+        0.9879032258064516
+      ]
+    },
+    "Judged@100": {
+      "mean": 0.5081451612903226,
+      "ci95": [
+        0.48806451612903223,
+        0.5284677419354838
+      ]
+    }
+  },
+  "run_validation": {
+    "rows": 12400,
+    "queries": 124,
+    "expected_queries": 124,
+    "missing_queries": 0,
+    "unknown_queries": 0,
+    "duplicate_query_doc_pairs": 0,
+    "invalid_rank_rows": 0
+  },
+  "comparison": {
+    "baseline_tag": "qwen3_embedding_0_6b_ft_kse16_20261016_0012",
+    "baseline_run": "results\\model_eval\\qwen3_embedding_0_6b_ft_kse16_20261016_0012\\run_t1_minimal_val.csv",
+    "baseline_aggregate": {
+      "nDCG@10": 0.9499584583805378,
+      "Precision@10": 0.9459677419354838,
+      "MRR@100": 0.9731793743890518,
+      "Recall@50": 0.30945160102960123,
+      "Recall@100": 0.43053845738197066,
+      "Bpref": 0.4156452534360578,
+      "Judged@10": 0.9935483870967743,
+      "Judged@100": 0.4921774193548388
+    },
+    "metrics": {
+      "nDCG@10": {
+        "delta_mean": -0.002738764652102657,
+        "delta_ci95": [
+          -0.018474019951960696,
+          0.013866789100550574
+        ],
+        "paired_permutation_pvalue": 0.7514248575142486,
+        "wins": 18,
+        "ties": 80,
+        "losses": 26
+      },
+      "Precision@10": {
+        "delta_mean": -4.476705744456276e-19,
+        "delta_ci95": [
+          -0.017741935483870968,
+          0.01935483870967742
+        ],
+        "paired_permutation_pvalue": 0.9924007599240076,
+        "wins": 16,
+        "ties": 89,
+        "losses": 19
+      },
+      "MRR@100": {
+        "delta_mean": 0.007180946350613134,
+        "delta_ci95": [
+          -0.012097204220493643,
+          0.03147095888570486
+        ],
+        "paired_permutation_pvalue": 0.6251374862513749,
+        "wins": 2,
+        "ties": 119,
+        "losses": 3
+      },
+      "Recall@50": {
+        "delta_mean": 0.006850834849952342,
+        "delta_ci95": [
+          -0.0030703453970867428,
+          0.01697150550356379
+        ],
+        "paired_permutation_pvalue": 0.1845815418458154,
+        "wins": 60,
+        "ties": 9,
+        "losses": 55
+      },
+      "Recall@100": {
+        "delta_mean": 0.0263536730900912,
+        "delta_ci95": [
+          0.01122893858981176,
+          0.04217625855324505
+        ],
+        "paired_permutation_pvalue": 0.0012998700129987,
+        "wins": 69,
+        "ties": 4,
+        "losses": 51
+      },
+      "Bpref": {
+        "delta_mean": 0.030164707345432997,
+        "delta_ci95": [
+          0.013966216508929891,
+          0.04749261148477052
+        ],
+        "paired_permutation_pvalue": 0.0006999300069993001,
+        "wins": 68,
+        "ties": 3,
+        "losses": 53
+      },
+      "Judged@10": {
+        "delta_mean": -0.01532258064516129,
+        "delta_ci95": [
+          -0.027419354838709678,
+          -0.004838709677419354
+        ],
+        "paired_permutation_pvalue": 0.0046995300469953,
+        "wins": 6,
+        "ties": 99,
+        "losses": 19
+      },
+      "Judged@100": {
+        "delta_mean": 0.01596774193548387,
+        "delta_ci95": [
+          -8.266129032258361e-05,
+          0.03274193548387096
+        ],
+        "paired_permutation_pvalue": 0.0663933606639336,
+        "wins": 63,
+        "ties": 6,
+        "losses": 55
+      }
+    },
+    "note": "For multiple pairwise model comparisons, apply Holm correction to the resulting p-values."
+  }
+}

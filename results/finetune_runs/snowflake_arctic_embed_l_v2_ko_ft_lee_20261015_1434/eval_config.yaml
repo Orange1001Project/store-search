@@ -1,0 +1,6 @@
+name: snowflake_arctic_embed_l_v2_ko_ft_lee_20261015_1434
+model_id: models/snowflake_arctic_embed_l_v2_ko_ft_lee_20261015_1434
+query_prompt_name: null
+normalize_embeddings: true
+target_dimension: null
+batch_size: 32

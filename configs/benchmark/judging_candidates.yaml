@@ -10,21 +10,19 @@
 #   그때는 scripts/eval_retrieval_stack.py --split test로 test run을 만든다.
 # - note: 어떤 구성인지 한 줄(라운드 manifest에 남는다)
 
-round: final_v1      # 판정 라운드 이름 → benchmark/storesearch_ko_v1/annotations/<round>/
+round: final_v1_val  # 판정 라운드 이름 → benchmark/storesearch_ko_v1/annotations/<round>/
 depth: 10            # 후보마다 상위 몇 개를 판정 대상으로 넣을지(TREC 관례 10~20, 비용은 --dry-run 표로 확인)
-splits: [val, test]
+# 2026-10-16: 세 후보 모두 test run이 아직 없어 val만 먼저 판정한다(선택은 val로 하므로 이것으로 공정 비교가 된다).
+# 고른 1개의 test run(노트북 15번)이 오면 그 모델만 test 상위 10개를 별도 라운드(final_v1_test)로 판정한 뒤 test를 1회 채점한다.
+splits: [val]
 
-candidates: []
-# 예(2026-10-16 기준 유망 후보 — test run을 만든 뒤 주석을 풀어 등록):
-#  - name: kse16_dense
-#    note: Qwen3-Embedding-0.6B LoRA kse16(215 train queries, hard negative 6) — Qwen3 0.6B 확정 run
-#    val: results/model_eval/qwen3_embedding_0_6b_ft_kse16_20261016_0012/run_t1_minimal_val.csv
-#    test: <노트북 15번 runs/pooling_runs/qwen3_embedding_0_6b_ft_kse16_20261016_0012.csv>
-#  - name: bge_m3_ft_<owner>
-#    note: bge-m3 full FT — 담당자가 고른 최고 run(학습 데이터 sha, 핵심 설정)
-#    val: <노트북 15번 runs/pooling_runs/<TAG>.csv>
-#    test: <같은 파일>
-#  - name: arctic_ko_ft_<owner>
-#    note: Snowflake Arctic-KO full FT — 담당자가 고른 최고 run
-#    val: <노트북 15번 runs/pooling_runs/<TAG>.csv>
-#    test: <같은 파일>
+candidates:
+  - name: kse16_dense
+    note: Qwen3-Embedding-0.6B LoRA kse16(hard negative 6, train data ec3a9b61 215 queries, T4 fp16)
+    val: results/model_eval/qwen3_embedding_0_6b_ft_kse16_20261016_0012/run_t1_minimal_val.csv
+  - name: bge_m3_ft_mj
+    note: bge-m3 full FT bge_m3_ft_mj_20261014_0743 — val run만 받음(manifest·체크포인트 없음, 설정·학습 데이터 sha 미확인)
+    val: results/model_eval/bge_m3_ft_mj_20261014_0743/run_t1_minimal_val.csv
+  - name: arctic_ko_ft_lee
+    note: Snowflake Arctic-KO full FT lee_20261015_1434(lr 5e-6, epoch 1, positive 4, train data 067e4aa4 237 queries, L4 bf16)
+    val: results/model_eval/snowflake_arctic_embed_l_v2_ko_ft_lee_20261015_1434/run_t1_minimal_val.csv

@@ -1,0 +1,169 @@
+{
+  "tag": "snowflake_arctic_embed_l_v2_ko_ft_lee_20261015_1434",
+  "owner": "lee",
+  "base_model_id": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
+  "base_model_config": {
+    "name": "snowflake_arctic_embed_l_v2_ko",
+    "model_id": "dragonkue/snowflake-arctic-embed-l-v2.0-ko",
+    "query_prompt_name": null,
+    "batch_size": 32,
+    "train": {
+      "lora_rank": null,
+      "learning_rate": 2e-05,
+      "base_dtype": "float32",
+      "batch_size": 32,
+      "loss": "gist",
+      "mini_batch_size": 16
+    }
+  },
+  "framework": "sentence-transformers",
+  "hyperparameters": {
+    "num_epochs": 1,
+    "batch_size": 32,
+    "mini_batch_size": 16,
+    "learning_rate": 5e-06,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "max_seq_length": 128,
+    "num_hard_negatives": 3,
+    "max_positives_per_query": 4,
+    "loss": "gist",
+    "lora_rank": null,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "base_dtype": "float32",
+    "save_dtype": "float16",
+    "seed": 20260831,
+    "keep_last_runs": 3,
+    "note": "HP 튜닝 stage2_pos_neg: learning_rate=5e-06, num_epochs=1, max_positives_per_query=4",
+    "resume_tag": null,
+    "save_mid_checkpoint": false
+  },
+  "precision": "bf16",
+  "training_data": {
+    "source": "/content/drive/MyDrive/store-search-ai/data/train_pairs.jsonl",
+    "sha256": "067e4aa48a1ca59c432a4f4e29b55ba023b6346e452f343e508ed28e1a2d262e",
+    "expansion": {
+      "n_queries_in_file": 237,
+      "n_queries_used": 237,
+      "n_skipped_few_negatives": 0,
+      "n_rows": 948
+    },
+    "prepare_meta": {
+      "created_at": "2026-10-02T01:19:32.162173+00:00",
+      "git_commit": "40506ea0efa1fca67ed4f3a61411638ae99b7294",
+      "benchmark_version": "storesearch_ko_v1",
+      "corpus_version": "store_corpus_v002",
+      "qrels_path": "benchmark/storesearch_ko_v1/qrels_train.csv",
+      "qrels_sha256": "6a9c42466462e7b584b6d89d7fceca745debd7f968ec6ec0b121df8e20a0de97",
+      "qrels_kind": "final",
+      "template": "t1_minimal",
+      "binary_relevance_threshold": 2,
+      "max_negatives": 8,
+      "train_pairs_sha256": "067e4aa48a1ca59c432a4f4e29b55ba023b6346e452f343e508ed28e1a2d262e",
+      "stats": {
+        "n_written": 237,
+        "n_skipped_no_positive": 0,
+        "total_positives": 16671,
+        "total_negatives": 1885
+      }
+    },
+    "smoke": false
+  },
+  "data_version": {
+    "packed_at": "2026-10-15T04:04:01.392118+00:00",
+    "git_branch": "main",
+    "git_commit": "cb2e8fafd879a0cda6cdeb4653919f0a9cefd39f",
+    "benchmark_version": "storesearch_ko_v1",
+    "corpus_version": "store_corpus_v002",
+    "corpus_file": "store_corpus_v002.parquet",
+    "evaluation": {
+      "bootstrap_samples": 10000,
+      "random_seed": 20260831,
+      "binary_relevance_threshold": 2
+    },
+    "files": {
+      "train_pairs.jsonl": "067e4aa48a1ca59c432a4f4e29b55ba023b6346e452f343e508ed28e1a2d262e",
+      "train_pairs.meta.json": "dc77e5e0044a891065abdc968cb682108d711f7246a5133bbe4429ee0c0e29d6",
+      "store_corpus_v002.parquet": "93bd159a98207087a784434c7731cc8b059aa9d10a0dc71d226829cc2c270a87",
+      "queries.csv": "605b17d74b36c0a861f76f899f4f91a76f19d3b890876999a86606cf7cea10ee",
+      "qrels_val.trec": "9451f3a7928ee6273ba98928d3bde5f0e732b5923f26752fb3aa24f6332f7c27",
+      "qrels_test.trec": "f165eb6eabd689d07ed47ca469d061513f3153eb2f7d827462e2356f1e13155b"
+    }
+  },
+  "code": {
+    "notebook": "colab/train_eval.ipynb",
+    "snapshot": "notebook_code.py",
+    "snapshot_sha256": "e38ec324a0a17b4138d4b5e52e40c8a9e0c825c38f4e145755af75668ec86b4a"
+  },
+  "training_result": {
+    "runtime_sec": 42.9,
+    "resumed_from": null,
+    "mid_checkpoint_step": null,
+    "global_steps": 30,
+    "peak_gpu_memory_gb": 10.93,
+    "final_loss": 0.53958,
+    "loss_history": [
+      {
+        "step": 10,
+        "loss": 1.89872
+      },
+      {
+        "step": 20,
+        "loss": 0.83039
+      },
+      {
+        "step": 30,
+        "loss": 0.53958
+      }
+    ]
+  },
+  "serving": {
+    "document_template": "t1_minimal",
+    "query_prompt_name": null,
+    "query_prompt": null,
+    "document_prompt": null,
+    "embedding_dim": 1024,
+    "full_embedding_dim": 1024,
+    "normalize_embeddings": true,
+    "similarity": "cosine",
+    "max_seq_length": 128,
+    "saved_dtype": "float16"
+  },
+  "environment": {
+    "packages": {
+      "torch": "2.11.0+cu130",
+      "transformers": "5.18.0",
+      "sentence-transformers": "5.7.0",
+      "peft": "0.21.1",
+      "datasets": "4.8.5",
+      "accelerate": "1.15.0",
+      "huggingface-hub": "1.33.0",
+      "ir-measures": "0.4.3",
+      "pytrec-eval-terrier": "0.5.10"
+    },
+    "gpu": "NVIDIA L4"
+  },
+  "created_at": "2026-10-15T14:35:14.864639+00:00",
+  "evaluations": [
+    {
+      "evaluated_at": "2026-10-15T14:36:57.799505+00:00",
+      "split": "val",
+      "template": "t1_minimal",
+      "tag": "snowflake_arctic_embed_l_v2_ko_ft_lee_20261015_1434_t1_minimal_val",
+      "official": true,
+      "metrics": {
+        "nDCG@10": 0.8961948030878624,
+        "Precision@10": 0.8919117647058825,
+        "MRR@100": 0.947079228013336,
+        "Recall@50": 0.29973612890735746,
+        "Recall@100": 0.4318888435869651,
+        "Bpref": 0.4198068640691606,
+        "Judged@10": 0.9529411764705884,
+        "Judged@100": 0.4945588235294115
+      },
+      "baseline": "snowflake_arctic_embed_l_v2_ko",
+      "where": "colab"
+    }
+  ]
+}
