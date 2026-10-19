@@ -256,6 +256,7 @@ def guide_table(targets: dict, version: str, seed: int) -> pd.DataFrame:
         ("원칙 2", "실제 앱 검색창에 칠 말 그대로. 짧아도 된다. 오타는 일부러 넣지 않는다."),
         ("원칙 3", "C(상황)는 코퍼스·업종 목록을 보지 말고 카드만 보고 쓴다."),
         ("원칙 4", "LLM으로 만든 후보는 작성방식=LLM후보로 표시한다. test에는 직접 쓴 쿼리 중심으로 넣는다."),
+        ("용도", "이 쿼리는 평가 전용(dev 25% / test 75%)이다. 학습에 쓰지 않는다."),
         ("", ""),
     ]
     for key, t in targets.items():
