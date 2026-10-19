@@ -1,10 +1,12 @@
 """서비스셋 쿼리 직접 작성용 작성자별 xlsx를 만든다. 절차는 docs/QUERY_WRITING_GUIDE.md 1부.
 
 출력(`writers.output_dir`, 기본 data/query/writers/):
-  W1_1부_C_E.xlsx   먼저 줌 — 안내 + 쿼리입력(배정 카드 22~23줄 + E 4줄)
-  W1_2부_A_D.xlsx   1부를 낸 뒤 줌 — 안내 + 쿼리입력(업종 5개 × 5줄 + 시장 9줄)
-  ...
-  진행자_배정표.xlsx  배정표, 작성자정보(빈 표), 진행 체크
+  --layout single(기본)  서비스셋_직접작성_v1.xlsx 한 파일 — 시트: 안내_1부(C·E), 안내_2부(A·D), 배정표, 작성자정보, 합계,
+                         W1_1부_C_E, W1_2부_A_D, …, W6_2부_A_D
+  --layout per-writer    W1_1부_C_E.xlsx(먼저 줌), W1_2부_A_D.xlsx(1부를 낸 뒤 줌), …, 진행자_배정표.xlsx
+
+한 파일을 여러 작성자가 공유해 동시에 쓰면 서로의 쿼리가 보인다(독립 작성 원칙 위반). 작성자에게 나눠 줄 때는
+per-writer로 만들거나, 한 파일에서 그 사람 시트만 복사해 준다.
 배정은 설정의 seed로 정해져 다시 만들어도 같다. 이미 출력 폴더가 있으면 덮어쓰지 않는다(--force).
 
 사용법:
@@ -41,38 +43,55 @@ logger = logging.getLogger(__name__)
 WIDTHS = {"작성자": 7, "묶음": 6, "근거ID": 8, "재료": 48, "질의": 26, "의도": 20, "지역표현": 14, "가정위치ID": 10, "작성방식": 9, "비고": 20}
 FILL_COLUMNS = {"질의", "의도", "지역표현", "비고"}
 FILL = PatternFill("solid", fgColor="FFF7D6")
+SINGLE_FILE = "서비스셋_직접작성_v1.xlsx"
 
 
-def write_writer_file(path: Path, guide: list[tuple[str, str]], rows: pd.DataFrame, bundles: str) -> None:
-    with pd.ExcelWriter(path, engine="openpyxl") as writer:
-        pd.DataFrame(guide, columns=["항목", "내용"]).to_excel(writer, sheet_name="안내", index=False)
-        rows.to_excel(writer, sheet_name="쿼리입력", index=False)
-        ws = writer.sheets["안내"]
-        ws.column_dimensions["A"].width = 14
-        ws.column_dimensions["B"].width = 110
-        for cell in ws["B"]:
-            cell.alignment = Alignment(wrap_text=True, vertical="top")
-        ws = writer.sheets["쿼리입력"]
-        ws.freeze_panes = "E2"
-        for idx, col in enumerate(WRITER_COLUMNS, start=1):
-            letter = get_column_letter(idx)
-            ws.column_dimensions[letter].width = WIDTHS[col]
-            if col in FILL_COLUMNS:   # 작성자가 채울 칸만 색칠
-                for r in range(2, len(rows) + 2):
-                    ws[f"{letter}{r}"].fill = FILL
-            if col == "재료":
-                for r in range(2, len(rows) + 2):
-                    ws[f"{letter}{r}"].alignment = Alignment(wrap_text=True, vertical="top")
-        letter = get_column_letter(WRITER_COLUMNS.index("묶음") + 1)
-        dv = DataValidation(type="list", formula1=f'"{",".join(bundles)}"', allow_blank=False)
-        dv.add(f"{letter}2:{letter}{len(rows) + 50}")
-        ws.add_data_validation(dv)
+def write_guide_sheet(writer: pd.ExcelWriter, name: str, guide: list[tuple[str, str]]) -> None:
+    pd.DataFrame(guide, columns=["항목", "내용"]).to_excel(writer, sheet_name=name, index=False)
+    ws = writer.sheets[name]
+    ws.column_dimensions["A"].width = 14
+    ws.column_dimensions["B"].width = 110
+    for cell in ws["B"]:
+        cell.alignment = Alignment(wrap_text=True, vertical="top")
+
+
+def write_input_sheet(writer: pd.ExcelWriter, name: str, rows: pd.DataFrame, bundles: str) -> None:
+    rows.to_excel(writer, sheet_name=name, index=False)
+    ws = writer.sheets[name]
+    ws.freeze_panes = "E2"
+    for idx, col in enumerate(WRITER_COLUMNS, start=1):
+        letter = get_column_letter(idx)
+        ws.column_dimensions[letter].width = WIDTHS[col]
+        if col in FILL_COLUMNS:   # 작성자가 채울 칸만 색칠
+            for r in range(2, len(rows) + 2):
+                ws[f"{letter}{r}"].fill = FILL
+        if col == "재료":
+            for r in range(2, len(rows) + 2):
+                ws[f"{letter}{r}"].alignment = Alignment(wrap_text=True, vertical="top")
+    letter = get_column_letter(WRITER_COLUMNS.index("묶음") + 1)
+    dv = DataValidation(type="list", formula1=f'"{",".join(bundles)}"', allow_blank=False)
+    dv.add(f"{letter}2:{letter}{len(rows) + 50}")
+    ws.add_data_validation(dv)
+
+
+def write_facilitator_sheets(writer: pd.ExcelWriter, table: pd.DataFrame, writers: list[str],
+                             totals: dict, targets: dict) -> None:
+    info = pd.DataFrame({"작성자": writers, "연령대": "", "온누리 사용(자주/가끔/없음)": "", "팀 내외부": "",
+                         "1부 배포": "", "1부 회수": "", "2부 배포": "", "2부 회수": "", "비고": ""})
+    table.to_excel(writer, sheet_name="배정표", index=False)
+    info.to_excel(writer, sheet_name="작성자정보", index=False)
+    pd.DataFrame({"묶음": list(totals), "작성 칸": list(totals.values()),
+                  "목표": [targets.get(k, "") for k in totals]}).to_excel(writer, sheet_name="합계", index=False)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--template", default=None, help="기본: 설정의 output_path(서비스셋 템플릿)")
+    parser.add_argument(
+        "--layout", choices=["single", "per-writer"], default="single",
+        help="single: 한 파일에 시트로(기본) / per-writer: 작성자별 1부·2부 파일 + 진행자 배정표",
+    )
     parser.add_argument("--force", action="store_true", help="출력 폴더가 있어도 덮어쓴다")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
@@ -115,18 +134,26 @@ def main() -> None:
         return
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    for w, parts in files.items():
-        write_writer_file(out_dir / f"{w}_1부_C_E.xlsx", PART1_GUIDE, parts["1부"], "CE")
-        write_writer_file(out_dir / f"{w}_2부_A_D.xlsx", PART2_GUIDE, parts["2부"], "AD")
-    info = pd.DataFrame({"작성자": writers, "연령대": "", "온누리 사용(자주/가끔/없음)": "", "팀 내외부": "",
-                         "1부 배포": "", "1부 회수": "", "2부 배포": "", "2부 회수": "", "비고": ""})
-    with pd.ExcelWriter(out_dir / "진행자_배정표.xlsx", engine="openpyxl") as writer:
-        table.to_excel(writer, sheet_name="배정표", index=False)
-        info.to_excel(writer, sheet_name="작성자정보", index=False)
-        pd.DataFrame({"묶음": list(totals), "작성 칸": list(totals.values()),
-                      "목표": [targets.get(k, "") for k in totals]}).to_excel(writer, sheet_name="합계", index=False)
-    logger.info("저장: %s (작성자 %d명 × 2개 + 진행자_배정표.xlsx)", out_dir, len(writers))
+    if args.layout == "single":
+        path = out_dir / SINGLE_FILE
+        with pd.ExcelWriter(path, engine="openpyxl") as writer:
+            write_guide_sheet(writer, "안내_1부(C·E)", PART1_GUIDE)
+            write_guide_sheet(writer, "안내_2부(A·D)", PART2_GUIDE)
+            write_facilitator_sheets(writer, table, writers, totals, targets)
+            for w, parts in files.items():
+                write_input_sheet(writer, f"{w}_1부_C_E", parts["1부"], "CE")
+                write_input_sheet(writer, f"{w}_2부_A_D", parts["2부"], "AD")
+        logger.info("저장: %s (시트: 안내 2 + 진행자 3 + 작성자 %d명 × 2)", path, len(writers))
+        return
 
+    for w, parts in files.items():
+        for part, guide, bundles, suffix in [("1부", PART1_GUIDE, "CE", "1부_C_E"), ("2부", PART2_GUIDE, "AD", "2부_A_D")]:
+            with pd.ExcelWriter(out_dir / f"{w}_{suffix}.xlsx", engine="openpyxl") as writer:
+                write_guide_sheet(writer, "안내", guide)
+                write_input_sheet(writer, "쿼리입력", parts[part], bundles)
+    with pd.ExcelWriter(out_dir / "진행자_배정표.xlsx", engine="openpyxl") as writer:
+        write_facilitator_sheets(writer, table, writers, totals, targets)
+    logger.info("저장: %s (작성자 %d명 × 2개 + 진행자_배정표.xlsx)", out_dir, len(writers))
 
 if __name__ == "__main__":
     main()
