@@ -76,14 +76,16 @@
 | Arctic lee vs bge-m3 mj | +0.001 [−0.010, 0.012] | 0.84 | 13/99/12 |
 | Arctic **zero-shot** vs kse16 | −0.001 [−0.017, 0.016] | 0.91 | 14/93/17 |
 | kse16 vs Qwen3 zero-shot | +0.034 [0.021, 0.048] | 0.0001 | 36/84/4 |
-| bge-m3 mj vs bge-m3 zero-shot | +0.042 [0.024, 0.062] | 0.0001 | 40/78/6 |
-| Arctic lee vs Arctic zero-shot | +0.009 [0.002, 0.017] | 0.016 | 16/102/6 |
+| bge-m3 mj vs bge-m3 zero-shot² | +0.042 [0.024, 0.062] | 0.0001 | 40/78/6 |
+| Arctic lee vs Arctic zero-shot² | +0.009 [0.002, 0.017] | 0.016 | 16/102/6 |
+
+² zero-shot bge·Arctic은 이 판정 라운드의 후보가 아니어서 판정 누락이 많고(bge 상위 10개 중 23개), 공식 Δ가 실제보다 크게 나온다. 판정된 문서만으로 매긴 condensed nDCG@10으로는 bge-m3 mj +0.029 [0.013, 0.048] p=0.0005, Arctic lee +0.008 p=0.025다(`results/model_comparison/final_v1_val/README.md`, 2026-10-19 PR #4 리뷰 반영).
 
 **해석**
 - **세 후보는 같은 수준이다**(5절 규칙: Δ ≥ 0.03·p < 0.05 아님). 5절 3번(서비스 지표)도 bad@3 6·7·8개, 1위 정답률 0.976·0.968·0.960으로
   쿼리 1~2개 차이라 가르지 못한다. 크기·속도도 셋 다 약 5.7~6억 파라미터·1024차원으로 비슷하다(Arctic·bge-m3는 XLM-R large 계열 인코더, Qwen3는
   디코더 28층 + query 지시문). **val 품질로는 v1을 고를 근거가 없다.**
-- 학습 효과는 계열마다 다르다: Qwen3 +0.034, bge-m3 +0.042(둘 다 유의), Arctic +0.009. Arctic-KO는 zero-shot이 이미 학습한 Qwen3와 같다(0.952 vs 0.953).
+- 학습 효과는 계열마다 다르다: Qwen3 +0.034, bge-m3 +0.029(condensed 기준. 공식 +0.042에는 zero-shot 판정 누락분이 섞임, 둘 다 유의), Arctic +0.008. Arctic-KO는 zero-shot이 이미 학습한 Qwen3와 같다(0.952 vs 0.953).
 - Arctic lee의 숫자는 **낙관적으로 편향**돼 있다: val 공식 nDCG로 11개 설정 중 1등을 골랐고(Dwork et al. 2015 — 같은 holdout으로 반복 선택하면 과적합),
   학습이 30 step·lr 5e-6이라 사실상 zero-shot이다. 선택 과정의 편향은 bge-m3 mj(기본값 1회) < kse16(kse14→kse16 2회) < Arctic lee(11회) 순으로 작다.
 - 유형별(nDCG@10): 구어·문장(T4, 37개) Arctic 0.944 > bge 0.923 ≈ kse16 0.922 / 개념확장(T3, 12개) bge 0.948 > kse16 0.933 > Arctic 0.926 — 쿼리 수가 적어 방향만 참고.
