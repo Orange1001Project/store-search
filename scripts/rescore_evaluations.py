@@ -46,10 +46,14 @@ def drop_inactive_queries(run_path: Path, inactive: set[str]) -> int:
 
     공식 evaluator는 qrels에 없는 query_id가 run에 있으면 멈춘다(엄격하게 두는 것이 의도). 쿼리를 비활성화하기 전에 만든
     run에는 그 쿼리 결과가 들어 있으므로, 비활성 쿼리만 빼고 다시 저장한다 — 그 밖의 모르는 query_id는 그대로 둬서 에러가 난다.
+    파일을 **제자리에서** 덮어쓴다(기준 run을 포함해 커밋된 run 파일도 바뀌므로 git diff에 나타난다 — 의도된 동작).
     """
 
     # pandas로 읽고 쓰면 score의 마지막 자리가 바뀔 수 있어(evaluator는 score로 정렬) 줄 단위로 그대로 거른다
-    header, *lines = run_path.read_text(encoding="utf-8-sig").splitlines(keepends=True)
+    text = run_path.read_text(encoding="utf-8-sig")
+    if not text.strip():   # 빈 파일은 그대로 둔다(evaluator가 빈 run이라고 알려 준다)
+        return 0
+    header, *lines = text.splitlines(keepends=True)
     kept = [line for line in lines if line.split(",", 1)[0] not in inactive]
     if len(kept) != len(lines):
         run_path.write_text(header + "".join(kept), encoding="utf-8-sig", newline="")

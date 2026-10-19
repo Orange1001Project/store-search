@@ -207,3 +207,23 @@ def new_pair_counts(runs: pd.DataFrame, pooled: set[tuple[str, str]], depths: li
         row["union_per_query"] = round(len(union) / n_queries, 1) if n_queries else 0.0
         rows.append(row)
     return pd.DataFrame(rows).fillna(0)
+
+
+def pool_mismatch(pool_path: Path, stats_path: Path) -> str | None:
+    """로컬 pool 행 수가 마지막 라운드의 pool_stats.json(git 추적)과 다르면 이유를 돌려준다(같으면 None).
+
+    candidate_pool_internal.csv는 git 제외 대상이라 팀원마다 로컬 pool이 다를 수 있다. 옛 pool로 새 라운드를 만들면
+    이미 판정한 쌍이 '새 쌍'으로 다시 판정 대상에 오른다(PR #4 리뷰). 그래서 pool을 다시 쓰는 명령 앞에서 확인한다.
+    """
+
+    if not stats_path.exists():
+        return None
+    expected = json.loads(stats_path.read_text(encoding="utf-8")).get("pool_rows")
+    if expected is None:
+        return None
+    if not pool_path.exists():
+        return f"{pool_path}가 없습니다(pool_stats.json 기준 {expected}행이어야 함)."
+    actual = len(pd.read_csv(pool_path, usecols=[0], encoding="utf-8-sig"))
+    if actual != expected:
+        return f"로컬 pool {actual}행 ≠ pool_stats.json {expected}행"
+    return None
