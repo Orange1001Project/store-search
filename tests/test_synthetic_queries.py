@@ -73,10 +73,12 @@ def test_generate_name_queries_drops_queries_touching_excluded_stores():
 
 def test_fewshot_examples_respects_split_and_inactive():
     families = [
-        {"family": "치킨", "split": "train", "queries": [
+        {"family": "치킨", "split": "train", "positive_terms": ["치킨", "통닭"], "queries": [
             {"type": "T2 동의어", "text": "통닭"}, {"type": "T4 구어·문장", "text": "치킨 먹을 데"},
-            {"type": "T6 기계변형", "text": "치킨추천"}]},
-        {"family": "치과", "split": "test", "queries": [{"type": "T2 동의어", "text": "치아"}]},
+            {"type": "T6 기계변형", "text": "치킨추천"}, {"type": "T4 구어·문장", "text": "닭튀김 먹을 곳"}]},
+        {"family": "치과", "split": "test", "positive_terms": [], "queries": [{"type": "T2 동의어", "text": "치아"}]},
     ]
     out = fewshot_examples(families, inactive_ids={"q_치킨_01"}, split="train")
-    assert set(zip(out["bundle"], out["query"])) == {("A", "치킨 먹을 데"), ("C", "치킨 먹을 데")}
+    # C 예시에는 업종명·positive_terms가 들어간 쿼리('치킨 먹을 데')를 넣지 않는다
+    assert set(zip(out["bundle"], out["query"])) == {
+        ("A", "치킨 먹을 데"), ("A", "닭튀김 먹을 곳"), ("C", "닭튀김 먹을 곳")}

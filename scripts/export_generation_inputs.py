@@ -1,7 +1,7 @@
 """A·C 합성 쿼리 LLM 생성(colab/generate_queries.ipynb)의 입력 CSV를 만든다. 계획은 docs/SERVICE_QUERYSET.md 4절.
 
 출력(colab_upload/generation/ → Drive `store-search-ai/generation/`에 올림):
-  stores.csv   doc_id, store_name, item_text, market_type — 생성 대상 가맹점(시장유형 비율, 상호명만 있는 가맹점·서비스셋 표본 제외)
+  stores.csv   doc_id, store_name, item_text, market_type — 생성 대상 가맹점(취급품목 표현마다 최대 max_per_item곳, 상호명만 있는 가맹점·서비스셋 표본 제외)
   fewshot.csv  bundle(A/C), family, type, query — 프롬프트 예시(기존 벤치마크 train 업종의 활성 쿼리)
   inputs_meta.json
 
@@ -51,7 +51,7 @@ def main() -> None:
     n_stores = args.n_stores or llm_cfg["n_stores"]
     stores = generation_store_sample(
         corpus, n_stores, generic_items, llm_cfg["skip_name_only"],
-        template_excluded_doc_ids(cfg["exclude"]["service_template"]), cfg["random_seed"],
+        template_excluded_doc_ids(cfg["exclude"]["service_template"]), llm_cfg["max_per_item"], cfg["random_seed"],
     )
     fewshot = fewshot_examples(families, inactive_ids, llm_cfg["fewshot_split"])
 
@@ -64,6 +64,8 @@ def main() -> None:
         "seed": cfg["random_seed"],
         "n_stores": len(stores),
         "queries_per_store": llm_cfg["queries_per_store"],
+        "max_per_item": llm_cfg["max_per_item"],
+        "unique_item_texts": int(stores["item_text"].nunique()),
         "fewshot_split": llm_cfg["fewshot_split"],
         "fewshot_rows": fewshot["bundle"].value_counts().to_dict(),
         "corpus_path": bench["corpus_path"],

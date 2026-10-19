@@ -23,6 +23,8 @@ names:
 llm:
   n_stores: 10000
   queries_per_store: 3
+  # 같은 취급품목 표현에서 최대 몇 곳까지 뽑을지. v1(가맹점 단위 추출)은 '한식' 등 흔한 품목이 몰려 고유 쿼리가 27%였다(2026-10-19).
+  max_per_item: 2
   # 프롬프트 예시(few-shot). 지금은 기존 벤치마크 train 쿼리, 서비스셋 dev가 생기면 그것으로 바꾼다.
   fewshot_split: train
   # 정보가 상호명뿐인 가맹점은 LLM이 업종을 추측하게 되므로 A·C 생성에서 뺀다(B가 다룬다).

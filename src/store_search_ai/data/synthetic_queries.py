@@ -204,39 +204,43 @@ def generation_store_sample(
     generic_items: set[str],
     skip_name_only: bool,
     exclude_doc_ids: set[str],
+    max_per_item: int,
     seed: int,
 ) -> pd.DataFrame:
-    """A·C LLM 생성 입력 가맹점. 시장유형 비율대로 뽑는다."""
+    """A·C LLM 생성 입력 가맹점. 같은 취급품목 표현에서는 최대 max_per_item곳만 뽑는다.
 
-    pool = corpus[~corpus["doc_id"].isin(exclude_doc_ids)]
+    가맹점을 그냥 뽑으면 '한식'·'의류' 같은 흔한 품목이 대부분이 되어 같은 쿼리가 수백 번 나온다(v1: A 쿼리 29,651개 중
+    고유 8,034개). 품목 표현 단위로 고르게 뽑아야 코퍼스의 다양한 품목(3.2만 가지)을 덮는다.
+    """
+
+    pool = corpus[~corpus["doc_id"].isin(exclude_doc_ids)].assign(item_text=lambda d: d["item_text"].fillna(""))
     if skip_name_only:
         pool = pool[~pool["item_text"].map(lambda s: is_name_only(s, generic_items))]
     rng = np.random.default_rng(seed)
-    shares = pool["market_type"].value_counts(normalize=True)
-    parts = []
-    for market_type, share in shares.items():
-        group = pool[pool["market_type"] == market_type]
-        quota = min(len(group), round(share * n_stores))
-        if quota:
-            parts.append(group.sample(n=quota, random_state=rng.integers(2**32)))
-    sample = pd.concat(parts, ignore_index=True)
-    return sample[["doc_id", "store_name", "item_text", "market_type"]].assign(
-        item_text=lambda d: d["item_text"].fillna("")
-    )
+    pool = pool.sample(frac=1, random_state=rng.integers(2**32))
+    pool = pool.groupby("item_text", sort=False).head(max_per_item)
+    sample = pool.sample(n=min(n_stores, len(pool)), random_state=rng.integers(2**32))
+    return sample[["doc_id", "store_name", "item_text", "market_type"]].reset_index(drop=True)
 
 
 def fewshot_examples(families: list[dict], inactive_ids: set[str], split: str) -> pd.DataFrame:
-    """프롬프트 예시: 지정 split 업종의 활성 쿼리. bundle A=T2·T3·T4, C=T4·T5(상황·목적형)."""
+    """프롬프트 예시: 지정 split 업종의 활성 쿼리. bundle A=T2·T3·T4, C=T4·T5(상황·목적형).
+
+    C는 '업종명·품목어를 쓰지 말라'는 규칙과 맞도록 업종명이나 positive_terms가 들어간 쿼리('담배 파는 곳')를 뺀다.
+    """
 
     rows = []
     for fam in families:
         if fam["split"] != split:
             continue
+        category_words = [fam["family"], *(w for w in fam["positive_terms"] if len(w) >= 2)]
         for i, q in enumerate(fam["queries"], start=1):
             if f"q_{fam['family']}_{i:02d}" in inactive_ids:
                 continue
             qtype = q["type"].split()[0]
             bundles = {"T2": "A", "T3": "A", "T4": "AC", "T5": "C"}.get(qtype, "")
+            if "C" in bundles and any(w in q["text"] for w in category_words):
+                bundles = bundles.replace("C", "")
             for bundle in bundles:
                 rows.append({"bundle": bundle, "family": fam["family"], "type": q["type"], "query": q["text"]})
     return pd.DataFrame(rows)
