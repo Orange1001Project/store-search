@@ -1,4 +1,4 @@
-# Colab — `train_eval.ipynb`(학습·평가) + `rerank_scores.ipynb`(reranker 채점)
+# Colab — `train_eval.ipynb`(학습·평가) + `rerank_scores.ipynb`(reranker 채점) + `generate_queries.ipynb`(합성 쿼리 생성)
 
 GPU가 필요한 일(학습, 21만 개 문서 인코딩·채점)은 Colab에서 이 노트북 하나로 합니다. **학습·평가 코드가 전부 노트북 안에** 있어서
 `src/`를 올리지 않고, 기법(학습 데이터 만드는 방식, LoRA·loss, 학습 인자)을 셀에서 바로 고쳐 실험합니다.
@@ -34,6 +34,7 @@ runs/evaluation/            ← <tag>_<template>_<split>_evaluation.json, _per_q
 runs/pooling_runs/<이름>.csv ← 15번: 판정용 val+test 검색 결과(채점 없음 — 보충 pooling·일괄 판정 후보)
 runs_smoke/                 ← SMOKE=True 결과(지워도 됨)
 stack_eval/<split>/         ← rerank_scores.ipynb: rerank_pairs.csv(올림) → rerank_scores_<모델>.csv(생김)
+generation/                 ← generate_queries.ipynb: stores.csv·fewshot.csv·inputs_meta.json(올림) → generated_{A,C}_<버전>.csv(생김)
 ```
 
 ## `rerank_scores.ipynb` — reranker 점수만 GPU로 (검색 파이프라인 탐색, 데이터 담당)
@@ -47,3 +48,15 @@ stack_eval/<split>/         ← rerank_scores.ipynb: rerank_pairs.csv(올림) �
 3. 로컬: 그 파일을 `results/stack_eval/<split>/`에 넣고 `--export-pairs` 없이 `--rerankers ...`로 다시 실행 → 캐시 점수로 비교표
 
 채점 함수 `load_reranker`는 `scripts/eval_retrieval_stack.py`와 같은 코드다(`tests/test_eval_retrieval_stack.py`가 확인).
+
+## `generate_queries.ipynb` — A 업종·C 상황 합성 학습 쿼리 (데이터 담당)
+
+계획·규칙은 `docs/SERVICE_QUERYSET.md` 4절.
+
+1. 로컬: `python scripts/export_generation_inputs.py` → `colab_upload/generation/`의 세 파일을 Drive `store-search-ai/generation/`에 올림
+2. Colab(GPU, L4·A100 권장): `SMOKE=True`로 끝까지 실행해 예시 쿼리를 확인한 뒤 `SMOKE=False`로 전체 실행
+   - 끊겨도 다시 실행하면 이어서 한다.
+   - GPU 메모리가 20GB 미만이면 Qwen3-4B로 자동 전환된다.
+3. 로컬: `generated_{A,C}_<버전>.csv`를 `data/finetune/synthetic/`에 넣음
+
+`# @cell prompts`(프롬프트·파싱)를 고치면 `PROMPT_VERSION`을 올린다. 이 셀은 `tests/test_generate_queries_notebook.py`가 실행해 확인한다.

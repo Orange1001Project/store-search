@@ -95,7 +95,31 @@
   - 데이터 흐름: 기존 `colab/rerank_scores.ipynb`처럼 로컬에서 입력 CSV를 만들어 Drive `store-search-ai/`에 올리고, 결과 CSV를 받아 로컬에서 거르기·조립을 한다.
   - Colab은 Google 서버라서 가맹점 데이터가 기관 밖으로 나간다. 기존 학습·채점에서도 같은 경로를 썼으므로 새로운 노출은 아니다.
     다만 외부 LLM API는 쓰지 않는다(쿼리 생성을 위해 데이터를 또 다른 업체로 보내지 않는다).
-- **순서**: B 규칙 생성은 GPU 없이 바로 할 수 있으므로 먼저 하고, A·C LLM 생성은 서비스셋 dev가 생긴 뒤에 한다(예시가 필요하다).
+- **순서**
+  - B 규칙 생성은 GPU 없이 바로 한다.
+  - A·C 생성은 지금 기존 벤치마크 train 쿼리를 예시로 시작한다. 서비스셋 dev가 생기면 예시를 dev로 바꾸고 `PROMPT_VERSION`을 올려 다시 만든다.
+
+### 4-4. 실행 (1·2단계 구현됨, 3단계 거르기·라벨링은 미구현)
+
+```bash
+# 1. B 상호명 — 로컬
+python scripts/gen_name_queries.py            # → data/finetune/synthetic/name_queries.csv (+ .meta.json)
+# 2. A·C — 로컬에서 입력을 만들어 Colab에서 생성
+python scripts/export_generation_inputs.py    # → colab_upload/generation/ → Drive store-search-ai/generation/ 에 올림
+#    Colab: colab/generate_queries.ipynb (SMOKE=True로 한 번 → 예시 확인 → SMOKE=False)
+#    결과 generated_{A,C}_<버전>.csv → 로컬 data/finetune/synthetic/
+```
+
+- 설정은 `configs/query/synthetic_queries_v1.yaml`, 로직은 `src/store_search_ai/data/synthetic_queries.py`에 있다. 산출물은 gitignore 대상이다(설정·seed로 다시 만든다).
+- **B 정답 규칙**: 쿼리를 정규화한 키(법인 표기·괄호·공백 제거, 소문자, 브랜드 별칭은 대표명으로)와 같은 키를 가진 모든 가맹점이 정답이다.
+  가맹점마다 전체 상호, 지점명을 뗀 상호, 괄호 안 이름을 키로 등록한다. 그래서 같은 쿼리면 어느 가맹점에서 나왔든 정답이 같다.
+- **B에서 빼는 쿼리**
+  - 업종어와 같은 상호('카페' 등). 이런 쿼리는 업종 쿼리라서 뺀다.
+  - 정답에 서비스셋 템플릿의 B 표본 가맹점이 들어가는 쿼리.
+  - `exclude_brands`에 적은 브랜드의 쿼리.
+- **1만 곳으로 만든 B 결과(2026-10-19)**: 쿼리 11,111개.
+  - 변형별: 전체 상호 9,495 / 띄어쓰기 없음 778 / 지점명 뗀 상호 607 / 괄호 안 이름 206 / 별칭 25.
+  - 정답 수별: 1곳 8,039 / 2~50곳 2,987 / 50곳 초과 85(GS25·파리바게뜨 같은 브랜드).
 
 ## 5. 실행
 
