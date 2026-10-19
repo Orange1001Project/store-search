@@ -113,3 +113,18 @@ scenario_cards:
   - 산후조리 중인 가족에게 보양식을 해 주고 싶다
   - 노트북이 갑자기 안 켜진다
   - 다음 주가 결혼기념일이다
+
+# 작성자별 배정 파일 — scripts/make_writer_sheets.py, 절차는 docs/QUERY_WRITING_GUIDE.md 1부.
+writers:
+  ids: [W1, W2, W3, W4, W5, W6]
+  output_dir: data/query/writers
+  # C: 카드 한 장을 서로 다른 작성자 몇 명에게 줄지(45장 × 3 = 135개 → 목표 130)
+  card_overlap: 3
+  # A: 업종 30개(1인 5개 × 5개). A_업종후보에서 고른 것 — 미채택 15 + 기존 보강 5 + 미포함 품목 10.
+  # 미포함 품목 중 기존 업종과 같은 뜻인 것(식육·육류·삼겹살→정육, 양약→의약품, 헤어→미용, 서적→서점 등)은 넣지 않았다.
+  a_industries: [식료품, 태권도, 감자탕, 골프, 당구, 노래연습장, 컴퓨터, 마라탕, 조명, 닭갈비, 숙박, 심리상담, 악기, 보청기, 자전거,
+                 낚시, 농자재, 사진, 인쇄, 유아용품,
+                 곱창, 장어, 닭발, 샐러드, 커텐, 고추, 시계, 디저트, 약초, 핫도그]
+  a_queries_per_industry: 5
+  d_markets_per_writer: 9
+  e_queries_per_writer: 4
