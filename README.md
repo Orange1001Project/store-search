@@ -75,7 +75,7 @@ data/
   finetune/train_pairs.jsonl     fine-tuning 학습쌍 (prepare_finetune_dataset.py 산출물, 재생성 가능)
 benchmark/storesearch_ko_v1/
   queries.csv(status active/inactive), query_manifest.json, annotation_guideline.md, qrels*.csv/.trec, benchmark_manifest.json
-  annotations/{full_annotation_v1, supplement_v1, supplement_v2}/   사람 판정 시트·완료본·조정 결과(본 라운드 + 보충 라운드)
+  annotations/{full_annotation_v1, supplement_v1, supplement_v2, final_v1_val}/   사람 판정 시트·완료본·조정 결과(본 라운드 + 보충·일괄 판정 라운드)
 archive/rule_based_train_labeling/ 한때 썼던 규칙 기반 train 자동 라벨링 스크립트 (재현율 문제로 보류, 참고용)
 models/                         fine-tuned 모델 가중치 (.gitignore 처리 — Colab에서 내려받은 걸 로컬에 둠)
 tests/                          단위 테스트 (pytest)

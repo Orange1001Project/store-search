@@ -284,7 +284,7 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 | 모델 | 출발점 | 먼저 해 볼 것 |
 |---|---|---|
 | **Arctic-ko** (`arctic_ko`, `arctic_ko_query`) | zero-shot 0.952 → lee 0.961(val 탐색 11회 중 1등, 30 step — 사실상 zero-shot) | ① `arctic_ko_query`(학습 때 쓴 `query: ` 접두어)와 비교 ② 이미 강하므로 **망가뜨리지 않게** lr 1e-5·epoch 1 ③ negative 3→5 |
-| **BGE-M3** (`bge_m3`) | zero-shot 0.918 → **mj 0.960(기본값 1회) — 임베딩 v1 선택** | ① lr 1e-5~2e-5, epoch 1~3 ② negative 3→5 ③ 서비스에서 dense만 쓸지, sparse(키워드형)까지 쓸지 결정(벡터DB 구조가 달라짐 — 팀 공유) |
+| **BGE-M3** (`bge_m3`) | zero-shot 0.918 → **mj 0.960(기본값 1회) — 임베딩 v1 선택**. zero-shot은 판정 누락이 많아(상위 10개 중 23개) 판정만 기준으로는 0.937 → 0.966 | ① lr 1e-5~2e-5, epoch 1~3 ② negative 3→5 ③ 서비스에서 dense만 쓸지, sparse(키워드형)까지 쓸지 결정(벡터DB 구조가 달라짐 — 팀 공유) |
 | **Qwen3-0.6B** (`qwen3_0_6b`, `_store`) | zero-shot 0.920 → kse14 0.949 → **kse16 0.953**(hard negative 3→6, bad@3 12→7/124) — Qwen3 기준선 | ① **prompt**: `qwen3_0_6b_store`(매장 검색용 지시문) — 지시문 모델이라 효과가 큼 ② LoRA r 16→32/64, lr 5e-5~2e-4 ③ `loss="mnrl"`과 GIST 비교 |
 | **Qwen3-4B** (`qwen3_4b`, `_store`) | – | T4는 빠듯함 → 가능하면 **L4/A100**(bf16, batch 키움). 0.6B에서 효과 있던 설정을 옮겨서 |
 

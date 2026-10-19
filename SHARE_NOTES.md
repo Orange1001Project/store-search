@@ -69,6 +69,8 @@ corpus·같은 config로 `06_generate_lexical_runs.py` → `07_build_annotation_
   없는 사람의 작업 결과라 그대로 보존했습니다
 - **`benchmark/storesearch_ko_v1/annotations/supplement_v1/`, `supplement_v2/`** — 보충 판정 라운드의 사람 판정 원본(완료본·조정 기록·
   그 라운드에 쓴 run 사본). supplement_v2는 임베딩 모델 6종 상위 20개를 추가로 판정한 13,759쌍(2026-10)
+- **`benchmark/storesearch_ko_v1/annotations/final_v1_val/`** — 임베딩 v1 후보 3종(kse16·bge-m3 mj·Arctic-KO lee)의 val 상위 10개 중
+  미판정 220쌍 일괄 판정 원본(2026-10-16). qrels_val에 217행 추가(판정 불가 3행 제외)
 - `benchmark/storesearch_ko_v1/queries.csv`, `qrels_train/val/test.csv(.trec)`, `qrels.csv(.trec)`,
   `benchmark_manifest.json`, `agreement_report.json`, `validation_final.json` — 위 원본을 집계한
   **최종 산출물**(548개 질의 — 그중 오타 변형 49개는 `configs/benchmark/inactive_queries_v1.yaml`로 비활성, active 499개 — gold qrels)

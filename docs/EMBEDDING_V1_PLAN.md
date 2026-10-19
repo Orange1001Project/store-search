@@ -29,7 +29,8 @@
 | **bge-m3 mj** (full FT, 기본값) | 0.960 [0.936, 0.980] | 0.994 | 0.960 | 8/124 |
 | **Arctic-KO lee** (full FT, val HP 탐색 1등) | 0.961 [0.937, 0.982] | 0.997 | 0.976 | 6/124 |
 
-¹ supplement_v2 pooling run(depth 20)으로 계산 — @10·@3 지표만 유효. 비교표 전체: `results/model_comparison/final_v1_val/`.
+¹ supplement_v2 pooling run(depth 20)으로 계산 — @10·@3 지표만 유효. 이 라운드 후보가 아니어서 판정 누락이 많다(bge 23개, Arctic 4개) —
+nDCG@10(판정만)은 bge 0.937, Arctic 0.957(학습 후보: kse16 0.954, mj 0.966, lee 0.964). 비교표 전체: `results/model_comparison/final_v1_val/`.
 
 **공식 지표 전체** (`artifacts/evaluation/storesearch_ko_v1/`)
 
