@@ -54,8 +54,5 @@ __pycache__/
 !/results/stack_eval/*/rerank_scores_*.csv
 !/results/stack_eval/*/*+bm25_rrf.csv
 
-# 합성 학습 쿼리(scripts/gen_name_queries.py, Colab generate_queries.ipynb 결과) — 설정·seed로 다시 만들 수 있음
-/data/finetune/synthetic/
-
 # 작성자 배포용 xlsx(scripts/make_writer_sheets.py, seed로 다시 만들 수 있음). 회수한 파일은 data/query/writers_completed/에 둔다
 /data/query/writers/
