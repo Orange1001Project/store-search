@@ -1,0 +1,35 @@
+{
+  "version": "service_queryset_v1",
+  "seed": 20261019,
+  "dev_share": 0.25,
+  "sources": {
+    "data/query/writers_completed/서비스셋_직접작성_v1_3명_completed.xlsx": "ce1f8fb137d3f149992efba770e97e92e8967dc51023bfbf0f4c66548543d6db",
+    "data/query/service_queryset_v1_team_completed.xlsx": "0ef98ff6add75ba8df3cb33a3bcd25bba71ff41d83147b7a3b4c69f48866ee29",
+    "data/query/service_queryset_v1.xlsx": "242f663407825a47798f6f84f84804cf4e87c8ef591056db04ecd2070cc2318b"
+  },
+  "queries": 498,
+  "active_by_bundle_split": {
+    "A": {
+      "dev": 40,
+      "test": 108
+    },
+    "B": {
+      "dev": 38,
+      "test": 112
+    },
+    "C": {
+      "dev": 34,
+      "test": 92
+    },
+    "D": {
+      "dev": 13,
+      "test": 38
+    },
+    "E": {
+      "dev": 5,
+      "test": 15
+    }
+  },
+  "excluded": 3,
+  "ai_draft_rows": 350
+}

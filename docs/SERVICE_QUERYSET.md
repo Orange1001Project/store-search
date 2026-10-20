@@ -61,4 +61,41 @@ python scripts/make_service_queryset_template.py --dry-run  # 시트별 행 수�
 
 - 설정(목표 개수, split, 상황 카드, 브랜드 별칭, seed)은 `configs/query/service_queryset_v1.yaml`에 있다.
 - 템플릿을 배포한 뒤에는 seed를 바꾸지 않는다. 바꾸면 표본ID(S·M번호)가 다른 가맹점을 가리키게 된다.
-- 작성이 끝난 xlsx를 쿼리셋으로 가져오는 스크립트(가정위치 자동 배정, dev/test split)는 작성이 끝난 뒤에 만든다.
+
+### 작성 결과 가져오기 (2026-10-20)
+
+```bash
+python scripts/import_service_queries.py --dry-run   # 묶음 × split 개수, 제외·중복 요약만
+python scripts/import_service_queries.py             # → data/query/service_queries_v1.csv (+ _ai_draft.csv, .meta.json)
+```
+
+- **입력**
+  - 작성자 완료본 `data/query/writers_completed/서비스셋_직접작성_v1_3명_completed.xlsx`: W1~W3의 A·C·D·E
+  - 팀 작성본 `data/query/service_queryset_v1_team_completed.xlsx`: 사람이 쓴 B 150개만 쓴다. 나머지 A·C·D·E 350개는 AI 초안이라
+    `service_queries_v1_ai_draft.csv`로 따로 두고 test에 넣지 않는다.
+- **같은 쿼리 합치기**: 공백을 지우고 소문자로 바꿔 같은 문자열이면 한 쿼리로 합친다. 몇 명이 썼는지는 `n_writers`·`writers`에 남긴다.
+  여러 묶음에 나오면 B > D > C > A > E 순서로 앞 묶음에 두고, 나머지는 `also_in_bundles`에 적는다.
+- **제외**(`status=excluded`): 다음 두 경우다. 행은 지우지 않는다.
+  - 기존 벤치마크 **train** 쿼리와 같은 문자열. 학습에 쓰인 문자열이라 v1에 유리하다.
+  - 설정 `import.exclude_queries`에 적은 쿼리. 판정 결과 E가 아닌 것 등을 여기에 적는다.
+  기존 val/test와 같은 문자열은 `old_benchmark_split`에 표시만 한다.
+- **dev/test**: 묶음마다 약 25% / 75%로 나눈다. 같은 근거(A 업종, C 카드, B 가맹점, D 시장)의 쿼리는 같은 쪽에 둔다.
+  dev에서 본 카드나 업종이 test에 다시 나오면 dev로 맞춘 튜닝이 test에 새기 때문이다.
+- **가정위치**
+  - D: 고른 시장
+  - B 개별 가맹점: 표본 가맹점 좌표
+  - B 브랜드: 작성자가 고른 시장
+  - A·C·E: 쿼리 문자열 해시로 고른 표본 시장(`location_source=auto`)
+  - B 개별 가맹점 쿼리의 지역 부분("묵동 대박축산"의 "묵동")은 주소·시장명과 맞춰 자동으로 채운다(`region_text_source=auto`).
+    상호의 지점명과 겹치는 지역("안산 고잔 숯토리" → 지점 "안산고잔점")은 잡지 못한다.
+- **E**: `corpus_hits`에 상호·취급품목에서 그 문자열이 몇 번 나오는지 적는다. 많이 나오는 것(백화점 621, 명품 419 등)은 판정 결과에 따라 제외하거나 A로 옮긴다.
+- **1차 결과(2026-10-20)**: 입력 503줄 → 쿼리 498개(중복 5개 합침), 제외 3개(기존 train과 같음: 머리 자르는 곳, 반찬가게, 반찬 사는 곳).
+
+  | 묶음 | dev | test |
+  |---|---|---|
+  | A | 40 | 108 |
+  | B | 38 | 112 |
+  | C | 34 | 92 |
+  | D | 13 | 38 |
+  | E | 5 | 15 |
+

@@ -1,0 +1,204 @@
+"""사람이 쓴 서비스셋 쿼리(작성자 완료본 + 팀 작성본의 B)를 하나의 쿼리 표로 합친다(docs/SERVICE_QUERYSET.md 4절).
+
+하는 일
+- 같은 문자열(공백 제거·소문자)은 한 쿼리로 합치고, 몇 명이 썼는지(`n_writers`)를 남긴다. 여러 묶음에 나오면 우선순위가 앞선 묶음에 둔다.
+- 기존 벤치마크(query_families_v1) 쿼리와 같은 문자열을 표시한다. 기존 train과 같으면 그 쿼리로 학습한 모델이 유리하므로 제외한다.
+- 묶음마다 dev/test를 나눈다. 같은 근거(업종·카드·가맹점·시장)의 쿼리는 같은 쪽에 둔다 — dev에서 본 카드·업종이 test에 다시
+  나오지 않게(그룹 단위 분할).
+- 가정위치를 붙인다: D는 고른 시장, B는 표본 가맹점(브랜드 쿼리는 작성자가 고른 시장), 나머지는 쿼리 문자열로 정한 시장(재현 가능).
+"""
+
+from __future__ import annotations
+
+import hashlib
+import re
+
+import numpy as np
+import pandas as pd
+
+SPACE_RE = re.compile(r"\s+")
+REGION_SUFFIXES = ("역", "시장", "동", "읍", "면", "구", "시", "군")
+
+OUTPUT_COLUMNS = [
+    "query_id", "query", "bundle", "split", "status", "exclude_reason", "intent", "region_text", "region_text_source",
+    "location_id", "latitude", "longitude", "location_source", "basis_id", "writers", "n_writers", "also_in_bundles",
+    "old_benchmark_split", "writer_notes",
+]
+
+
+def normalize(text: str) -> str:
+    return SPACE_RE.sub("", str(text)).casefold()
+
+
+def _clean(value) -> str:
+    return "" if pd.isna(value) else str(value).strip()
+
+
+def writer_rows(sheets: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """작성자 완료본의 `W?_1부_C_E`·`W?_2부_A_D` 시트에서 질의가 있는 줄만 모은다."""
+
+    frames = []
+    for name, sheet in sheets.items():
+        if not re.fullmatch(r"W\d+_[12]부_[A-Z]_[A-Z]", name):
+            continue
+        frame = sheet.copy()
+        frame["질의"] = frame["질의"].map(_clean)
+        frames.append(frame[frame["질의"] != ""])
+    rows = pd.concat(frames, ignore_index=True)
+    return pd.DataFrame({
+        "query": rows["질의"], "bundle": rows["묶음"], "intent": rows["의도"].map(_clean),
+        "region_text": rows["지역표현"].map(_clean), "location_id": rows["가정위치ID"].map(_clean),
+        "basis_id": rows["근거ID"].map(_clean), "writer": rows["작성자"].map(_clean), "note": rows["비고"].map(_clean),
+    })
+
+
+def team_b_rows(team: pd.DataFrame, human_methods: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """팀 작성본에서 사람이 쓴 B와 그 밖의 AI 초안을 나눈다. 작성자 이름 대신 작성방식으로 표시한다."""
+
+    team = team[team["질의"].map(_clean) != ""]
+    human = team["작성방식"].isin(human_methods)
+    b = team[human & (team["묶음"] == "B")]
+    rows = pd.DataFrame({
+        "query": b["질의"].map(_clean), "bundle": "B", "intent": b["의도"].map(_clean),
+        "region_text": b["지역표현"].map(_clean), "location_id": b["가정위치ID"].map(_clean),
+        "basis_id": b["근거ID"].map(_clean), "writer": "team:" + b["작성자"].map(_clean), "note": b["비고"].map(_clean),
+    })
+    return rows.reset_index(drop=True), team[~human].reset_index(drop=True)
+
+
+def detect_region_text(query: str, store_name: str, address: str, market_name: str) -> str:
+    """B 개별 가맹점 쿼리에서 지역 부분을 찾는다('왜관 발톱닥터 네일' → '왜관').
+
+    상호에 없는 토큰 중, 그대로 또는 끝의 역·시장·동 등을 뗀 형태가 가맹점 주소·시장명에 들어 있으면 지역으로 본다.
+    """
+
+    place = f"{address} {market_name}"
+    name = normalize(store_name)
+    found = []
+    for token in query.split():
+        if normalize(token) in name:
+            continue
+        stems = {token} | {token[: -len(s)] for s in REGION_SUFFIXES if token.endswith(s) and len(token) > len(s) + 1}
+        if any(len(stem) >= 2 and stem in place for stem in stems):
+            found.append(token)
+    return " ".join(found)
+
+
+def merge_duplicates(rows: pd.DataFrame, priority: list[str]) -> pd.DataFrame:
+    """같은 문자열(정규화)을 한 쿼리로 합친다. 대표 줄은 우선순위가 앞선 묶음의 첫 줄이다."""
+
+    rank = {b: i for i, b in enumerate(priority)}
+    rows = rows.assign(_key=rows["query"].map(normalize), _rank=rows["bundle"].map(rank), _order=range(len(rows)))
+    out = []
+    for _, group in rows.sort_values(["_rank", "_order"]).groupby("_key", sort=False):
+        head = group.iloc[0].to_dict()
+        head["writers"] = "|".join(dict.fromkeys(group["writer"]))
+        head["n_writers"] = group["writer"].nunique()
+        head["also_in_bundles"] = "|".join(sorted(set(group["bundle"]) - {head["bundle"]}))
+        head["writer_notes"] = " / ".join(n for n in group["note"] if n)
+        out.append(head)
+    merged = pd.DataFrame(out).sort_values(["_rank", "_order"]).reset_index(drop=True)
+    return merged.drop(columns=["_key", "_rank", "_order", "writer", "note"])
+
+
+def old_benchmark_splits(families: list[dict], inactive_ids: set[str]) -> dict[str, str]:
+    """기존 벤치마크 쿼리 문자열(정규화) → split. 비활성 쿼리는 평가·학습에 안 쓰므로 뺀다."""
+
+    out = {}
+    for fam in families:
+        for i, q in enumerate(fam["queries"], start=1):
+            if f"q_{fam['family']}_{i:02d}" not in inactive_ids:
+                out[normalize(q["text"])] = fam["split"]
+    return out
+
+
+def split_groups(queries: pd.DataFrame, dev_share: float, seed: int) -> pd.Series:
+    """묶음마다 근거ID(없으면 쿼리) 단위로 dev/test를 나눈다. 그룹 순서를 seed로 섞어 앞에서부터 dev 몫만큼 dev."""
+
+    split = pd.Series("test", index=queries.index, dtype=object)
+    for bundle, frame in queries.groupby("bundle"):
+        group_key = frame["basis_id"].where(frame["basis_id"] != "", "q:" + frame["query"].map(normalize))
+        groups = sorted(group_key.unique())
+        rng = np.random.default_rng([seed, sum(map(ord, bundle))])
+        order = [groups[i] for i in rng.permutation(len(groups))]
+        target = dev_share * len(frame)
+        dev, count = set(), 0
+        for g in order:
+            if count >= target:
+                break
+            dev.add(g)
+            count += int((group_key == g).sum())
+        split[frame.index[group_key.isin(dev)]] = "dev"
+    return split
+
+
+def auto_location(query: str, markets: pd.DataFrame) -> str:
+    """지역이 없는 쿼리의 가정위치: 쿼리 문자열의 해시로 시장을 고른다(입력 순서와 무관하게 재현)."""
+
+    digest = int(hashlib.sha256(normalize(query).encode("utf-8")).hexdigest(), 16)
+    return str(markets["시장ID"].iloc[digest % len(markets)])
+
+
+def assign_locations(queries: pd.DataFrame, stores: pd.DataFrame, markets: pd.DataFrame) -> pd.DataFrame:
+    """가정위치(location_id·좌표·출처)와 B 개별 가맹점 쿼리의 지역표현을 채운다."""
+
+    stores = stores.set_index("표본ID")
+    markets_by_id = markets.set_index("시장ID")
+    loc_ids, lats, lons, sources, regions, region_sources = [], [], [], [], [], []
+    for row in queries.itertuples(index=False):
+        region, region_source = row.region_text, ("writer" if row.region_text else "")
+        if row.bundle == "B" and row.basis_id in stores.index:
+            store = stores.loc[row.basis_id]
+            loc_ids.append(row.basis_id)
+            lats.append(float(store["위도"]))
+            lons.append(float(store["경도"]))
+            sources.append("store")
+            if not region:
+                region = detect_region_text(row.query, store["가맹점명"], store["주소"], store["시장명"])
+                region_source = "auto" if region else ""
+        else:
+            loc, source = row.location_id, "market"
+            if loc not in markets_by_id.index:
+                loc, source = auto_location(row.query, markets), "auto"
+            market = markets_by_id.loc[loc]
+            loc_ids.append(loc)
+            lats.append(float(market["위도"]))
+            lons.append(float(market["경도"]))
+            sources.append(source)
+        regions.append(region)
+        region_sources.append(region_source)
+    return queries.assign(location_id=loc_ids, latitude=lats, longitude=lons, location_source=sources,
+                          region_text=regions, region_text_source=region_sources)
+
+
+def build_service_queries(
+    rows: pd.DataFrame,
+    priority: list[str],
+    old_splits: dict[str, str],
+    exclude: list[dict],
+    stores: pd.DataFrame,
+    markets: pd.DataFrame,
+    dev_share: float,
+    seed: int,
+) -> pd.DataFrame:
+    queries = merge_duplicates(rows, priority)
+    queries["old_benchmark_split"] = queries["query"].map(lambda q: old_splits.get(normalize(q), ""))
+    in_train = queries["old_benchmark_split"] == "train"
+    status = np.where(in_train, "excluded", "active").astype(object)
+    reason = np.where(in_train, "기존 벤치마크 train 쿼리와 같음(학습에 쓰인 문자열)", "").astype(object)
+    for item in exclude:
+        hit = (queries["query"].map(normalize) == normalize(item["query"])).to_numpy()
+        status[hit], reason[hit] = "excluded", item["reason"]
+    queries = queries.assign(status=status, exclude_reason=reason)
+    active = queries["status"] == "active"
+    split = pd.Series("", index=queries.index, dtype=object)
+    split[active] = split_groups(queries[active], dev_share, seed)
+    queries = queries.assign(split=split)
+    queries = assign_locations(queries, stores, markets)
+    counters: dict[str, int] = {}
+    ids = []
+    for bundle in queries["bundle"]:
+        counters[bundle] = counters.get(bundle, 0) + 1
+        ids.append(f"sq_{bundle}{counters[bundle]:03d}")
+    queries["query_id"] = ids
+    return queries[OUTPUT_COLUMNS]

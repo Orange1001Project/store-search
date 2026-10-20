@@ -89,10 +89,9 @@
 
 ## 5단계 — 넘기기
 
-- 작성자 파일을 모아 `data/query/service_queryset_v1_human.xlsx` 하나로 합친다(`작성자` 열 유지).
-- AI 초안은 `작성방식`에 `ai_draft`로 표시해 같은 파일의 `AI초안` 시트로 옮긴다.
-- 그다음 가져오기 스크립트(dev/test split, 가정위치 배정)를 만든다. dev/test는 묶음마다 25% / 75%로 나눈다.
-  같은 작성자의 쿼리가 dev와 test에 고르게 퍼지도록 작성자별로 층화한다.
+- 회수한 작성자 파일(한 파일 배치)을 `data/query/writers_completed/`에 둔다. AI 초안은 팀 작성본(`data/query/service_queryset_v1_team_completed.xlsx`)에 그대로 둔다.
+- `python scripts/import_service_queries.py`로 가져온다. 중복 합치기, 제외, dev/test, 가정위치 규칙은 `docs/SERVICE_QUERYSET.md` 4절에 있다.
+  dev/test는 작성자가 아니라 근거(업종·카드·가맹점·시장) 단위로 나눈다 — 같은 카드의 쿼리가 dev와 test에 갈라지지 않게.
 
 ---
 

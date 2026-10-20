@@ -131,3 +131,16 @@ writers:
   a_queries_per_industry: 5
   d_markets_per_writer: 17
   e_queries_per_writer: 7
+
+# 작성 결과 → 쿼리셋 — scripts/import_service_queries.py, 설명은 docs/SERVICE_QUERYSET.md 4절.
+import:
+  writers_completed: data/query/writers_completed/서비스셋_직접작성_v1_3명_completed.xlsx
+  # 사람이 직접 쓴 B 150개(개별 가맹점 105 + 브랜드 45)가 든 팀 작성본. 나머지(A·C·D·E)는 AI 초안이라 ai_draft로 따로 둔다.
+  team_completed: data/query/service_queryset_v1_team_completed.xlsx
+  team_human_methods: ["개별 가맹점 표본 기반(독립 표본)", "상호/브랜드 검색(독립 표본)"]
+  output: data/query/service_queries_v1.csv
+  ai_draft_output: data/query/service_queries_v1_ai_draft.csv
+  # 같은 문자열이 여러 묶음에 나오면 앞의 묶음에 둔다(C는 재료 없이 먼저 쓴 반응이라 A보다 앞).
+  bundle_priority: [B, D, C, A, E]
+  # 판정·검토 뒤 빼야 할 쿼리. {query: ..., reason: ...} — 지우지 않고 status=excluded로 남긴다.
+  exclude_queries: []
