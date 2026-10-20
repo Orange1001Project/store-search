@@ -31,6 +31,7 @@ from store_search_ai.data.writer_sheets import (
     WRITER_COLUMNS,
     assign_cards,
     assignment_table,
+    carry_over_answers,
     deal,
     part1_rows,
     part2_rows,
@@ -93,6 +94,10 @@ def main() -> None:
         help="single: 한 파일에 시트로(기본) / per-writer: 작성자별 1부·2부 파일 + 진행자 배정표",
     )
     parser.add_argument("--force", action="store_true", help="출력 폴더가 있어도 덮어쓴다")
+    parser.add_argument(
+        "--carry-over", default=None,
+        help="이전 배정 파일(한 파일 배치)에 이미 쓴 답을 같은 작성자·묶음·근거ID 줄로 옮긴다(예: 작성자 수를 바꿀 때)",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -104,8 +109,10 @@ def main() -> None:
     seed = cfg["random_seed"]
     template = args.template or cfg["output_path"]
     out_dir = Path(wcfg["output_dir"])
-    if out_dir.exists() and any(out_dir.iterdir()) and not (args.force or args.dry_run):
-        raise SystemExit(f"{out_dir}에 이미 파일이 있습니다. 배포한 파일일 수 있어 덮어쓰지 않습니다(--force).")
+    single_path = out_dir / wcfg.get("single_file", SINGLE_FILE)
+    existing = single_path.exists() if args.layout == "single" else any(out_dir.glob("W*_*.xlsx"))
+    if existing and not (args.force or args.dry_run):
+        raise SystemExit(f"{out_dir}에 이미 배정 파일이 있습니다. 배포한 파일일 수 있어 덮어쓰지 않습니다(--force).")
 
     sheets = pd.read_excel(template, sheet_name=["C_상황카드", "A_업종후보", "D_시장표본"])
     cards = sheets["C_상황카드"].set_index("카드ID")
@@ -122,6 +129,12 @@ def main() -> None:
         part1 = part1_rows(w, cards.loc[card_map[w]].reset_index(), wcfg["e_queries_per_writer"])
         part2 = part2_rows(w, industries.loc[industry_map[w]], markets.loc[market_map[w]], wcfg["a_queries_per_industry"])
         files[w] = {"1부": part1, "2부": part2}
+        if args.carry_over:
+            old = pd.read_excel(args.carry_over, sheet_name=None)
+            for part, suffix in [("1부", "1부_C_E"), ("2부", "2부_A_D")]:
+                if f"{w}_{suffix}" in old:
+                    files[w][part], moved = carry_over_answers(files[w][part], old[f"{w}_{suffix}"])
+                    logger.info("%s %s: 이전 답 %d개 옮김", w, part, moved)
         logger.info("%s: 1부 C %d + E %d / 2부 A %d(업종 %d) + D %d", w, (part1["묶음"] == "C").sum(),
                     (part1["묶음"] == "E").sum(), (part2["묶음"] == "A").sum(), per_writer_industries,
                     (part2["묶음"] == "D").sum())
@@ -135,7 +148,7 @@ def main() -> None:
 
     out_dir.mkdir(parents=True, exist_ok=True)
     if args.layout == "single":
-        path = out_dir / SINGLE_FILE
+        path = single_path
         with pd.ExcelWriter(path, engine="openpyxl") as writer:
             write_guide_sheet(writer, "안내_1부(C·E)", PART1_GUIDE)
             write_guide_sheet(writer, "안내_2부(A·D)", PART2_GUIDE)

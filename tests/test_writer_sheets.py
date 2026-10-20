@@ -59,3 +59,25 @@ def test_rows_prefill_material_and_location():
     d = p2[p2["묶음"] == "D"].iloc[0]
     assert d["가정위치ID"] == "M001" and "망원시장" in d["재료"]
     assert (p2["작성방식"] == "직접").all()
+
+
+def test_carry_over_answers_matches_by_bundle_and_basis_and_keeps_extras():
+    from store_search_ai.data.writer_sheets import carry_over_answers
+
+    cards = pd.DataFrame({"카드ID": ["C001", "C002"], "상황": ["가", "나"]})
+    new = part1_rows("W1", cards.iloc[::-1].reset_index(drop=True), e_count=2)   # 새 배정은 카드 순서가 다름
+    old = part1_rows("W1", cards, e_count=1)
+    old.loc[0, ["질의", "의도"]] = ["구두 수선", "구두 수선집"]          # C001
+    old.loc[1, "비고"] = "떠오르는 검색어 없음"                          # C002, 질의 없이 비고만
+    old.loc[2, "질의"] = "코스트코"                                      # E
+    extra = old.iloc[[0]].copy()
+    extra.loc[:, ["질의", "의도"]] = ["구두 굽", "구두 수선집"]          # 같은 카드에 두 번째 답
+    old = pd.concat([old, extra, part1_rows("W1", cards.iloc[[1]], e_count=0)], ignore_index=True)   # 빈 줄은 옮기지 않음
+
+    out, moved = carry_over_answers(new, old)
+    assert moved == 4
+    c1 = out[out["근거ID"] == "C001"]
+    assert set(c1["질의"]) == {"구두 수선", "구두 굽"}                     # 자리가 모자라 한 줄 덧붙임
+    assert out.loc[out["근거ID"] == "C002", "비고"].iloc[0] == "떠오르는 검색어 없음"
+    assert out.loc[out["묶음"] == "E", "질의"].tolist()[0] == "코스트코"
+    assert len(out) == len(new) + 1

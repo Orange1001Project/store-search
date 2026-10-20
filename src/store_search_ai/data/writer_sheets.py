@@ -23,7 +23,7 @@ COMMON_RULES = [
 ]
 
 PART1_GUIDE = COMMON_RULES + [
-    ("C 상황 (먼저)", "재료 칸의 상황에 놓인 나를 떠올리고, 휴대폰을 꺼내 처음 치는 말 하나를 질의 칸에 씁니다."),
+    ("C 상황 (먼저)", "재료 칸의 상황에 놓인 나를 떠올리고, 휴대폰을 꺼내 처음 치는 말 하나를 질의 칸에 씁니다. 같은 상황에서 결이 다른 검색어가 또 떠오르면 같은 근거ID로 줄을 하나 더 만들어 씁니다(말만 살짝 바꾼 것은 X)."),
     ("", "업종 이름이 떠오르면 그대로 써도 됩니다(세탁소). 물건·하려는 일·문제로 써도 됩니다(패딩 세탁). 상황 문장을 그대로 옮기지는 마세요."),
     ("예", "구두 뒤축이 다 닳았다 → 좋음: 구두 굽 수선 / 피함: 구두 뒤축이 다 닳았을 때 가는 곳(카드 문장을 옮김)"),
     ("예", "비 오는 날 저녁, 뜨끈한 국물이 당긴다 → 좋음: 칼국수, 국밥집 / 피함: 비 오는 날 국물 음식점 추천(다듬은 문장)"),
@@ -115,3 +115,37 @@ def assignment_table(writer_files: dict[str, dict[str, pd.DataFrame]]) -> pd.Dat
         .rename("작성 칸 수")
         .reset_index()
     )
+
+
+ANSWER_COLUMNS = ["질의", "의도", "지역표현", "비고"]
+
+
+def carry_over_answers(new_rows: pd.DataFrame, old_rows: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """이전 배정 파일에 작성자가 쓴 답을 새 배정 시트로 옮긴다. (묶음, 근거ID)가 같은 줄끼리 순서대로 맞춘다.
+
+    E처럼 근거ID가 없는 줄은 묶음 안에서 순서대로 맞춘다. 새 시트에 자리가 모자라면(같은 카드에 두 줄을 썼던 경우 등)
+    줄을 덧붙여 답을 잃지 않는다. 돌려주는 값: (답을 채운 새 시트, 옮긴 답 수)
+    """
+
+    def key(frame: pd.DataFrame) -> pd.Series:
+        return frame["묶음"].astype(str) + "|" + frame["근거ID"].fillna("").astype(str)
+
+    answers = old_rows[ANSWER_COLUMNS].fillna("").astype(str).apply(lambda col: col.str.strip())
+    filled = old_rows[(answers != "").any(axis=1)].copy()
+    out = new_rows.copy().reset_index(drop=True)
+    out_keys = key(out)
+    used: set[int] = set()
+    extra = []
+    for _, row in filled.assign(_key=key(filled)).iterrows():
+        slots = [i for i in out.index[out_keys == row["_key"]] if i not in used]
+        if slots:
+            i = slots[0]
+            used.add(i)
+            for col in ANSWER_COLUMNS:
+                out.loc[i, col] = row[col] if pd.notna(row[col]) else ""
+        else:
+            new = {c: row.get(c, "") for c in WRITER_COLUMNS}
+            extra.append({c: ("" if pd.isna(v) else v) for c, v in new.items()})
+    if extra:
+        out = pd.concat([out, pd.DataFrame(extra, columns=WRITER_COLUMNS)], ignore_index=True)
+    return out, len(filled)
