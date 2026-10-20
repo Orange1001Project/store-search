@@ -2,12 +2,12 @@
 
 입력(설정 `import` 블록)
   - 작성자 완료본(data/query/writers_completed/…_completed.xlsx): W1~W3의 A·C·D·E
-  - 팀 작성본(data/query/service_queryset_v1_team_completed.xlsx): 사람이 쓴 B 150개만 쓰고, 나머지 AI 초안은 따로 저장
+  - 팀 작성본(data/query/service_queryset_v1_team_completed.xlsx): 사람이 쓴 B 150개만 쓴다(나머지는 AI 초안이라 버림)
+  - 설정 `import.extra_queries`: 진행자가 직접 더한 쿼리
   - 서비스셋 템플릿(B_가맹점표본·D_시장표본 좌표), 기존 벤치마크 쿼리(중복 확인)
 
 출력
   - data/query/service_queries_v1.csv           평가 쿼리(query_id, split dev/test, status, 가정위치 …)
-  - data/query/service_queries_v1_ai_draft.csv  AI 초안(test에 넣지 않음 — dev 보조로만)
   - data/query/service_queries_v1.meta.json     원본 sha256, 묶음·split별 개수, seed
 
 다시 실행해도 같은 결과가 나온다(split은 설정 seed, 자동 가정위치는 쿼리 문자열 해시).
@@ -53,8 +53,13 @@ def main() -> None:
 
     writers = writer_rows(pd.read_excel(icfg["writers_completed"], sheet_name=None))
     team = pd.read_excel(icfg["team_completed"], sheet_name="쿼리입력")
-    b_rows, ai_draft = team_b_rows(team, icfg["team_human_methods"])
-    rows = pd.concat([b_rows, writers], ignore_index=True)
+    b_rows, _ = team_b_rows(team, icfg["team_human_methods"])   # 팀 작성본의 나머지는 AI 초안이라 쓰지 않는다
+    extra = pd.DataFrame([
+        {"query": e["query"], "bundle": e["bundle"], "intent": e.get("intent", ""), "region_text": "", "location_id": "",
+         "basis_id": "", "writer": "facilitator", "note": "진행자 추가"}
+        for e in icfg.get("extra_queries", [])
+    ])
+    rows = pd.concat([b_rows, writers, extra], ignore_index=True)
 
     template = pd.read_excel(cfg["output_path"], sheet_name=["B_가맹점표본", "D_시장표본"])
     families = load_config(args.families)["families"]
@@ -75,8 +80,8 @@ def main() -> None:
 
     active = queries[queries["status"] == "active"]
     counts = active.groupby(["bundle", "split"]).size().unstack(fill_value=0)
-    logger.info("입력 %d줄(사람 B %d + 작성자 %d) → 쿼리 %d개(합친 중복 %d)", len(rows), len(b_rows), len(writers),
-                len(queries), len(rows) - len(queries))
+    logger.info("입력 %d줄(사람 B %d + 작성자 %d + 진행자 %d) → 쿼리 %d개(합친 중복 %d)", len(rows), len(b_rows),
+                len(writers), len(extra), len(queries), len(rows) - len(queries))
     logger.info("묶음 × split(활성):\n%s", counts.to_string())
     excluded = queries[queries["status"] == "excluded"]
     if len(excluded):
@@ -86,19 +91,12 @@ def main() -> None:
                 queries["old_benchmark_split"].isin(["val", "test"]).sum())
     logger.info("가정위치 출처: %s / B 지역표현 자동 추출 %d개", queries["location_source"].value_counts().to_dict(),
                 (queries["region_text_source"] == "auto").sum())
-    logger.info("AI 초안(따로 저장): %d줄", len(ai_draft))
     if args.dry_run:
         logger.info("[dry-run] 파일을 쓰지 않았습니다.")
         return
 
     out = Path(icfg["output"])
     queries.to_csv(out, index=False, encoding="utf-8-sig", lineterminator="\n")
-    draft = pd.DataFrame({
-        "query": ai_draft["질의"], "bundle": ai_draft["묶음"], "intent": ai_draft["의도"], "region_text": ai_draft["지역표현"],
-        "location_id": ai_draft["가정위치ID"], "basis_id": ai_draft["근거ID"], "method": ai_draft["작성방식"],
-        "split": "ai_draft",
-    })
-    draft.to_csv(icfg["ai_draft_output"], index=False, encoding="utf-8-sig", lineterminator="\n")
     meta = {
         "version": cfg["version"],
         "seed": cfg["random_seed"],
@@ -107,10 +105,9 @@ def main() -> None:
         "queries": len(queries),
         "active_by_bundle_split": {b: counts.loc[b].to_dict() for b in counts.index},
         "excluded": len(excluded),
-        "ai_draft_rows": len(draft),
     }
     out.with_suffix(".meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-    logger.info("저장: %s, %s", out, icfg["ai_draft_output"])
+    logger.info("저장: %s", out)
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@
 - 검수만 한 쿼리는 "사람이 쓴 쿼리"가 아니다. 검수자는 AI가 내놓은 표현 범위 안에서 고르기 때문이다.
 
 **처리**
-- AI 초안 약 350개(A·C·D·E)는 `ai_draft`로 표시해 dev 보조로만 쓴다. test에는 넣지 않는다.
+- AI 초안 약 350개(A·C·D·E)는 쓰지 않는다(팀 작성본에 원본만 남김).
 - A·C·D·E 350개는 아래 절차로 사람이 새로 쓴다.
 - B 150개는 사람이 쓴 것이므로 유지한다. 단, 지역표현과 가정위치를 채운다(4단계).
 
@@ -89,7 +89,7 @@
 
 ## 5단계 — 넘기기
 
-- 회수한 작성자 파일(한 파일 배치)을 `data/query/writers_completed/`에 둔다. AI 초안은 팀 작성본(`data/query/service_queryset_v1_team_completed.xlsx`)에 그대로 둔다.
+- 회수한 작성자 파일(한 파일 배치)을 `data/query/writers_completed/`에 둔다. 팀 작성본(`data/query/service_queryset_v1_team_completed.xlsx`)에서는 사람이 쓴 B만 가져온다.
 - `python scripts/import_service_queries.py`로 가져온다. 중복 합치기, 제외, dev/test, 가정위치 규칙은 `docs/SERVICE_QUERYSET.md` 4절에 있다.
   dev/test는 작성자가 아니라 근거(업종·카드·가맹점·시장) 단위로 나눈다 — 같은 카드의 쿼리가 dev와 test에 갈라지지 않게.
 

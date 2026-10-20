@@ -66,13 +66,14 @@ python scripts/make_service_queryset_template.py --dry-run  # 시트별 행 수�
 
 ```bash
 python scripts/import_service_queries.py --dry-run   # 묶음 × split 개수, 제외·중복 요약만
-python scripts/import_service_queries.py             # → data/query/service_queries_v1.csv (+ _ai_draft.csv, .meta.json)
+python scripts/import_service_queries.py             # → data/query/service_queries_v1.csv (+ .meta.json)
 ```
 
 - **입력**
   - 작성자 완료본 `data/query/writers_completed/서비스셋_직접작성_v1_3명_completed.xlsx`: W1~W3의 A·C·D·E
   - 팀 작성본 `data/query/service_queryset_v1_team_completed.xlsx`: 사람이 쓴 B 150개만 쓴다. 나머지 A·C·D·E 350개는 AI 초안이라
-    `service_queries_v1_ai_draft.csv`로 따로 두고 test에 넣지 않는다.
+    쓰지 않는다(2026-10-20 결정 — 합성 학습 데이터 계획을 접어 생성 예시로 쓸 곳도 없음).
+  - 설정 `import.extra_queries`: 진행자가 직접 더한 쿼리(`writers=facilitator`). 지금은 E 3개(신세계, 샤넬, 5성급 호텔)
 - **같은 쿼리 합치기**: 공백을 지우고 소문자로 바꿔 같은 문자열이면 한 쿼리로 합친다. 몇 명이 썼는지는 `n_writers`·`writers`에 남긴다.
   여러 묶음에 나오면 B > D > C > A > E 순서로 앞 묶음에 두고, 나머지는 `also_in_bundles`에 적는다.
 - **제외**(`status=excluded`): 다음 두 경우다. 행은 지우지 않는다.
