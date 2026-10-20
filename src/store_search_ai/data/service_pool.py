@@ -137,3 +137,22 @@ def annotation_sheet(pairs: pd.DataFrame, queries: pd.DataFrame, corpus: pd.Data
         market_name=pairs["doc_id"].map(c["market_name"]), relevance="", uncertain="", annotator_note="",
     )
     return sheet.sample(frac=1, random_state=seed).reset_index(drop=True)[SHEET_COLUMNS]
+
+
+def runs_outside_radius(runs: pd.DataFrame, queries: pd.DataFrame, corpus: pd.DataFrame, radius_km: float) -> dict[str, int]:
+    """시스템별로, 지금 쿼리 가정위치에서 반경 밖이거나 지금 쿼리에 없는 run 행 수. 0이 아니면 쿼리 위치가 바뀐 뒤의
+    옛 run이다(예: Colab run을 다시 만들지 않음) — 그대로 pool을 만들면 반경 밖 가게를 판정하게 된다."""
+
+    q = queries.set_index("query_id")[["latitude", "longitude"]]
+    c = corpus.set_index("doc_id")[["latitude", "longitude"]]
+    known = runs["query_id"].isin(q.index) & runs["doc_id"].isin(c.index)
+    out = {}
+    for system, frame in runs.groupby("system"):
+        ok = known.loc[frame.index]
+        f = frame[ok]
+        qa, da = q.loc[f["query_id"]].to_numpy(dtype=float), c.loc[f["doc_id"]].to_numpy(dtype=float)
+        a, b = np.radians(qa), np.radians(da)
+        h = np.sin((b[:, 0] - a[:, 0]) / 2) ** 2 + np.cos(a[:, 0]) * np.cos(b[:, 0]) * np.sin((b[:, 1] - a[:, 1]) / 2) ** 2
+        dist = 2 * EARTH_RADIUS_KM * np.arcsin(np.sqrt(h))
+        out[system] = int((~ok).sum() + (dist > radius_km + 1e-6).sum())
+    return out

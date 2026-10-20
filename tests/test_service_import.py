@@ -27,6 +27,10 @@ def _markets():
     return pd.DataFrame({"시장ID": ["M001", "M002"], "위도": [37.5, 35.1], "경도": [127.0, 129.0]})
 
 
+def _points():
+    return pd.DataFrame({"doc_id": ["z9", "a1", "m5"], "latitude": [36.0, 37.0, 35.0], "longitude": [127.0, 128.0, 129.0]})
+
+
 def _stores():
     return pd.DataFrame({"표본ID": ["S001"], "가맹점명": ["대박축산"], "주소": ["서울특별시 중랑구 묵동 1"],
                          "시장명": ["묵동시장"], "위도": [37.6], "경도": [127.08]})
@@ -80,11 +84,14 @@ def test_split_groups_keeps_same_basis_together_and_is_deterministic():
 def test_assign_locations_by_bundle():
     queries = merge_duplicates(_rows([("묵동 대박축산", "B", "S001", "team:x"), ("망원시장 떡집", "D", "M002", "W1", "M002"),
                                       ("화분", "C", "C027", "W1")]), ["B", "D", "C"])
-    out = assign_locations(queries, _stores(), _markets()).set_index("query")
+    out = assign_locations(queries, _stores(), _markets(), _points()).set_index("query")
     assert out.loc["묵동 대박축산", "location_source"] == "store" and out.loc["묵동 대박축산", "region_text"] == "묵동"
     assert out.loc["망원시장 떡집", "location_id"] == "M002" and out.loc["망원시장 떡집", "location_source"] == "market"
-    assert out.loc["화분", "location_source"] == "auto"
-    assert out.loc["화분", "location_id"] == auto_location("화 분", _markets())   # 공백과 무관하게 같은 시장
+    assert out.loc["화분", "location_source"] == "auto_store"
+    sorted_points = _points().sort_values("doc_id").reset_index(drop=True)
+    assert out.loc["화분", "location_id"] == f"doc:{auto_location('화 분', sorted_points)['doc_id']}"   # 공백과 무관
+    shuffled = assign_locations(queries, _stores(), _markets(), _points().iloc[::-1]).set_index("query")
+    assert shuffled.loc["화분", "location_id"] == out.loc["화분", "location_id"]      # 코퍼스 행 순서와 무관
 
 
 def test_build_excludes_old_train_and_configured_queries():
@@ -92,7 +99,7 @@ def test_build_excludes_old_train_and_configured_queries():
                   ("화분", "C", "C027", "W2")])
     out = build_service_queries(
         rows, ["C", "E"], {"반찬가게": "train", "커튼": "test"}, [{"query": "백화점", "reason": "가맹점 있음"}],
-        _stores(), _markets(), 0.25, 1,
+        _stores(), _markets(), _points(), 0.25, 1,
     ).set_index("query")
     assert out.loc["반찬가게", "status"] == "excluded" and out.loc["반찬가게", "split"] == ""
     assert out.loc["백화점", "exclude_reason"] == "가맹점 있음"

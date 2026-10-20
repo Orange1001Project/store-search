@@ -65,13 +65,15 @@ def main() -> None:
     families = load_config(args.families)["families"]
     inactive = {r["query_id"] for r in load_config(bench["query_set"]["inactive_queries_path"])["inactive_queries"]}
 
+    corpus = pd.read_parquet(bench["corpus_path"],
+                             columns=["doc_id", "store_name", "item_text", "latitude", "longitude", "geo_status"])
+    points = corpus.loc[corpus["geo_status"] == "VALID", ["doc_id", "latitude", "longitude"]]
     queries = build_service_queries(
         rows, icfg["bundle_priority"], old_benchmark_splits(families, inactive), icfg["exclude_queries"],
-        template["B_가맹점표본"], template["D_시장표본"], cfg["split"]["dev_share"], cfg["random_seed"],
+        template["B_가맹점표본"], template["D_시장표본"], points, cfg["split"]["dev_share"], cfg["random_seed"],
     )
 
     # E는 정말 가맹점이 없는지 판정 전에 볼 수 있게, 상호·취급품목에 그 문자열이 몇 번 나오는지 붙인다
-    corpus = pd.read_parquet(bench["corpus_path"], columns=["store_name", "item_text"])
     text = (corpus["store_name"].fillna("") + " " + corpus["item_text"].fillna("")).str.replace(" ", "", regex=False)
     queries["corpus_hits"] = [
         str(int(text.str.contains(q.replace(" ", ""), regex=False).sum())) if b == "E" else ""

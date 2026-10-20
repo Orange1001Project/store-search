@@ -86,7 +86,11 @@ python scripts/import_service_queries.py             # → data/query/service_qu
   - D: 고른 시장
   - B 개별 가맹점: 표본 가맹점 좌표
   - B 브랜드: 작성자가 고른 시장
-  - A·C·E: 쿼리 문자열 해시로 고른 표본 시장(`location_source=auto`)
+  - A·C·E: 쿼리 문자열 해시로 **전체 가맹점 중 하나**를 골라 그 좌표(`location_source=auto_store`, `location_id=doc:<doc_id>`).
+    가맹점이 밀집한 곳일수록 자주 뽑혀 상권 규모에 비례한다. 검색 로그가 없을 때 쓰는 **사용자 위치 대용 가정**이며, 표준 방식은 로그의
+    (쿼리, 위치) 쌍을 그대로 쓰는 것이다. 로그를 확보하면 그 분포로 바꾸고, 결과 보고에는 대용 가정임을 적는다.
+    쿼리 내용과 무관하게 고른다(정답이 있는 곳을 고르면 평가가 쉬워지는 쪽으로 치우침).
+    2026-10-20에 바꿨다. 이전 방식은 표본 시장 151곳을 같은 확률로 골라 작은 시장이 과대표집됐고, 1km 안 후보가 50곳 미만인 쿼리가 44개 → 33개로 줄었다.
   - B 개별 가맹점 쿼리의 지역 부분("묵동 대박축산"의 "묵동")은 주소·시장명과 맞춰 자동으로 채운다(`region_text_source=auto`).
     상호의 지점명과 겹치는 지역("안산 고잔 숯토리" → 지점 "안산고잔점")은 잡지 못한다.
 - **E**: `corpus_hits`에 상호·취급품목에서 그 문자열이 몇 번 나오는지 적는다. 많이 나오는 것(백화점 621, 명품 419 등)은 판정 결과에 따라 제외하거나 A로 옮긴다.
@@ -106,7 +110,7 @@ python scripts/import_service_queries.py             # → data/query/service_qu
 판정 기준은 `docs/SERVICE_ANNOTATION_GUIDELINE.md`에 있다. 판정은 반경 2km 안 가맹점으로 하고, 채점은 1km(현재 서비스)와 2km로 한다.
 
 ```bash
-python scripts/build_service_pool.py export          # 반경 안 가맹점 129,608개·쿼리 → colab_upload/service_eval/ (Colab 입력)
+python scripts/build_service_pool.py export          # 반경 안 가맹점(약 15만 개)·쿼리 → colab_upload/service_eval/ (Colab 입력)
 #   Colab: colab/service_dense_runs.ipynb → bge_m3_ft_mj_20261014_0743.csv, bge_m3.csv → benchmark/service_ko_v1/runs/
 python scripts/build_service_pool.py runs            # char BM25·키워드 후보 run(로컬, 약 3분)
 python scripts/build_service_pool.py pool --dry-run  # depth별 판정 건수
@@ -115,4 +119,6 @@ python scripts/build_service_pool.py pool --round service_v1 --depth 10
 
 - BM25·키워드 후보 쿼리에서는 서술어('파는', '곳')와 지역 표현을 뺀다. 후보가 이미 반경 안이라, 지역 단어를 남기면 지점명이 같은
   아무 가게나 끌려오기 때문이다.
-- BM25·키워드 두 run만으로 잰 판정 건수: depth 10이면 5,272쌍(쿼리당 10.6), depth 20이면 10,097쌍. 임베딩 run 두 개를 더하면 늘어난다.
+- 쿼리 위치가 바뀌면 모든 run을 다시 만든다. `pool`은 run 결과가 지금 쿼리 위치의 반경 밖이면 멈춘다(옛 Colab run을 쓰는 실수 방지).
+  Colab 노트북은 Drive에 같은 이름의 결과가 있으면 건너뛰므로, 다시 돌릴 때는 Drive의 옛 `<모델>.csv`를 먼저 지운다.
+- 판정 건수(첫 위치 기준, 4개 run): depth 10이면 10,549쌍(쿼리당 21.2), depth 20이면 20,562쌍.

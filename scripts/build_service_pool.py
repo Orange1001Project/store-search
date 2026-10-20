@@ -38,6 +38,7 @@ from store_search_ai.data.service_pool import (
     keyword_run,
     lexical_query,
     pool_pairs,
+    runs_outside_radius,
     top_k_run,
 )
 from store_search_ai.pipeline.common import load_config, sha256_file
@@ -168,6 +169,10 @@ def pool(args, cfg: dict, bench: dict) -> None:
         raise SystemExit("run이 없습니다 — 먼저 runs")
     all_runs = pd.concat([pd.read_csv(p, encoding="utf-8-sig") for p in run_files], ignore_index=True)
     queries, corpus, _cands = load_inputs(cfg, bench)
+    stale = {k: v for k, v in runs_outside_radius(all_runs, queries, corpus, jcfg["judge_radius_km"]).items() if v}
+    if stale:
+        raise SystemExit(f"반경 밖이거나 지금 쿼리에 없는 run 행이 있습니다 {stale} — 쿼리 위치가 바뀐 뒤의 옛 run입니다. "
+                         "export → Colab → runs를 다시 하세요.")
 
     rows = []
     for d in sorted({5, 10, 20, args.depth or jcfg["depth"]}):

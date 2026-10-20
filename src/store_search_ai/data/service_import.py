@@ -5,7 +5,8 @@
 - 기존 벤치마크(query_families_v1) 쿼리와 같은 문자열을 표시한다. 기존 train과 같으면 그 쿼리로 학습한 모델이 유리하므로 제외한다.
 - 묶음마다 dev/test를 나눈다. 같은 근거(업종·카드·가맹점·시장)의 쿼리는 같은 쪽에 둔다 — dev에서 본 카드·업종이 test에 다시
   나오지 않게(그룹 단위 분할).
-- 가정위치를 붙인다: D는 고른 시장, B는 표본 가맹점(브랜드 쿼리는 작성자가 고른 시장), 나머지는 쿼리 문자열로 정한 시장(재현 가능).
+- 가정위치를 붙인다: D는 고른 시장, B는 표본 가맹점(브랜드 쿼리는 작성자가 고른 시장), 나머지는 쿼리 문자열로 정한 가맹점의
+  좌표(전체 가맹점에서 고르므로 가맹점이 밀집한 곳일수록 자주 뽑힘 — 검색 로그가 없을 때의 사용자 위치 대용, 재현 가능).
 """
 
 from __future__ import annotations
@@ -132,17 +133,25 @@ def split_groups(queries: pd.DataFrame, dev_share: float, seed: int) -> pd.Serie
     return split
 
 
-def auto_location(query: str, markets: pd.DataFrame) -> str:
-    """지역이 없는 쿼리의 가정위치: 쿼리 문자열의 해시로 시장을 고른다(입력 순서와 무관하게 재현)."""
+def auto_location(query: str, points: pd.DataFrame) -> pd.Series:
+    """지역이 없는 쿼리의 가정위치: 쿼리 문자열의 해시로 가맹점 하나를 골라 그 좌표를 쓴다.
+
+    `points`는 좌표가 있는 전체 가맹점(doc_id, latitude, longitude). 가맹점마다 같은 확률이라 상권이 클수록 자주 뽑힌다 —
+    "사용자는 가게가 많은 곳에 많다"는 대용 가정(2026-10-20; 이전에는 표본 시장 151곳을 같은 확률로 골라 작은 시장이 과대표집됐다).
+    쿼리 내용과 무관하게 고른다(정답이 있는 곳을 고르면 평가가 쉬워지는 쪽으로 치우친다). doc_id 순으로 정렬해 쓰므로
+    코퍼스 파일의 행 순서와 무관하게 재현된다.
+    """
 
     digest = int(hashlib.sha256(normalize(query).encode("utf-8")).hexdigest(), 16)
-    return str(markets["시장ID"].iloc[digest % len(markets)])
+    return points.iloc[digest % len(points)]
 
 
-def assign_locations(queries: pd.DataFrame, stores: pd.DataFrame, markets: pd.DataFrame) -> pd.DataFrame:
+def assign_locations(queries: pd.DataFrame, stores: pd.DataFrame, markets: pd.DataFrame,
+                     points: pd.DataFrame) -> pd.DataFrame:
     """가정위치(location_id·좌표·출처)와 B 개별 가맹점 쿼리의 지역표현을 채운다."""
 
     stores = stores.set_index("표본ID")
+    points = points.sort_values("doc_id").reset_index(drop=True)
     markets_by_id = markets.set_index("시장ID")
     loc_ids, lats, lons, sources, regions, region_sources = [], [], [], [], [], []
     for row in queries.itertuples(index=False):
@@ -157,14 +166,18 @@ def assign_locations(queries: pd.DataFrame, stores: pd.DataFrame, markets: pd.Da
                 region = detect_region_text(row.query, store["가맹점명"], store["주소"], store["시장명"])
                 region_source = "auto" if region else ""
         else:
-            loc, source = row.location_id, "market"
-            if loc not in markets_by_id.index:
-                loc, source = auto_location(row.query, markets), "auto"
-            market = markets_by_id.loc[loc]
-            loc_ids.append(loc)
-            lats.append(float(market["위도"]))
-            lons.append(float(market["경도"]))
-            sources.append(source)
+            if row.location_id in markets_by_id.index:
+                market = markets_by_id.loc[row.location_id]
+                loc_ids.append(row.location_id)
+                lats.append(float(market["위도"]))
+                lons.append(float(market["경도"]))
+                sources.append("market")
+            else:
+                point = auto_location(row.query, points)
+                loc_ids.append(f"doc:{point['doc_id']}")
+                lats.append(float(point["latitude"]))
+                lons.append(float(point["longitude"]))
+                sources.append("auto_store")
         regions.append(region)
         region_sources.append(region_source)
     return queries.assign(location_id=loc_ids, latitude=lats, longitude=lons, location_source=sources,
@@ -178,6 +191,7 @@ def build_service_queries(
     exclude: list[dict],
     stores: pd.DataFrame,
     markets: pd.DataFrame,
+    points: pd.DataFrame,
     dev_share: float,
     seed: int,
 ) -> pd.DataFrame:
@@ -194,7 +208,7 @@ def build_service_queries(
     split = pd.Series("", index=queries.index, dtype=object)
     split[active] = split_groups(queries[active], dev_share, seed)
     queries = queries.assign(split=split)
-    queries = assign_locations(queries, stores, markets)
+    queries = assign_locations(queries, stores, markets, points)
     counters: dict[str, int] = {}
     ids = []
     for bundle in queries["bundle"]:
