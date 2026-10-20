@@ -78,6 +78,9 @@ def main() -> None:
         for q, b in zip(queries["query"], queries["bundle"], strict=True)
     ]
 
+    keywords = cfg["judging"]["attribute_keywords"]
+    queries["attribute"] = queries["query"].map(lambda q: "|".join(k for k in keywords if k in q))
+
     active = queries[queries["status"] == "active"]
     counts = active.groupby(["bundle", "split"]).size().unstack(fill_value=0)
     logger.info("입력 %d줄(사람 B %d + 작성자 %d + 진행자 %d) → 쿼리 %d개(합친 중복 %d)", len(rows), len(b_rows),
@@ -89,6 +92,8 @@ def main() -> None:
     logger.info("여러 명이 쓴 쿼리 %d개, 다른 묶음에도 나온 쿼리 %d개, 기존 벤치마크 val/test와 같은 문자열 %d개",
                 (queries["n_writers"] > 1).sum(), (queries["also_in_bundles"] != "").sum(),
                 queries["old_benchmark_split"].isin(["val", "test"]).sum())
+    logger.info("속성 쿼리 %d개: %s", (queries["attribute"] != "").sum(),
+                ", ".join(queries.loc[queries["attribute"] != "", "query"]))
     logger.info("가정위치 출처: %s / B 지역표현 자동 추출 %d개", queries["location_source"].value_counts().to_dict(),
                 (queries["region_text_source"] == "auto").sum())
     if args.dry_run:

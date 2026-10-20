@@ -100,3 +100,19 @@ python scripts/import_service_queries.py             # → data/query/service_qu
   | D | 13 | 38 |
   | E | 5 | 15 |
 
+
+### 판정 pool 만들기 (반경 안)
+
+판정 기준은 `docs/SERVICE_ANNOTATION_GUIDELINE.md`에 있다. 판정은 반경 2km 안 가맹점으로 하고, 채점은 1km(현재 서비스)와 2km로 한다.
+
+```bash
+python scripts/build_service_pool.py export          # 반경 안 가맹점 129,608개·쿼리 → colab_upload/service_eval/ (Colab 입력)
+#   Colab: colab/service_dense_runs.ipynb → bge_m3_ft_mj_20261014_0743.csv, bge_m3.csv → benchmark/service_ko_v1/runs/
+python scripts/build_service_pool.py runs            # char BM25·키워드 후보 run(로컬, 약 3분)
+python scripts/build_service_pool.py pool --dry-run  # depth별 판정 건수
+python scripts/build_service_pool.py pool --round service_v1 --depth 10
+```
+
+- BM25·키워드 후보 쿼리에서는 서술어('파는', '곳')와 지역 표현을 뺀다. 후보가 이미 반경 안이라, 지역 단어를 남기면 지점명이 같은
+  아무 가게나 끌려오기 때문이다.
+- BM25·키워드 두 run만으로 잰 판정 건수: depth 10이면 5,272쌍(쿼리당 10.6), depth 20이면 10,097쌍. 임베딩 run 두 개를 더하면 늘어난다.

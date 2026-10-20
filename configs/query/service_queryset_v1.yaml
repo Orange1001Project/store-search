@@ -149,3 +149,20 @@ import:
     - {query: 신세계, bundle: E, intent: 범위 밖(백화점 브랜드)}
     - {query: 샤넬, bundle: E, intent: 범위 밖(명품 브랜드)}
     - {query: 5성급 호텔, bundle: E, intent: 범위 밖(고급 호텔)}
+
+# 판정·pool — docs/SERVICE_ANNOTATION_GUIDELINE.md, scripts/build_service_pool.py
+judging:
+  benchmark_dir: benchmark/service_ko_v1
+  # 판정은 2km 안 가맹점으로 하고, 1km(현재 서비스)·2km 두 반경으로 채점한다. 1km ⊂ 2km라 판정 한 번으로 둘 다 잰다.
+  judge_radius_km: 2
+  report_radii_km: [1, 2]
+  # 시스템마다 반경 안 상위 몇 개를 pool에 넣을지. --dry-run 표로 판정 건수를 보고 정한다.
+  depth: 10
+  run_depth: 50            # run 파일에는 반경 안 상위 50개까지 남긴다(채점용)
+  keyword_per_query: 10    # 쿼리 단어가 상호·취급품목에 들어간 가맹점 후보(점수 높은 순)
+  dense_models:
+    - configs/models/bge_m3_ft_mj_20261014_0743.yaml
+    - configs/models/bge_m3.yaml
+  double_annotation_share: 0.2
+  # 데이터에 없는 속성(영업시간·예약·평판)이 들어간 쿼리 표시 — 판정은 업종만, 결과는 따로 집계
+  attribute_keywords: [단체 예약, 단체 회식, 예약, 늦게, 늦은, 24시, 심야, 맛집, 분위기, 넓은, 시설 좋은, 잘하는, 잘 찍는, 맛있는, 배달, 드라이브 스루, 가능한]

@@ -47,3 +47,14 @@ stack_eval/<split>/         ← rerank_scores.ipynb: rerank_pairs.csv(올림) �
 3. 로컬: 그 파일을 `results/stack_eval/<split>/`에 넣고 `--export-pairs` 없이 `--rerankers ...`로 다시 실행 → 캐시 점수로 비교표
 
 채점 함수 `load_reranker`는 `scripts/eval_retrieval_stack.py`와 같은 코드다(`tests/test_eval_retrieval_stack.py`가 확인).
+
+## `service_dense_runs.ipynb` — 서비스셋 임베딩 run(반경 안 상위 결과)
+
+서비스셋 판정 pool·채점용. 쿼리 가정위치에서 반경(2km) 안 가맹점만 놓고 임베딩 모델 상위 50개를 만든다(`docs/SERVICE_ANNOTATION_GUIDELINE.md`).
+
+1. 로컬: `python scripts/build_service_pool.py export` → `colab_upload/service_eval/`의 세 파일을 Drive `store-search-ai/service_eval/`에 올림
+2. bge-m3 mj 모델이 Drive `store-search-ai/runs/finetune/bge_m3_ft_mj_20261014_0743/`에 없으면 로컬 `models/` 폴더를 올림
+3. Colab(GPU): 위에서부터 실행 → 같은 폴더에 `bge_m3_ft_mj_20261014_0743.csv`, `bge_m3.csv`
+4. 로컬: 두 파일을 `benchmark/service_ko_v1/runs/`에 넣고 `build_service_pool.py pool --dry-run`
+
+`# @cell runs`는 `tests/test_service_dense_notebook.py`가 로컬 `service_pool`과 같은 결과인지 확인한다.
