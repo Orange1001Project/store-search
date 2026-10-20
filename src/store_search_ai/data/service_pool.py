@@ -125,7 +125,11 @@ SHEET_COLUMNS = ["judgment_id", "query_id", "query", "bundle", "intent_hint", "d
 
 
 def annotation_sheet(pairs: pd.DataFrame, queries: pd.DataFrame, corpus: pd.DataFrame, seed: int) -> pd.DataFrame:
-    """판정 시트. 시스템·순위·거리는 넣지 않고, 행 순서를 섞는다(판정자가 출처를 모르게)."""
+    """판정 시트. 시스템·순위·거리는 넣지 않는다(판정자가 출처를 모르게).
+
+    쿼리끼리 모아 둔다 — 쿼리 순서를 섞고, 한 쿼리 안의 가맹점 순서도 섞는다. TREC 판정처럼 한 쿼리의 후보를 이어서 보면
+    기준이 흔들리지 않고 빠르다. 순위는 쿼리 안에서 섞으므로 드러나지 않는다.
+    """
 
     q = queries.set_index("query_id")
     c = corpus.set_index("doc_id")
@@ -136,7 +140,37 @@ def annotation_sheet(pairs: pd.DataFrame, queries: pd.DataFrame, corpus: pd.Data
         store_name=pairs["doc_id"].map(c["store_name"]), item_text=pairs["doc_id"].map(c["item_text"]).fillna(""),
         market_name=pairs["doc_id"].map(c["market_name"]), relevance="", uncertain="", annotator_note="",
     )
-    return sheet.sample(frac=1, random_state=seed).reset_index(drop=True)[SHEET_COLUMNS]
+    rng = np.random.default_rng(seed)
+    query_order = {qid: i for i, qid in enumerate(rng.permutation(sorted(sheet["query_id"].unique())))}
+    sheet = sheet.assign(_q=sheet["query_id"].map(query_order), _r=rng.random(len(sheet)))
+    return sheet.sort_values(["_q", "_r"]).reset_index(drop=True)[SHEET_COLUMNS]
+
+
+def assign_annotators(
+    pairs_per_query: pd.Series,
+    double: set[str],
+    annotators: dict[str, str | None],
+    query_writers: dict[str, set[str]],
+    seed: int,
+) -> dict[str, set[str]]:
+    """판정자별로 판정할 쿼리. 이중 판정 쿼리는 모두에게, 나머지는 판정 쌍 수가 비슷하도록 한 명에게만 준다.
+
+    `annotators`는 판정자 이름 → 그 사람이 쓴 쿼리의 작성자 ID(W1 등, 작성자가 아니면 None). 자기가 쓴 쿼리는 자기 답에 후하게
+    판정하기 쉬우므로 가능하면 다른 사람에게 준다(모두가 쓴 쿼리면 덜 맡은 사람에게).
+    """
+
+    names = list(annotators)
+    out = {n: set(double) for n in names}
+    load = {n: 0 for n in names}
+    rng = np.random.default_rng(seed)
+    rest = [q for q in rng.permutation(sorted(pairs_per_query.index)) if q not in double]
+    rest.sort(key=lambda q: -int(pairs_per_query[q]))          # 큰 쿼리부터 → 부하가 고르게
+    for qid in rest:
+        allowed = [n for n in names if annotators[n] is None or annotators[n] not in query_writers.get(qid, set())]
+        pick = min(allowed or names, key=lambda n: (load[n], names.index(n)))
+        out[pick].add(qid)
+        load[pick] += int(pairs_per_query[qid])
+    return out
 
 
 def runs_outside_radius(runs: pd.DataFrame, queries: pd.DataFrame, corpus: pd.DataFrame, radius_km: float) -> dict[str, int]:

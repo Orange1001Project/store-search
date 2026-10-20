@@ -3,6 +3,7 @@ import pandas as pd
 
 from store_search_ai.data.service_pool import (
     annotation_sheet,
+    assign_annotators,
     candidates_within,
     double_annotation_queries,
     haversine_km,
@@ -64,3 +65,21 @@ def test_lexical_query_drops_function_words_and_region():
     assert lexical_query("술안주 파는 곳") == "술안주"
     assert lexical_query("뚝섬 식당", "뚝섬") == "식당"
     assert lexical_query("파는 곳") == "파는 곳"            # 남는 단어가 없으면 원래 쿼리
+
+
+def test_annotation_sheet_keeps_each_query_contiguous():
+    pairs = pd.DataFrame({"query_id": ["q1", "q2"] * 5, "doc_id": [f"d{i}" for i in range(10)], "pool_sources": "x"})
+    queries = pd.DataFrame({"query_id": ["q1", "q2"], "query": ["a", "b"], "bundle": ["A", "A"], "intent": ["", ""]})
+    corpus = pd.DataFrame({"doc_id": [f"d{i}" for i in range(10)], "store_name": "s", "item_text": "", "market_name": "m"})
+    order = annotation_sheet(pairs, queries, corpus, 3)["query_id"].tolist()
+    assert order == sorted(order, key=order.index) and order.count(order[0]) == 5 and order[:5] == [order[0]] * 5
+
+
+def test_assign_annotators_balances_and_avoids_own_queries():
+    sizes = pd.Series({"q1": 30, "q2": 20, "q3": 10, "q4": 10, "q5": 5})
+    writers = {"q1": {"W1"}, "q2": {"W2"}, "q3": {"W1", "W2"}}
+    out = assign_annotators(sizes, {"q5"}, {"A": "W1", "B": "W2"}, writers, 0)
+    assert "q5" in out["A"] and "q5" in out["B"]                  # 이중 판정은 둘 다
+    assert "q1" in out["B"] and "q2" in out["A"]                  # 자기 쿼리는 상대에게
+    assert (out["A"] - {"q5"}).isdisjoint(out["B"] - {"q5"})      # 나머지는 한 명만
+    assert set().union(*out.values()) == set(sizes.index)

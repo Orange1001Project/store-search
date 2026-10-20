@@ -164,5 +164,8 @@ judging:
     - configs/models/bge_m3_ft_mj_20261014_0743.yaml
     - configs/models/bge_m3.yaml
   double_annotation_share: 0.2
+  # 판정자 → 그 사람이 쓴 쿼리의 작성자 ID(작성자가 아니면 null). 이중 판정 20%는 둘 다, 나머지는 판정 쌍이 비슷하게 한 명에게.
+  # 자기가 쓴 쿼리는 가능하면 다른 사람에게 준다(2026-10-20 판정자 2명).
+  annotators: {A: null, B: null}
   # 데이터에 없는 속성(영업시간·예약·평판)이 들어간 쿼리 표시 — 판정은 업종만, 결과는 따로 집계
   attribute_keywords: [단체 예약, 단체 회식, 예약, 늦게, 늦은, 24시, 심야, 맛집, 분위기, 넓은, 시설 좋은, 잘하는, 잘 찍는, 맛있는, 배달, 드라이브 스루, 가능한]

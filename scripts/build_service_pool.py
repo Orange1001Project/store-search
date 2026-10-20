@@ -33,6 +33,7 @@ import pandas as pd
 from store_search_ai.data.service_pool import (
     RUN_COLUMNS,
     annotation_sheet,
+    assign_annotators,
     candidates_within,
     double_annotation_queries,
     keyword_run,
@@ -196,10 +197,14 @@ def pool(args, cfg: dict, bench: dict) -> None:
     seed = cfg["random_seed"]
     sheet = annotation_sheet(pairs, queries, corpus, seed)
     double = double_annotation_queries(sorted(pairs["query_id"].unique()), share, seed)
+    writers = {qid: set(str(w).split("|")) for qid, w in zip(queries["query_id"], queries["writers"], strict=True)}
+    assignment = assign_annotators(pairs.groupby("query_id").size(), double, jcfg["annotators"], writers, seed)
     round_dir.mkdir(parents=True, exist_ok=True)
-    sheet.to_csv(round_dir / "annotation_A.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
-    sheet[sheet["query_id"].isin(double)].to_csv(round_dir / "annotation_B.csv", index=False, encoding="utf-8-sig",
-                                                lineterminator="\n")
+    for name, qids in assignment.items():
+        part = sheet[sheet["query_id"].isin(qids)].reset_index(drop=True)
+        part.to_csv(round_dir / f"annotation_{name}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+        write_annotation_xlsx(part, round_dir / f"판정_{name}.xlsx")
+        logger.info("판정자 %s: 쿼리 %d개(이중 판정 %d 포함), %d쌍", name, len(qids), len(double), len(part))
     pairs.to_csv(round_dir / "pool.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     queries.to_csv(bdir / "queries.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     manifest = {
@@ -212,12 +217,44 @@ def pool(args, cfg: dict, bench: dict) -> None:
         "pairs": len(pairs),
         "double_annotation_queries": len(double),
         "double_annotation_pairs": int(sheet["query_id"].isin(double).sum()),
+        "annotators": {name: {"writer_id": jcfg["annotators"][name], "queries": len(qids),
+                              "pairs": int(sheet["query_id"].isin(qids).sum())} for name, qids in assignment.items()},
         "runs_sha256": {p.name: sha256_file(p) for p in run_files},
         "queries_sha256": hashlib.sha256((bdir / "queries.csv").read_bytes()).hexdigest(),
         "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
     }
     (round_dir / "pool_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    logger.info("저장: %s (A %d행, B %d행)", round_dir, len(sheet), manifest["double_annotation_pairs"])
+    logger.info("저장: %s (전체 %d쌍, 이중 판정 %d쌍)", round_dir, len(sheet), manifest["double_annotation_pairs"])
+
+
+def write_annotation_xlsx(sheet: pd.DataFrame, path: Path) -> None:
+    """판정자용 엑셀: relevance(0~3)·uncertain(Y) 드롭다운, 채울 칸 색칠, 첫 행 고정. 회수는 이 파일이나 같은 열의 CSV로 받는다."""
+
+    from openpyxl.styles import Alignment, PatternFill
+    from openpyxl.utils import get_column_letter
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    widths = {"query": 22, "intent_hint": 22, "store_name": 26, "item_text": 30, "market_name": 22, "annotator_note": 30}
+    fill = PatternFill("solid", fgColor="FFF7D6")
+    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        sheet.to_excel(writer, sheet_name="판정", index=False)
+        ws = writer.sheets["판정"]
+        ws.freeze_panes = "C2"
+        cols = list(sheet.columns)
+        for i, col in enumerate(cols, start=1):
+            letter = get_column_letter(i)
+            ws.column_dimensions[letter].width = widths.get(col, 10)
+            if col in ("relevance", "uncertain", "annotator_note"):
+                for r in range(2, len(sheet) + 2):
+                    ws[f"{letter}{r}"].fill = fill
+            if col in ("item_text", "intent_hint"):
+                for r in range(2, len(sheet) + 2):
+                    ws[f"{letter}{r}"].alignment = Alignment(wrap_text=True, vertical="top")
+        for col, values in (("relevance", '"0,1,2,3"'), ("uncertain", '"Y"')):
+            letter = get_column_letter(cols.index(col) + 1)
+            dv = DataValidation(type="list", formula1=values, allow_blank=True)
+            dv.add(f"{letter}2:{letter}{len(sheet) + 1}")
+            ws.add_data_validation(dv)
 
 
 def main() -> None:
