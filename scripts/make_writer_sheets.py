@@ -45,6 +45,7 @@ WIDTHS = {"작성자": 7, "묶음": 6, "근거ID": 8, "재료": 48, "질의": 26
 FILL_COLUMNS = {"질의", "의도", "지역표현", "비고"}
 FILL = PatternFill("solid", fgColor="FFF7D6")
 SINGLE_FILE = "서비스셋_직접작성_v1.xlsx"
+EXTRA_C_FILE = "서비스셋_직접작성_v1_추가C.xlsx"
 
 
 def write_guide_sheet(writer: pd.ExcelWriter, name: str, guide: list[tuple[str, str]]) -> None:
@@ -85,6 +86,25 @@ def write_facilitator_sheets(writer: pd.ExcelWriter, table: pd.DataFrame, writer
                   "목표": [targets.get(k, "") for k in totals]}).to_excel(writer, sheet_name="합계", index=False)
 
 
+def write_extra_c(cfg: dict, writers: list[str], out_dir: Path, force: bool) -> None:
+    """추가 C 카드 파일: 작성자마다 모든 추가 카드 한 줄씩. 카드ID는 기존 카드 다음 번호부터."""
+
+    start = len(cfg["scenario_cards"]) + 1
+    cards = pd.DataFrame({"카드ID": [f"C{start + i:03d}" for i in range(len(cfg["scenario_cards_extra"]))],
+                          "상황": cfg["scenario_cards_extra"]})
+    path = out_dir / EXTRA_C_FILE
+    if path.exists() and not force:
+        raise SystemExit(f"{path}이 이미 있습니다(--force).")
+    guide = [g for g in PART1_GUIDE if not g[0].startswith("E")]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        write_guide_sheet(writer, "안내(C)", guide)
+        for i, w in enumerate(writers):
+            order = cards.sample(frac=1, random_state=cfg["random_seed"] + i).reset_index(drop=True)   # 사람마다 순서만 다르게
+            write_input_sheet(writer, f"{w}_추가_C", part1_rows(w, order, 0), "C")
+    logger.info("저장: %s (카드 %d장 × 작성자 %d명 = %d줄)", path, len(cards), len(writers), len(cards) * len(writers))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
@@ -94,6 +114,10 @@ def main() -> None:
         help="single: 한 파일에 시트로(기본) / per-writer: 작성자별 1부·2부 파일 + 진행자 배정표",
     )
     parser.add_argument("--force", action="store_true", help="출력 폴더가 있어도 덮어쓴다")
+    parser.add_argument(
+        "--extra-c", action="store_true",
+        help="추가 C 카드(설정 scenario_cards_extra)만 담은 파일을 만든다 — 작성자 모두 모든 카드(1부 C만, E 없음)",
+    )
     parser.add_argument(
         "--carry-over", default=None,
         help="이전 배정 파일(한 파일 배치)에 이미 쓴 답을 같은 작성자·묶음·근거ID 줄로 옮긴다(예: 작성자 수를 바꿀 때)",
@@ -109,6 +133,9 @@ def main() -> None:
     seed = cfg["random_seed"]
     template = args.template or cfg["output_path"]
     out_dir = Path(wcfg["output_dir"])
+    if args.extra_c:   # 추가 C 파일은 자기 파일만 검사한다(write_extra_c)
+        write_extra_c(cfg, writers, out_dir, args.force)
+        return
     single_path = out_dir / wcfg.get("single_file", SINGLE_FILE)
     existing = single_path.exists() if args.layout == "single" else any(out_dir.glob("W*_*.xlsx"))
     if existing and not (args.force or args.dry_run):

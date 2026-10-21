@@ -40,7 +40,7 @@ def writer_rows(sheets: dict[str, pd.DataFrame]) -> pd.DataFrame:
 
     frames = []
     for name, sheet in sheets.items():
-        if not re.fullmatch(r"W\d+_[12]부_[A-Z]_[A-Z]", name):
+        if not re.fullmatch(r"W\d+_([12]부_[A-Z]_[A-Z]|추가_[A-Z])", name):
             continue
         frame = sheet.copy()
         frame["질의"] = frame["질의"].map(_clean)
@@ -113,24 +113,37 @@ def old_benchmark_splits(families: list[dict], inactive_ids: set[str]) -> dict[s
     return out
 
 
-def split_groups(queries: pd.DataFrame, dev_share: float, seed: int) -> pd.Series:
-    """묶음마다 근거ID(없으면 쿼리) 단위로 dev/test를 나눈다. 그룹 순서를 seed로 섞어 앞에서부터 dev 몫만큼 dev."""
+def split_groups(queries: pd.DataFrame, dev_share: float, seed: int, fixed: dict[str, str] | None = None) -> pd.Series:
+    """묶음마다 근거ID(없으면 쿼리) 그룹 단위로 dev/test를 나눈다.
 
+    `fixed`(그룹 키 → split)에 있는 그룹은 그대로 둔다 — 쿼리를 나중에 더해도 이미 나눈 쿼리의 dev/test가 바뀌지 않게
+    (2026-10-21, 추가 C 카드). 나머지 그룹은 seed로 섞은 순서대로, 묶음의 dev 몫(고정 그룹 포함)이 찰 때까지 dev에 넣는다.
+    """
+
+    fixed = fixed or {}
     split = pd.Series("test", index=queries.index, dtype=object)
     for bundle, frame in queries.groupby("bundle"):
         group_key = frame["basis_id"].where(frame["basis_id"] != "", "q:" + frame["query"].map(normalize))
-        groups = sorted(group_key.unique())
+        sizes = group_key.value_counts()
+        dev = {g for g in sizes.index if fixed.get(f"{bundle}|{g}") == "dev"}
+        count = int(sizes[list(dev)].sum()) if dev else 0
+        free = sorted(g for g in sizes.index if f"{bundle}|{g}" not in fixed)
         rng = np.random.default_rng([seed, sum(map(ord, bundle))])
-        order = [groups[i] for i in rng.permutation(len(groups))]
-        target = dev_share * len(frame)
-        dev, count = set(), 0
-        for g in order:
-            if count >= target:
+        for g in [free[i] for i in rng.permutation(len(free))]:
+            if count >= dev_share * len(frame):
                 break
             dev.add(g)
-            count += int((group_key == g).sum())
+            count += int(sizes[g])
         split[frame.index[group_key.isin(dev)]] = "dev"
     return split
+
+
+def split_fixed_from(previous: pd.DataFrame) -> dict[str, str]:
+    """이전 쿼리 표에서 그룹 키 → split(활성 쿼리만)."""
+
+    prev = previous[previous["split"].isin(["dev", "test"])]
+    keys = prev["basis_id"].where(prev["basis_id"] != "", "q:" + prev["query"].map(normalize))
+    return {f"{b}|{k}": sp for b, k, sp in zip(prev["bundle"], keys, prev["split"], strict=True)}
 
 
 def auto_location(query: str, points: pd.DataFrame) -> pd.Series:
@@ -194,6 +207,7 @@ def build_service_queries(
     points: pd.DataFrame,
     dev_share: float,
     seed: int,
+    fixed_split: dict[str, str] | None = None,
 ) -> pd.DataFrame:
     queries = merge_duplicates(rows, priority)
     queries["old_benchmark_split"] = queries["query"].map(lambda q: old_splits.get(normalize(q), ""))
@@ -206,7 +220,7 @@ def build_service_queries(
     queries = queries.assign(status=status, exclude_reason=reason)
     active = queries["status"] == "active"
     split = pd.Series("", index=queries.index, dtype=object)
-    split[active] = split_groups(queries[active], dev_share, seed)
+    split[active] = split_groups(queries[active], dev_share, seed, fixed_split)
     queries = queries.assign(split=split)
     queries = assign_locations(queries, stores, markets, points)
     counters: dict[str, int] = {}

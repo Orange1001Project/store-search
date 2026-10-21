@@ -1,0 +1,24 @@
+{
+  "service_v1": {
+    "annotators": [
+      "A",
+      "B"
+    ],
+    "pairs": 10558,
+    "qrels_rows": 10450,
+    "needs_adjudication": 108,
+    "adjudication_pending": 108,
+    "excluded_from_gold": 0,
+    "reasons": {
+      "아무도 점수를 주지 않음(판단 보류)": 55,
+      "이진 판정이 다름": 53
+    },
+    "agreement": {
+      "pairs_scored_by_both": 2169,
+      "exact_agreement": 0.8944,
+      "binary_agreement": 0.9756,
+      "binary_kappa": 0.9005,
+      "quadratic_weighted_kappa": 0.9093
+    }
+  }
+}

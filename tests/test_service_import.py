@@ -105,3 +105,15 @@ def test_build_excludes_old_train_and_configured_queries():
     assert out.loc["백화점", "exclude_reason"] == "가맹점 있음"
     assert out.loc["커튼", "status"] == "active" and out.loc["커튼", "old_benchmark_split"] == "test"
     assert set(out["query_id"]) == {"sq_C001", "sq_C002", "sq_C003", "sq_E001"}
+
+
+def test_split_groups_keeps_fixed_groups_when_new_groups_are_added():
+    rows = _rows([(f"q{i}", "C", f"C{i // 3:03d}", "W1") for i in range(30)])
+    before = merge_duplicates(rows, ["C"])
+    first = split_groups(before, 0.25, seed=7)
+    fixed = {f"C|{b}": sp for b, sp in zip(before["basis_id"], first, strict=True)}
+    more = merge_duplicates(_rows([*[(f"q{i}", "C", f"C{i // 3:03d}", "W1") for i in range(30)],
+                                   *[(f"n{i}", "C", f"C{100 + i // 3:03d}", "W2") for i in range(15)]]), ["C"])
+    second = split_groups(more, 0.25, seed=7, fixed=fixed)
+    assert second[:30].tolist() == first.tolist()                      # 기존 쿼리는 그대로
+    assert 0.15 <= (second == "dev").mean() <= 0.35

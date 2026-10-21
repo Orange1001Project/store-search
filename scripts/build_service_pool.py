@@ -16,6 +16,10 @@
     python scripts/build_service_pool.py runs
     python scripts/build_service_pool.py pool --dry-run
     python scripts/build_service_pool.py pool --round service_v1 --depth 10
+    # anchor 사례(정답 없는 쿼리에 앵커 근처 위치 추가): 같은 단계를 --set anchor로
+    python scripts/build_service_pool.py export --set anchor   # → colab_upload/service_eval_anchor/
+    python scripts/build_service_pool.py runs --set anchor     # Colab run은 <benchmark_dir>/runs_anchor/에
+    python scripts/build_service_pool.py pool --set anchor --round service_v2 --depth 10
 """
 
 from __future__ import annotations
@@ -51,9 +55,27 @@ CACHE_DIR = Path("data/interim/service_eval")
 DOC_TEXT_COLUMN = "search_text_t1_minimal"   # 모델 평가와 같은 문서 텍스트(가맹점명 + 취급품목)
 
 
-def load_inputs(cfg: dict, bench: dict) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, np.ndarray]]:
-    queries = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
-    queries = queries[queries["status"] == "active"].reset_index(drop=True)
+SETS = {
+    # 평가 사례 묶음 → (Colab 입력 폴더, run 폴더 이름)
+    "main": (Path("colab_upload/service_eval"), "runs"),
+    "anchor": (Path("colab_upload/service_eval_anchor"), "runs_anchor"),
+}
+
+
+def load_inputs(cfg: dict, bench: dict, set_name: str = "main") -> tuple[pd.DataFrame, pd.DataFrame, dict[str, np.ndarray]]:
+    """평가 사례 표(query_id = 사례 ID, base_query_id = 판정에 쓰는 쿼리 ID), 코퍼스, 사례별 반경 안 후보.
+
+    main: 활성 쿼리(사례 ID = 쿼리 ID). anchor: instances.csv의 anchor 사례(scripts/build_service_instances.py).
+    """
+
+    if set_name == "anchor":
+        inst = pd.read_csv(Path(cfg["judging"]["benchmark_dir"]) / "instances.csv", encoding="utf-8-sig", keep_default_na=False)
+        queries = inst[inst["context"] == "anchor"].rename(columns={"query_id": "base_query_id"})
+        queries = queries.rename(columns={"instance_id": "query_id"}).reset_index(drop=True)
+    else:
+        queries = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
+        queries = queries[queries["status"] == "active"].reset_index(drop=True)
+        queries = queries.assign(base_query_id=queries["query_id"])
     corpus = pd.read_parquet(bench["corpus_path"], columns=[
         "doc_id", "store_name", "item_text", "market_name", "latitude", "longitude", "geo_status", DOC_TEXT_COLUMN])
     corpus = corpus[corpus["geo_status"] == "VALID"].reset_index(drop=True)
@@ -74,7 +96,7 @@ def encode(args, cfg: dict, bench: dict) -> None:
         SentenceTransformerEncoder,
     )
 
-    _, corpus, cands = load_inputs(cfg, bench)
+    _, corpus, cands = load_inputs(cfg, bench)   # 로컬 캐시는 main 사례만
     idx = union_index(cands)
     doc_ids = corpus["doc_id"].to_numpy()[idx]
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -96,9 +118,9 @@ def export(args, cfg: dict, bench: dict) -> None:
     """Colab(colab/service_dense_runs.ipynb) 입력: 판정 반경 안에 드는 가맹점과 활성 쿼리, 반경·depth."""
 
     jcfg = cfg["judging"]
-    queries, corpus, cands = load_inputs(cfg, bench)
+    queries, corpus, cands = load_inputs(cfg, bench, args.set)
     idx = union_index(cands)
-    out = Path("colab_upload/service_eval")
+    out = SETS[args.set][0]
     out.mkdir(parents=True, exist_ok=True)
     docs = corpus.iloc[idx][["doc_id", DOC_TEXT_COLUMN, "latitude", "longitude"]].rename(columns={DOC_TEXT_COLUMN: "text"})
     docs.to_csv(out / "docs.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
@@ -107,7 +129,7 @@ def export(args, cfg: dict, bench: dict) -> None:
     meta = {"judge_radius_km": jcfg["judge_radius_km"], "run_depth": jcfg["run_depth"], "docs": len(docs),
             "queries": len(queries), "doc_text": DOC_TEXT_COLUMN, "corpus_path": bench["corpus_path"]}
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-    logger.info("가맹점 %d개, 쿼리 %d개 → %s (Drive store-search-ai/service_eval/에 올림)", len(docs), len(queries), out)
+    logger.info("가맹점 %d개, 사례 %d개 → %s (Drive store-search-ai/%s/에 올림)", len(docs), len(queries), out, out.name)
 
 
 def runs(args, cfg: dict, bench: dict) -> None:
@@ -116,10 +138,10 @@ def runs(args, cfg: dict, bench: dict) -> None:
     )
 
     jcfg = cfg["judging"]
-    queries, corpus, cands = load_inputs(cfg, bench)
+    queries, corpus, cands = load_inputs(cfg, bench, args.set)
     idx = union_index(cands)
     doc_ids = corpus["doc_id"].to_numpy()
-    run_dir = Path(jcfg["benchmark_dir"]) / "runs"
+    run_dir = Path(jcfg["benchmark_dir"]) / SETS[args.set][1]
     run_dir.mkdir(parents=True, exist_ok=True)
     depth = jcfg["run_depth"]
 
@@ -140,7 +162,7 @@ def runs(args, cfg: dict, bench: dict) -> None:
     for model_cfg in jcfg["dense_models"]:
         mcfg = load_config(model_cfg)
         emb_path, ids_path = cache_paths(mcfg["name"])
-        if not emb_path.exists():
+        if args.set != "main" or not emb_path.exists():
             colab_run = run_dir / f"{mcfg['name']}.csv"
             if colab_run.exists():
                 logger.info("%s: 로컬 캐시 없음 — Colab에서 받은 run(%s)을 그대로 씀", mcfg["name"], colab_run)
@@ -165,21 +187,24 @@ def write_run(run: pd.DataFrame, path: Path) -> None:
 def pool(args, cfg: dict, bench: dict) -> None:
     jcfg = cfg["judging"]
     bdir = Path(jcfg["benchmark_dir"])
-    run_files = sorted((bdir / "runs").glob("*.csv"))
+    run_files = sorted((bdir / SETS[args.set][1]).glob("*.csv"))
     if not run_files:
         raise SystemExit("run이 없습니다 — 먼저 runs")
     all_runs = pd.concat([pd.read_csv(p, encoding="utf-8-sig") for p in run_files], ignore_index=True)
-    queries, corpus, _cands = load_inputs(cfg, bench)
+    queries, corpus, _cands = load_inputs(cfg, bench, args.set)
     stale = {k: v for k, v in runs_outside_radius(all_runs, queries, corpus, jcfg["judge_radius_km"]).items() if v}
     if stale:
         raise SystemExit(f"반경 밖이거나 지금 쿼리에 없는 run 행이 있습니다 {stale} — 쿼리 위치가 바뀐 뒤의 옛 run입니다. "
                          "export → Colab → runs를 다시 하세요.")
 
+    judged = previously_judged(bdir)
+    radii = sorted(set(jcfg["report_radii_km"]))   # 채점하는 반경마다 상위 depth개를 판정
     rows = []
     for d in sorted({5, 10, 20, args.depth or jcfg["depth"]}):
-        pairs = pool_pairs(all_runs, d)
+        pairs = judging_pairs(all_runs, queries, d, judged, corpus, radii)
         per_q = pairs.groupby("query_id").size()
-        rows.append({"depth": d, "판정 쌍": len(pairs), "쿼리당 평균": round(per_q.mean(), 1), "쿼리당 최대": int(per_q.max())})
+        rows.append({"depth": d, "새 판정 쌍": len(pairs), "쿼리 수": len(per_q),
+                     "쿼리당 평균": round(per_q.mean(), 1) if len(per_q) else 0, "쿼리당 최대": int(per_q.max()) if len(per_q) else 0})
     print(f"========== 판정 건수(시스템 {sorted(all_runs['system'].unique())}, 쿼리 {len(queries)}개) ==========")
     print(pd.DataFrame(rows).to_string(index=False))
     share = jcfg["double_annotation_share"]
@@ -193,11 +218,12 @@ def pool(args, cfg: dict, bench: dict) -> None:
     if (round_dir / "pool_manifest.json").exists():
         raise SystemExit(f"{round_dir}에 이미 라운드가 있습니다 — 채우는 중인 시트를 덮어쓰지 않도록 다른 --round를 쓰세요.")
     depth = args.depth or jcfg["depth"]
-    pairs = pool_pairs(all_runs, depth)
+    pairs = judging_pairs(all_runs, queries, depth, judged, corpus, radii)
     seed = cfg["random_seed"]
-    sheet = annotation_sheet(pairs, queries, corpus, seed)
+    base = pd.read_csv(bdir / "queries.csv", encoding="utf-8-sig", keep_default_na=False) if args.set != "main" else queries
+    sheet = annotation_sheet(pairs, base, corpus, seed)
     double = double_annotation_queries(sorted(pairs["query_id"].unique()), share, seed)
-    writers = {qid: set(str(w).split("|")) for qid, w in zip(queries["query_id"], queries["writers"], strict=True)}
+    writers = {qid: set(str(w).split("|")) for qid, w in zip(base["query_id"], base["writers"], strict=True)}
     assignment = assign_annotators(pairs.groupby("query_id").size(), double, jcfg["annotators"], writers, seed)
     round_dir.mkdir(parents=True, exist_ok=True)
     for name, qids in assignment.items():
@@ -206,13 +232,18 @@ def pool(args, cfg: dict, bench: dict) -> None:
         write_annotation_xlsx(part, round_dir / f"판정_{name}.xlsx")
         logger.info("판정자 %s: 쿼리 %d개(이중 판정 %d 포함), %d쌍", name, len(qids), len(double), len(part))
     pairs.to_csv(round_dir / "pool.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
-    queries.to_csv(bdir / "queries.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    if args.set == "main":
+        queries.drop(columns=["base_query_id"]).to_csv(bdir / "queries.csv", index=False, encoding="utf-8-sig",
+                                                       lineterminator="\n")
     manifest = {
         "round": args.round,
+        "set": args.set,
+        "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
         "created_at": datetime.now(UTC).isoformat(),
         "judge_radius_km": jcfg["judge_radius_km"],
         "report_radii_km": jcfg["report_radii_km"],
         "depth": depth,
+        "depth_radii_km": radii,
         "queries": int(pairs["query_id"].nunique()),
         "pairs": len(pairs),
         "double_annotation_queries": len(double),
@@ -221,10 +252,55 @@ def pool(args, cfg: dict, bench: dict) -> None:
                               "pairs": int(sheet["query_id"].isin(qids).sum())} for name, qids in assignment.items()},
         "runs_sha256": {p.name: sha256_file(p) for p in run_files},
         "queries_sha256": hashlib.sha256((bdir / "queries.csv").read_bytes()).hexdigest(),
+        "instances_sha256": sha256_file(bdir / "instances.csv") if (bdir / "instances.csv").exists() else None,
         "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
     }
     (round_dir / "pool_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("저장: %s (전체 %d쌍, 이중 판정 %d쌍)", round_dir, len(sheet), manifest["double_annotation_pairs"])
+
+
+def previously_judged(bdir: Path) -> set[tuple[str, str]]:
+    """앞 라운드에서 판정 대상이었던 (쿼리, 가맹점). 판정은 위치와 무관하므로 다른 위치 사례에서 다시 나와도 다시 판정하지 않는다."""
+
+    out: set[tuple[str, str]] = set()
+    for path in (bdir / "annotations").glob("*/pool.csv"):
+        p = pd.read_csv(path, encoding="utf-8-sig")
+        out |= set(zip(p["query_id"], p["doc_id"], strict=True))
+    return out
+
+
+def within_radius(runs: pd.DataFrame, queries: pd.DataFrame, corpus: pd.DataFrame, radius_km: float) -> pd.DataFrame:
+    """run에서 사례 위치로부터 radius_km 안만 남기고 순위를 다시 매긴다(1km 채점에 쓰는 순위와 같음)."""
+
+    loc = queries.set_index("query_id")[["latitude", "longitude"]]
+    c = corpus.set_index("doc_id")[["latitude", "longitude"]]
+    r = runs[runs["query_id"].isin(loc.index)].copy()
+    a = np.radians(loc.loc[r["query_id"]].to_numpy(float))
+    b = np.radians(c.loc[r["doc_id"]].to_numpy(float))
+    h = np.sin((b[:, 0] - a[:, 0]) / 2) ** 2 + np.cos(a[:, 0]) * np.cos(b[:, 0]) * np.sin((b[:, 1] - a[:, 1]) / 2) ** 2
+    r = r[2 * 6371.0 * np.arcsin(np.sqrt(h)) <= radius_km + 1e-9].sort_values(["system", "query_id", "rank"])
+    return r.assign(rank=r.groupby(["system", "query_id"]).cumcount() + 1)
+
+
+def judging_pairs(runs: pd.DataFrame, queries: pd.DataFrame, depth: int, judged: set[tuple[str, str]],
+                  corpus: pd.DataFrame | None = None, radii: list[float] | None = None) -> pd.DataFrame:
+    """사례별 run 상위 depth개(반경마다 다시 매긴 순위로, 합집합) + 앵커 가게 → 판정 쿼리 ID(base) 기준 (쿼리, 가맹점).
+    앞 라운드에서 판정한 쌍은 뺀다. 채점 반경이 둘(1km·2km)이면 1km 안 상위 depth개도 판정해야 1km 지표의 판정 누락이 없다."""
+
+    if radii and corpus is not None:
+        runs = pd.concat([within_radius(runs, queries, corpus, r) for r in radii], ignore_index=True)
+    pairs = pool_pairs(runs, depth).rename(columns={"query_id": "instance_id"})
+    to_base = dict(zip(queries["query_id"], queries["base_query_id"], strict=True))
+    pairs["query_id"] = pairs["instance_id"].map(to_base)
+    if "anchor_doc_id" in queries:
+        anchors = queries.loc[queries["anchor_doc_id"] != "", ["query_id", "base_query_id", "anchor_doc_id"]]
+        pairs = pd.concat([pairs, pd.DataFrame({"instance_id": anchors["query_id"], "doc_id": anchors["anchor_doc_id"],
+                                                "pool_sources": "anchor", "query_id": anchors["base_query_id"]})])
+    pairs = (pairs.groupby(["query_id", "doc_id"], as_index=False)
+             .agg(pool_sources=("pool_sources", lambda s: "|".join(sorted(set("|".join(s).split("|"))))),
+                  instance_ids=("instance_id", lambda s: "|".join(sorted(set(s))))))
+    keep = [(q, d) not in judged for q, d in zip(pairs["query_id"], pairs["doc_id"], strict=True)]
+    return pairs[keep].reset_index(drop=True)
 
 
 def write_annotation_xlsx(sheet: pd.DataFrame, path: Path) -> None:
@@ -266,6 +342,8 @@ def main() -> None:
     parser.add_argument("--round", help="pool: 판정 라운드 이름(예: service_v1)")
     parser.add_argument("--depth", type=int, help="pool: 시스템마다 상위 몇 개(기본: 설정 judging.depth)")
     parser.add_argument("--dry-run", action="store_true", help="pool: 판정 건수 표만")
+    parser.add_argument("--set", choices=sorted(SETS), default="main",
+                        help="평가 사례 묶음: main(활성 쿼리의 기본 위치) / anchor(정답 없는 쿼리의 앵커 근처 위치, instances.csv)")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")

@@ -29,6 +29,7 @@ import pandas as pd
 from store_search_ai.data.service_import import (
     build_service_queries,
     old_benchmark_splits,
+    split_fixed_from,
     team_b_rows,
     writer_rows,
 )
@@ -51,7 +52,9 @@ def main() -> None:
     icfg = cfg["import"]
     bench = load_config(args.benchmark_config)
 
-    writers = writer_rows(pd.read_excel(icfg["writers_completed"], sheet_name=None))
+    sources = icfg["writers_completed"] if isinstance(icfg["writers_completed"], list) else [icfg["writers_completed"]]
+    writers = pd.concat([writer_rows(pd.read_excel(src, sheet_name=None)) for src in sources if Path(src).exists()],
+                        ignore_index=True)
     team = pd.read_excel(icfg["team_completed"], sheet_name="쿼리입력")
     b_rows, _ = team_b_rows(team, icfg["team_human_methods"])   # 팀 작성본의 나머지는 AI 초안이라 쓰지 않는다
     extra = pd.DataFrame([
@@ -71,6 +74,8 @@ def main() -> None:
     queries = build_service_queries(
         rows, icfg["bundle_priority"], old_benchmark_splits(families, inactive), icfg["exclude_queries"],
         template["B_가맹점표본"], template["D_시장표본"], points, cfg["split"]["dev_share"], cfg["random_seed"],
+        split_fixed_from(pd.read_csv(icfg["output"], encoding="utf-8-sig", keep_default_na=False))
+        if Path(icfg["output"]).exists() else None,
     )
 
     # E는 정말 가맹점이 없는지 판정 전에 볼 수 있게, 상호·취급품목에 그 문자열이 몇 번 나오는지 붙인다
@@ -103,12 +108,18 @@ def main() -> None:
         return
 
     out = Path(icfg["output"])
+    if out.exists():   # 판정(qrels)은 query_id에 묶여 있다 — 기존 쿼리의 ID가 다른 문자열을 가리키게 되면 멈춘다
+        old = pd.read_csv(out, encoding="utf-8-sig", keep_default_na=False).set_index("query_id")["query"]
+        new = queries.set_index("query_id")["query"]
+        moved = [qid for qid in old.index if qid not in new.index or new[qid] != old[qid]]
+        if moved:
+            raise SystemExit(f"기존 query_id {len(moved)}개가 바뀝니다(예: {moved[:5]}) — 판정과 어긋나므로 저장하지 않습니다.")
     queries.to_csv(out, index=False, encoding="utf-8-sig", lineterminator="\n")
     meta = {
         "version": cfg["version"],
         "seed": cfg["random_seed"],
         "dev_share": cfg["split"]["dev_share"],
-        "sources": {p: sha256_file(Path(p)) for p in [icfg["writers_completed"], icfg["team_completed"], cfg["output_path"]]},
+        "sources": {p: sha256_file(Path(p)) for p in [*sources, icfg["team_completed"], cfg["output_path"]] if Path(p).exists()},
         "queries": len(queries),
         "active_by_bundle_split": {b: counts.loc[b].to_dict() for b in counts.index},
         "excluded": len(excluded),
