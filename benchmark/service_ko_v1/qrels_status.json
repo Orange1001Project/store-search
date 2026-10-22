@@ -27,10 +27,10 @@
       "B"
     ],
     "pairs": 3604,
-    "qrels_rows": 3544,
+    "qrels_rows": 3585,
     "needs_adjudication": 60,
-    "adjudication_pending": 60,
-    "excluded_from_gold": 0,
+    "adjudication_pending": 0,
+    "excluded_from_gold": 19,
     "reasons": {
       "이진 판정이 다름": 31,
       "아무도 점수를 주지 않음(판단 보류)": 29
@@ -49,10 +49,10 @@
       "B"
     ],
     "pairs": 4976,
-    "qrels_rows": 4895,
+    "qrels_rows": 4963,
     "needs_adjudication": 81,
-    "adjudication_pending": 81,
-    "excluded_from_gold": 0,
+    "adjudication_pending": 0,
+    "excluded_from_gold": 13,
     "reasons": {
       "이진 판정이 다름": 60,
       "아무도 점수를 주지 않음(판단 보류)": 21
@@ -71,10 +71,10 @@
       "B"
     ],
     "pairs": 1483,
-    "qrels_rows": 1466,
+    "qrels_rows": 1474,
     "needs_adjudication": 17,
-    "adjudication_pending": 17,
-    "excluded_from_gold": 0,
+    "adjudication_pending": 0,
+    "excluded_from_gold": 9,
     "reasons": {
       "아무도 점수를 주지 않음(판단 보류)": 13,
       "이진 판정이 다름": 4
