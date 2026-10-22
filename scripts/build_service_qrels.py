@@ -2,8 +2,8 @@
 
 라운드마다(benchmark/service_ko_v1/annotations/<round>/)
   - 입력: annotation_<판정자>_completed.csv (판정자 이름은 파일 이름에서 읽음)
-  - 조정: analysis/adjudication_needed.csv를 만든다 → 사람이 final_relevance를 채워 analysis/adjudication_completed.csv로
-    저장하면 다음 실행부터 반영된다(빈칸 = gold 제외).
+  - 조정: analysis/adjudication_needed.csv를 만든다 → 사람이 final_relevance를 채워 analysis/adjudication_completed.csv
+    (또는 adjudication_needed_completed.csv)로 저장하면 다음 실행부터 반영된다(빈칸 = gold 제외). 엑셀의 쉼표·탭 CSV 모두 읽는다.
 출력(모든 라운드 합침)
   - <benchmark_dir>/qrels.csv            query_id, doc_id, relevance — 확정된 판정만
   - <benchmark_dir>/qrels_status.json    라운드별 판정 수, 조정 대상·미확정 수, 판정자 일치도(이중 판정 쌍)
@@ -29,7 +29,7 @@ from store_search_ai.data.service_qrels import (
     build_qrels,
     merge_judgments,
 )
-from store_search_ai.pipeline.common import load_config
+from store_search_ai.pipeline.common import load_config, read_sheet_csv
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +64,13 @@ def main() -> None:
         if not files:
             logger.info("%s: 완료 시트 없음 — 건너뜀", round_dir.name)
             continue
-        sheets = {f.name.removeprefix("annotation_").removesuffix("_completed.csv"): pd.read_csv(f, encoding="utf-8-sig")
-                  for f in files}
+        sheets = {f.name.removeprefix("annotation_").removesuffix("_completed.csv"): read_sheet_csv(f) for f in files}
         merged = merge_judgments(sheets)
         analysis = round_dir / "analysis"
         analysis.mkdir(exist_ok=True)
-        done = analysis / "adjudication_completed.csv"
-        adjudicated = pd.read_csv(done, encoding="utf-8-sig") if done.exists() else None
+        done = next((p for p in (analysis / "adjudication_completed.csv", analysis / "adjudication_needed_completed.csv")
+                     if p.exists()), None)
+        adjudicated = read_sheet_csv(done) if done else None
         if adjudicated is None:
             sheet = adjudication_sheet(merged)
             sheet.to_csv(analysis / "adjudication_needed.csv", index=False, encoding="utf-8-sig", lineterminator="\n")

@@ -56,9 +56,11 @@ DOC_TEXT_COLUMN = "search_text_t1_minimal"   # 모델 평가와 같은 문서 �
 
 
 SETS = {
-    # 평가 사례 묶음 → (Colab 입력 폴더, run 폴더 이름)
+    # 평가 사례 묶음 → (Colab 입력 폴더, run 폴더 이름). 이미 판정한 묶음의 run은 다시 만들지 않는다 — BM25 색인 범위가 바뀌면
+    # 순위가 흔들려 판정 범위와 어긋나기 때문이다. 새 쿼리는 새 묶음(extra)으로 따로 만든다.
     "main": (Path("colab_upload/service_eval"), "runs"),
     "anchor": (Path("colab_upload/service_eval_anchor"), "runs_anchor"),
+    "extra": (Path("colab_upload/service_eval_extra"), "runs_extra"),
 }
 
 
@@ -68,13 +70,19 @@ def load_inputs(cfg: dict, bench: dict, set_name: str = "main") -> tuple[pd.Data
     main: 활성 쿼리(사례 ID = 쿼리 ID). anchor: instances.csv의 anchor 사례(scripts/build_service_instances.py).
     """
 
-    if set_name == "anchor":
+    if set_name in ("anchor", "extra"):
         inst = pd.read_csv(Path(cfg["judging"]["benchmark_dir"]) / "instances.csv", encoding="utf-8-sig", keep_default_na=False)
-        queries = inst[inst["context"] == "anchor"].rename(columns={"query_id": "base_query_id"})
+        batch = inst["batch"] if "batch" in inst else pd.Series("v1", index=inst.index)
+        pick = (inst["context"] == "anchor") if set_name == "anchor" else (batch == set_name)
+        queries = inst[pick].rename(columns={"query_id": "base_query_id"})
         queries = queries.rename(columns={"instance_id": "query_id"}).reset_index(drop=True)
-    else:
+    else:   # main: 처음 판정한 v1 쿼리(benchmark_dir/queries.csv가 있으면 그 목록, 없으면 가져온 활성 쿼리 전부)
         queries = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
         queries = queries[queries["status"] == "active"].reset_index(drop=True)
+        v1_list = Path(cfg["judging"]["benchmark_dir"]) / "queries.csv"
+        if v1_list.exists():
+            v1 = set(pd.read_csv(v1_list, encoding="utf-8-sig", keep_default_na=False)["query_id"])
+            queries =queries[queries["query_id"].isin(v1)].reset_index(drop=True)
         queries = queries.assign(base_query_id=queries["query_id"])
     corpus = pd.read_parquet(bench["corpus_path"], columns=[
         "doc_id", "store_name", "item_text", "market_name", "latitude", "longitude", "geo_status", DOC_TEXT_COLUMN])
@@ -220,7 +228,8 @@ def pool(args, cfg: dict, bench: dict) -> None:
     depth = args.depth or jcfg["depth"]
     pairs = judging_pairs(all_runs, queries, depth, judged, corpus, radii)
     seed = cfg["random_seed"]
-    base = pd.read_csv(bdir / "queries.csv", encoding="utf-8-sig", keep_default_na=False) if args.set != "main" else queries
+    base = (pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
+            if args.set != "main" else queries)   # 판정 시트의 쿼리 정보(문자열·묶음·의도)
     sheet = annotation_sheet(pairs, base, corpus, seed)
     double = double_annotation_queries(sorted(pairs["query_id"].unique()), share, seed)
     writers = {qid: set(str(w).split("|")) for qid, w in zip(base["query_id"], base["writers"], strict=True)}

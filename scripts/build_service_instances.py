@@ -24,10 +24,28 @@ from store_search_ai.pipeline.common import load_config
 logger = logging.getLogger(__name__)
 
 
+def append_new(path: Path, cfg: dict, batch: str) -> None:
+    """가져온 활성 쿼리 중 사례가 없는 것만 random 사례로 덧붙인다. 기존 사례(판정했거나 판정 중)는 바꾸지 않는다."""
+
+    inst = pd.read_csv(path, encoding="utf-8-sig", keep_default_na=False)
+    if "batch" not in inst:
+        inst["batch"] = inst["context"].map({"random": "v1", "anchor": "anchor"})
+    queries = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
+    new = queries[(queries["status"] == "active") & ~queries["query_id"].isin(inst["query_id"])]
+    rows = new.assign(instance_id=new["query_id"], context="random", anchor_doc_id="", anchor_rule="", batch=batch)
+    out = pd.concat([inst, rows[inst.columns.intersection(rows.columns)]], ignore_index=True).fillna("")
+    out.to_csv(path, index=False, encoding="utf-8-sig", lineterminator="\n")
+    logger.info("새 random 사례 %d개(batch=%s) 덧붙임: %s → 전체 %d개", len(rows), batch,
+                rows.groupby(["bundle", "split"]).size().to_dict(), len(out))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
+    parser.add_argument("--append-new", action="store_true",
+                        help="이미 있는 instances.csv는 그대로 두고, 아직 사례가 없는 활성 쿼리만 random 사례로 덧붙인다")
+    parser.add_argument("--batch", default="extra", help="--append-new로 더한 사례의 batch 이름(pool --set과 같음)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -35,8 +53,12 @@ def main() -> None:
     bench = load_config(args.benchmark_config)
     bdir = Path(cfg["judging"]["benchmark_dir"])
     out = bdir / "instances.csv"
+    if out.exists() and args.append_new:
+        append_new(out, cfg, args.batch)
+        return
     if out.exists():
-        raise SystemExit(f"{out}이 이미 있습니다 — anchor 판정을 시작했다면 바꾸면 안 됩니다. 정말 다시 만들려면 파일을 지우고 실행하세요.")
+        raise SystemExit(f"{out}이 이미 있습니다 — anchor 판정을 시작했다면 바꾸면 안 됩니다. 새 쿼리만 더하려면 --append-new, "
+                         "정말 다시 만들려면 파일을 지우고 실행하세요.")
     queries = pd.read_csv(bdir / "queries.csv", encoding="utf-8-sig", keep_default_na=False)
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")
     corpus = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "store_name", "item_text", "latitude", "longitude",

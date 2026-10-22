@@ -56,7 +56,7 @@ def main() -> None:
     iq = instance_qrels(instances, qrels, coords)
 
     runs: dict[str, list[pd.DataFrame]] = {}
-    for run_dir in (bdir / "runs", bdir / "runs_anchor"):
+    for run_dir in (bdir / "runs", bdir / "runs_anchor", bdir / "runs_extra"):
         for path in sorted(run_dir.glob("*.csv")) if run_dir.exists() else []:
             if path.stem not in SYSTEMS_EXCLUDED:
                 runs.setdefault(path.stem, []).append(pd.read_csv(path, encoding="utf-8-sig"))

@@ -5,10 +5,10 @@
       "B"
     ],
     "pairs": 10558,
-    "qrels_rows": 10450,
+    "qrels_rows": 10534,
     "needs_adjudication": 108,
-    "adjudication_pending": 108,
-    "excluded_from_gold": 0,
+    "adjudication_pending": 0,
+    "excluded_from_gold": 24,
     "reasons": {
       "아무도 점수를 주지 않음(판단 보류)": 55,
       "이진 판정이 다름": 53

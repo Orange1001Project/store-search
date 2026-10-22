@@ -169,7 +169,8 @@ import:
   # 같은 문자열이 여러 묶음에 나오면 앞의 묶음에 둔다(C는 재료 없이 먼저 쓴 반응이라 A보다 앞).
   bundle_priority: [B, D, C, A, E]
   # 판정·검토 뒤 빼야 할 쿼리. {query: ..., reason: ...} — 지우지 않고 status=excluded로 남긴다.
-  exclude_queries: []
+  exclude_queries:
+    - {query: 유아용픔, reason: 오타(유아용품) — 오타는 이 셋에서 다루지 않음(추가 C W1 C059, 2026-10-22)}
   # 진행자가 직접 더한 쿼리(작성자 파일 밖). writer는 facilitator로 기록된다.
   # E: 이름이 겹치는 가맹점(신세계약국·샤넬의상실, 숙박업소)은 있어도 그 의도를 채우는 가맹점은 없는 함정형(2026-10-20).
   extra_queries:
