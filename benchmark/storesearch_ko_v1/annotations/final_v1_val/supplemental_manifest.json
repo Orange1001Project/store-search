@@ -1,0 +1,31 @@
+{
+  "round": "final_v1_val",
+  "base_round": "full_annotation_v1",
+  "created_at": "2026-10-16T04:20:41.127734+00:00",
+  "reason": "임베딩 v1 후보 3종(Qwen3 kse16, bge-m3 mj, Arctic-KO lee) val 공정 비교용 일괄 판정",
+  "method": "model_runs",
+  "splits": [
+    "val"
+  ],
+  "depth": 10,
+  "systems_sha256": {
+    "arctic_ko_ft_lee": "eaee3cd900771af3eba57d4f67918920b4ce9ecf7f091a2e435dfa9534d1fbec",
+    "bge_m3_ft_mj": "08a8f247334bd9bcce99e1a34528c10f303187319a7ef1073191524ef41aa9cc",
+    "kse16_dense": "e42217fdd0e1ff0331977f938c9b769e6093f8f915c64513845ae7de15da8099"
+  },
+  "run_copies": "benchmark/storesearch_ko_v1/annotations/final_v1_val/runs",
+  "new_pairs": 220,
+  "new_pairs_by_split": {
+    "val": 220
+  },
+  "new_pairs_by_system": {
+    "arctic_ko_ft_lee": 24,
+    "bge_m3_ft_mj": 189,
+    "kse16_dense": 8
+  },
+  "annotators": [
+    "A",
+    "B"
+  ],
+  "policy": "기존 판정은 바꾸지 않음. 새 후보만 val/test는 A·B 독립 판정 → 일치 자동 확정 → 불일치 adjudication."
+}

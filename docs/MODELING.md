@@ -39,6 +39,7 @@ nDCG/Recall/Precision/MRR을 여러 곳에서 각자 재구현하면 언젠가 �
 | `scripts/14_run_model_eval.py` | (로컬 GPU가 있을 때) 위 셋을 엮어서 corpus 인코딩 → query 인코딩 → 검색 → run.csv → `13_evaluate_run.py` 호출까지 한 번에 |
 | `scripts/15_score_model_runs.py` | `results/model_eval/` 밑의 여러 run(Colab/로컬, zero-shot/fine-tuned 어느 쪽에서 왔든)을 한 번에 채점해 리더보드 생성 |
 | `colab/train_eval.ipynb` | Colab(GPU)에서 학습 + 인코딩·검색(run.csv) + 공식과 같은 채점까지 한 파일로 (`colab/README.md` 참고) |
+| `scripts/eval_retrieval_stack.py` | (임베딩 리더보드가 아니라 검색 파이프라인 단계) 임베딩 run 위에 BM25 하이브리드·reranker를 얹은 구성 비교 (`docs/PIPELINE.md` 10절) |
 | `store_search_ai.evaluation.evaluator` | `13_evaluate_run.py`의 채점 로직 본체(qrels/run 로딩, `ir_measures` 위임 계산, bootstrap CI, paired comparison). `13_evaluate_run.py`는 이 모듈을 호출하는 얇은 CLI일 뿐이고, 14/15번은 여전히 `13_evaluate_run.py`를 **서브프로세스로** 호출한다(이 모듈을 직접 import하지 않음) — "모든 모델의 run은 동일 evaluator를 거친다"는 원칙을 CLI 계약으로 강제하기 위함 |
 
 ## 실행 예시

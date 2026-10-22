@@ -27,7 +27,7 @@ from store_search_ai.data.annotation_pool import (
     merge_pool_history,
     precompute_match_index,
 )
-from store_search_ai.pipeline.common import load_active_queries, load_config
+from store_search_ai.pipeline.common import load_active_queries, load_all_queries, load_config
 
 
 def main() -> None:
@@ -61,7 +61,7 @@ def main() -> None:
 
     accumulate_random_candidates(candidates, queries, corpus, base_seed, random_per_query, args.round)
 
-    pool = build_pool_frame(candidates, queries, corpus, args.round)
+    pool = build_pool_frame(candidates, load_all_queries(benchmark_dir), corpus, args.round)   # 비활성 쿼리 행도 보존
     pool.to_csv(pool_path, index=False, encoding="utf-8-sig", lineterminator="\n")
 
     stats = build_pool_stats(pool, run_df, args.round)

@@ -169,6 +169,21 @@ def test_build_pool_frame_skips_inactive_queries_and_raises_on_unknown_doc():
         build_pool_frame(candidates_bad, queries, corpus, "r1")
 
 
+def test_pool_rewrite_with_all_queries_keeps_inactive_query_rows(tmp_path):
+    # 07·16번은 pool을 다시 쓸 때 load_all_queries를 넘긴다 — load_active_queries를 넘기면 비활성 쿼리 행이 사라진다
+    from store_search_ai.pipeline.common import load_active_queries, load_all_queries
+
+    pd.DataFrame([
+        {"query_id": "q1", "query": "치킨", "split": "val", "query_family": "치킨", "status": "active"},
+        {"query_id": "q2", "query": "치긴", "split": "val", "query_family": "치킨", "status": "inactive"},
+    ]).to_csv(tmp_path / "queries.csv", index=False, encoding="utf-8-sig")
+    corpus = pd.DataFrame([{"doc_id": "d1", "store_name": "s", "item_text": "i", "market_name": "", "market_type": "", "source_region": "서울"}])
+    candidates = {(q, "d1"): {"pool_sources": {}, "first_seen_round": "r1"} for q in ("q1", "q2")}
+
+    assert sorted(build_pool_frame(candidates, load_all_queries(tmp_path), corpus, "r2")["query_id"]) == ["q1", "q2"]
+    assert list(build_pool_frame(candidates, load_active_queries(tmp_path), corpus, "r2")["query_id"]) == ["q1"]
+
+
 def test_build_pool_stats_schema():
     pool = pd.DataFrame(
         [

@@ -114,11 +114,18 @@ def assemble_qrels(
     qrels_val: pd.DataFrame,
     qrels_test: pd.DataFrame,
     active_query_ids: set[str],
+    inactive_query_ids: set[str] = frozenset(),
 ) -> dict[str, pd.DataFrame]:
     """train/val/test qrels에 split 컬럼을 붙이고, query_id 유효성 + 교차 split 중복을 검사한 뒤
     {"train", "val", "test", "all"} 4개 DataFrame을 반환한다.
+
+    비활성 쿼리(queries.csv status=inactive)의 판정은 빼고 만든다 — 판정 기록은 annotations/에 그대로 남는다.
+    queries.csv에 아예 없는 query_id는 여전히 에러다.
     """
 
+    qrels_train, qrels_val, qrels_test = (
+        q[~q["query_id"].astype(str).isin(inactive_query_ids)] for q in (qrels_train, qrels_val, qrels_test)
+    )
     for split, qrels in [("train", qrels_train), ("val", qrels_val), ("test", qrels_test)]:
         unknown_queries = set(qrels["query_id"].astype(str)) - active_query_ids
         if unknown_queries:

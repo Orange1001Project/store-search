@@ -67,10 +67,14 @@ corpus·같은 config로 `06_generate_lexical_runs.py` → `07_build_annotation_
   조정 기록(`analysis/adjudication_*`). 최종 `qrels_*.csv`는 이 원본을 코드로 집계한 결과물이지만,
   **누가 무엇을 판정했는지·A/B가 어디서 갈렸는지·조정 근거**는 이 원본에만 있고 코드로 재생성할 수
   없는 사람의 작업 결과라 그대로 보존했습니다
+- **`benchmark/storesearch_ko_v1/annotations/supplement_v1/`, `supplement_v2/`** — 보충 판정 라운드의 사람 판정 원본(완료본·조정 기록·
+  그 라운드에 쓴 run 사본). supplement_v2는 임베딩 모델 6종 상위 20개를 추가로 판정한 13,759쌍(2026-10)
+- **`benchmark/storesearch_ko_v1/annotations/final_v1_val/`** — 임베딩 v1 후보 3종(kse16·bge-m3 mj·Arctic-KO lee)의 val 상위 10개 중
+  미판정 220쌍 일괄 판정 원본(2026-10-16). qrels_val에 217행 추가(판정 불가 3행 제외)
 - `benchmark/storesearch_ko_v1/queries.csv`, `qrels_train/val/test.csv(.trec)`, `qrels.csv(.trec)`,
   `benchmark_manifest.json`, `agreement_report.json`, `validation_final.json` — 위 원본을 집계한
-  **최종 산출물**(548개 질의, gold qrels)
-- `results/model_eval/`, `artifacts/evaluation/`, `results/experiments.csv`, `results/finetune_runs/` — 확정 gold qrels 기준 모델 평가 결과와
+  **최종 산출물**(548개 질의 — 그중 오타 변형 49개는 `configs/benchmark/inactive_queries_v1.yaml`로 비활성, active 499개 — gold qrels)
+- `results/model_eval/`, `artifacts/evaluation/`, `results/experiments.csv`, `results/finetune_runs/`, `results/stack_eval/`(검색 구성 탐색) — 현재 qrels 기준 모델 평가 결과와
   실험 기록(Colab 결과를 `scripts/import_colab_results.py --verify`로 가져옴). gold 확정 이전 정답으로 채점한 예전 결과는 지웠습니다
 - `data/query/queryset_final.xlsx`, `data/finetune/train_pairs.jsonl` — 작고 재사용되는 원본/산출물
 - `archive/` — 규칙 기반 train 라벨링을 되돌린 이력(작음)

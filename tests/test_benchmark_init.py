@@ -98,3 +98,24 @@ def test_build_query_manifest_schema():
 def test_guideline_mentions_binary_threshold_and_blind_annotation():
     assert "relevance >= 2" in GUIDELINE
     assert "Blind annotation" in GUIDELINE
+
+
+def test_build_queries_frame_marks_listed_queries_inactive_and_checks_text(tmp_path):
+    from store_search_ai.data.benchmark_init import load_inactive_queries
+
+    listed = tmp_path / "inactive.yaml"
+    listed.write_text('inactive_queries:\n  - {query_id: q_치킨_02, query: "통닭", reason: typo}\n', encoding="utf-8")
+    inactive = load_inactive_queries(listed)
+    frame = build_queries_frame(_query_cfg(), inactive)
+    assert dict(zip(frame["query_id"], frame["status"])) == {"q_치킨_01": "active", "q_치킨_02": "inactive"}
+    assert load_inactive_queries(tmp_path / "missing.yaml") == {}
+
+    with pytest.raises(ValueError, match="맞지 않습니다"):
+        build_queries_frame(_query_cfg(), {"q_치킨_02": "치킨집"})      # 번호가 밀려 다른 쿼리를 가리키면 멈춤
+    with pytest.raises(ValueError, match="맞지 않습니다"):
+        build_queries_frame(_query_cfg(), {"q_치킨_09": "통닭"})
+
+    manifest = build_query_manifest({"benchmark_version": "b"}, _query_cfg(), frame, "s", "f")
+    assert (manifest["active_queries"], manifest["inactive_queries"]) == (1, 1)
+    assert "inactive_queries" not in build_query_manifest({"benchmark_version": "b"}, _query_cfg(),
+                                                          build_queries_frame(_query_cfg()), "s", "f")

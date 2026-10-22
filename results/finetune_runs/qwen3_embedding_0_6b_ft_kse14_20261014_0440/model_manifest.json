@@ -1,0 +1,323 @@
+{
+  "tag": "qwen3_embedding_0_6b_ft_kse14_20261014_0440",
+  "owner": "kse14",
+  "base_model_id": "Qwen/Qwen3-Embedding-0.6B",
+  "base_model_config": {
+    "name": "qwen3_embedding_0_6b",
+    "model_id": "Qwen/Qwen3-Embedding-0.6B",
+    "query_prompt_name": "query",
+    "batch_size": 32,
+    "train": {
+      "lora_rank": 16,
+      "learning_rate": 0.0001,
+      "base_dtype": "float32",
+      "batch_size": 32,
+      "loss": "gist",
+      "mini_batch_size": 16
+    }
+  },
+  "framework": "sentence-transformers+peft-lora(merged)",
+  "hyperparameters": {
+    "num_epochs": 2,
+    "batch_size": 32,
+    "mini_batch_size": 16,
+    "learning_rate": 0.0001,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "max_seq_length": 128,
+    "num_hard_negatives": 3,
+    "typo_variants_per_query": 0,
+    "typo_positives_per_variant": 8,
+    "max_positives_per_query": 32,
+    "loss": "gist",
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "base_dtype": "float32",
+    "save_dtype": "float16",
+    "seed": 20260831,
+    "keep_last_runs": 3,
+    "note": "baseline (오타 비활성, 215 queries)",
+    "resume_tag": null,
+    "save_mid_checkpoint": true
+  },
+  "precision": "fp16",
+  "training_data": {
+    "source": "/content/drive/MyDrive/store-search-ai/data/train_pairs.jsonl",
+    "sha256": "ec3a9b619d54f56d31086714b420f4878a29fb686cb98f1b4897c193f4f57cde",
+    "expansion": {
+      "n_queries_in_file": 215,
+      "n_queries_used": 215,
+      "n_skipped_few_negatives": 0,
+      "n_rows": 6650
+    },
+    "prepare_meta": {
+      "created_at": "2026-10-14T02:25:43.132575+00:00",
+      "git_commit": "a109065f70ee7f2744cee08c74794a794d029a7c",
+      "benchmark_version": "storesearch_ko_v1",
+      "corpus_version": "store_corpus_v002",
+      "qrels_path": "benchmark/storesearch_ko_v1/qrels_train.csv",
+      "qrels_sha256": "016365360b59bda2447daad31fb03199551f1690544a26fbf4d6371d0d177621",
+      "qrels_kind": "final",
+      "template": "t1_minimal",
+      "binary_relevance_threshold": 2,
+      "max_negatives": 8,
+      "train_pairs_sha256": "ec3a9b619d54f56d31086714b420f4878a29fb686cb98f1b4897c193f4f57cde",
+      "stats": {
+        "n_written": 215,
+        "n_skipped_no_positive": 0,
+        "total_positives": 15543,
+        "total_negatives": 1709
+      }
+    },
+    "smoke": false
+  },
+  "data_version": {
+    "packed_at": "2026-10-14T02:31:13.605149+00:00",
+    "git_branch": "feature/qwen3-embedding-finetuning",
+    "git_commit": "4d5b8df5c63669e0635fc37fbeb0f3e138f8ce21",
+    "benchmark_version": "storesearch_ko_v1",
+    "corpus_version": "store_corpus_v002",
+    "corpus_file": "store_corpus_v002.parquet",
+    "evaluation": {
+      "bootstrap_samples": 10000,
+      "random_seed": 20260831,
+      "binary_relevance_threshold": 2
+    },
+    "files": {
+      "train_pairs.jsonl": "ec3a9b619d54f56d31086714b420f4878a29fb686cb98f1b4897c193f4f57cde",
+      "train_pairs.meta.json": "5b343ca99b5ec210e945897c684aec682d7c3baff84638aa05f4c253caf045f0",
+      "store_corpus_v002.parquet": "93bd159a98207087a784434c7731cc8b059aa9d10a0dc71d226829cc2c270a87",
+      "queries.csv": "b5255026d254bcf9b488d6ed545b86e804e273bc517566fe62e9168587f61a02",
+      "qrels_val.trec": "0e291fb8ee4f633c4be9cb681551611821911db570b7c87a55601e057535ea2c",
+      "qrels_test.trec": "0d6d82830de6ef70b87012d623904fc0391c39c05b33797bc176e8fd751941a3"
+    }
+  },
+  "code": {
+    "notebook": "colab/train_eval.ipynb",
+    "snapshot": "notebook_code.py",
+    "snapshot_sha256": "d66e30098790ca1a446021d00e2820c2a3ed9f2715aaf7c02915d57dfed4c9fc"
+  },
+  "training_result": {
+    "runtime_sec": 1683.0,
+    "resumed_from": null,
+    "mid_checkpoint_step": 208,
+    "global_steps": 416,
+    "peak_gpu_memory_gb": 6.49,
+    "final_loss": 0.01868,
+    "loss_history": [
+      {
+        "step": 10,
+        "loss": 0.66433
+      },
+      {
+        "step": 20,
+        "loss": 0.28447
+      },
+      {
+        "step": 30,
+        "loss": 0.30264
+      },
+      {
+        "step": 40,
+        "loss": 0.1874
+      },
+      {
+        "step": 50,
+        "loss": 0.23787
+      },
+      {
+        "step": 60,
+        "loss": 0.21859
+      },
+      {
+        "step": 70,
+        "loss": 0.21928
+      },
+      {
+        "step": 80,
+        "loss": 0.1778
+      },
+      {
+        "step": 90,
+        "loss": 0.20057
+      },
+      {
+        "step": 100,
+        "loss": 0.16706
+      },
+      {
+        "step": 110,
+        "loss": 0.12442
+      },
+      {
+        "step": 120,
+        "loss": 0.17569
+      },
+      {
+        "step": 130,
+        "loss": 0.0698
+      },
+      {
+        "step": 140,
+        "loss": 0.15402
+      },
+      {
+        "step": 150,
+        "loss": 0.13295
+      },
+      {
+        "step": 160,
+        "loss": 0.14131
+      },
+      {
+        "step": 170,
+        "loss": 0.11869
+      },
+      {
+        "step": 180,
+        "loss": 0.09679
+      },
+      {
+        "step": 190,
+        "loss": 0.08622
+      },
+      {
+        "step": 200,
+        "loss": 0.0346
+      },
+      {
+        "step": 210,
+        "loss": 0.06672
+      },
+      {
+        "step": 220,
+        "loss": 0.13616
+      },
+      {
+        "step": 230,
+        "loss": 0.09722
+      },
+      {
+        "step": 240,
+        "loss": 0.04427
+      },
+      {
+        "step": 250,
+        "loss": 0.09898
+      },
+      {
+        "step": 260,
+        "loss": 0.09199
+      },
+      {
+        "step": 270,
+        "loss": 0.05913
+      },
+      {
+        "step": 280,
+        "loss": 0.08994
+      },
+      {
+        "step": 290,
+        "loss": 0.05743
+      },
+      {
+        "step": 300,
+        "loss": 0.0184
+      },
+      {
+        "step": 310,
+        "loss": 0.08541
+      },
+      {
+        "step": 320,
+        "loss": 0.04147
+      },
+      {
+        "step": 330,
+        "loss": 0.08239
+      },
+      {
+        "step": 340,
+        "loss": 0.05365
+      },
+      {
+        "step": 350,
+        "loss": 0.05337
+      },
+      {
+        "step": 360,
+        "loss": 0.04452
+      },
+      {
+        "step": 370,
+        "loss": 0.05744
+      },
+      {
+        "step": 380,
+        "loss": 0.04871
+      },
+      {
+        "step": 390,
+        "loss": 0.04947
+      },
+      {
+        "step": 400,
+        "loss": 0.03723
+      },
+      {
+        "step": 410,
+        "loss": 0.01868
+      }
+    ]
+  },
+  "serving": {
+    "document_template": "t1_minimal",
+    "query_prompt_name": "query",
+    "query_prompt": "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:",
+    "document_prompt": null,
+    "embedding_dim": 1024,
+    "full_embedding_dim": 1024,
+    "normalize_embeddings": true,
+    "similarity": "cosine",
+    "max_seq_length": 128,
+    "saved_dtype": "float16"
+  },
+  "environment": {
+    "packages": {
+      "torch": "2.11.0+cu130",
+      "transformers": "5.18.0",
+      "sentence-transformers": "5.7.0",
+      "peft": "0.21.1",
+      "datasets": "4.8.5",
+      "accelerate": "1.15.0",
+      "huggingface-hub": "1.33.0",
+      "ir-measures": "0.4.3",
+      "pytrec-eval-terrier": "0.5.10"
+    },
+    "gpu": "Tesla T4"
+  },
+  "created_at": "2026-10-14T05:09:16.610004+00:00",
+  "evaluations": [
+    {
+      "evaluated_at": "2026-10-14T05:18:39.686079+00:00",
+      "split": "val",
+      "template": "t1_minimal",
+      "tag": "qwen3_embedding_0_6b_ft_kse14_20261014_0440_t1_minimal_val",
+      "official": true,
+      "metrics": {
+        "nDCG@10": 0.9481519496270793,
+        "Precision@10": 0.9451612903225808,
+        "MRR@100": 0.9666760658696143,
+        "Recall@50": 0.30466629790935246,
+        "Recall@100": 0.41836718071910267,
+        "Bpref": 0.4038469717094746,
+        "Judged@10": 0.9951612903225809,
+        "Judged@100": 0.47846774193548386
+      },
+      "baseline": "qwen3_embedding_0_6b",
+      "where": "colab"
+    }
+  ]
+}

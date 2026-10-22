@@ -81,8 +81,19 @@ def load_active_queries(benchmark_dir: str | Path) -> pd.DataFrame:
     패턴을 통합.
     """
 
-    queries = pd.read_csv(Path(benchmark_dir) / "queries.csv", encoding="utf-8-sig")
+    queries = load_all_queries(benchmark_dir)
     return queries[queries["status"].astype(str).str.lower() == "active"].copy()
+
+
+def load_all_queries(benchmark_dir: str | Path) -> pd.DataFrame:
+    """benchmark_dir/queries.csv 전체(비활성 포함).
+
+    candidate_pool_internal.csv를 다시 쓸 때(07, 16번 build_pool_frame)는 이것을 넘긴다 — 활성 쿼리만 넘기면 비활성 쿼리의
+    pool 행이 파일에서 조용히 사라진다(2026-10-16 final_v1_val make-runs에서 6,270행 유실 → 복원). 새 후보를 더하는 대상은
+    지금처럼 활성 쿼리만 쓴다.
+    """
+
+    return pd.read_csv(Path(benchmark_dir) / "queries.csv", encoding="utf-8-sig")
 
 
 def write_trec_qrels(frame: pd.DataFrame, path: str | Path) -> None:

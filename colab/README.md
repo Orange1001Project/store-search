@@ -1,4 +1,4 @@
-# Colab — `train_eval.ipynb` 하나로 학습·평가
+# Colab — `train_eval.ipynb`(학습·평가) + `rerank_scores.ipynb`(reranker 채점)
 
 GPU가 필요한 일(학습, 21만 개 문서 인코딩·채점)은 Colab에서 이 노트북 하나로 합니다. **학습·평가 코드가 전부 노트북 안에** 있어서
 `src/`를 올리지 않고, 기법(학습 데이터 만드는 방식, LoRA·loss, 학습 인자)을 셀에서 바로 고쳐 실험합니다.
@@ -31,5 +31,19 @@ data/                       ← pack_for_colab.py 결과(학습 데이터·corpu
 runs/finetune/<TAG>/        ← 모델 + model_manifest.json + eval_config.yaml + notebook_code.py(그 모델을 만든 셀 코드)
 runs/model_eval/<tag>/      ← run_<template>_<split>.csv (검색 결과)
 runs/evaluation/            ← <tag>_<template>_<split>_evaluation.json, _per_query.csv (지표)
+runs/pooling_runs/<이름>.csv ← 15번: 판정용 val+test 검색 결과(채점 없음 — 보충 pooling·일괄 판정 후보)
 runs_smoke/                 ← SMOKE=True 결과(지워도 됨)
+stack_eval/<split>/         ← rerank_scores.ipynb: rerank_pairs.csv(올림) → rerank_scores_<모델>.csv(생김)
 ```
+
+## `rerank_scores.ipynb` — reranker 점수만 GPU로 (검색 파이프라인 탐색, 데이터 담당)
+
+하이브리드·reranker는 임베딩 학습이 아니라 **검색 파이프라인 단계**의 구성 요소다(`docs/EMBEDDING_V1_PLAN.md`). Qwen3-Reranker는 로컬 CPU로
+1만 쌍에 1시간 넘게 걸려서 점수 계산만 Colab에서 한다.
+
+1. 로컬: `python scripts/eval_retrieval_stack.py --dense <dense run 이름들> --export-pairs` → `results/stack_eval/<split>/rerank_pairs.csv`를
+   Drive `store-search-ai/stack_eval/<split>/`에 올림
+2. Colab(GPU): `SPLIT`·`RERANKERS` 확인 → 위에서부터 실행 → 같은 폴더에 `rerank_scores_<모델>.csv` (이미 모든 쌍이 있으면 건너뜀)
+3. 로컬: 그 파일을 `results/stack_eval/<split>/`에 넣고 `--export-pairs` 없이 `--rerankers ...`로 다시 실행 → 캐시 점수로 비교표
+
+채점 함수 `load_reranker`는 `scripts/eval_retrieval_stack.py`와 같은 코드다(`tests/test_eval_retrieval_stack.py`가 확인).

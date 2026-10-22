@@ -1,0 +1,217 @@
+{
+  "benchmark": "StoreSearch-KO v1",
+  "tag": "bge_m3_ft_mj_20261014_0743_t1_minimal_val",
+  "qrels": "benchmark\\storesearch_ko_v1\\qrels_val.trec",
+  "run": "results\\model_eval\\bge_m3_ft_mj_20261014_0743\\run_t1_minimal_val.csv",
+  "primary_metric": "nDCG@10",
+  "binary_relevance_threshold": 2,
+  "metrics": [
+    "nDCG@10",
+    "Precision@10",
+    "MRR@100",
+    "Recall@50",
+    "Recall@100",
+    "Bpref",
+    "Judged@10",
+    "Judged@100"
+  ],
+  "query_count": 124,
+  "run_query_count": 124,
+  "aggregate": {
+    "nDCG@10": 0.9600129176020619,
+    "Precision@10": 0.9629032258064515,
+    "MRR@100": 0.9741263440860215,
+    "Recall@50": 0.30436238298021184,
+    "Recall@100": 0.4436871795248284,
+    "Bpref": 0.43705875178429104,
+    "Judged@10": 0.9935483870967743,
+    "Judged@100": 0.49201612903225794
+  },
+  "query_bootstrap_ci95": {
+    "nDCG@10": {
+      "mean": 0.9600129176020619,
+      "ci95": [
+        0.9358548151006467,
+        0.9806061855657683
+      ]
+    },
+    "Precision@10": {
+      "mean": 0.9629032258064517,
+      "ci95": [
+        0.9346774193548387,
+        0.9862903225806451
+      ]
+    },
+    "MRR@100": {
+      "mean": 0.9741263440860214,
+      "ci95": [
+        0.9485887096774194,
+        0.9939516129032258
+      ]
+    },
+    "Recall@50": {
+      "mean": 0.3043623829802119,
+      "ci95": [
+        0.2816501236058618,
+        0.3266768579522213
+      ]
+    },
+    "Recall@100": {
+      "mean": 0.4436871795248286,
+      "ci95": [
+        0.4139195613897078,
+        0.4735968063416185
+      ]
+    },
+    "Bpref": {
+      "mean": 0.43705875178429127,
+      "ci95": [
+        0.40644223834465254,
+        0.46748975946446825
+      ]
+    },
+    "Judged@10": {
+      "mean": 0.9935483870967742,
+      "ci95": [
+        0.9887096774193549,
+        0.9975806451612902
+      ]
+    },
+    "Judged@100": {
+      "mean": 0.49201612903225805,
+      "ci95": [
+        0.4699193548387097,
+        0.5141149193548388
+      ]
+    }
+  },
+  "run_validation": {
+    "rows": 12400,
+    "queries": 124,
+    "expected_queries": 124,
+    "missing_queries": 0,
+    "unknown_queries": 0,
+    "duplicate_query_doc_pairs": 0,
+    "invalid_rank_rows": 0
+  },
+  "comparison": {
+    "baseline_tag": "qwen3_embedding_0_6b_ft_kse16_20261016_0012",
+    "baseline_run": "results\\model_eval\\qwen3_embedding_0_6b_ft_kse16_20261016_0012\\run_t1_minimal_val.csv",
+    "baseline_aggregate": {
+      "nDCG@10": 0.9533061449358835,
+      "Precision@10": 0.9508064516129031,
+      "MRR@100": 0.9731793743890518,
+      "Recall@50": 0.3078329809796137,
+      "Recall@100": 0.428826299230191,
+      "Bpref": 0.4140901273570384,
+      "Judged@10": 0.9991935483870968,
+      "Judged@100": 0.495483870967742
+    },
+    "metrics": {
+      "nDCG@10": {
+        "delta_mean": 0.006706772666178369,
+        "delta_ci95": [
+          -0.008081742641376264,
+          0.023717830587480296
+        ],
+        "paired_permutation_pvalue": 0.44525547445255476,
+        "wins": 14,
+        "ties": 98,
+        "losses": 12
+      },
+      "Precision@10": {
+        "delta_mean": 0.012096774193548385,
+        "delta_ci95": [
+          -0.005645161290322581,
+          0.03387096774193548
+        ],
+        "paired_permutation_pvalue": 0.29187081291870814,
+        "wins": 12,
+        "ties": 103,
+        "losses": 9
+      },
+      "MRR@100": {
+        "delta_mean": 0.000946969696969698,
+        "delta_ci95": [
+          -0.027675953079178885,
+          0.030516862170087977
+        ],
+        "paired_permutation_pvalue": 0.9646035396460354,
+        "wins": 3,
+        "ties": 116,
+        "losses": 5
+      },
+      "Recall@50": {
+        "delta_mean": -0.0034705979994018895,
+        "delta_ci95": [
+          -0.01546287602503276,
+          0.009143956956919127
+        ],
+        "paired_permutation_pvalue": 0.5869413058694131,
+        "wins": 48,
+        "ties": 8,
+        "losses": 68
+      },
+      "Recall@100": {
+        "delta_mean": 0.014860880294637375,
+        "delta_ci95": [
+          -0.0010262816382584845,
+          0.03155770605569435
+        ],
+        "paired_permutation_pvalue": 0.08599140085991401,
+        "wins": 59,
+        "ties": 8,
+        "losses": 57
+      },
+      "Bpref": {
+        "delta_mean": 0.022968624427252643,
+        "delta_ci95": [
+          0.0056351296954598755,
+          0.0414113565076274
+        ],
+        "paired_permutation_pvalue": 0.012998700129987,
+        "wins": 61,
+        "ties": 6,
+        "losses": 57
+      },
+      "Judged@10": {
+        "delta_mean": -0.0056451612903225794,
+        "delta_ci95": [
+          -0.010483870967741934,
+          -0.0016129032258064512
+        ],
+        "paired_permutation_pvalue": 0.0400959904009599,
+        "wins": 1,
+        "ties": 115,
+        "losses": 8
+      },
+      "Judged@100": {
+        "delta_mean": -0.003467741935483875,
+        "delta_ci95": [
+          -0.021129032258064517,
+          0.014356854838709649
+        ],
+        "paired_permutation_pvalue": 0.7051294870512949,
+        "wins": 53,
+        "ties": 7,
+        "losses": 64
+      }
+    },
+    "note": "For multiple pairwise model comparisons, apply Holm correction to the resulting p-values."
+  },
+  "rescored": {
+    "rescored_at": "2026-10-16T06:06:00.855826+00:00",
+    "qrels_sha256": "b900031803bd5acefcd44fa246a9688b4ab60502981a4811dcf7f70f981eee98",
+    "previous_aggregate": {
+      "nDCG@10": 0.8403374561236288,
+      "Precision@10": 0.8209677419354842,
+      "MRR@100": 0.940876216077829,
+      "Recall@50": 0.2959162014195834,
+      "Recall@100": 0.4360506265245594,
+      "Bpref": 0.4296460345223855,
+      "Judged@10": 0.8427419354838713,
+      "Judged@100": 0.47556451612903217
+    },
+    "previous_rescored": null
+  }
+}

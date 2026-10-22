@@ -9,7 +9,10 @@ casefold) 쿼리 텍스트 중복 금지를 강제한다.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
+import yaml
 
 GUIDELINE = """# StoreSearch-KO v1 Annotation Guideline
 
@@ -180,10 +183,22 @@ A/B 라벨에 AI 초안을 참고하는 것도 허용한다 — 다만 최종 �
 """
 
 
-def build_queries_frame(query_cfg: dict) -> pd.DataFrame:
+def load_inactive_queries(path: Path | None) -> dict[str, str]:
+    """비활성 쿼리 목록(yaml의 `inactive_queries: [{query_id, query, reason}]`) → {query_id: query}. 경로가 없으면 빈 dict."""
+
+    if path is None or not Path(path).exists():
+        return {}
+    with Path(path).open(encoding="utf-8") as f:
+        entries = yaml.safe_load(f).get("inactive_queries") or []
+    return {str(e["query_id"]): str(e["query"]) for e in entries}
+
+
+def build_queries_frame(query_cfg: dict, inactive: dict[str, str] | None = None) -> pd.DataFrame:
     """query_families_v1.yaml의 families를 queries.csv 스키마의 DataFrame으로 변환한다.
 
     family 이름 중복, 잘못된 split, variant 0개, 정규화된 쿼리 텍스트 중복을 검사한다.
+    `inactive`({query_id: query})에 있는 쿼리는 `status=inactive`로 남긴다 — 행은 그대로라 판정 기록과 연결이 유지되고,
+    qrels·평가·학습은 active만 쓴다. 목록의 query_id·쿼리 텍스트가 실제와 다르면 에러(번호가 밀린 채 엉뚱한 쿼리를 끄지 않게).
     """
 
     rows = []
@@ -224,7 +239,15 @@ def build_queries_frame(query_cfg: dict) -> pd.DataFrame:
                 }
             )
 
-    return pd.DataFrame(rows)
+    frame = pd.DataFrame(rows)
+    if inactive:
+        texts = frame.set_index("query_id")["query"]
+        missing = sorted(set(inactive) - set(texts.index))
+        mismatched = sorted(qid for qid, text in inactive.items() if qid in texts.index and texts[qid] != text)
+        if missing or mismatched:
+            raise ValueError(f"비활성 목록이 queries와 맞지 않습니다 — 없는 query_id {missing}, 텍스트 다름 {mismatched}")
+        frame.loc[frame["query_id"].isin(inactive), "status"] = "inactive"
+    return frame
 
 
 def build_query_manifest(
@@ -245,4 +268,18 @@ def build_query_manifest(
         ),
         "queries_sha256": queries_sha256,
         "families_config_sha256": families_config_sha256,
+        **_status_counts(queries),
+    }
+
+
+def _status_counts(queries: pd.DataFrame) -> dict:
+    """비활성 쿼리가 있을 때만 active 기준 개수를 덧붙인다(없으면 예전 manifest와 같은 키)."""
+
+    active = queries[queries["status"] == "active"]
+    if len(active) == len(queries):
+        return {}
+    return {
+        "active_queries": len(active),
+        "active_queries_by_split": active["split"].value_counts().to_dict(),
+        "inactive_queries": len(queries) - len(active),
     }

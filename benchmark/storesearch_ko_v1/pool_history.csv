@@ -2,3 +2,4 @@
 lexical_v1,52115,548,"['char_bm25_v1', 'char_tfidf_v1', 'char_tfidf_v2']",3,95.10036496350364,27,93.0,160,52115
 supplement_v1,52167,548,"['char_bm25_v1', 'char_tfidf_v1', 'char_tfidf_v2']",3,95.19525547445257,27,93.0,160,52
 supplement_v2,65926,548,"['bge_m3', 'char_bm25_v1', 'char_tfidf_v1', 'char_tfidf_v2', 'qwen3_embedding_0_6b', 'qwen3_embedding_0_6b_ft_kse1_20261006_0708', 'qwen3_embedding_0_6b_store', 'snowflake_arctic_embed_l_v2_ko', 'snowflake_arctic_embed_l_v2_ko_query']",9,120.3029197080292,27,118.0,212,13759
+final_v1_val,66146,548,"['arctic_ko_ft_lee', 'bge_m3_ft_mj', 'char_bm25_v1', 'char_tfidf_v1', 'char_tfidf_v2', 'kse16_dense']",6,120.7043795620438,27,118.0,212,220
