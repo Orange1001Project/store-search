@@ -7,6 +7,7 @@ from store_search_ai.data.supplemental_round import (
     load_supplement_runs,
     merge_into_base_adjudication,
     new_pair_counts,
+    pool_mismatch,
     select_new_pairs,
     target_queries_with_terms,
 )
@@ -178,3 +179,15 @@ def test_new_pair_counts_counts_only_unpooled_pairs_per_depth():
     table = new_pair_counts(runs, {("q1", "d1")}, [1, 2]).set_index("depth")
     assert table.loc[1, "union"] == 0                                   # d1은 이미 pool에 있음
     assert (table.loc[2, "a"], table.loc[2, "b"], table.loc[2, "union"]) == (1, 1, 2)
+
+
+def test_pool_mismatch_compares_local_pool_with_tracked_stats(tmp_path):
+    pool = tmp_path / "candidate_pool_internal.csv"
+    stats = tmp_path / "pool_stats.json"
+    assert pool_mismatch(pool, stats) is None                       # 기록이 없으면 검사하지 않음
+    stats.write_text('{"round": "r1", "pool_rows": 2}', encoding="utf-8")
+    assert "없습니다" in pool_mismatch(pool, stats)
+    pool.write_text("﻿query_id,doc_id\nq1,d1\nq1,d2\n", encoding="utf-8")
+    assert pool_mismatch(pool, stats) is None
+    pool.write_text("﻿query_id,doc_id\nq1,d1\n", encoding="utf-8")   # 옛 pool(행이 적음)
+    assert "1행" in pool_mismatch(pool, stats)

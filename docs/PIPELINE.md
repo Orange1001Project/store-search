@@ -291,7 +291,14 @@ python scripts/collect_judging_candidates.py --make --reason "..."  # → annota
 # 이후 6-1과 같다: A·B 판정 → 16 merge → 조정 → 11 → 12 → rescore_evaluations.py → pack_for_colab.py → 노트북 16번
 ```
 
-`candidate_pool_internal.csv`(git 제외)가 있는 곳에서 실행해야 합니다.
+`candidate_pool_internal.csv`(git 제외)가 있는 곳에서 실행해야 합니다. **마지막 라운드의 pool이어야 합니다**:
+`16_supplemental_round.py make/make-runs`(이 스크립트가 부름)는 로컬 pool 행 수가 `pool_stats.json`(git 추적)의 `pool_rows`와 다르면 멈춥니다.
+옛 pool로 만들면 이미 판정한 쌍이 다시 판정 대상에 오르기 때문입니다. 마지막 라운드를 만든 사람에게 pool 파일을 받아 바꾸고,
+정말 의도한 경우만 `--skip-pool-check`를 씁니다(행 수만 비교하므로 행 수가 같고 내용이 다른 pool은 잡지 못함).
+
+- 결과(final_v1_val, 2026-10-16): 후보 3종 val 상위 10개 → 새 판정 220쌍(bge-m3 mj 189, Arctic lee 24, kse16 8, 중복 있음).
+  A·B 둘 다 점수를 준 213행 중 일치 93%(198행 자동 확정), 이진(≥2) 일치 94%, 가중 kappa 0.60(대부분 3점이라 kappa가 낮게 나옴).
+  조정 22행 → qrels_val +217행(판정 불가 3행 gold 제외), pool 66,146행. 비교표는 `results/model_comparison/final_v1_val/`.
 
 ## 10. 검색 파이프라인 구성 탐색 — 하이브리드·reranker (판정 후보 아님)
 

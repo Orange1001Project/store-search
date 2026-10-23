@@ -74,6 +74,7 @@ from store_search_ai.data.supplemental_round import (
     load_supplement_runs,
     merge_into_base_adjudication,
     new_pair_counts,
+    pool_mismatch,
     select_new_pairs,
     target_queries_with_terms,
 )
@@ -313,10 +314,22 @@ def main() -> None:
     parser.add_argument("--depth", type=int, default=20, help="run마다 상위 몇 개를 pool에 넣을지 — make-runs 전용")
     parser.add_argument("--splits", nargs="+", default=["val", "test"], choices=["val", "test"], help="make-runs 전용")
     parser.add_argument("--dry-run", action="store_true", help="depth별 판정 건수만 출력하고 끝 — make-runs 전용")
+    parser.add_argument(
+        "--skip-pool-check", action="store_true",
+        help="로컬 pool 행 수가 pool_stats.json과 달라도 진행(make/make-runs). 옛 pool이면 판정한 쌍을 다시 판정하게 되니 주의",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
     benchmark_dir = Path(config["benchmark_dir"])
+    if args.command in ("make", "make-runs") and not args.skip_pool_check:
+        problem = pool_mismatch(benchmark_dir / "candidate_pool_internal.csv", benchmark_dir / "pool_stats.json")
+        if problem:
+            raise SystemExit(
+                f"{problem}\n로컬 pool이 마지막 판정 라운드와 다릅니다. 옛 pool로 라운드를 만들면 이미 판정한 쌍을 다시 판정하게 됩니다.\n"
+                "마지막 라운드를 만든 사람에게 candidate_pool_internal.csv를 받아 바꾼 뒤 다시 실행하세요"
+                "(정말 의도한 경우만 --skip-pool-check)."
+            )
     if args.command == "make":
         if not args.query:
             raise SystemExit("--query가 필요합니다.")

@@ -29,7 +29,8 @@
 | **bge-m3 mj** (full FT, 기본값) | 0.960 [0.936, 0.980] | 0.994 | 0.960 | 8/124 |
 | **Arctic-KO lee** (full FT, val HP 탐색 1등) | 0.961 [0.937, 0.982] | 0.997 | 0.976 | 6/124 |
 
-¹ supplement_v2 pooling run(depth 20)으로 계산 — @10·@3 지표만 유효. 비교표 전체: `results/model_comparison/final_v1_val/`.
+¹ supplement_v2 pooling run(depth 20)으로 계산 — @10·@3 지표만 유효. 이 라운드 후보가 아니어서 판정 누락이 많다(bge 23개, Arctic 4개) —
+nDCG@10(판정만)은 bge 0.937, Arctic 0.957(학습 후보: kse16 0.954, mj 0.966, lee 0.964). 비교표 전체: `results/model_comparison/final_v1_val/`.
 
 **공식 지표 전체** (`artifacts/evaluation/storesearch_ko_v1/`)
 
@@ -76,14 +77,16 @@
 | Arctic lee vs bge-m3 mj | +0.001 [−0.010, 0.012] | 0.84 | 13/99/12 |
 | Arctic **zero-shot** vs kse16 | −0.001 [−0.017, 0.016] | 0.91 | 14/93/17 |
 | kse16 vs Qwen3 zero-shot | +0.034 [0.021, 0.048] | 0.0001 | 36/84/4 |
-| bge-m3 mj vs bge-m3 zero-shot | +0.042 [0.024, 0.062] | 0.0001 | 40/78/6 |
-| Arctic lee vs Arctic zero-shot | +0.009 [0.002, 0.017] | 0.016 | 16/102/6 |
+| bge-m3 mj vs bge-m3 zero-shot² | +0.042 [0.024, 0.062] | 0.0001 | 40/78/6 |
+| Arctic lee vs Arctic zero-shot² | +0.009 [0.002, 0.017] | 0.016 | 16/102/6 |
+
+² zero-shot bge·Arctic은 이 판정 라운드의 후보가 아니어서 판정 누락이 많고(bge 상위 10개 중 23개), 공식 Δ가 실제보다 크게 나온다. 판정된 문서만으로 매긴 condensed nDCG@10으로는 bge-m3 mj +0.029 [0.013, 0.048] p=0.0005, Arctic lee +0.008 p=0.025다(`results/model_comparison/final_v1_val/README.md`, 2026-10-19 PR #4 리뷰 반영).
 
 **해석**
 - **세 후보는 같은 수준이다**(5절 규칙: Δ ≥ 0.03·p < 0.05 아님). 5절 3번(서비스 지표)도 bad@3 6·7·8개, 1위 정답률 0.976·0.968·0.960으로
   쿼리 1~2개 차이라 가르지 못한다. 크기·속도도 셋 다 약 5.7~6억 파라미터·1024차원으로 비슷하다(Arctic·bge-m3는 XLM-R large 계열 인코더, Qwen3는
   디코더 28층 + query 지시문). **val 품질로는 v1을 고를 근거가 없다.**
-- 학습 효과는 계열마다 다르다: Qwen3 +0.034, bge-m3 +0.042(둘 다 유의), Arctic +0.009. Arctic-KO는 zero-shot이 이미 학습한 Qwen3와 같다(0.952 vs 0.953).
+- 학습 효과는 계열마다 다르다: Qwen3 +0.034, bge-m3 +0.029(condensed 기준. 공식 +0.042에는 zero-shot 판정 누락분이 섞임, 둘 다 유의), Arctic +0.008. Arctic-KO는 zero-shot이 이미 학습한 Qwen3와 같다(0.952 vs 0.953).
 - Arctic lee의 숫자는 **낙관적으로 편향**돼 있다: val 공식 nDCG로 11개 설정 중 1등을 골랐고(Dwork et al. 2015 — 같은 holdout으로 반복 선택하면 과적합),
   학습이 30 step·lr 5e-6이라 사실상 zero-shot이다. 선택 과정의 편향은 bge-m3 mj(기본값 1회) < kse16(kse14→kse16 2회) < Arctic lee(11회) 순으로 작다.
 - 유형별(nDCG@10): 구어·문장(T4, 37개) Arctic 0.944 > bge 0.923 ≈ kse16 0.922 / 개념확장(T3, 12개) bge 0.948 > kse16 0.933 > Arctic 0.926 — 쿼리 수가 적어 방향만 참고.
@@ -107,7 +110,7 @@ bge-m3 mj의 run 폴더(manifest·가중치)는 2026-10-16에 받아 `models/`·
 | ③ 임베딩 v1 선택 (val 선택 완료 2026-10-16: bge-m3 mj, test 남음) | val 공식 지표로 1개 선택, **test는 그 1개만 1회** 채점 | 선택 근거·test 결과 보고, v1 고정 |
 | ④ 검색 파이프라인 | 위치 필터·정렬(거리, 필요시 인지도), **하이브리드 결합, reranker 여부(지연 예산)**, **벡터 DB/ANN 색인**, BM25 폴백 | ANN recall(exact 대비), 지연 p95 측정 |
 | ⑤ 전체 성능 측정 | 실제형 쿼리(로그가 없으므로 팀이 시나리오 기반으로 새로 작성, 7절) + 검색 위치. 반경 안 정답은 소수라 업종·키워드 필터 + 여러 시스템 pooling으로 **거의 빠짐없이** 판정 → 정밀도·재현율 | 쿼리 500개 이상에서 bad@3 상한 ≤ 목표, 현행 대비 우위 |
-| ⑥ 부족하면 재학습 | ⑤의 실패 **유형**에 맞춰 실제 쿼리 기반 데이터·코퍼스 기반 합성 데이터로 v2 학습 | ⑤ 지표로 비교 |
+| ⑥ 부족하면 재학습 | ⑤의 실패 **유형**에 맞춰 실제 쿼리 기반 데이터로 v2 학습 | ⑤ 지표로 비교 |
 | ⑦ 서비스 연결 | 운영 색인·모니터링·폴백 → shadow → interleaving/A/B → 단계적 확대 | 온라인 지표(클릭률, 결과 없음 비율, 재검색률) |
 
 벡터 DB는 ⑦이 아니라 ④에 넣는다 — ANN 색인은 exact 검색과 결과가 조금 달라서, ⑤의 전체 성능은 ANN을 붙인 상태로 재야 한다.

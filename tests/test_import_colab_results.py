@@ -180,3 +180,12 @@ def test_drop_inactive_queries_removes_only_those_lines_verbatim(tmp_path):
     assert drop_inactive_queries(run, {"q_typo"}) == 1
     assert run.read_text(encoding="utf-8") == text.replace("q_typo,d2,1,0.5,m\n", "")   # 점수 자릿수까지 그대로
     assert drop_inactive_queries(run, {"q_typo"}) == 0
+
+
+def test_drop_inactive_queries_leaves_empty_file_alone(tmp_path):
+    from rescore_evaluations import drop_inactive_queries
+
+    run = tmp_path / "run_empty.csv"
+    run.write_text("", encoding="utf-8")
+    assert drop_inactive_queries(run, {"q_typo"}) == 0
+    assert run.read_text(encoding="utf-8") == ""

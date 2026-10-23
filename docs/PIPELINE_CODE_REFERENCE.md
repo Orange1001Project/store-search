@@ -802,6 +802,9 @@ expand_training_rows`, `docs/TRAINING.md` 1절)이 한다.
 - `load_supplement_runs`: 파일 하나 = 시스템 하나, 기존 pool 시스템 이름과 겹치면 에러(어느 run이 넣었는지 보존), 대상 쿼리가 빠진 run은 에러.
 - 시트는 08번과 같은 컬럼(시스템·순위 없음, 무작위 순서). 같은 `--round`로 다시 만들면 멈춤(채우는 중인 시트 보호).
 - 11·12번이 `supplemental_manifest.json`으로 라운드를 찾아 본 라운드와 매번 합친다(본 라운드 파일에 쓰지 않으므로 10번을 다시 돌려도 안전).
+- make·make-runs는 시작할 때 로컬 `candidate_pool_internal.csv` 행 수를 `pool_stats.json`의 `pool_rows`와 비교해 다르면 멈춘다
+  (`supplemental_round.pool_mismatch`, 옛 pool로 판정한 쌍을 다시 판정하는 것을 막음). `--skip-pool-check`로만 넘어간다.
+  `pool_stats.json`의 `pool_systems`는 그 라운드에서 넣은 run + lexical만 적는다 — pool 전체의 시스템 목록은 `validation_final.json`에 있다.
 
 **출력 파일**: `annotations/<round>/annotation_A.csv`, `annotation_B.csv`, `supplemental_manifest.json`(이유, 시스템별 sha256,
 depth, 쌍 수), `runs/`(make-runs가 쓴 run 사본), `analysis/`(merge 결과). `candidate_pool_internal.csv`·`pool_stats.json`·`pool_history.csv` 갱신.
