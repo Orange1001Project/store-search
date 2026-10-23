@@ -8,6 +8,8 @@
            1) --exp rerank --export-pairs → results/service_pipeline/rerank/rerank_pairs.csv(dev+test 쌍, 위치 무관이라 쿼리 단위)
               → Drive store-search-ai/stack_eval/service/에 올리고 colab/rerank_scores.ipynb(SPLIT="service") 실행
            2) 생긴 rerank_scores_<모델>.csv를 results/service_pipeline/rerank/에 넣고 --exp rerank
+           3) 1-4 보충 판정: --exp rerank --pool-round service_v5 [--dry-run] → annotations/service_v5/
+              (고른 reranker의 모든 구성, dev+test 반경별 상위 10 중 미판정 쌍)
 
 출력: results/service_pipeline/<exp>_<split>.csv — 구성 × 반경 × 묶음별 nDCG@10, nDCG@10(판정만), Judged@10, bad@3, top1_ok
 
@@ -20,7 +22,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
+import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -30,8 +35,9 @@ from store_search_ai.evaluation.service_eval import attach_distance, instance_qr
 from store_search_ai.pipeline.common import load_config
 from store_search_ai.retrieval.fusion import _rerank, boost, convex, name_match, rrf
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))   # 보충 판정 시트는 build_service_pool.py와 같은 함수로 만든다
 logger = logging.getLogger(__name__)
-V1 = "bge_m3_ft_mj_20261014_0743"
+V1 ="bge_m3_ft_mj_20261014_0743"
 RERANK_DIR = Path("results/service_pipeline/rerank")
 RERANK_DEPTH = 50          # 재정렬 후보 수(반경 안 1단계 상위). 실험은 이 안에서 k=20·30·50을 본다
 DOC_TEXT_COLUMN = "search_text_t1_minimal"   # 모델 평가·판정 pool과 같은 문서 텍스트(가맹점명 + 취급품목)
@@ -149,6 +155,83 @@ def rerank_variants(stage_r: pd.DataFrame, scores: dict[str, pd.DataFrame], inst
     return out
 
 
+def supplement_pool(args, cfg: dict, bench: dict, stage: pd.DataFrame, scores: dict[str, pd.DataFrame],
+                    instances: pd.DataFrame, coords: pd.DataFrame, names: pd.Series) -> None:
+    """1-4 보충 판정: 고른 reranker 구성들의 반경별 상위 depth개 중 아직 판정 안 된 (쿼리, 가맹점) → 판정 라운드.
+    dev·test 모든 사례(묶음 v1·anchor·extra)를 한 라운드로 만든다. 시트 형식·판정자 배정은 build_service_pool.py pool과 같다."""
+
+    from build_service_pool import previously_judged, write_annotation_xlsx
+
+    from store_search_ai.data.service_pool import annotation_sheet, assign_annotators, double_annotation_queries
+    from store_search_ai.pipeline.common import sha256_file
+
+    jcfg = cfg["judging"]
+    bdir = Path(jcfg["benchmark_dir"])
+    depth = jcfg["depth"]
+    scores = {m: s for m, s in scores.items() if m in set(args.pool_rerankers)}
+    if len(scores) != len(args.pool_rerankers):
+        raise SystemExit(f"reranker 점수 파일이 없습니다: {sorted(set(args.pool_rerankers) - set(scores))}")
+    tops = []
+    for radius in jcfg["report_radii_km"]:
+        for name, run in rerank_variants(within_radius(stage, instances, coords, radius), scores, instances, names).items():
+            if name != "v1+name b=0.5":     # 1단계는 이미 판정됨
+                tops.append(within_radius(run, instances, coords, radius, depth).assign(system=name))
+    top = pd.concat(tops, ignore_index=True).rename(columns={"query_id": "instance_id"})
+    top["query_id"] = top["instance_id"].map(instances.set_index("instance_id")["query_id"])
+    judged = previously_judged(bdir)
+    pairs = (top.groupby(["query_id", "doc_id"], as_index=False)
+             .agg(pool_sources=("system", lambda s: "|".join(sorted(set(s)))),
+                  instance_ids=("instance_id", lambda s: "|".join(sorted(set(s))))))
+    pairs = pairs[[(q, d) not in judged for q, d in zip(pairs["query_id"], pairs["doc_id"], strict=True)]].reset_index(drop=True)
+    split = instances.drop_duplicates("query_id").set_index("query_id")["split"]
+    logger.info("새 판정 쌍 %d개(쿼리 %d개, %s), 구성 %d개 × 반경 %s × 상위 %d", len(pairs), pairs["query_id"].nunique(),
+                pairs["query_id"].map(split).value_counts().to_dict(), len(tops) // len(jcfg["report_radii_km"]),
+                jcfg["report_radii_km"], depth)
+    if args.dry_run:
+        return
+    round_dir = bdir / "annotations" / args.pool_round
+    if (round_dir / "pool_manifest.json").exists():
+        raise SystemExit(f"{round_dir}에 이미 라운드가 있습니다 — 다른 --pool-round를 쓰세요.")
+    seed = cfg["random_seed"]
+    base = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
+    corpus = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "store_name", "item_text", "market_name"])
+    sheet = annotation_sheet(pairs, base, corpus, seed)
+    share = jcfg["double_annotation_share"]
+    double = double_annotation_queries(sorted(pairs["query_id"].unique()), share, seed)
+    writers = {qid: set(str(w).split("|")) for qid, w in zip(base["query_id"], base["writers"], strict=True)}
+    assignment = assign_annotators(pairs.groupby("query_id").size(), double, jcfg["annotators"], writers, seed)
+    round_dir.mkdir(parents=True, exist_ok=True)
+    for name, qids in assignment.items():
+        part = sheet[sheet["query_id"].isin(qids)].reset_index(drop=True)
+        part.to_csv(round_dir / f"annotation_{name}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+        write_annotation_xlsx(part, round_dir / f"판정_{name}.xlsx")
+        logger.info("판정자 %s: 쿼리 %d개(이중 판정 %d 포함), %d쌍", name, len(qids), len(double), len(part))
+    pairs.to_csv(round_dir / "pool.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    manifest = {
+        "round": args.pool_round,
+        "set": "service_pipeline 1-4 보충 판정(reranker 구성, dev+test 모든 사례)",
+        "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
+        "created_at": datetime.now(UTC).isoformat(),
+        "first_stage": "v1+name b=0.5",
+        "rerankers": sorted(scores),
+        "systems": sorted(top["system"].unique()),
+        "report_radii_km": jcfg["report_radii_km"],
+        "depth": depth,
+        "queries": int(pairs["query_id"].nunique()),
+        "pairs": len(pairs),
+        "double_annotation_queries": len(double),
+        "double_annotation_pairs": int(sheet["query_id"].isin(double).sum()),
+        "annotators": {name: {"writer_id": jcfg["annotators"][name], "queries": len(qids),
+                              "pairs": int(sheet["query_id"].isin(qids).sum())} for name, qids in assignment.items()},
+        "rerank_scores_sha256": {p.name: sha256_file(p) for p in sorted(RERANK_DIR.glob("rerank_scores_*.csv"))
+                                 if p.stem.removeprefix("rerank_scores_") in scores},
+        "instances_sha256": sha256_file(bdir / "instances.csv"),
+        "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
+    }
+    (round_dir / "pool_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info("저장: %s (전체 %d쌍, 이중 판정 %d쌍)", round_dir, len(sheet), manifest["double_annotation_pairs"])
+
+
 def condense(run: pd.DataFrame, instances: pd.DataFrame, qrels: pd.DataFrame) -> pd.DataFrame:
     """판정된 (쿼리, 가맹점)만 남긴 run(Sakai 2007 condensed list). 판정 누락이 있는 새 구성을 공정하게 비교하려고 같이 본다."""
 
@@ -178,14 +261,18 @@ def main() -> None:
     parser.add_argument("--split", choices=["dev", "test"], default="dev")
     parser.add_argument("--only", action="append", help="채점할 구성 이름(여러 번). test는 반드시 지정")
     parser.add_argument("--export-pairs", action="store_true", help="rerank: Colab에서 채점할 쌍만 내보내고 끝")
+    parser.add_argument("--pool-round", help="rerank: 보충 판정 라운드를 만든다(1-4, 예: service_v5)")
+    parser.add_argument("--pool-rerankers", nargs="+", default=["bge-reranker-v2-m3"],
+                        help="보충 판정에 넣을 reranker(점수 파일 이름). 기본은 dev에서 앞선 bge 하나")
+    parser.add_argument("--dry-run", action="store_true", help="--pool-round: 판정 건수만")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     if args.split == "test" and not args.only:
         raise SystemExit("test는 고른 구성만 채점합니다 — --only로 지정하세요(docs/SERVICE_PIPELINE_PLAN.md 3절).")
-    if args.export_pairs and args.exp != "rerank":
-        raise SystemExit("--export-pairs는 --exp rerank에서만 씁니다")
+    if (args.export_pairs or args.pool_round) and args.exp != "rerank":
+        raise SystemExit("--export-pairs·--pool-round는 --exp rerank에서만 씁니다")
 
     cfg = load_config(args.config)
     bdir = Path(cfg["judging"]["benchmark_dir"])
@@ -206,6 +293,10 @@ def main() -> None:
         RERANK_DIR.mkdir(parents=True, exist_ok=True)
         pairs.to_csv(RERANK_DIR / "rerank_pairs.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
         logger.info("쌍 %d개(쿼리 %d개) → %s", len(pairs), pairs["query_id"].nunique(), RERANK_DIR / "rerank_pairs.csv")
+        return
+    if args.pool_round:
+        supplement_pool(args, cfg, bench, first_stage(runs, all_instances, names), load_rerank_scores(), all_instances, coords,
+                        names)
         return
 
     iq = instance_qrels(instances, qrels, coords)
