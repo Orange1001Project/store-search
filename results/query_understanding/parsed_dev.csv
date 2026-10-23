@@ -1,0 +1,144 @@
+﻿query_id,bundle,query,gold_region,parsed_region,core,intent,region_stores,target_in_region,center_km_from_location,region_has_location,remote_region,remote_region_has_location,name_hits,target_in_name_hits,region_exact
+sq_B004,B,파리바게트,,,파리바게트,brand,0,,,,,,116,,True
+sq_B005,B,컴포즈커피,,,컴포즈커피,brand,0,,,,,,343,,True
+sq_B015,B,텐퍼센트커피,,,텐퍼센트커피,brand,0,,,,,,109,,True
+sq_B019,B,뚜레쥬르,,,뚜레쥬르,brand,0,,,,,,147,,True
+sq_B021,B,맘스터치,,,맘스터치,brand,0,,,,,,145,,True
+sq_B028,B,비비큐,,,비비큐,brand,0,,,,,,137,,True
+sq_B029,B,자담치킨,,,자담치킨,brand,0,,,,,,96,,True
+sq_B035,B,BHC,,,BHC,brand,0,,,,,,75,,True
+sq_B043,B,가마치통닭,,,가마치통닭,brand,0,,,,,,73,,True
+sq_B044,B,벌크커피,,,벌크커피,brand,0,,,,,,84,,True
+sq_B046,B,희랑 원주,원주,원주,희랑,name,1531,True,2.3547372907138775,True,원주,True,2,True,True
+sq_B047,B,문주짓수,,,문주짓수,name,0,,,,,,1,True,True
+sq_B048,B,안산 고잔 숯토리,,안산 고잔,숯토리,brand,426,True,0.22915196584205053,True,안산 고잔,True,6,True,False
+sq_B051,B,고성 성나루횟집,고성,고성,성나루횟집,name,216,True,0.12228317931319545,True,고성,True,1,True,True
+sq_B056,B,남부민 김천수산,남부민,남부민,김천수산,brand,129,True,0.11568407587198475,True,남부민,True,3,True,True
+sq_B057,B,순천 웃장 손두부,순천,순천 웃장,손두부,name,97,True,0.03970732219442652,True,순천 웃장,True,96,True,False
+sq_B066,B,구리시장 승환상회,구리시장,구리시장,승환상회,name,794,True,0.023494411516473766,True,구리시장,True,1,True,True
+sq_B068,B,신림 봉추찜닭,신림,신림,봉추찜닭,brand,892,True,0.2154575893466178,True,신림,True,17,True,True
+sq_B071,B,동대문종합시장 CU,,동대문종합시장,CU,brand,99,True,0.04313581484356356,True,동대문종합시장,True,5,False,False
+sq_B077,B,알찬김밥,,,알찬김밥,brand,0,,,,,,3,True,True
+sq_B078,B,불광동 죽마을,불광동,불광동,죽마을,name,167,True,0.4560568605475804,True,불광동,True,2,True,True
+sq_B080,B,장미미소약국,,,장미미소약국,name,0,,,,,,12,True,True
+sq_B081,B,QED 골프 선운점,,,QED 골프 선운점,category,0,,,,,,0,False,True
+sq_B093,B,묵동 대박축산,묵동,묵동,대박축산,brand,122,True,0.4943059925808229,True,묵동,True,18,True,True
+sq_B096,B,태후사랑 첨단3호,,,태후사랑 첨단3호,name,0,,,,,,49,True,True
+sq_B102,B,정선 새아네그릇,정선,정선,새아네그릇,name,342,True,13.007436562984433,True,정선,True,1,True,True
+sq_B107,B,원주 누나네낙지,원주,원주,누나네낙지,name,1531,True,3.8340755130865865,True,원주,True,1,True,True
+sq_B113,B,삼거리 황소곱창,,,삼거리 황소곱창,name,0,,,,,,10,True,True
+sq_B115,B,대전 아카데미 과학모형,대전,대전,아카데미 과학모형,name,9866,True,9.989505865528532,True,대전,True,2,True,True
+sq_B118,B,동래 우진식육점,동래,동래,우진식육점,name,833,True,0.10986146312517098,True,동래,True,2,True,True
+sq_B122,B,통영 승리상회,통영,통영,승리상회,brand,673,True,0.5758248814724565,True,통영,True,9,True,True
+sq_B124,B,평택 사계절식당,평택,평택,사계절식당,brand,1288,True,1.8482634213461206,True,평택,True,30,True,True
+sq_B125,B,부평시장 다모아베이커리,부평시장,부평시장,다모아베이커리,name,1279,True,0.15293439068896555,True,부평시장,False,36,True,True
+sq_B126,B,성남 오늘도회땡겨,성남,성남,오늘도회땡겨,name,2345,True,0.9357341574114298,True,성남,True,3,True,True
+sq_B127,B,문경 라망화장품,문경,문경,라망화장품,name,541,True,0.07055345722774846,True,문경,True,4,True,True
+sq_B129,B,옥련시장 봉이네축산,옥련시장,옥련시장,봉이네축산,name,71,True,0.02823495394618673,True,옥련시장,True,4,True,True
+sq_B133,B,충주 회풍루,충주,충주,회풍루,name,1093,True,0.2357134488607586,True,충주,True,1,True,True
+sq_B143,B,범계 88포장마차,,,범계 88포장마차,name,0,,,,,,3,False,True
+sq_D001,D,보문산 카페,보문산,보문산,카페,category,34,,0.05330767486490896,True,보문산,True,0,,True
+sq_D002,D,화성 분식,화성,화성,분식,category,1628,,10.564466815386476,True,화성,True,0,,True
+sq_D003,D,을지로 옷가게,을지로,을지로,옷가게,category,852,,0.8506186952043113,True,을지로,True,0,,True
+sq_D004,D,평화시장 패션,평화시장,평화시장,패션,category,415,,0.4932955925970669,True,평화시장,True,0,,True
+sq_D021,D,표선사거리 치킨,표선사거리,표선사거리,치킨,category,57,,0.00799339361739242,True,표선사거리,True,0,,True
+sq_D022,D,명동 귀금속,명동,명동,귀금속,category,2,,118.47380757339333,False,명동,False,0,,True
+sq_D024,D,암사종합시장 수산물,암사종합시장,암사종합시장,수산물,category,119,,0.008785856846370349,True,암사종합시장,True,0,,True
+sq_D025,D,용봉우치로 세차,용봉우치로,용봉우치로,세차,category,38,,0.052941831040817164,True,용봉우치로,True,0,,True
+sq_D028,D,금산인삼약령시장 약초,금산인삼약령시장,금산인삼약령시장,약초,category,20,,0.05793837719799876,True,금산인삼약령시장,True,0,,True
+sq_D040,D,일곡동 세탁소,일곡동,일곡동,세탁소,category,659,,0.25811176796305474,True,일곡동,True,0,,True
+sq_D042,D,달서로 식당,달서로,달서로,식당,category,213,,0.21788303943009393,True,달서로,True,0,,True
+sq_D044,D,진잠 칼국수,진잠,진잠,칼국수,category,149,,0.0023362081789765994,True,진잠,True,0,,True
+sq_D051,D,봉담 아울렛 옷가게,봉담,봉담,아울렛 옷가게,category,188,,2.7149647915697708,True,봉담,True,0,,True
+sq_C008,C,보양식 재료 파는 곳,,,보양식 재료 파는 곳,category,0,,,,,,0,,True
+sq_C013,C,부모님 선물,,,부모님 선물,category,0,,,,,,0,,True
+sq_C014,C,농장 준비,,,농장 준비,category,0,,,,,,0,,True
+sq_C016,C,자전거 수리점,,,자전거 수리점,category,0,,,,,,0,,True
+sq_C021,C,이유식 재료 파는 곳,,,이유식 재료 파는 곳,category,0,,,,,,0,,True
+sq_C023,C,생선 가게,,,생선 가게,category,0,,,,,,0,,True
+sq_C025,C,집들이 선물,,,집들이 선물,category,0,,,,,,0,,True
+sq_C030,C,안경 맞추는 곳,,,안경 맞추는 곳,category,0,,,,,,0,,True
+sq_C033,C,감기 걸리면 가는 병원,,,감기 걸리면 가는 병원,category,0,,,,,,0,,True
+sq_C036,C,신경 관련 병원,,,신경 관련 병원,category,0,,,,,,0,,True
+sq_C038,C,피아노 학원,,,피아노 학원,category,0,,,,,,0,,True
+sq_C039,C,차례상 재료 파는 곳,,,차례상 재료 파는 곳,category,0,,,,,,0,,True
+sq_C052,C,보양식 재료 살 곳,,,보양식 재료 살 곳,category,0,,,,,,0,,True
+sq_C057,C,어른 선물 살 곳,,,어른 선물 살 곳,category,0,,,,,,0,,True
+sq_C058,C,텃밭 농기구,,,텃밭 농기구,category,0,,,,,,0,,True
+sq_C060,C,자전거 바람 넣는 곳,,,자전거 바람 넣는 곳,category,0,,,,,,0,,True
+sq_C065,C,이유식 재료 살 곳,,,이유식 재료 살 곳,category,0,,,,,,0,,True
+sq_C067,C,제사용 생선 파는 곳,,,제사용 생선 파는 곳,category,0,,,,,,0,,True
+sq_C069,C,집들이 선물 살 곳,,,집들이 선물 살 곳,category,0,,,,,,0,,True
+sq_C074,C,눈 검사할 곳,,,눈 검사할 곳,category,0,,,,,,0,,True
+sq_C077,C,목감기 진료,,,목감기 진료,category,0,,,,,,0,,True
+sq_C080,C,난청 진료,,,난청 진료,category,0,,,,,,0,,True
+sq_C082,C,피아노 레슨,,,피아노 레슨,category,0,,,,,,0,,True
+sq_C083,C,차례 음식 재료,,,차례 음식 재료,category,0,,,,,,0,,True
+sq_C096,C,보양식 재료,,,보양식 재료,category,0,,,,,,0,,True
+sq_C101,C,과일 선물세트,,,과일 선물세트,category,0,,,,,,0,,True
+sq_C102,C,모종 파는 곳,,,모종 파는 곳,category,0,,,,,,0,,True
+sq_C108,C,이유식 재료,,,이유식 재료,category,0,,,,,,0,,True
+sq_C110,C,제수용 생선,,,제수용 생선,category,0,,,,,,0,,True
+sq_C112,C,집들이 와인 선물,,,집들이 와인 선물,category,0,,,,,,0,,True
+sq_C117,C,돋보기 안경,,,돋보기 안경,category,0,,,,,,0,,True
+sq_C120,C,동네 약국,,,동네 약국,category,0,,,,,,0,,True
+sq_C123,C,보청기 상담,,,보청기 상담,category,0,,,,,,0,,True
+sq_C124,C,차례상 떡 과일,,,차례상 떡 과일,category,0,,,,,,0,,True
+sq_C132,C,도시락 음식,,,도시락 음식,category,0,,,,,,0,,True
+sq_C133,C,예쁜 그릇,,,예쁜 그릇,category,0,,,,,,0,,True
+sq_C141,C,운동복 매장,,,운동복 매장,category,0,,,,,,0,,True
+sq_C143,C,비상등 매장,,,비상등 매장,category,0,,,,,,0,,True
+sq_C145,C,우산,,,우산,category,0,,,,,,0,,True
+sq_C151,C,손전등,,,손전등,category,0,,,,,,0,,True
+sq_C156,C,학생 체육복,,,학생 체육복,category,0,,,,,,0,,True
+sq_C158,C,과일 바구니,,,과일 바구니,category,0,,,,,,0,,True
+sq_C166,C,김밥,,,김밥,category,0,,,,,,0,,True
+sq_C172,C,우산 파는 곳,,,우산 파는 곳,category,0,,,,,,0,,True
+sq_C174,C,아동 체육복,,,아동 체육복,category,0,,,,,,0,,True
+sq_C180,C,소풍 도시락,,,소풍 도시락,category,0,,,,,,0,,True
+sq_A001,A,샐러드 가게,,,샐러드 가게,category,0,,,,,,0,,True
+sq_A002,A,포케,,,포케,category,0,,,,,,0,,True
+sq_A003,A,다이어트 음식,,,다이어트 음식,category,0,,,,,,0,,True
+sq_A004,A,건강한 음식,,,건강한 음식,category,0,,,,,,0,,True
+sq_A005,A,샐러드 파는 곳,,,샐러드 파는 곳,category,0,,,,,,0,,True
+sq_A015,A,네컷,,,네컷,category,0,,,,,,0,,True
+sq_A016,A,무인 사진관,,,무인 사진관,category,0,,,,,,0,,True
+sq_A017,A,스냅 사진,,,스냅 사진,category,0,,,,,,0,,True
+sq_A018,A,프로필 사진,,,프로필 사진,category,0,,,,,,0,,True
+sq_A019,A,단체 사진,,,단체 사진,category,0,,,,,,0,,True
+sq_A020,A,곱창 파는 곳,,,곱창 파는 곳,category,0,,,,,,0,,True
+sq_A021,A,고기 내장,,,고기 내장,category,0,,,,,,0,,True
+sq_A022,A,곱창 구이,,,곱창 구이,category,0,,,,,,0,,True
+sq_A023,A,곱창 잘하는 집,,,곱창 잘하는 집,category,0,,,,,,0,,True
+sq_A024,A,야채곱창,,,야채곱창,name,0,,,,,,9,,True
+sq_A034,A,농자재 파는 곳,,,농자재 파는 곳,category,0,,,,,,0,,True
+sq_A035,A,농사 기구 파는 곳,,,농사 기구 파는 곳,category,0,,,,,,0,,True
+sq_A036,A,농사 준비,,,농사 준비,category,0,,,,,,0,,True
+sq_A037,A,농사에 필요한 기구,,,농사에 필요한 기구,category,0,,,,,,0,,True
+sq_A038,A,농자재 가게,,,농자재 가게,category,0,,,,,,0,,True
+sq_A084,A,커튼 가게,,,커튼 가게,category,0,,,,,,0,,True
+sq_A085,A,창문 가리개,,,창문 가리개,name,0,,,,,,1,,True
+sq_A086,A,거실 커튼,,,거실 커튼,category,0,,,,,,0,,True
+sq_A087,A,햇빛 가릴 커튼,,,햇빛 가릴 커튼,category,0,,,,,,0,,True
+sq_A088,A,커튼 맞춤 제작,,,커튼 맞춤 제작,category,0,,,,,,0,,True
+sq_A094,A,태권도장,,,태권도장,category,0,,,,,,0,,True
+sq_A095,A,무술 학원,,,무술 학원,category,0,,,,,,0,,True
+sq_A096,A,아이 운동,,,아이 운동,category,0,,,,,,0,,True
+sq_A097,A,무술 배우는 곳,,,무술 배우는 곳,category,0,,,,,,0,,True
+sq_A098,A,태권도 배우는 곳,,,태권도 배우는 곳,category,0,,,,,,0,,True
+sq_A109,A,마라탕집,,,마라탕집,category,0,,,,,,0,,True
+sq_A110,A,마라샹궈,,,마라샹궈,category,0,,,,,,0,,True
+sq_A111,A,매운 탕요리,,,매운 탕요리,category,0,,,,,,0,,True
+sq_A112,A,마라탕 맛있는 곳,,,마라탕 맛있는 곳,category,0,,,,,,0,,True
+sq_A113,A,훠궈,,,훠궈,category,0,,,,,,0,,True
+sq_A114,A,청각 보조기,,,청각 보조기,category,0,,,,,,0,,True
+sq_A115,A,귀 안 들릴 때,,,귀 안 들릴 때,category,0,,,,,,0,,True
+sq_A116,A,보청기 배터리,,,보청기 배터리,category,0,,,,,,0,,True
+sq_A117,A,보청기 맞추는 곳,,,보청기 맞추는 곳,category,0,,,,,,0,,True
+sq_A118,A,난청 센터,,,난청 센터,category,0,,,,,,0,,True
+sq_E002,E,워터파크,,,워터파크,category,0,,,,,,0,,True
+sq_E008,E,쿠팡,,,쿠팡,category,0,,,,,,0,,True
+sq_E013,E,온누리 잔액조회,,,온누리 잔액조회,category,0,,,,,,0,,True
+sq_E017,E,온누리 환불 방법,,,온누리 환불 방법,category,0,,,,,,0,,True
+sq_E021,E,신세계,,,신세계,brand,0,,,,,,125,,True
+sq_E023,E,5성급 호텔,,,5성급 호텔,category,0,,,,,,0,,True

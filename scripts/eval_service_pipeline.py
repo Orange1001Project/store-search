@@ -61,16 +61,39 @@ def hybrid_variants(runs: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
     return out
 
 
-def name_hits(run: pd.DataFrame, instances: pd.DataFrame, names: pd.Series) -> pd.Series:
-    q = instances.set_index("instance_id")
-    core = {}
-    for i in q.index:
-        t = q.at[i, "query"]
-        for w in str(q.at[i, "region_text"]).split():
-            t = t.replace(w, "")
-        core[i] = t
-    return pd.Series([name_match(core.get(i, ""), names.get(d, "")) for i, d in zip(run["query_id"], run["doc_id"], strict=True)],
+def name_hits(run: pd.DataFrame, instances: pd.DataFrame, names: pd.Series, cores: dict[str, str] | None = None) -> pd.Series:
+    """상호 일치 신호. cores(사례 → 지역을 뺀 쿼리)가 없으면 쿼리 작성 때 적은 region_text를 뺀다(1-1 방식, 서비스에는 없는 정보).
+    서비스와 같은 조건은 쿼리 이해(parsed_cores)로 뺀 cores를 넘긴다."""
+
+    if cores is None:
+        q = instances.set_index("instance_id")
+        cores = {}
+        for i in q.index:
+            t = q.at[i, "query"]
+            for w in str(q.at[i, "region_text"]).split():
+                t = t.replace(w, "")
+            cores[i] = t
+    return pd.Series([name_match(cores.get(i, ""), names.get(d, "")) for i, d in zip(run["query_id"], run["doc_id"], strict=True)],
                      index=run.index)
+
+
+def parsed_cores(instances: pd.DataFrame, corpus_path: str) -> dict[str, str]:
+    """사례마다 쿼리 이해로 지역을 뺀 나머지(사용자 위치 = 사례 위치)."""
+
+    from store_search_ai.query.understanding import QueryUnderstanding
+
+    corpus = pd.read_parquet(corpus_path, columns=["store_name", "item_text", "address", "market_name", "source_region",
+                                                   "legal_dong_code", "latitude", "longitude", "geo_status"])
+    qu = QueryUnderstanding(corpus[corpus["geo_status"] == "VALID"])
+    parsed: dict[tuple, str] = {}
+    out = {}
+    for i, q, la, lo in zip(instances["instance_id"], instances["query"], instances["latitude"], instances["longitude"],
+                            strict=True):
+        key = (q, round(float(la), 3), round(float(lo), 3))
+        if key not in parsed:
+            parsed[key] = qu.parse(q, float(la), float(lo)).core
+        out[i] = parsed[key]
+    return out
 
 
 def hybrid2_variants(runs: dict[str, pd.DataFrame], instances: pd.DataFrame, names: pd.Series) -> dict[str, pd.DataFrame]:
@@ -92,13 +115,14 @@ def hybrid2_variants(runs: dict[str, pd.DataFrame], instances: pd.DataFrame, nam
     return out
 
 
-def first_stage(runs: dict[str, pd.DataFrame], instances: pd.DataFrame, names: pd.Series) -> pd.DataFrame:
+def first_stage(runs: dict[str, pd.DataFrame], instances: pd.DataFrame, names: pd.Series,
+                cores: dict[str, str] | None = None, name: str = "v1+name b=0.5") -> pd.DataFrame:
     """1-1에서 채택한 1단계: v1 + BM25 후보 합집합에 상호 일치 가산점 β=0.5."""
 
     v1 = runs[V1][runs[V1]["query_id"].isin(instances["instance_id"])]
     bm25 = runs["char_bm25"][runs["char_bm25"]["query_id"].isin(instances["instance_id"])]
     union = convex([v1, bm25], [1.0, 0.0], name="union_v1")
-    return boost(union, name_hits(union, instances, names), 0.5, "v1+name b=0.5")
+    return boost(union, name_hits(union, instances, names, cores), 0.5, name)
 
 
 def within_radius(run: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame, radius_km: float,
@@ -257,7 +281,7 @@ def _agg(g: pd.DataFrame) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp", choices=["hybrid", "hybrid2", "rerank"], required=True)
+    parser.add_argument("--exp", choices=["hybrid", "hybrid2", "rerank", "qu"], required=True)
     parser.add_argument("--split", choices=["dev", "test"], default="dev")
     parser.add_argument("--only", action="append", help="채점할 구성 이름(여러 번). test는 반드시 지정")
     parser.add_argument("--export-pairs", action="store_true", help="rerank: Colab에서 채점할 쌍만 내보내고 끝")
@@ -308,6 +332,14 @@ def main() -> None:
 
         def variants_for(radius: float) -> dict[str, pd.DataFrame]:
             return rerank_variants(within_radius(stage, instances, coords, radius), scores, instances, names)
+    elif args.exp == "qu":
+        v1 = runs[V1][runs[V1]["query_id"].isin(instances["instance_id"])]
+        fixed = {"v1": v1, "v1+name b=0.5": first_stage(runs, instances, names),
+                 "v1+name(qu) b=0.5": first_stage(runs, instances, names, parsed_cores(instances, bench["corpus_path"]),
+                                                  "v1+name(qu) b=0.5")}
+
+        def variants_for(radius: float) -> dict[str, pd.DataFrame]:
+            return fixed
     else:
         fixed = hybrid_variants(runs) if args.exp == "hybrid" else hybrid2_variants(runs, instances, names)
 
