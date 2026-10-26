@@ -60,3 +60,11 @@ def test_notebook_radius_runs_keep_top_depth_per_radius_like_local():
     q1 = got[got["query_id"] == "q1"]
     assert q1["doc_id"].isin(near).sum() == min(5, len(near))      # 작은 반경 상위 5개가 다 들어 있다
     assert (q1["rank"].head(5).to_numpy() == np.arange(1, 6)).all()
+
+
+def test_every_code_cell_compiles():
+    # Colab에서 처음 실행할 때 문법 오류로 멈추지 않게(2026-10-27: 문자열 안 줄바꿈으로 셀 하나가 깨졌던 일)
+    cells = json.loads(NOTEBOOK.read_text(encoding="utf-8"))["cells"]
+    for i, c in enumerate(cells):
+        if c["cell_type"] == "code":
+            compile("".join(c["source"]), f"<notebook cell {i}>", "exec")
