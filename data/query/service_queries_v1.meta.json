@@ -5,18 +5,19 @@
   "sources": {
     "data/query/writers_completed/서비스셋_직접작성_v1_3명_completed.xlsx": "ce1f8fb137d3f149992efba770e97e92e8967dc51023bfbf0f4c66548543d6db",
     "data/query/writers_completed/서비스셋_직접작성_v1_추가C_completed.xlsx": "c743839c5f871278b1cc5039c047124bd820b27ce3d483109aebb977fba71d45",
+    "data/query/writers_completed/서비스셋_직접작성_v1_추가B_completed.xlsx": "6416c3714d7d2b1c39c4cce8247fac5f77cad27901a738d1fd05fa909cc7c626",
     "data/query/service_queryset_v1_team_completed.xlsx": "0ef98ff6add75ba8df3cb33a3bcd25bba71ff41d83147b7a3b4c69f48866ee29",
     "data/query/service_queryset_v1.xlsx": "242f663407825a47798f6f84f84804cf4e87c8ef591056db04ecd2070cc2318b"
   },
-  "queries": 553,
+  "queries": 617,
   "active_by_bundle_split": {
     "A": {
       "dev": 40,
       "test": 108
     },
     "B": {
-      "dev": 38,
-      "test": 112
+      "dev": 54,
+      "test": 160
     },
     "C": {
       "dev": 46,

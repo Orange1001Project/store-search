@@ -48,7 +48,7 @@ DOC_TEXT_COLUMN = "search_text_t1_minimal"   # 모델 평가·판정 pool과 같
 
 def load_runs(bdir: Path) -> dict[str, pd.DataFrame]:
     runs: dict[str, list[pd.DataFrame]] = {}
-    for d in ("runs", "runs_anchor", "runs_extra"):
+    for d in ("runs", "runs_anchor", "runs_extra", "runs_extra_b"):
         for path in sorted((bdir / d).glob("*.csv")):
             runs.setdefault(path.stem, []).append(pd.read_csv(path, encoding="utf-8-sig"))
     return {k: pd.concat(v, ignore_index=True) for k, v in runs.items()}

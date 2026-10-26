@@ -730,3 +730,67 @@ sq_C178,바비큐 고기,C,test,active,,정육점,,,doc:bee79f69-ed6b-4e23-9165-
 sq_C179,치과,C,test,active,,치과 의원,,,doc:8984cfaf-98d4-4436-8673-02fd8b14d003,36.130617315,128.330188747,auto_store,C055,W3,1,,test,,,,sq_C179,random,,,extra
 sq_C180,소풍 도시락,C,dev,active,,"김밥집, 분식점",,,doc:bc947c2e-22f8-4363-b5eb-88629ef3dc87,35.156695181,126.868931389,auto_store,C065,W3,1,,,,,,sq_C180,random,,,extra
 sq_C181,야간 약국,C,test,active,,"약국, 24시 약국",,,doc:a96685c9-a366-46b3-87c5-4a2dc3b87477,35.2289773,129.088954529,auto_store,C060,W3,1,,,,,,sq_C181,random,,,extra
+sq_B151,온무드,B,test,active,,온무드,,,S227,37.310827241,126.83243147,store,S227,W1,1,,,,,,sq_B151,random,,,extra_b
+sq_B152,천금주단,B,test,active,,천금주단,,,S183,35.6502832458,127.3625695792,store,S183,W1,1,,,,,,sq_B152,random,,,extra_b
+sq_B153,GS,B,test,active,,주변 GS25,,,S060,35.7966788862,127.1145832005,store,S060,W1,1,,,,,,sq_B153,random,,,extra_b
+sq_B154,선미양장,B,dev,active,,선미양장,,,S212,35.9833961474,126.7203109572,store,S212,W1,1,,,,,,sq_B154,random,,,extra_b
+sq_B155,효준,B,test,active,,효준횟집,,,S214,34.840144066,127.894249782,store,S214,W1,1,,,,,,sq_B155,random,,,extra_b
+sq_B156,경민,B,test,active,,경민상회,,,S209,37.4275337498,127.1420634165,store,S209,W1,1,,,,,,sq_B156,random,,,extra_b
+sq_B157,반월당 보물창고,B,test,active,,보물창고,반월당,writer,S234,35.865803,128.59259,store,S234,W1,1,,,,,,sq_B157,random,,,extra_b
+sq_B158,더 베이비,B,dev,active,,더:베이비,,,S123,35.147593685,126.92294632,store,S123,W1,1,,,,,,sq_B158,random,,,extra_b
+sq_B159,맑은샘 피아노,B,test,active,,맑은샘피아노교습소,,,S113,35.147869926,126.872570839,store,S113,W1,1,,,,,,sq_B159,random,,,extra_b
+sq_B160,청송,B,test,active,,청송반찬,,,S173,38.14462,127.30979,store,S173,W1,1,,,,,,sq_B160,random,,,extra_b
+sq_B161,이근철,B,test,active,,이근철청과,,,S200,36.018127,129.35698,store,S200,W1,1,,,,,,sq_B161,random,,,extra_b
+sq_B162,샐리스,B,test,active,,핫뷰핫 selly's,,,S138,36.298253876,127.319926691,store,S138,W1,1,,,,,,sq_B162,random,,,extra_b
+sq_B163,남해안 건어,B,dev,active,,남해안건어물,,,S203,35.2356656701,128.6707867816,store,S203,W1,1,,,,,,sq_B163,random,,,extra_b
+sq_B164,한결 축산,B,test,active,,한결축산,,,S184,35.554302357,129.310617161,store,S184,W1,1,,,,,,sq_B164,random,,,extra_b
+sq_B165,성광 축산,B,dev,active,,성광축산사조산업경기총판,,,S176,36.9976628235,127.0841663777,store,S176,W1,1,,,,,,sq_B165,random,,,extra_b
+sq_B166,광원,B,test,active,,광원세라믹,,,S114,35.174444479,126.932750116,store,S114,W1,1,,,,,,sq_B166,random,,,extra_b
+sq_B167,달콤 마켓,B,test,active,,주변 달콤마켓,,,S132,35.170571724,126.904520252,store,S132,W1,1,,,,,,sq_B167,random,,,extra_b
+sq_B168,제이엘,B,test,active,,제이엘 필라테스,,,S056,35.3002996012,126.7825232689,store,S056,W1,1,,,,,,sq_B168,random,,,extra_b
+sq_B169,바운드,B,test,active,,바운드본점,,,S030,37.4960815351,126.8916054362,store,S030,W1,1,,,,,,sq_B169,random,,,extra_b
+sq_B170,송도 올룸,B,test,active,,,송도,auto,S034,37.3830228271,126.6408651969,store,S034,W1,1,,,,,,sq_B170,random,,,extra_b
+sq_B171,공백,B,dev,active,,공백커피,,,S130,36.784776968,127.158151689,store,S130,W1,1,,,,,,sq_B171,random,,,extra_b
+sq_B172,냉삼맛집,B,test,active,,여기는 냉삼맛집,한대앞,writer,S029,37.3084462535,126.8502334429,store,S029,W2,1,,,,,맛집,sq_B172,random,,,extra_b
+sq_B173,방구 족발,B,test,active,,방구족발,,,S206,35.15506,128.69092,store,S206,W2,1,,,,,,sq_B173,random,,,extra_b
+sq_B174,화곡 화서가,B,dev,active,,화서가,화곡,writer,S175,37.53462,126.83881,store,S175,W2,1,,,,,,sq_B174,random,,,extra_b
+sq_B175,부평 해피맘,B,test,active,,해피맘,부평,writer,S236,37.49563,126.72266,store,S236,W2,1,,,,,,sq_B175,random,,,extra_b
+sq_B176,구의역 반코디,B,test,active,,반코디,구의역,writer,S051,37.5416865197,127.0857845974,store,S051,W2,1,,,,,,sq_B176,random,,,extra_b
+sq_B177,양동 유동상회,B,dev,active,,유동상회,양동,writer,S040,35.1527491239,126.9044420623,store,S040,W2,1,,,,,,sq_B177,random,,,extra_b
+sq_B178,선산상회 채소,B,test,active,,선산상회,,,S180,35.153893,128.9816,store,S180,W2,1,,,,,,sq_B178,random,,,extra_b
+sq_B179,전남대 제이헤어,B,test,active,,J헤어,전남대,writer,S124,35.175226963,126.913324546,store,S124,W2,1,,,,,,sq_B179,random,,,extra_b
+sq_B180,현대자동차 보성점,B,dev,active,,보성점 현대자동자,보성,writer,S008,34.7750961176,127.083907835,store,S008,W2,1,,,,,,sq_B180,random,,,extra_b
+sq_B181,평화시장 대원사,B,test,active,,대원사,평화시장,writer,S205,37.569466,127.00809,store,S205,W2,1,,,,,,sq_B181,random,,,extra_b
+sq_B182,영산포 닭갈비마을,B,test,active,,닭갈비 마을,영산포,writer,S053,34.994005151,126.7087867066,store,S053,W2,1,,,,,,sq_B182,random,,,extra_b
+sq_B183,비헤어,B,dev,active,,비헤어 아티스트,,,S111,35.2292453766,129.0881898127,store,S111,W2,1,,,,,,sq_B183,random,,,extra_b
+sq_B184,금복커텐,B,test,active,,금복커텐,,,S187,37.560050516,126.9776952677,store,S187,W2,1,,,,,,sq_B184,random,,,extra_b
+sq_B185,서면 경주상회,B,test,active,,경주상회,서면,writer,S052,35.16196,129.05896,store,S052,W2,1,,,,,,sq_B185,random,,,extra_b
+sq_B186,와이투케이,B,dev,active,,Y2K(명함여행),,,S233,37.5656487198,126.9881425482,store,S233,W2,1,,,,,,sq_B186,random,,,extra_b
+sq_B187,덕산종합상사 청소용품,B,test,active,,덕산종합상사,,,S128,35.132826423,126.905154468,store,S128,W2,1,,,,,,sq_B187,random,,,extra_b
+sq_B188,영암 한우,B,test,active,,영암한우,,,S112,35.178922775,126.806908176,store,S112,W2,1,,,,,,sq_B188,random,,,extra_b
+sq_B189,무안 시내산,B,test,active,,시내산,무안,writer,S215,34.993465401,126.472425936,store,S215,W2,1,,,,,,sq_B189,random,,,extra_b
+sq_B190,두암동 닥터스 통증의학과,B,test,active,,닥터스마취통증의학과의원,두암동,writer,S065,35.173268605,126.925806168,store,S065,W2,1,,,,,,sq_B190,random,,,extra_b
+sq_B191,대림 침구,B,dev,active,,대림침구,,,S174,37.570286,126.99871,store,S174,W2,1,,,,,,sq_B191,random,,,extra_b
+sq_B192,월곡시장 만남의 광장,B,test,active,,만남의 광장,월곡시장,writer,S179,35.171308834,126.809654952,store,S179,W2,1,,,,,,sq_B192,random,,,extra_b
+sq_B193,더벤티 신봉점,B,test,active,,더벤티 용인신봉점,신봉,writer,S057,37.323168633,127.078036696,store,S057,W2,1,,,,,,sq_B193,random,,,extra_b
+sq_B194,엘스테이,B,test,active,,엘스테이,,,S045,35.0696105225,129.0824973675,store,S045,W3,1,,,,,,sq_B194,random,,,extra_b
+sq_B195,살롱드 브로우,B,test,active,,살롱드브로우,,,S081,37.315285,127.080925,store,S081,W3,1,,,,,,sq_B195,random,,,extra_b
+sq_B196,팜스 골프,B,test,active,,팜스스프링스 골프,,,S230,33.514374,126.52617,store,S230,W3,1,,,,,,sq_B196,random,,,extra_b
+sq_B197,남양 수산,B,test,active,,남양수산,,,S145,35.1536874459,126.9011891307,store,S145,W3,1,,,,,,sq_B197,random,,,extra_b
+sq_B198,역전상회,B,test,active,,역전상회,,,S169,35.55608,129.32817,store,S169,W3,1,,,,,,sq_B198,random,,,extra_b
+sq_B199,화성 회관,B,test,active,,화성회관,,,S127,35.140805068,126.895055846,store,S127,W3,1,,,,,,sq_B199,random,,,extra_b
+sq_B200,경안 깡통,B,test,active,,깡통,경안,writer,S036,37.4101292389,127.2573559462,store,S036,W3,1,,,,,,sq_B200,random,,,extra_b
+sq_B201,강촌 엘리시안,B,test,active,,엘리시안 강촌 렌탈샵 와우 스키강습 센터,,,S004,37.8134298282,127.6332413931,store,S004,W3,1,,,,,,sq_B201,random,,,extra_b
+sq_B202,먹보 대감 식당,B,test,active,,먹보대감식당,,,S058,35.8747715344,128.6402159864,store,S058,W3,1,,,,,,sq_B202,random,,,extra_b
+sq_B203,밝은 경희 한의,B,dev,active,,밝은경희한의원,,,S096,37.308163069,126.827326188,store,S096,W3,1,,,,,,sq_B203,random,,,extra_b
+sq_B204,오케이 정형외과,B,dev,active,,광주오케이OK정형외과의원,,,S109,35.171041613,126.896337252,store,S109,W3,1,,,,,,sq_B204,random,,,extra_b
+sq_B205,아이콘 안경,B,dev,active,,아이콘안경원,,,S190,36.783893624,127.000738127,store,S190,W3,1,,,,,,sq_B205,random,,,extra_b
+sq_B206,정선 더덕 직판장,B,test,active,,정선더덕농원직판장,,,S213,38.20394276,128.589990977,store,S213,W3,1,,,,,,sq_B206,random,,,extra_b
+sq_B207,곰 네일,B,test,active,,곰네일,,,S185,35.1643536238,128.9782841615,store,S185,W3,1,,,,,,sq_B207,random,,,extra_b
+sq_B208,신내챙이 농약,B,dev,active,,신내챙이농약사,,,S177,37.086105,127.91511,store,S177,W3,1,,,,,,sq_B208,random,,,extra_b
+sq_B209,현대 이발,B,test,active,,현대이발관,,,S102,35.154773344,126.875951558,store,S102,W3,1,,,,,,sq_B209,random,,,extra_b
+sq_B210,재해석,B,test,active,,재해석,,,S098,35.140523091,126.915724018,store,S098,W3,1,,,,,,sq_B210,random,,,extra_b
+sq_B211,이지,B,test,active,,이지+,,,S170,37.6028134911,127.0220276883,store,S170,W3,1,,,,,,sq_B211,random,,,extra_b
+sq_B212,짐 나인,B,test,active,,짐나인,,,S087,35.022642301,126.785876022,store,S087,W3,1,,,,,,sq_B212,random,,,extra_b
+sq_B213,선경사 한복,B,dev,active,,선경사,,,S208,36.4571374701,127.1246650028,store,S208,W3,1,,,,,,sq_B213,random,,,extra_b
+sq_B214,성남프라자 황금주단,B,test,active,,황금주단,성남프라자,writer,S211,35.5545045195,129.3175344253,store,S211,W3,1,,,,,,sq_B214,random,,,extra_b

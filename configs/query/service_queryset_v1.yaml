@@ -175,6 +175,9 @@ import:
   # 판정·검토 뒤 빼야 할 쿼리. {query: ..., reason: ...} — 지우지 않고 status=excluded로 남긴다.
   exclude_queries:
     - {query: 유아용픔, reason: 오타(유아용품) — 오타는 이 셋에서 다루지 않음(추가 C W1 C059, 2026-10-22)}
+  # 작성 줄 단위로 뺄 것 {writer, basis_id, reason} — 같은 문자열의 기존 쿼리는 남긴다.
+  drop_rows:
+    - {writer: W1, basis_id: S235, reason: "추가 B '샤넬'(코코샤넬) — 기존 E 쿼리 '샤넬'(범위 밖 명품 브랜드, 판정 완료)과 같은 문자열"}
   # 진행자가 직접 더한 쿼리(작성자 파일 밖). writer는 facilitator로 기록된다.
   # E: 이름이 겹치는 가맹점(신세계약국·샤넬의상실, 숙박업소)은 있어도 그 의도를 채우는 가맹점은 없는 함정형(2026-10-20).
   extra_queries:

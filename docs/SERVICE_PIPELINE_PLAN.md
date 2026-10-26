@@ -262,3 +262,6 @@ reranker 기반(쌍 export·Colab 채점·재정렬 평가)은 2-1 미세조정 
   | 1단계(v1+상호) | **0.846** | **0.067** | 0.773 | 0.912 | 0.747 | 0.814 |
 
   dev 1km(77): 1단계 0.863 / bad@3 0.065. B를 더 받으면 A 표본이 늘어(78 → 104) 숫자가 다시 바뀐다. 남은 병목은 A(0.773).
+- **추가 B 회수(2026-10-26)**: 66줄 중 64개 반영. W1 '샤넬'(코코샤넬)은 기존 E 쿼리 '샤넬'과 같은 문자열이라 줄 단위로 뺐고
+  (설정 `import.drop_rows`), W3 'GS25'는 기존 B 쿼리(sq_B001)에 합쳐졌다. 사례 batch `extra_b`(dev 16 / test 48), pool 묶음
+  `--set extra_b`(run 폴더 `runs_extra_b`). BM25·키워드 run은 로컬에서 만들었고, dense run은 Colab(`SET = "service_eval_extra_b"`) 대기.

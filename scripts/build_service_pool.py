@@ -61,6 +61,7 @@ SETS = {
     "main": (Path("colab_upload/service_eval"), "runs"),
     "anchor": (Path("colab_upload/service_eval_anchor"), "runs_anchor"),
     "extra": (Path("colab_upload/service_eval_extra"), "runs_extra"),
+    "extra_b": (Path("colab_upload/service_eval_extra_b"), "runs_extra_b"),   # 추가 B(2026-10-26, 주 평가셋 비율)
 }
 
 
@@ -70,7 +71,7 @@ def load_inputs(cfg: dict, bench: dict, set_name: str = "main") -> tuple[pd.Data
     main: 활성 쿼리(사례 ID = 쿼리 ID). anchor: instances.csv의 anchor 사례(scripts/build_service_instances.py).
     """
 
-    if set_name in ("anchor", "extra"):
+    if set_name != "main":
         inst = pd.read_csv(Path(cfg["judging"]["benchmark_dir"]) / "instances.csv", encoding="utf-8-sig", keep_default_na=False)
         batch = inst["batch"] if "batch" in inst else pd.Series("v1", index=inst.index)
         pick = (inst["context"] == "anchor") if set_name == "anchor" else (batch == set_name)

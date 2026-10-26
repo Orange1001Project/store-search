@@ -63,6 +63,12 @@ def main() -> None:
         for e in icfg.get("extra_queries", [])
     ])
     rows = pd.concat([b_rows, writers, extra], ignore_index=True)
+    drop = {(d["writer"], d["basis_id"]): d["reason"] for d in icfg.get("drop_rows", [])}
+    if drop:   # 작성자 한 줄만 뺀다(같은 문자열의 다른 묶음 쿼리는 그대로 — exclude_queries는 문자열 단위라 둘 다 빠짐)
+        hit = [(w, b) in drop for w, b in zip(rows["writer"], rows["basis_id"], strict=True)]
+        for w, b, q in rows.loc[hit, ["writer", "basis_id", "query"]].itertuples(index=False):
+            logger.info("작성 줄 뺌: %s %s %s — %s", w, b, q, drop[(w, b)])
+        rows = rows[~pd.Series(hit, index=rows.index)].reset_index(drop=True)
 
     template = pd.read_excel(cfg["output_path"], sheet_name=["B_가맹점표본", "D_시장표본"])
     families = load_config(args.families)["families"]
