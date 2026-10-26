@@ -265,3 +265,5 @@ reranker 기반(쌍 export·Colab 채점·재정렬 평가)은 2-1 미세조정 
 - **추가 B 회수(2026-10-26)**: 66줄 중 64개 반영. W1 '샤넬'(코코샤넬)은 기존 E 쿼리 '샤넬'과 같은 문자열이라 줄 단위로 뺐고
   (설정 `import.drop_rows`), W3 'GS25'는 기존 B 쿼리(sq_B001)에 합쳐졌다. 사례 batch `extra_b`(dev 16 / test 48), pool 묶음
   `--set extra_b`(run 폴더 `runs_extra_b`). BM25·키워드 run은 로컬에서 만들었고, dense run은 Colab(`SET = "service_eval_extra_b"`) 대기.
+- **판정 라운드 service_v6(2026-10-26)**: 추가 B 64개, depth 10(4개 시스템 × 1·2km) = 1,601쌍, 이중 판정 13개 쿼리 353쌍
+  (A 980쌍 / B 974쌍). 1단계(v1+상호) 1km 상위 10 중 pool 밖은 4쌍뿐이라 따로 보충하지 않았다.
