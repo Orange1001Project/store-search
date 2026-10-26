@@ -42,6 +42,42 @@ PART2_GUIDE = COMMON_RULES + [
 ]
 
 
+EXTRA_B_GUIDE = COMMON_RULES + [
+    ("B 상호명", "재료 칸의 가게를 찾으려고 앱 검색창에 칠 말을 씁니다. 가게마다 1줄. 전체 이름이든 일부든, 평소 치는 대로."),
+    ("", "지점명·법인명(주식회사 등)은 평소 안 친다면 빼도 됩니다. 이름이 길면 기억날 만한 부분만 써도 됩니다."),
+    ("", "평소 지역이나 업종을 붙여 친다면 붙여도 됩니다(망원 행복떡집, 행복떡집 떡). 의도 칸에는 찾는 가게 이름을 씁니다."),
+    ("예", "행복한우리떡집 (망원시장) → 좋음: 우리떡집 / 망원 우리떡집 / 행복한우리떡집  피함: 상호와 상관없는 말"),
+    ("다 쓰면", "모든 줄에 질의와 의도를 적었는지 확인하고 진행자에게 냅니다."),
+]
+
+
+def extra_b_rows(writer: str, stores: pd.DataFrame) -> pd.DataFrame:
+    """추가 B 줄: B_가맹점표본의 가게 하나에 한 줄. 근거ID·가정위치ID = 표본ID(가정위치는 그 가게 좌표)."""
+
+    rows = []
+    for _, r in stores.iterrows():
+        items = str(r["취급품목"]) if pd.notna(r["취급품목"]) and str(r["취급품목"]).strip() else "-"
+        market = str(r["시장명"]) if pd.notna(r["시장명"]) and str(r["시장명"]).strip() else "-"
+        material = f"{r['가맹점명']} | 취급품목: {items} | 시장: {market} | {r['주소']}"
+        rows.append(_row(writer, "B", r["표본ID"], material, r["표본ID"]))
+    return pd.DataFrame(rows, columns=WRITER_COLUMNS)
+
+
+def pick_unused_stores(stores: pd.DataFrame, used: set[str], n: int, name_only_share: float, seed: int) -> pd.DataFrame:
+    """아직 쿼리를 안 쓴 표본 가게에서 n개. '상호명만' 층을 name_only_share만큼(모자라면 있는 만큼) 먼저 채운다."""
+
+    free = stores[~stores["표본ID"].isin(used)]
+    name_only = free[free["층"] == "상호명만"]
+    k = min(len(name_only), round(n * name_only_share))
+    rest = free[free["층"] != "상호명만"]
+    if k + len(rest) < n:
+        raise ValueError(f"안 쓴 표본 가게가 부족합니다: {len(free)}개 < {n}개")
+    rng = np.random.default_rng(seed)
+    picked = pd.concat([name_only.sample(n=k, random_state=rng.integers(2**32)),
+                        rest.sample(n=n - k, random_state=rng.integers(2**32))])
+    return picked.sample(frac=1, random_state=rng.integers(2**32)).reset_index(drop=True)
+
+
 def assign_cards(card_ids: list[str], writers: list[str], overlap: int, seed: int) -> dict[str, list[str]]:
     """카드마다 서로 다른 작성자 overlap명. 카드 순서를 섞은 뒤 k번째 카드를 작성자 k, k+1, …(순환)에게 준다.
 

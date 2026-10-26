@@ -12,7 +12,7 @@ from store_search_ai.data.service_qrels import (
     build_qrels,
     merge_judgments,
 )
-from store_search_ai.evaluation.service_eval import instance_qrels, paired, score_system
+from store_search_ai.evaluation.service_eval import build_eval_set, instance_qrels, paired, score_system
 
 
 def _sheet(rel, ids):
@@ -87,3 +87,26 @@ def test_score_system_uses_radius_and_skips_no_answer_instances():
 def test_paired_reports_delta_and_counts():
     out = paired(pd.Series([0.9, 0.8, 0.7]), pd.Series([0.5, 0.8, 0.9]))
     assert round(out["delta"], 3) == 0.067 and out["wins"] == 1 and out["losses"] == 1 and out["n"] == 3
+
+
+def test_build_eval_set_matches_shares_one_instance_per_query_and_is_nested():
+    rows = []
+    for b, n in (("B", 10), ("A", 20), ("C", 30)):
+        for i in range(n):
+            rows.append({"instance_id": f"{b}{i}", "query_id": f"{b}{i}", "query": f"{b}{i}", "split": "test", "bundle": b,
+                         "context": "random"})
+    rows.append({"instance_id": "A0@anchor", "query_id": "A0", "query": "A0", "split": "test", "bundle": "A",
+                 "context": "anchor"})
+    inst = pd.DataFrame(rows)
+    ans = pd.Series(True, index=inst.index)
+    ans[inst["instance_id"] == "A0"] = False                      # random에 정답이 없으면 anchor
+    shares = {"B": 0.5, "A": 0.3, "C": 0.2}
+    small = build_eval_set(inst, ans, shares, "s")
+    assert small["bundle"].value_counts().to_dict() == {"B": 10, "A": 6, "C": 4}   # B가 크기를 정함
+    assert small["query_id"].is_unique
+    if "A0" in set(small["query_id"]):
+        assert small.loc[small["query_id"] == "A0", "instance_id"].item() == "A0@anchor"
+    more = pd.concat([inst, pd.DataFrame([{"instance_id": f"B{i}", "query_id": f"B{i}", "query": f"B{i}", "split": "test",
+                                           "bundle": "B", "context": "random"} for i in range(10, 20)])], ignore_index=True)
+    big = build_eval_set(more, pd.concat([ans, pd.Series(True, index=range(len(ans), len(more)))]), shares, "s")
+    assert set(small["query_id"]) <= set(big["query_id"])        # 쿼리를 더해도 뽑힌 쿼리는 남는다

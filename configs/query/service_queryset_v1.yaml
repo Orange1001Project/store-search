@@ -155,6 +155,9 @@ writers:
   a_queries_per_industry: 5
   d_markets_per_writer: 17
   e_queries_per_writer: 7
+  # 추가 B(2026-10-26, --extra-b): 주 평가셋 비율(eval_set)을 맞추려면 B가 약 55개 더 필요하다. 빠질 몫을 두고 1인 22줄.
+  # 재료는 B_가맹점표본 중 아직 안 쓴 가게, 상호명만 층은 store_sample.name_only_share만큼.
+  extra_b_per_writer: 22
 
 # 작성 결과 → 쿼리셋 — scripts/import_service_queries.py, 설명은 docs/SERVICE_QUERYSET.md 4절.
 import:
@@ -162,6 +165,7 @@ import:
   writers_completed:
     - data/query/writers_completed/서비스셋_직접작성_v1_3명_completed.xlsx
     - data/query/writers_completed/서비스셋_직접작성_v1_추가C_completed.xlsx
+    - data/query/writers_completed/서비스셋_직접작성_v1_추가B_completed.xlsx
   # 사람이 직접 쓴 B 150개(개별 가맹점 105 + 브랜드 45)가 든 팀 작성본. 나머지(A·C·D·E)는 AI 초안이라 쓰지 않는다.
   team_completed: data/query/service_queryset_v1_team_completed.xlsx
   team_human_methods: ["개별 가맹점 표본 기반(독립 표본)", "상호/브랜드 검색(독립 표본)"]
@@ -177,6 +181,16 @@ import:
     - {query: 신세계, bundle: E, intent: 범위 밖(백화점 브랜드)}
     - {query: 샤넬, bundle: E, intent: 범위 밖(명품 브랜드)}
     - {query: 5성급 호텔, bundle: E, intent: 범위 밖(고급 호텔)}
+
+# 주 평가셋(2026-10-26) — scripts/build_service_eval_set.py, 설명은 docs/SERVICE_QUERYSET.md 1절.
+# 쿼리 수 자체를 가정한 실제 쿼리 비율에 맞춘다(가중 평균을 쓰지 않는다). 비율은 로그를 받으면 그 분포로 바꾼다.
+# 쿼리마다 사례 하나(1km 안 정답이 있는 random, 없으면 anchor). split마다 가장 모자란 묶음이 크기를 정하고 나머지는 줄인다.
+# E(결과 없음)는 순위 지표가 없어 비율 밖에서 따로 본다.
+eval_set:
+  shares: {B: 0.50, A: 0.35, D: 0.10, C: 0.05}
+  radius_km: 1
+  salt: eval_set_v1
+  output: benchmark/service_ko_v1/eval_set.csv
 
 # 판정·pool — docs/SERVICE_ANNOTATION_GUIDELINE.md, scripts/build_service_pool.py
 judging:

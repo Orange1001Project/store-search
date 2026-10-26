@@ -11,7 +11,10 @@
            3) 1-4 보충 판정: --exp rerank --pool-round service_v5 [--dry-run] → annotations/service_v5/
               (고른 reranker의 모든 구성, dev+test 반경별 상위 10 중 미판정 쌍)
 
-출력: results/service_pipeline/<exp>_<split>.csv — 구성 × 반경 × 묶음별 nDCG@10, nDCG@10(판정만), Judged@10, bad@3, top1_ok
+채점 대상(--set): main(기본) = 주 평가셋(eval_set.csv, 묶음 비율을 가정 쿼리 비율에 맞춘 쿼리당 사례 하나,
+  scripts/build_service_eval_set.py) / all = instances.csv의 모든 사례(2026-10-26 이전 방식)
+
+출력: results/service_pipeline/<exp>_<split>[_all].csv — 구성 × 반경 × 묶음별 nDCG@10, nDCG@10(판정만), Judged@10, bad@3, top1_ok
 
 사용법:
     python scripts/eval_service_pipeline.py --exp hybrid
@@ -289,6 +292,8 @@ def main() -> None:
     parser.add_argument("--pool-rerankers", nargs="+", default=["bge-reranker-v2-m3"],
                         help="보충 판정에 넣을 reranker(점수 파일 이름). 기본은 dev에서 앞선 bge 하나")
     parser.add_argument("--dry-run", action="store_true", help="--pool-round: 판정 건수만")
+    parser.add_argument("--set", choices=["main", "all"], default="main",
+                        help="main: 주 평가셋(eval_set.csv)만 채점 / all: 모든 사례")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     args = parser.parse_args()
@@ -303,6 +308,9 @@ def main() -> None:
     bench = load_config(args.benchmark_config)
     all_instances = pd.read_csv(bdir / "instances.csv", encoding="utf-8-sig", keep_default_na=False)
     instances = all_instances[all_instances["split"] == args.split]
+    if args.set == "main":
+        main_ids = pd.read_csv(cfg["eval_set"]["output"], encoding="utf-8-sig")["instance_id"]
+        instances = instances[instances["instance_id"].isin(main_ids)]
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")
     coords = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "latitude", "longitude", "geo_status"])
     coords = coords[coords["geo_status"] == "VALID"]
@@ -360,8 +368,9 @@ def main() -> None:
     summary = summarize(per)
     out = Path("results/service_pipeline")
     out.mkdir(parents=True, exist_ok=True)
-    summary.to_csv(out / f"{args.exp}_{args.split}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
-    per.to_csv(out / f"{args.exp}_{args.split}_per_instance.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    stem = f"{args.exp}_{args.split}" + ("_all" if args.set == "all" else "")
+    summary.to_csv(out / f"{stem}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    per.to_csv(out / f"{stem}_per_instance.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     pd.set_option("display.width", 220)
     view = summary[(summary["radius_km"] == 1)].pivot_table(index="config", columns="bundle",
                                                             values=["nDCG@10", "bad@3", "top1_ok"]).round(3)

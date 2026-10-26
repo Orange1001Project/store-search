@@ -26,6 +26,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from store_search_ai.data.writer_sheets import (
+    EXTRA_B_GUIDE,
     PART1_GUIDE,
     PART2_GUIDE,
     WRITER_COLUMNS,
@@ -33,9 +34,11 @@ from store_search_ai.data.writer_sheets import (
     assignment_table,
     carry_over_answers,
     deal,
+    extra_b_rows,
     part1_rows,
     part2_rows,
     pick_industries,
+    pick_unused_stores,
 )
 from store_search_ai.pipeline.common import load_config
 
@@ -46,6 +49,7 @@ FILL_COLUMNS = {"질의", "의도", "지역표현", "비고"}
 FILL = PatternFill("solid", fgColor="FFF7D6")
 SINGLE_FILE = "서비스셋_직접작성_v1.xlsx"
 EXTRA_C_FILE = "서비스셋_직접작성_v1_추가C.xlsx"
+EXTRA_B_FILE = "서비스셋_직접작성_v1_추가B.xlsx"
 
 
 def write_guide_sheet(writer: pd.ExcelWriter, name: str, guide: list[tuple[str, str]]) -> None:
@@ -105,6 +109,27 @@ def write_extra_c(cfg: dict, writers: list[str], out_dir: Path, force: bool) -> 
     logger.info("저장: %s (카드 %d장 × 작성자 %d명 = %d줄)", path, len(cards), len(writers), len(cards) * len(writers))
 
 
+def write_extra_b(cfg: dict, writers: list[str], template: str, out_dir: Path, force: bool) -> None:
+    """추가 B 파일(2026-10-26, 주 평가셋 비율 맞추기): 아직 쿼리를 안 쓴 B_가맹점표본 가게를 작성자마다 겹치지 않게 나눈다."""
+
+    path = out_dir / EXTRA_B_FILE
+    if path.exists() and not force:
+        raise SystemExit(f"{path}이 이미 있습니다(--force).")
+    stores = pd.read_excel(template, sheet_name="B_가맹점표본")
+    queries = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
+    used = set(queries["basis_id"])
+    per_writer = cfg["writers"]["extra_b_per_writer"]
+    picked = pick_unused_stores(stores, used, per_writer * len(writers), cfg["store_sample"]["name_only_share"],
+                                cfg["random_seed"] + 3)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        write_guide_sheet(writer, "안내(B)", EXTRA_B_GUIDE)
+        for i, w in enumerate(writers):
+            write_input_sheet(writer, f"{w}_추가_B", extra_b_rows(w, picked.iloc[i * per_writer:(i + 1) * per_writer]), "B")
+    logger.info("저장: %s (안 쓴 표본 가게 %d개 중 %d개 = 작성자 %d명 × %d, 층 %s)", path,
+                (~stores["표본ID"].isin(used)).sum(), len(picked), len(writers), per_writer, picked["층"].value_counts().to_dict())
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
@@ -117,6 +142,10 @@ def main() -> None:
     parser.add_argument(
         "--extra-c", action="store_true",
         help="추가 C 카드(설정 scenario_cards_extra)만 담은 파일을 만든다 — 작성자 모두 모든 카드(1부 C만, E 없음)",
+    )
+    parser.add_argument(
+        "--extra-b", action="store_true",
+        help="추가 B(안 쓴 B_가맹점표본 가게)만 담은 파일을 만든다 — 주 평가셋 비율 맞추기(설정 writers.extra_b_per_writer)",
     )
     parser.add_argument(
         "--carry-over", default=None,
@@ -135,6 +164,9 @@ def main() -> None:
     out_dir = Path(wcfg["output_dir"])
     if args.extra_c:   # 추가 C 파일은 자기 파일만 검사한다(write_extra_c)
         write_extra_c(cfg, writers, out_dir, args.force)
+        return
+    if args.extra_b:
+        write_extra_b(cfg, writers, template, out_dir, args.force)
         return
     single_path = out_dir / wcfg.get("single_file", SINGLE_FILE)
     existing = single_path.exists() if args.layout == "single" else any(out_dir.glob("W*_*.xlsx"))

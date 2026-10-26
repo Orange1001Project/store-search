@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import hashlib
+
 import ir_measures
 import numpy as np
 import pandas as pd
@@ -88,10 +90,35 @@ def paired(a: pd.Series, b: pd.Series, samples: int = 10_000, seed: int = 202610
             "wins": int((d > 1e-9).sum()), "losses": int((d < -1e-9).sum())}
 
 
+def build_eval_set(instances: pd.DataFrame, answerable: pd.Series, shares: dict[str, float], salt: str) -> pd.DataFrame:
+    """주 평가셋: 쿼리마다 사례 하나, split마다 묶음 비율을 `shares`로 맞춘다.
+
+    - 사례는 반경 안 정답이 있는 것만. random 사례를 먼저, 없으면 anchor.
+    - 가장 모자란 묶음이 split 크기를 정하고, 나머지 묶음은 (salt, query_id) 해시 순 앞에서부터 남긴다 —
+      쿼리를 더해 셋이 커져도 이미 뽑힌 쿼리는 빠지지 않는다.
+    `answerable`은 instances와 같은 순서의 불리언(no_answer_counts 결과).
+    """
+
+    cand = instances[instances["bundle"].isin(list(shares)) & answerable.to_numpy()]
+    cand = (cand.assign(_anchor=(cand["context"] != "random").astype(int))
+            .sort_values(["query_id", "_anchor", "instance_id"]).drop_duplicates("query_id"))
+    cand = cand.assign(_key=[hashlib.sha256(f"{salt}:{q}".encode()).hexdigest() for q in cand["query_id"]])
+    picked = []
+    for _, frame in cand.groupby("split"):
+        avail = frame["bundle"].value_counts()
+        total = min(avail.get(b, 0) / s for b, s in shares.items())
+        for b, s in shares.items():
+            n = min(int(avail.get(b, 0)), int(np.floor(total * s + 0.5)))
+            picked.append(frame[frame["bundle"] == b].sort_values("_key").head(n))
+    out = pd.concat(picked, ignore_index=True)
+    return out[["instance_id", "query_id", "query", "split", "bundle", "context"]].sort_values(
+        ["split", "bundle", "query_id"]).reset_index(drop=True)
+
+
 def no_answer_counts(instances: pd.DataFrame, iq: pd.DataFrame, radius_km: float) -> pd.Series:
     q = iq[(iq["dist_km"] <= radius_km) & (iq["relevance"] >= BINARY_THRESHOLD)]
     has = set(q["instance_id"])
     return instances.assign(answerable=instances["instance_id"].isin(has))["answerable"]
 
 
-__all__ = ["attach_distance", "haversine_km", "instance_qrels", "no_answer_counts", "paired", "score_system"]
+__all__ = ["attach_distance", "build_eval_set","haversine_km", "instance_qrels", "no_answer_counts", "paired", "score_system"]

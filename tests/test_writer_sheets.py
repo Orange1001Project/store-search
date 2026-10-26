@@ -5,9 +5,11 @@ from store_search_ai.data.writer_sheets import (
     WRITER_COLUMNS,
     assign_cards,
     deal,
+    extra_b_rows,
     part1_rows,
     part2_rows,
     pick_industries,
+    pick_unused_stores,
 )
 
 WRITERS = ["W1", "W2", "W3", "W4", "W5", "W6"]
@@ -81,3 +83,17 @@ def test_carry_over_answers_matches_by_bundle_and_basis_and_keeps_extras():
     assert out.loc[out["근거ID"] == "C002", "비고"].iloc[0] == "떠오르는 검색어 없음"
     assert out.loc[out["묶음"] == "E", "질의"].tolist()[0] == "코스트코"
     assert len(out) == len(new) + 1
+
+
+def test_pick_unused_stores_skips_used_and_keeps_name_only_share():
+    stores = pd.DataFrame({"표본ID": [f"S{i:03d}" for i in range(40)],
+                           "층": ["상호명만"] * 10 + ["일반·전통시장"] * 30,
+                           "가맹점명": "가게", "취급품목": "", "시장명": "", "주소": "서울"})
+    used = {f"S{i:03d}" for i in range(0, 40, 4)}
+    picked = pick_unused_stores(stores, used, 12, 0.25, seed=1)
+    assert len(picked) == 12 and not set(picked["표본ID"]) & used
+    assert (picked["층"] == "상호명만").sum() == 3
+    rows = extra_b_rows("W1", picked)
+    assert (rows["근거ID"] == rows["가정위치ID"]).all() and (rows["묶음"] == "B").all()
+    with pytest.raises(ValueError):
+        pick_unused_stores(stores, used, 31, 0.25, seed=1)
