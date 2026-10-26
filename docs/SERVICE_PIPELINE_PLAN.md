@@ -282,3 +282,23 @@ reranker 기반(쌍 export·Colab 채점·재정렬 평가)은 2-1 미세조정 
 
   2km: 1단계 0.816 / bad@3 0.084(keyword 0.564 / 0.228). 이미 정한 시스템의 기준선을 새 셋으로 다시 잰 것이다(선택 없음).
   **전체는 목표 0.85에 닿았고, A(0.793, bad@3 0.125)가 남은 병목이다** → 다음은 업종(9) 연결·쿼리→업종으로 A를 올린다.
+
+## 8. 코드 점검 후 수정(2026-10-26) — 노션 "변경 내역 + 코드 점검"
+
+| # | 수정 | 산출물 변화 |
+|---|---|---|
+| 1 | run을 반경별 상위 50개 합집합으로(`top_k_run(dist, radii)`, Colab 노트북 같은 규칙) | BM25·키워드 run에 1km 가게가 더해짐(기존 행·순위 그대로). dense는 Colab 재실행 → service_v7 보충 판정 |
+| 2 | 주 평가셋이 이전 eval_set의 쿼리·사례를 먼저 남김, 묶음 0개·비율 0 검증 | 현재 셋 그대로(빠짐 0) |
+| 3 | query_id를 이전 표에서 물려받고 새 쿼리만 다음 번호, 기존 쿼리의 문자열·묶음·split·위치 변경을 dry-run에서도 막음 | 다시 가져와도 같음 |
+| 4 | `build_service_instances.py --add-anchors`(batch anchor_extra) | 추가 C 15개에 anchor 사례(instances 810개) |
+| 5 | 조정 파일에 없는 새 조정 대상은 `adjudication_needed_more.csv`로, 조정 대상 아닌 줄의 빈칸은 합의 점수 유지, pending = 대상 − 조정됨 | v6 16쌍 조정 반영(모두 0점), qrels 26,559행 |
+| 6 | `make_writer_sheets.py --extra-b/--extra-c`가 --dry-run을 지킴, 쓴 가게를 원본 작성 줄로 셈 | 없음 |
+| 7 | `import.drop_rows`가 맞는 줄이 없으면 멈춤 | 없음 |
+| 9 | 1단계 합집합의 동점(BM25만 찾은 문서)을 BM25 순으로, `v1+bm25 union b=0` 기준선 추가 | 1단계 점수 ±0.0003 수준(다음 재측정에 반영) |
+| 10 | `score_service_eval.py` pairs.csv delta = 시스템 − 기준 | 부호가 반대로 바뀜 |
+| 11 | 쿼리 이해: 경도 없는 위치, '강남 맛집'은 지역 유지, 띄어 쓴 상호('남양 수산', '영암 한우')는 붙여 쓴 상호가 있고 지명 끝말이 없으면 지역으로 떼지 않음 | 지역 오탐 test 10→5, dev 4→3(추가 B에서 생긴 것). D·A·C 변화 없음 |
+
+- 11번의 띄어 쓴 상호 규칙은 추가 B의 test 파싱 결과를 보고 만들었다(쿼리 이해 평가만, 순위 선택 없음). 다음 test 채점 전까지 규칙을
+  더 고치지 않는다.
+- 남은 일: Colab 반경별 dense run(5개 묶음) → `build_service_pool.py pool --set <묶음> --round service_v7` 보충 판정 → qrels →
+  `build_service_eval_set.py` → 기준선 재측정(1단계 test 1회).

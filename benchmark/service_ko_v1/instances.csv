@@ -794,3 +794,18 @@ sq_B211,이지,B,test,active,,이지+,,,S170,37.6028134911,127.0220276883,store,
 sq_B212,짐 나인,B,test,active,,짐나인,,,S087,35.022642301,126.785876022,store,S087,W3,1,,,,,,sq_B212,random,,,extra_b
 sq_B213,선경사 한복,B,dev,active,,선경사,,,S208,36.4571374701,127.1246650028,store,S208,W3,1,,,,,,sq_B213,random,,,extra_b
 sq_B214,성남프라자 황금주단,B,test,active,,황금주단,성남프라자,writer,S211,35.5545045195,129.3175344253,store,S211,W3,1,,,,,,sq_B214,random,,,extra_b
+sq_C130,시린이 치료,C,test,active,,치과,,,doc:9f71b66f-879d-4734-8385-9bc8832936c4,35.16447081,126.933733375,anchor_near,C055,W1,1,,,,,,sq_C130@a,anchor,c31d11ae-b0a5-4ca0-ab35-efeab3be2763,auto,anchor_extra
+sq_C131,손님용 그릇 파는 곳,C,test,active,,"그릇 가게, 마트",,,doc:238bbe38-af06-45b4-b580-35893121af05,37.532288,127.0284,anchor_near,C056,W1,1,,,,,,sq_C131@a,anchor,238bbe38-af06-45b4-b580-35893121af05,auto,anchor_extra
+sq_C138,동물 미용실,C,test,active,,동물 미용실,,,doc:70ee002e-8f7f-43c5-88b4-16f62ff0d89e,35.229857978,129.086438012,anchor_near,C052,W1,1,,,,,,sq_C138@a,anchor,dfe69798-97f8-47fb-ba66-0472c2d7dc5d,auto,anchor_extra
+sq_C149,자동차 수리점,C,test,active,,자동차 수리점,,,doc:80699185-a49a-4c50-94b5-8c0c2edbca8d,35.164684183,126.896771117,anchor_near,C053,W1,1,,,,,,sq_C149@a,anchor,f82596fb-b600-47f0-82b1-9980d98a3f56,auto,anchor_extra
+sq_C151,손전등,C,dev,active,,손전등을 판매하는 철물점·생활잡화점,,,doc:d54f323b-ce6c-4f1e-9b28-dcd676cf271f,35.150249199,126.862266815,anchor_near,C046,W2|W3,2,,,,,,sq_C151@a,anchor,0c1fea45-e416-4616-8cad-2379b68394fe,auto,anchor_extra
+sq_C153,운동화 수선,C,test,active,,운동화 밑창을 수선하는 신발 수선점,,,doc:b44bb4b3-5590-4c43-a982-8ffd28dcbc82,35.2097,126.83705,anchor_near,C047,W2,1,,,,,,sq_C153@a,anchor,f7949c70-471d-4db1-9a77-daf1f101f2fd,auto,anchor_extra
+sq_C155,죽,C,test,active,,죽을 판매하는 죽 전문점·음식점,,,doc:eff05d35-ebc4-44c1-b7be-47b33a74a50b,37.5283517948,126.813451119,anchor_near,C064,W2,1,,,,,,sq_C155@a,anchor,a6ae4de7-ae4e-47ce-81c4-554e078d33fd,auto,anchor_extra
+sq_C156,학생 체육복,C,dev,active,,학생용 체육복을 판매하는 의류점·교복점,,,doc:2ba63211-7113-4ac4-92c7-9159d450a4a7,34.739185,127.73681,anchor_near,C048,W2,1,,,,,,sq_C156@a,anchor,05c57ef7-6e55-4472-9530-4759d4a5a1c6,auto,anchor_extra
+sq_C162,자동차 와이퍼,C,test,active,,차량용 와이퍼를 판매하는 자동차용품점,,,doc:039d7f3d-7fb9-47ea-944e-8ba3d2dcfbe7,35.203433206,128.577927415,anchor_near,C053,W2,1,,,,,,sq_C162@a,anchor,c880c323-58c1-46bc-bdd7-f042702a6328,auto,anchor_extra
+sq_C164,접시,C,test,active,,접시와 식기를 판매하는 그릇가게·주방용품점,,,doc:a21ee220-e01c-4244-8862-b737051a9eb2,33.247858904,126.563809948,anchor_near,C056,W2,1,,,,,,sq_C164@a,anchor,cd304e20-38f1-4c21-8f69-6c79378a1f9c,auto,anchor_extra
+sq_C165,애견 미용,C,test,active,,반려견 미용 서비스를 제공하는 애견미용점,,,doc:a7d60363-314a-41cd-9374-3d9b3300312d,37.017606582,127.035001672,anchor_near,C052,W2|W3,2,,,,,,sq_C165@a,anchor,8e4620c7-bcf8-4dea-9347-352622601fa1,auto,anchor_extra
+sq_C167,도어락,C,test,active,,도어락을 판매하거나 설치하는 열쇠집·철물점,,,doc:31ffc75d-dc45-4f80-a1cd-4dd14bf4a7d0,35.6300703837,129.3437204281,anchor_near,C062,W2,1,,,,,,sq_C167@a,anchor,12256fb1-4eed-437f-8847-41350c9f4850,auto,anchor_extra
+sq_C168,제사 술,C,test,active,,"제수용 술, 마트 및 슈퍼",,,doc:f3d4b270-258b-4508-bd1f-06dbac4851e8,35.0371066174,126.7242405078,anchor_near,C051,W3,1,,,,,,sq_C168@a,anchor,f3d4b270-258b-4508-bd1f-06dbac4851e8,auto,anchor_extra
+sq_C169,운동화 수리,C,test,active,,신발 수선집,,,doc:f5ec0f46-8325-4c52-b392-d48fee2f00ea,37.8772505984,127.7277036779,anchor_near,C047,W3,1,,,,,,sq_C169@a,anchor,c79da85a-0c99-48b5-bf82-48e2127ca559,auto,anchor_extra
+sq_C177,아기 죽,C,test,active,,죽 전문점,,,doc:9408d93d-6b69-4d1e-9657-7ed554ae7292,36.9126405514,127.5450056012,anchor_near,C064,W3,1,,,,,,sq_C177@a,anchor,1cda71c1-5f9c-4181-8c66-62e37e3c0bbc,auto,anchor_extra

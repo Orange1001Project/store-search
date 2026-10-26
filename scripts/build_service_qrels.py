@@ -24,6 +24,7 @@ from sklearn.metrics import cohen_kappa_score
 
 from store_search_ai.data.service_qrels import (
     BINARY_THRESHOLD,
+    adjudication_gaps,
     adjudication_sheet,
     apply_adjudication,
     build_qrels,
@@ -77,9 +78,19 @@ def main() -> None:
             logger.info("%s: 조정 대상 %d쌍 → %s (final_relevance를 채워 adjudication_completed.csv로 저장)",
                         round_dir.name, len(sheet), analysis / "adjudication_needed.csv")
         final = apply_adjudication(merged, adjudicated)
+        if adjudicated is not None:
+            missing, extra = adjudication_gaps(final, adjudicated)
+            if len(missing):   # 조정을 끝낸 뒤 판정이 바뀌어 새로 생긴 조정 대상
+                more = analysis / "adjudication_needed_more.csv"
+                adjudication_sheet(missing).to_csv(more, index=False, encoding="utf-8-sig", lineterminator="\n")
+                logger.warning("%s: 조정 파일에 없는 조정 대상 %d쌍 → %s (채워서 조정 파일에 합칠 것)", round_dir.name,
+                               len(missing), more)
+            if extra:
+                logger.warning("%s: 조정 대상이 아닌 judgment_id %d개가 조정 파일에 있음(값을 적은 것만 반영): %s",
+                               round_dir.name, len(extra), extra[:5])
         qrels = build_qrels(final)
         all_qrels.append(qrels)
-        pending = int((final["reason"] != "").sum() - final["adjudicated"].sum())
+        pending = int(((final["reason"] != "") & ~final["adjudicated"]).sum())
         status[round_dir.name] = {
             "annotators": sorted(sheets),
             "pairs": len(final),

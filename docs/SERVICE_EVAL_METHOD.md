@@ -31,7 +31,17 @@
 |---|---|---|
 | service_v1 | 활성 쿼리 498개, random 위치, 2km 상위 10 | 10,558 |
 | service_v2 | 같은 사례, **1km 상위 10**(새로 나온 쌍만) | 3,604 |
-| service_v3(예정) | anchor 사례 183개 + 추가 C 쿼리(random) | Colab 뒤 확정 |
+| service_v3 | anchor 사례 183개 | 4,976 |
+| service_v4 | 추가 C 쿼리 50개(random) | 1,483 |
+| service_v5 | 1단계·reranker 상위 10 보충(1-4) | 4,463 |
+| service_v6 | 추가 B 쿼리 64개(random) | 1,601 |
+| service_v7(예정) | 반경별 run 보충(아래) + 추가 C의 anchor 15개 | Colab 뒤 확정 |
+
+- **반경별 run(2026-10-26 수정)**: run은 채점 반경(1km·2km)마다 그 안 상위 50개를 합쳐 저장한다. 전에는 2km 상위 50개만 남겨,
+  그 안에 1km 가게가 10개보다 적은 사례(주 평가셋 406개 중 v1 21개, BM25 47개)에서 1km 순위가 잘렸고 그만큼 1km 점수가 낮게 나왔다.
+  service_v2의 "1km 상위 10"도 이 잘린 run에서 뽑았다. 기존 run의 행·순위는 그대로이고 1km 가게만 뒤에 더해진다(BM25·키워드 확인).
+- **anchor_extra**: `--append-new`로 더한 쿼리는 random 사례만 있었다. 판정 뒤 1km 안 정답이 없는 추가 C 15개에 처음과 같은 규칙으로
+  anchor 사례를 붙였다(`build_service_instances.py --add-anchors`).
 
 ## 3. 채점 (`scripts/score_service_eval.py`)
 

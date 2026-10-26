@@ -71,3 +71,11 @@ def test_brand_and_category_intent():
     qu = QueryUnderstanding(_corpus())
     assert qu.parse("GS25").intent == "brand"
     assert qu.parse("의류").intent == "category"
+
+
+def test_region_modifier_keeps_region_and_half_coordinates_do_not_crash():
+    qu = QueryUnderstanding(_corpus())
+    p = qu.parse("안산 맛집")
+    assert p.region_text == "안산" and p.core == "맛집"
+    assert qu.parse("우산 파는 곳").region is None                # 서술·장소어만 남으면 여전히 지역이 아님
+    assert qu.parse("신림 옷가게", 37.23, None).region is not None  # 경도 없음 → 가까운 곳 대신 가장 큰 곳

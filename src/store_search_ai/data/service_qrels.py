@@ -68,13 +68,25 @@ def apply_adjudication(merged: pd.DataFrame, adjudicated: pd.DataFrame | None) -
     if adjudicated is None or adjudicated.empty:
         return out
     adj = adjudicated.set_index("judgment_id")
-    hit = out["judgment_id"].isin(adj.index)
-    final = out.loc[hit, "judgment_id"].map(adj["final_relevance"])
-    final = pd.to_numeric(final, errors="coerce")
-    out.loc[hit, "relevance"] = final
-    out.loc[hit, "adjudicated"] = True
-    out.loc[hit, "exclude_from_gold"] = final.isna()
+    final = pd.to_numeric(out["judgment_id"].map(adj["final_relevance"]), errors="coerce")
+    listed = out["judgment_id"].isin(adj.index)
+    need = out["reason"] != ""
+    # 조정 대상: 시트에 있으면 그 값(빈칸 = gold 제외). 조정 대상이 아닌데 시트에 있으면 값을 적었을 때만 덮어쓴다 —
+    # 빈칸이라고 합의된 점수를 버리지 않는다(2026-10-26 점검 5번).
+    apply = listed & (need | final.notna())
+    out.loc[apply, "relevance"] = final[apply]
+    out.loc[apply, "adjudicated"] = True
+    out.loc[apply, "exclude_from_gold"] = final[apply].isna()
     return out
+
+
+def adjudication_gaps(final: pd.DataFrame, adjudicated: pd.DataFrame | None) -> tuple[pd.DataFrame, list[str]]:
+    """조정 대상인데 조정 시트에 없는 쌍(나중에 판정을 고쳐 새로 생긴 불일치), 조정 시트에 있지만 조정 대상이 아닌 judgment_id."""
+
+    listed = set(adjudicated["judgment_id"]) if adjudicated is not None else set()
+    missing = final[(final["reason"] != "") & ~final["judgment_id"].isin(listed)]
+    extra = sorted(listed - set(final.loc[final["reason"] != "", "judgment_id"]))
+    return missing, extra
 
 
 def build_qrels(final: pd.DataFrame) -> pd.DataFrame:

@@ -2,7 +2,8 @@
 
 설정 `eval_set`: 묶음 비율(shares), 반경, 해시 salt, 출력 경로.
 - 쿼리마다 사례 하나(반경 안 정답이 있는 random, 없으면 anchor).
-- split마다 가장 모자란 묶음이 크기를 정한다. 그 묶음을 더 쓰면 셋이 커지고, 이미 뽑힌 쿼리는 그대로 남는다.
+- split마다 가장 모자란 묶음이 크기를 정한다. 이미 있는 eval_set.csv의 쿼리·사례를 먼저 남기고(정답이 남아 있는 한),
+  나머지는 해시 순으로 채운다. 이전 쿼리가 빠지는 것은 그 묶음 자체가 줄 때뿐이다.
 - 빠진 사례·쿼리는 지우지 않는다(instances.csv·qrels 그대로). 채점 스크립트가 이 목록으로 거른다(--set main).
 
 다시 실행해도 같은 결과(해시 순). 판정(qrels)이 바뀌거나 쿼리를 더한 뒤 다시 돌린다.
@@ -58,7 +59,13 @@ def main() -> None:
 
     answerable = no_answer_counts(instances, instance_qrels(instances, qrels, coords), ecfg["radius_km"])
     shares = ecfg["shares"]
-    picked = build_eval_set(instances, answerable, shares, ecfg["salt"])
+    out = Path(ecfg["output"])
+    previous = pd.read_csv(out, encoding="utf-8-sig") if out.exists() else None
+    picked = build_eval_set(instances, answerable, shares, ecfg["salt"], previous)
+    if previous is not None:
+        dropped = sorted(set(previous["instance_id"]) - set(picked["instance_id"]))
+        added = sorted(set(picked["instance_id"]) - set(previous["instance_id"]))
+        logger.info("이전 셋 대비: 빠짐 %d개 %s / 더해짐 %d개", len(dropped), dropped[:10], len(added))
 
     scored = instances[answerable.to_numpy()].drop_duplicates("query_id")
     for split in ("dev", "test"):
@@ -72,7 +79,6 @@ def main() -> None:
     if args.dry_run:
         logger.info("[dry-run] 파일을 쓰지 않았습니다.")
         return
-    out = Path(ecfg["output"])
     picked.to_csv(out, index=False, encoding="utf-8-sig", lineterminator="\n")
     logger.info("저장: %s (%d개)", out, len(picked))
 

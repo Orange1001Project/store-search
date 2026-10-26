@@ -11,6 +11,7 @@ from store_search_ai.data.service_pool import (
     lexical_query,
     pool_pairs,
     query_keywords,
+    top_k_run,
 )
 
 
@@ -83,3 +84,14 @@ def test_assign_annotators_balances_and_avoids_own_queries():
     assert "q1" in out["B"] and "q2" in out["A"]                  # 자기 쿼리는 상대에게
     assert (out["A"] - {"q5"}).isdisjoint(out["B"] - {"q5"})      # 나머지는 한 명만
     assert set().union(*out.values()) == set(sizes.index)
+
+
+def test_top_k_run_keeps_top_depth_inside_each_radius():
+    cand = np.arange(6)
+    scores = np.array([0.9, 0.8, 0.7, 0.6, 0.5, 0.4])
+    dist = np.array([1.5, 1.5, 0.5, 1.5, 0.5, 0.5])         # 1km 안은 2·4·5번(점수 3·5·6위)
+    ids = np.array([f"d{i}" for i in range(6)])
+    plain = top_k_run("q", cand, scores, ids, 2, "s")
+    assert plain["doc_id"].tolist() == ["d0", "d1"]           # 2km 상위 2개만 — 1km 순위가 비어 버림
+    both = top_k_run("q", cand, scores, ids, 2, "s", dist, [1.0, 2.0])
+    assert both["doc_id"].tolist() == ["d0", "d1", "d2", "d4"] and both["rank"].tolist() == [1, 2, 3, 4]

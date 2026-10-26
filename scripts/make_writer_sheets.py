@@ -90,16 +90,19 @@ def write_facilitator_sheets(writer: pd.ExcelWriter, table: pd.DataFrame, writer
                   "목표": [targets.get(k, "") for k in totals]}).to_excel(writer, sheet_name="합계", index=False)
 
 
-def write_extra_c(cfg: dict, writers: list[str], out_dir: Path, force: bool) -> None:
+def write_extra_c(cfg: dict, writers: list[str], out_dir: Path, force: bool, dry_run: bool = False) -> None:
     """추가 C 카드 파일: 작성자마다 모든 추가 카드 한 줄씩. 카드ID는 기존 카드 다음 번호부터."""
 
     start = len(cfg["scenario_cards"]) + 1
     cards = pd.DataFrame({"카드ID": [f"C{start + i:03d}" for i in range(len(cfg["scenario_cards_extra"]))],
                           "상황": cfg["scenario_cards_extra"]})
     path = out_dir / EXTRA_C_FILE
-    if path.exists() and not force:
+    if path.exists() and not (force or dry_run):
         raise SystemExit(f"{path}이 이미 있습니다(--force).")
     guide = [g for g in PART1_GUIDE if not g[0].startswith("E")]
+    if dry_run:
+        logger.info("[dry-run] 카드 %d장 × 작성자 %d명 — 파일을 쓰지 않았습니다.", len(cards), len(writers))
+        return
     out_dir.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
         write_guide_sheet(writer, "안내(C)", guide)
@@ -109,18 +112,38 @@ def write_extra_c(cfg: dict, writers: list[str], out_dir: Path, force: bool) -> 
     logger.info("저장: %s (카드 %d장 × 작성자 %d명 = %d줄)", path, len(cards), len(writers), len(cards) * len(writers))
 
 
-def write_extra_b(cfg: dict, writers: list[str], template: str, out_dir: Path, force: bool) -> None:
+def used_b_stores(cfg: dict, out_dir: Path) -> set[str]:
+    """이미 쓴(또는 배정한) B 표본 가게: 쿼리 표의 근거ID + 팀 작성본·작성자 파일(배포본·완료본)의 B 줄 근거ID.
+    쿼리 표만 보면 다른 쿼리에 합쳐진 줄('GS25' → sq_B001)의 가게가 안 쓴 것으로 보인다(2026-10-26 점검 6번)."""
+
+    queries = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
+    used = set(queries["basis_id"])
+    files = [Path(cfg["import"]["team_completed"]), *out_dir.glob("*.xlsx"),
+             *(Path(p) for p in cfg["import"]["writers_completed"])]
+    for f in files:
+        if not f.exists():
+            continue
+        for sheet in pd.read_excel(f, sheet_name=None).values():
+            if {"묶음", "근거ID"} <= set(sheet.columns):
+                used |= set(sheet.loc[sheet["묶음"] == "B", "근거ID"].dropna().astype(str))
+    return used
+
+
+def write_extra_b(cfg: dict, writers: list[str], template: str, out_dir: Path, force: bool, dry_run: bool = False) -> None:
     """추가 B 파일(2026-10-26, 주 평가셋 비율 맞추기): 아직 쿼리를 안 쓴 B_가맹점표본 가게를 작성자마다 겹치지 않게 나눈다."""
 
     path = out_dir / EXTRA_B_FILE
-    if path.exists() and not force:
+    if path.exists() and not (force or dry_run):
         raise SystemExit(f"{path}이 이미 있습니다(--force).")
     stores = pd.read_excel(template, sheet_name="B_가맹점표본")
-    queries = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
-    used = set(queries["basis_id"])
+    used = used_b_stores(cfg, out_dir)
     per_writer = cfg["writers"]["extra_b_per_writer"]
     picked = pick_unused_stores(stores, used, per_writer * len(writers), cfg["store_sample"]["name_only_share"],
                                 cfg["random_seed"] + 3)
+    if dry_run:
+        logger.info("[dry-run] 안 쓴 표본 가게 %d개 중 %d개 — 파일을 쓰지 않았습니다.", (~stores["표본ID"].isin(used)).sum(),
+                    len(picked))
+        return
     out_dir.mkdir(parents=True, exist_ok=True)
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
         write_guide_sheet(writer, "안내(B)", EXTRA_B_GUIDE)
@@ -163,10 +186,10 @@ def main() -> None:
     template = args.template or cfg["output_path"]
     out_dir = Path(wcfg["output_dir"])
     if args.extra_c:   # 추가 C 파일은 자기 파일만 검사한다(write_extra_c)
-        write_extra_c(cfg, writers, out_dir, args.force)
+        write_extra_c(cfg, writers, out_dir, args.force, args.dry_run)
         return
     if args.extra_b:
-        write_extra_b(cfg, writers, template, out_dir, args.force)
+        write_extra_b(cfg, writers, template, out_dir, args.force, args.dry_run)
         return
     single_path = out_dir / wcfg.get("single_file", SINGLE_FILE)
     existing = single_path.exists() if args.layout == "single" else any(out_dir.glob("W*_*.xlsx"))

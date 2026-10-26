@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 import pandas as pd
 
 from store_search_ai.data.service_instances import (
@@ -7,6 +8,7 @@ from store_search_ai.data.service_instances import (
     strip_josa,
 )
 from store_search_ai.data.service_qrels import (
+    adjudication_gaps,
     adjudication_sheet,
     apply_adjudication,
     build_qrels,
@@ -110,3 +112,30 @@ def test_build_eval_set_matches_shares_one_instance_per_query_and_is_nested():
                                            "bundle": "B", "context": "random"} for i in range(10, 20)])], ignore_index=True)
     big = build_eval_set(more, pd.concat([ans, pd.Series(True, index=range(len(ans), len(more)))]), shares, "s")
     assert set(small["query_id"]) <= set(big["query_id"])        # 쿼리를 더해도 뽑힌 쿼리는 남는다
+
+
+def test_adjudication_blank_for_non_target_keeps_agreed_score_and_gaps_are_reported():
+    a = _sheet([3, 0, 1], [1, 2, 3])
+    b = _sheet([2, 1, 3], [1, 2, 3])
+    m = merge_judgments({"A": a, "B": b})
+    adj = pd.DataFrame({"judgment_id": [1], "final_relevance": [np.nan]})     # 조정 대상이 아닌 1번, 빈칸
+    final = apply_adjudication(m, adj).set_index("judgment_id")
+    assert final.loc[1, "relevance"] == 2 and not final.loc[1, "exclude_from_gold"]
+    missing, extra = adjudication_gaps(final.reset_index(), adj)
+    assert missing["judgment_id"].tolist() == [3] and extra == [1]
+
+
+def test_build_eval_set_keeps_previous_queries_when_scarcest_bundle_changes():
+    def frame(n_b, n_a):
+        rows = [{"instance_id": f"{b}{i}", "query_id": f"{b}{i}", "query": "", "split": "test", "bundle": b, "context": "random"}
+                for b, n in (("B", n_b), ("A", n_a)) for i in range(n)]
+        return pd.DataFrame(rows)
+
+    shares = {"B": 0.5, "A": 0.5}
+    first = frame(10, 20)
+    prev = build_eval_set(first, pd.Series(True, index=first.index), shares, "s")      # B가 크기를 정함: B10 A10
+    later = frame(30, 20)                                                                 # B가 늘어 A가 크기를 정함: B20 A20
+    now = build_eval_set(later, pd.Series(True, index=later.index), shares, "s", prev)
+    assert set(prev["query_id"]) <= set(now["query_id"])
+    with pytest.raises(ValueError):
+        build_eval_set(first, pd.Series(True, index=first.index), {"B": 0.5, "C": 0.5}, "s")   # C가 0개

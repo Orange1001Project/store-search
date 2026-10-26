@@ -59,6 +59,8 @@ def main() -> None:
         if q.bundle == "B" and q.location_source == "store":
             d = np.hypot(lat - float(q.latitude), (lon - float(q.longitude)) * 0.8) * 111.0
             target = np.flatnonzero(d <= 0.05)
+            if len(target) == 0:   # 50m 안 가게가 없으면 판단하지 않는다(False가 아니라 None)
+                target = None
         in_region = (bool(np.isin(target, p.region.doc_idx).any()) if (p.region is not None and target is not None)
                      else None)
         # 원격 사용자: 쿼리 지역과 먼 곳(서울시청, 가정 위치가 서울 근처면 부산시청)에서 같은 쿼리를 검색할 때 지역을 맞게 고르는지

@@ -90,26 +90,37 @@ def paired(a: pd.Series, b: pd.Series, samples: int = 10_000, seed: int = 202610
             "wins": int((d > 1e-9).sum()), "losses": int((d < -1e-9).sum())}
 
 
-def build_eval_set(instances: pd.DataFrame, answerable: pd.Series, shares: dict[str, float], salt: str) -> pd.DataFrame:
+def build_eval_set(instances: pd.DataFrame, answerable: pd.Series, shares: dict[str, float], salt: str,
+                   previous: pd.DataFrame | None = None) -> pd.DataFrame:
     """주 평가셋: 쿼리마다 사례 하나, split마다 묶음 비율을 `shares`로 맞춘다.
 
     - 사례는 반경 안 정답이 있는 것만. random 사례를 먼저, 없으면 anchor.
-    - 가장 모자란 묶음이 split 크기를 정하고, 나머지 묶음은 (salt, query_id) 해시 순 앞에서부터 남긴다 —
-      쿼리를 더해 셋이 커져도 이미 뽑힌 쿼리는 빠지지 않는다.
+    - 가장 모자란 묶음이 split 크기를 정하고, 나머지 묶음은 앞에서부터 남긴다. 순서는 ① 이전 셋(`previous`)에 있던 쿼리
+      ② (salt, query_id) 해시 순. 그래서 다시 만들어도 이전 셋의 쿼리와 사례는 정답이 남아 있는 한 그대로이고,
+      빠지는 것은 그 묶음 자체가 줄 때뿐이다(2026-10-26 점검 2번 — 전에는 해시 순만 써서 가장 모자란 묶음이 바뀌면 이전 쿼리가 밀렸다).
     `answerable`은 instances와 같은 순서의 불리언(no_answer_counts 결과).
     """
 
+    if not shares or any(s <= 0 for s in shares.values()):
+        raise ValueError(f"묶음 비율은 0보다 커야 합니다: {shares}")
+    prev_inst = set(previous["instance_id"]) if previous is not None else set()
     cand = instances[instances["bundle"].isin(list(shares)) & answerable.to_numpy()]
-    cand = (cand.assign(_anchor=(cand["context"] != "random").astype(int))
-            .sort_values(["query_id", "_anchor", "instance_id"]).drop_duplicates("query_id"))
+    cand = (cand.assign(_prev=(~cand["instance_id"].isin(prev_inst)).astype(int),
+                        _anchor=(cand["context"] != "random").astype(int))
+            .sort_values(["query_id", "_prev", "_anchor", "instance_id"]).drop_duplicates("query_id"))
     cand = cand.assign(_key=[hashlib.sha256(f"{salt}:{q}".encode()).hexdigest() for q in cand["query_id"]])
     picked = []
-    for _, frame in cand.groupby("split"):
+    for split, frame in cand.groupby("split"):
         avail = frame["bundle"].value_counts()
-        total = min(avail.get(b, 0) / s for b, s in shares.items())
+        missing = [b for b in shares if avail.get(b, 0) == 0]
+        if missing:
+            raise ValueError(f"{split}: 정답 있는 쿼리가 없는 묶음 {missing} — 이 split은 비율을 맞출 수 없습니다")
+        total = min(avail[b] / s for b, s in shares.items())
         for b, s in shares.items():
-            n = min(int(avail.get(b, 0)), int(np.floor(total * s + 0.5)))
-            picked.append(frame[frame["bundle"] == b].sort_values("_key").head(n))
+            n = min(int(avail[b]), int(np.floor(total * s + 0.5)))
+            picked.append(frame[frame["bundle"] == b].sort_values(["_prev", "_key"]).head(n))
+    if not picked:
+        raise ValueError("정답 있는 사례가 없습니다")
     out = pd.concat(picked, ignore_index=True)
     return out[["instance_id", "query_id", "query", "split", "bundle", "context"]].sort_values(
         ["split", "bundle", "query_id"]).reset_index(drop=True)

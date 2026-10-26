@@ -37,6 +37,22 @@ sq_B127,B,문경 라망화장품,문경,문경,라망화장품,name,541,True,0.0
 sq_B129,B,옥련시장 봉이네축산,옥련시장,옥련시장,봉이네축산,name,71,True,0.02823495394618673,True,옥련시장,True,4,True,True
 sq_B133,B,충주 회풍루,충주,충주,회풍루,name,1093,True,0.2357134488607586,True,충주,True,1,True,True
 sq_B143,B,범계 88포장마차,,,범계 88포장마차,name,0,,,,,,3,False,True
+sq_B154,B,선미양장,,,선미양장,name,0,,,,,,1,True,True
+sq_B158,B,더 베이비,,,더 베이비,category,0,,,,,,0,False,True
+sq_B163,B,남해안 건어,,,남해안 건어,category,0,,,,,,0,False,True
+sq_B165,B,성광 축산,,,성광 축산,category,0,,,,,,0,False,True
+sq_B171,B,공백,,,공백,name,0,,,,,,1,False,True
+sq_B174,B,화곡 화서가,화곡,화곡,화서가,name,494,True,0.7698464195848551,True,화곡,True,1,True,True
+sq_B177,B,양동 유동상회,양동,양동,유동상회,name,914,True,0.17483205036966726,True,양동,True,1,True,True
+sq_B180,B,현대자동차 보성점,보성,,현대자동차 보성점,category,0,,,,,,0,False,False
+sq_B183,B,비헤어,,,비헤어,name,0,,,,,,57,True,True
+sq_B186,B,와이투케이,,,와이투케이,name,0,,,,,,1,False,True
+sq_B191,B,대림 침구,,,대림 침구,category,0,,,,,,0,False,True
+sq_B203,B,밝은 경희 한의,,,밝은 경희 한의,category,0,,,,,,0,False,True
+sq_B204,B,오케이 정형외과,,오케이,정형외과,category,62,False,4.543721326718537,False,오케이,False,0,False,False
+sq_B205,B,아이콘 안경,,,아이콘 안경,category,0,,,,,,0,False,True
+sq_B208,B,신내챙이 농약,,,신내챙이 농약,category,0,,,,,,0,False,True
+sq_B213,B,선경사 한복,,,선경사 한복,category,0,,,,,,0,False,True
 sq_D001,D,보문산 카페,보문산,보문산,카페,category,34,,0.05330767486490896,True,보문산,True,0,,True
 sq_D002,D,화성 분식,화성,화성,분식,category,1628,,10.564466815386476,True,화성,True,0,,True
 sq_D003,D,을지로 옷가게,을지로,을지로,옷가게,category,852,,0.8506186952043113,True,을지로,True,0,,True

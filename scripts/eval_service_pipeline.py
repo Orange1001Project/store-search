@@ -48,8 +48,8 @@ DOC_TEXT_COLUMN = "search_text_t1_minimal"   # 모델 평가·판정 pool과 같
 
 def load_runs(bdir: Path) -> dict[str, pd.DataFrame]:
     runs: dict[str, list[pd.DataFrame]] = {}
-    for d in ("runs", "runs_anchor", "runs_extra", "runs_extra_b"):
-        for path in sorted((bdir / d).glob("*.csv")):
+    for d in sorted(p for p in bdir.glob("runs*") if p.is_dir()):   # 사례 묶음마다 run 폴더(build_service_pool.SETS)
+        for path in sorted(d.glob("*.csv")):
             runs.setdefault(path.stem, []).append(pd.read_csv(path, encoding="utf-8-sig"))
     return {k: pd.concat(v, ignore_index=True) for k, v in runs.items()}
 
@@ -106,7 +106,7 @@ def hybrid2_variants(runs: dict[str, pd.DataFrame], instances: pd.DataFrame, nam
     bm25 = runs["char_bm25"][runs["char_bm25"]["query_id"].isin(instances["instance_id"])]
     out = {"v1": v1, "convex a=0.7": convex([v1, bm25], [0.7, 0.3])}
     # 상호 일치는 v1과 BM25 후보를 합친 목록에서 본다(BM25만 찾은 상호도 올릴 수 있게)
-    union = convex([v1, bm25], [1.0, 0.0], name="union_v1")      # BM25 후보도 포함, 점수는 v1만
+    union = union_v1(v1, bm25)      # BM25 후보도 포함, 점수는 v1(동점은 BM25 순)
     hu = name_hits(union, instances, names)
     for beta in (0.3, 0.5, 1.0):
         out[f"v1+name b={beta}"] = boost(union, hu, beta, f"v1+name b={beta}")
@@ -124,8 +124,16 @@ def first_stage(runs: dict[str, pd.DataFrame], instances: pd.DataFrame, names: p
 
     v1 = runs[V1][runs[V1]["query_id"].isin(instances["instance_id"])]
     bm25 = runs["char_bm25"][runs["char_bm25"]["query_id"].isin(instances["instance_id"])]
-    union = convex([v1, bm25], [1.0, 0.0], name="union_v1")
+    union = union_v1(v1, bm25)
     return boost(union, name_hits(union, instances, names, cores), 0.5, name)
+
+
+def union_v1(v1: pd.DataFrame, bm25: pd.DataFrame) -> pd.DataFrame:
+    """v1과 BM25 후보의 합집합, 점수는 v1. BM25만 찾은 문서는 v1 점수 0(정규화 최솟값)이라 v1 최하위와 동점이 되는데,
+    이 동점을 doc_id 순이 아니라 BM25 순으로 풀려고 BM25에 아주 작은 가중치를 준다(2026-10-26 점검 9번).
+    이 합집합만으로도(β=0) v1 단독보다 조금 오른다 — 반경 안 v1 결과가 모자랄 때 BM25 후보가 채운다."""
+
+    return convex([v1, bm25], [1.0, 1e-6], name="union_v1")
 
 
 def within_radius(run: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame, radius_km: float,
@@ -342,7 +350,8 @@ def main() -> None:
             return rerank_variants(within_radius(stage, instances, coords, radius), scores, instances, names)
     elif args.exp == "qu":
         v1 = runs[V1][runs[V1]["query_id"].isin(instances["instance_id"])]
-        fixed = {"v1": v1, "v1+name b=0.5": first_stage(runs, instances, names),
+        bm25 = runs["char_bm25"][runs["char_bm25"]["query_id"].isin(instances["instance_id"])]
+        fixed = {"v1": v1, "v1+bm25 union b=0": union_v1(v1, bm25), "v1+name b=0.5": first_stage(runs, instances, names),
                  "v1+name(qu) b=0.5": first_stage(runs, instances, names, parsed_cores(instances, bench["corpus_path"]),
                                                   "v1+name(qu) b=0.5")}
 
@@ -357,7 +366,7 @@ def main() -> None:
     for radius in radii:
         variants = variants_for(radius)
         if args.only:
-            variants = {k: v for k, v in variants.items() if k in set(args.only) | {"v1", "v1+name b=0.5"}}
+            variants = {k: v for k, v in variants.items() if k in set(args.only) | {"v1", "v1+bm25 union b=0", "v1+name b=0.5"}}
         for name, run in variants.items():
             run = run[run["query_id"].isin(instances["instance_id"])]
             s = score_system(run, iq, instances, coords, radius)

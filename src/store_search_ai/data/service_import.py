@@ -208,6 +208,7 @@ def build_service_queries(
     dev_share: float,
     seed: int,
     fixed_split: dict[str, str] | None = None,
+    previous: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     queries = merge_duplicates(rows, priority)
     queries["old_benchmark_split"] = queries["query"].map(lambda q: old_splits.get(normalize(q), ""))
@@ -223,10 +224,55 @@ def build_service_queries(
     split[active] = split_groups(queries[active], dev_share, seed, fixed_split)
     queries = queries.assign(split=split)
     queries = assign_locations(queries, stores, markets, points)
-    counters: dict[str, int] = {}
-    ids = []
-    for bundle in queries["bundle"]:
-        counters[bundle] = counters.get(bundle, 0) + 1
-        ids.append(f"sq_{bundle}{counters[bundle]:03d}")
-    queries["query_id"] = ids
+    queries["query_id"] = assign_query_ids(queries, previous)
     return queries[OUTPUT_COLUMNS]
+
+
+QUERY_ID_RE = re.compile(r"sq_([A-Z])(\d+)")
+
+
+def assign_query_ids(queries: pd.DataFrame, previous: pd.DataFrame | None = None) -> list[str]:
+    """쿼리 ID. 이전 표에 같은 (정규화 문자열, 묶음)이 있으면 그 ID를 그대로 쓰고, 새 쿼리만 묶음별 최대 번호 다음부터 붙인다.
+
+    판정(qrels)은 query_id에 묶여 있어서 줄 순서로 번호를 다시 매기면 안 된다 — 작성 파일을 더하면 앞 번호가 밀린다
+    (2026-10-26 점검 3번). 이전 표가 없으면 묶음별 1번부터.
+    """
+
+    known: dict[tuple[str, str], str] = {}
+    last: dict[str, int] = {}
+    if previous is not None:
+        for qid, q, b in zip(previous["query_id"], previous["query"], previous["bundle"], strict=True):
+            known[(normalize(q), b)] = qid
+            m = QUERY_ID_RE.fullmatch(str(qid))
+            if m:
+                last[m.group(1)] = max(last.get(m.group(1), 0), int(m.group(2)))
+    ids = []
+    for q, b in zip(queries["query"], queries["bundle"], strict=True):
+        qid = known.get((normalize(q), b))
+        if qid is None:
+            last[b] = last.get(b, 0) + 1
+            qid = f"sq_{b}{last[b]:03d}"
+        ids.append(qid)
+    return ids
+
+
+def changes_from_previous(previous: pd.DataFrame, queries: pd.DataFrame) -> list[str]:
+    """이전 표의 쿼리가 새 표에서 없어졌거나, 문자열·묶음이 바뀌었거나, 활성 쿼리의 split·가정위치가 바뀐 것.
+    판정·사례·dev/test 구분이 그 값에 묶여 있으므로 하나라도 있으면 저장하면 안 된다."""
+
+    new = queries.set_index("query_id")
+    out = []
+    for row in previous.itertuples(index=False):
+        if row.query_id not in new.index:
+            out.append(f"{row.query_id} '{row.query}' 없어짐")
+            continue
+        cur = new.loc[row.query_id]
+        if normalize(cur["query"]) != normalize(row.query) or cur["bundle"] != row.bundle:
+            out.append(f"{row.query_id} '{row.query}'({row.bundle}) → '{cur['query']}'({cur['bundle']})")
+        elif row.status == "active" and cur["status"] == "active":
+            if cur["split"] != row.split:
+                out.append(f"{row.query_id} split {row.split} → {cur['split']}")
+            if (round(float(cur["latitude"]), 6), round(float(cur["longitude"]), 6)) != (
+                    round(float(row.latitude), 6), round(float(row.longitude), 6)):
+                out.append(f"{row.query_id} 가정위치 바뀜")
+    return out

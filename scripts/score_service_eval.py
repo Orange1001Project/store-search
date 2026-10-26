@@ -4,7 +4,8 @@ src/store_search_ai/evaluation/service_eval.py 머리말.
 입력: <benchmark_dir>/instances.csv, qrels.csv, runs/(random 사례), runs_anchor/(anchor 사례), 코퍼스 좌표
 출력: results/service_eval/
   summary.csv      시스템·반경·split·묶음·맥락별 사례 수, 정답 없는 사례 수, nDCG@10(95% CI), Judged@10, bad@3, top1_ok
-  pairs.csv        기준 시스템(설정 judging.dense_models 첫째 = v1) 대비 다른 시스템의 nDCG@10 차이·CI·p (같은 사례끼리)
+  pairs.csv        기준 시스템(설정 judging.dense_models 첫째 = v1) 대비 다른 시스템의 nDCG@10 차이·CI·p (같은 사례끼리).
+                   delta = 그 시스템 − 기준, wins/losses도 그 시스템 쪽에서 센다(2026-10-26 전에는 기준 − 시스템이었다)
   per_instance.csv 사례별 지표
 
 사용법:
@@ -56,8 +57,8 @@ def main() -> None:
     iq = instance_qrels(instances, qrels, coords)
 
     runs: dict[str, list[pd.DataFrame]] = {}
-    for run_dir in (bdir / "runs", bdir / "runs_anchor", bdir / "runs_extra", bdir / "runs_extra_b"):
-        for path in sorted(run_dir.glob("*.csv")) if run_dir.exists() else []:
+    for run_dir in sorted(p for p in bdir.glob("runs*") if p.is_dir()):   # 사례 묶음마다 run 폴더(build_service_pool.SETS)
+        for path in sorted(run_dir.glob("*.csv")):
             if path.stem not in SYSTEMS_EXCLUDED:
                 runs.setdefault(path.stem, []).append(pd.read_csv(path, encoding="utf-8-sig"))
     baseline = load_config(jcfg["dense_models"][0])["name"]
@@ -102,7 +103,7 @@ def main() -> None:
                         base = per[(per["system"] == baseline) & (per["radius_km"] == radius)].set_index("instance_id")["nDCG@10"]
                         mine = g.set_index("instance_id")["nDCG@10"]
                         pair_rows.append({"scope": scope, "radius_km": radius, "group": group_name, **label,
-                                          "baseline": baseline, **paired(base.reindex(mine.index), mine)})
+                                          "baseline": baseline, **paired(mine, base.reindex(mine.index))})
     summary = pd.DataFrame(rows)
     summary.to_csv(out / "summary.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     pd.DataFrame(pair_rows).to_csv(out / "pairs.csv", index=False, encoding="utf-8-sig", lineterminator="\n")

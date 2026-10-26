@@ -34,6 +34,8 @@ MARKET_SUFFIXES = ("골목형상점가", "상점가", "전통시장", "종합시
 QUERY_SUFFIXES = ("역", "시장", "사거리", "삼거리", "오거리", "동", "읍", "면")   # 쿼리 토큰에서 떼어 보는 끝말("쌍문역"→"쌍문")
 # 지명·상호로 보지 않는 일반어(시장 이름 '○○가게', 상품권 이름 '온누리' 등과 겹침)
 GENERIC = {"가게", "곳", "데", "집", "파는", "사는", "하는", "먹을", "먹는", "배우는", "동네", "근처", "주변", "맛집", "온누리"}
+# 지역을 꾸미는 일반어('강남 맛집', '망원 근처') — 남는 말이 이것뿐이어도 앞 토큰은 지역으로 둔다
+REGION_MODIFIERS = {"동네", "근처", "주변", "맛집", "온누리"}
 NEAR_KM = 30.0   # 같은 지명이 여러 곳일 때 이 거리 안에 있으면 사용자 근처를 고른다(생활권)
 PLACE_ENDINGS = ("동", "가", "리", "로", "길", "시장", "상가", "역", "시", "군", "구", "읍", "면")
 ROAD_RE = re.compile(r"^([가-힣A-Za-z]+?\d*(?:대로|로|길))")
@@ -197,8 +199,17 @@ class QueryUnderstanding:
             region_pos = sorted(region_pos)[:-1]
         region_pos = sorted(region_pos)
         rest = [t for i, t in enumerate(tokens) if i not in set(region_pos)]
-        if rest and all(t in GENERIC for t in rest):               # '우산 파는 곳' — 남는 게 일반어뿐이면 그 토큰이 찾는 대상
+        # '우산 파는 곳' — 남는 게 서술·장소어뿐이면 그 토큰이 찾는 대상. '강남 맛집'·'망원 근처'는 지역을 남긴다
+        if rest and all(t in GENERIC - REGION_MODIFIERS for t in rest):
             region_pos = []
+        # '남양 수산', '영암 한우', '현대 이발' — 띄어 쓴 상호의 앞부분이 지명과 같은 경우. 붙여 쓴 쿼리가 상호에 있고, 지명 토큰에
+        # 지명 끝말(동·역·시장…)이 없고, 남는 말이 상호가 아니면 지역으로 떼지 않는다(상호 일치를 먼저 보는 지도 검색 관례)
+        if region_pos and not any(tokens[i].endswith(PLACE_ENDINGS) for i in region_pos):
+            whole = normalize_name(query)
+            core_try = " ".join(t for i, t in enumerate(tokens) if i not in set(region_pos))
+            if len(whole) >= 3 and self._names_s.str.contains(whole, regex=False).any() \
+                    and self._intent(core_try)[0] == "category":
+                region_pos = []
         region = (self._resolve([tokens[i] for i in region_pos], [found[i] for i in region_pos], user_lat, user_lon)
                   if region_pos else None)
         core = " ".join(t for i, t in enumerate(tokens) if i not in set(region_pos))
@@ -232,7 +243,7 @@ class QueryUnderstanding:
         if len(groups) > 1:
             # 지도 검색처럼: 사용자 근처(NEAR_KM 안)에 같은 이름이 있으면 가까운 곳, 없으면 가게가 가장 많은(큰) 곳
             near = []
-            if user_lat is not None:
+            if user_lat is not None and user_lon is not None:
                 def dist(ix):
                     return float(np.hypot(np.median(self.lat[ix]) - user_lat, (np.median(self.lon[ix]) - user_lon) * 0.8)) * 111
                 near = [g for g in groups if dist(g) <= NEAR_KM]

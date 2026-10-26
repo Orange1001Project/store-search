@@ -56,12 +56,26 @@ def distances_km(queries: pd.DataFrame, corpus: pd.DataFrame, cands: dict[str, n
     }
 
 
-def top_k_run(qid: str, cand_idx: np.ndarray, scores: np.ndarray, doc_ids: np.ndarray, depth: int, system: str) -> pd.DataFrame:
-    """반경 안 후보의 점수에서 상위 depth개. 동점은 corpus 순서로(재현 가능)."""
+def top_k_run(qid: str, cand_idx: np.ndarray, scores: np.ndarray, doc_ids: np.ndarray, depth: int, system: str,
+              dist: np.ndarray | None = None, radii: list[float] | None = None) -> pd.DataFrame:
+    """반경 안 후보의 점수에서 상위 depth개. 동점은 corpus 순서로(재현 가능).
+
+    `dist`(후보별 거리)와 `radii`(채점 반경)를 주면 반경마다 그 안의 상위 depth개를 합친다. 큰 반경 상위 depth개만 남기면
+    그 안에 작은 반경 가게가 depth개보다 적을 때 작은 반경의 순위가 잘린다(2026-10-26 점검). 순위는 전체 점수 순이라
+    큰 반경 상위 depth개의 순위는 그대로이고, 더해진 가게는 그 뒤에 온다.
+    """
 
     if len(cand_idx) == 0:
         return pd.DataFrame(columns=RUN_COLUMNS)
-    order = np.lexsort((cand_idx, -scores))[:depth]
+    order = np.lexsort((cand_idx, -scores))
+    if dist is None or not radii:
+        order = order[:depth]
+    else:
+        keep = np.zeros(len(order), dtype=bool)
+        keep[:depth] = True
+        for r in radii:
+            keep[np.flatnonzero(dist[order] <= r + 1e-9)[:depth]] = True
+        order = order[keep]
     return pd.DataFrame({
         "query_id": qid, "doc_id": doc_ids[cand_idx[order]], "rank": np.arange(1, len(order) + 1),
         "score": scores[order], "system": system,
@@ -83,7 +97,8 @@ def lexical_query(query: str, region_text: str = "") -> str:
     return " ".join(words) or query
 
 
-def keyword_run(qid: str, query: str, cand_idx: np.ndarray, texts: np.ndarray, doc_ids: np.ndarray, depth: int) -> pd.DataFrame:
+def keyword_run(qid: str, query: str, cand_idx: np.ndarray, texts: np.ndarray, doc_ids: np.ndarray, depth: int,
+                dist: np.ndarray | None = None, radii: list[float] | None = None) -> pd.DataFrame:
     """쿼리 단어가 상호·취급품목에 들어간 반경 안 가맹점(겹친 단어 수 → 겹친 글자 수 순). 시스템이 놓친 이름 겹침(E 함정)과
     문자 그대로의 정답을 pool에 넣는다."""
 
@@ -95,7 +110,8 @@ def keyword_run(qid: str, query: str, cand_idx: np.ndarray, texts: np.ndarray, d
     chars = np.array([sum(len(w) for w in words if w in t) for t in cand_texts])
     keep = hits > 0
     scores = (hits * 100 + chars).astype(float)
-    return top_k_run(qid, cand_idx[keep], scores[keep], doc_ids, depth, "keyword")
+    return top_k_run(qid, cand_idx[keep], scores[keep], doc_ids, depth, "keyword",
+                     None if dist is None else dist[keep], radii)
 
 
 def pool_pairs(runs: pd.DataFrame, depth: int) -> pd.DataFrame:

@@ -39,6 +39,7 @@ from store_search_ai.data.service_pool import (
     annotation_sheet,
     assign_annotators,
     candidates_within,
+    distances_km,
     double_annotation_queries,
     keyword_run,
     lexical_query,
@@ -62,19 +63,22 @@ SETS = {
     "anchor": (Path("colab_upload/service_eval_anchor"), "runs_anchor"),
     "extra": (Path("colab_upload/service_eval_extra"), "runs_extra"),
     "extra_b": (Path("colab_upload/service_eval_extra_b"), "runs_extra_b"),   # 추가 B(2026-10-26, 주 평가셋 비율)
+    "anchor_extra": (Path("colab_upload/service_eval_anchor_extra"), "runs_anchor_extra"),   # 추가 쿼리의 anchor(2026-10-26)
 }
 
 
 def load_inputs(cfg: dict, bench: dict, set_name: str = "main") -> tuple[pd.DataFrame, pd.DataFrame, dict[str, np.ndarray]]:
     """평가 사례 표(query_id = 사례 ID, base_query_id = 판정에 쓰는 쿼리 ID), 코퍼스, 사례별 반경 안 후보.
 
-    main: 활성 쿼리(사례 ID = 쿼리 ID). anchor: instances.csv의 anchor 사례(scripts/build_service_instances.py).
+    main: 활성 쿼리(사례 ID = 쿼리 ID). 나머지: instances.csv에서 batch가 묶음 이름과 같은 사례
+    (anchor = 처음 anchor 사례, anchor_extra = 나중에 더한 쿼리의 anchor, extra·extra_b = 나중에 더한 쿼리).
     """
 
     if set_name != "main":
         inst = pd.read_csv(Path(cfg["judging"]["benchmark_dir"]) / "instances.csv", encoding="utf-8-sig", keep_default_na=False)
-        batch = inst["batch"] if "batch" in inst else pd.Series("v1", index=inst.index)
-        pick = (inst["context"] == "anchor") if set_name == "anchor" else (batch == set_name)
+        if "batch" not in inst:
+            inst["batch"] = inst["context"].map({"random": "v1", "anchor": "anchor"})
+        pick = inst["batch"] == set_name
         queries = inst[pick].rename(columns={"query_id": "base_query_id"})
         queries = queries.rename(columns={"instance_id": "query_id"}).reset_index(drop=True)
     else:   # main: 처음 판정한 v1 쿼리(benchmark_dir/queries.csv가 있으면 그 목록, 없으면 가져온 활성 쿼리 전부)
@@ -135,7 +139,8 @@ def export(args, cfg: dict, bench: dict) -> None:
     docs.to_csv(out / "docs.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     queries[["query_id", "query", "latitude", "longitude"]].to_csv(out / "queries.csv", index=False, encoding="utf-8-sig",
                                                                   lineterminator="\n")
-    meta = {"judge_radius_km": jcfg["judge_radius_km"], "run_depth": jcfg["run_depth"], "docs": len(docs),
+    meta = {"judge_radius_km": jcfg["judge_radius_km"], "run_depth": jcfg["run_depth"],
+            "report_radii_km": sorted(set(jcfg["report_radii_km"])), "run_dir": SETS[args.set][1], "docs": len(docs),
             "queries": len(queries), "doc_text": DOC_TEXT_COLUMN, "corpus_path": bench["corpus_path"]}
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("가맹점 %d개, 사례 %d개 → %s (Drive store-search-ai/%s/에 올림)", len(docs), len(queries), out, out.name)
@@ -153,6 +158,8 @@ def runs(args, cfg: dict, bench: dict) -> None:
     run_dir = Path(jcfg["benchmark_dir"]) / SETS[args.set][1]
     run_dir.mkdir(parents=True, exist_ok=True)
     depth = jcfg["run_depth"]
+    radii = sorted(set(jcfg["report_radii_km"]))   # 반경마다 상위 depth개(작은 반경 순위가 잘리지 않게)
+    dist = distances_km(queries, corpus, cands)
 
     # BM25: 판정 반경 안에 드는 가맹점만으로 색인(IDF도 그 범위 기준)
     texts = build_pool_document_texts(corpus).to_numpy()
@@ -160,11 +167,13 @@ def runs(args, cfg: dict, bench: dict) -> None:
     pos[idx] = np.arange(len(idx))
     logger.info("char BM25 색인: %d개", len(idx))
     bm25 = fit_bm25_scorer(pd.Series(texts[idx]))
-    frames = [top_k_run(qid, cands[qid], bm25(lexical_query(q, region))[pos[cands[qid]]], doc_ids, depth, "char_bm25")
+    frames = [top_k_run(qid, cands[qid], bm25(lexical_query(q, region))[pos[cands[qid]]], doc_ids, depth, "char_bm25",
+                        dist[qid], radii)
               for qid, q, region in zip(queries["query_id"], queries["query"], queries["region_text"], strict=True)]
     write_run(pd.concat(frames, ignore_index=True), run_dir / "char_bm25.csv")
 
-    frames = [keyword_run(qid, lexical_query(q, region), cands[qid], texts, doc_ids, jcfg["keyword_per_query"])
+    frames = [keyword_run(qid, lexical_query(q, region), cands[qid], texts, doc_ids, jcfg["keyword_per_query"], dist[qid],
+                          radii)
               for qid, q, region in zip(queries["query_id"], queries["query"], queries["region_text"], strict=True)]
     write_run(pd.concat(frames, ignore_index=True), run_dir / "keyword.csv")
 
@@ -183,7 +192,7 @@ def runs(args, cfg: dict, bench: dict) -> None:
             raise SystemExit(f"{mcfg['name']}: 캐시의 가맹점 목록이 지금 쿼리·반경과 다릅니다 — encode를 다시 실행하세요.")
         emb = np.load(emb_path)
         q_emb = SentenceTransformerEncoder(mcfg).encode_queries(queries["query"].tolist())
-        frames = [top_k_run(qid, cands[qid], emb[pos[cands[qid]]] @ q_emb[i], doc_ids, depth, mcfg["name"])
+        frames = [top_k_run(qid, cands[qid], emb[pos[cands[qid]]] @ q_emb[i], doc_ids, depth, mcfg["name"], dist[qid], radii)
                   for i, qid in enumerate(queries["query_id"])]
         write_run(pd.concat(frames, ignore_index=True), run_dir / f"{mcfg['name']}.csv")
 

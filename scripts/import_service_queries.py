@@ -28,6 +28,7 @@ import pandas as pd
 
 from store_search_ai.data.service_import import (
     build_service_queries,
+    changes_from_previous,
     old_benchmark_splits,
     split_fixed_from,
     team_b_rows,
@@ -65,10 +66,14 @@ def main() -> None:
     rows = pd.concat([b_rows, writers, extra], ignore_index=True)
     drop = {(d["writer"], d["basis_id"]): d["reason"] for d in icfg.get("drop_rows", [])}
     if drop:   # 작성자 한 줄만 뺀다(같은 문자열의 다른 묶음 쿼리는 그대로 — exclude_queries는 문자열 단위라 둘 다 빠짐)
-        hit = [(w, b) in drop for w, b in zip(rows["writer"], rows["basis_id"], strict=True)]
+        keys = list(zip(rows["writer"], rows["basis_id"], strict=True))
+        unmatched = set(drop) - set(keys)
+        if unmatched:
+            raise SystemExit(f"설정 import.drop_rows 중 맞는 작성 줄이 없는 항목: {sorted(unmatched)}")
+        hit = pd.Series([k in drop for k in keys], index=rows.index)
         for w, b, q in rows.loc[hit, ["writer", "basis_id", "query"]].itertuples(index=False):
             logger.info("작성 줄 뺌: %s %s %s — %s", w, b, q, drop[(w, b)])
-        rows = rows[~pd.Series(hit, index=rows.index)].reset_index(drop=True)
+        rows = rows[~hit].reset_index(drop=True)
 
     template = pd.read_excel(cfg["output_path"], sheet_name=["B_가맹점표본", "D_시장표본"])
     families = load_config(args.families)["families"]
@@ -77,12 +82,17 @@ def main() -> None:
     corpus = pd.read_parquet(bench["corpus_path"],
                              columns=["doc_id", "store_name", "item_text", "latitude", "longitude", "geo_status"])
     points = corpus.loc[corpus["geo_status"] == "VALID", ["doc_id", "latitude", "longitude"]]
+    out = Path(icfg["output"])
+    previous = pd.read_csv(out, encoding="utf-8-sig", keep_default_na=False) if out.exists() else None
     queries = build_service_queries(
         rows, icfg["bundle_priority"], old_benchmark_splits(families, inactive), icfg["exclude_queries"],
         template["B_가맹점표본"], template["D_시장표본"], points, cfg["split"]["dev_share"], cfg["random_seed"],
-        split_fixed_from(pd.read_csv(icfg["output"], encoding="utf-8-sig", keep_default_na=False))
-        if Path(icfg["output"]).exists() else None,
+        split_fixed_from(previous) if previous is not None else None, previous,
     )
+    # 판정(qrels)·사례·dev/test가 기존 query_id에 묶여 있다 — 기존 쿼리가 없어지거나 문자열·묶음·split·위치가 바뀌면 멈춘다(dry-run도)
+    changed = changes_from_previous(previous, queries) if previous is not None else []
+    if changed:
+        raise SystemExit(f"기존 쿼리 {len(changed)}개가 바뀝니다 — 판정과 어긋나므로 멈춥니다:\n" + "\n".join(changed[:20]))
 
     # E는 정말 가맹점이 없는지 판정 전에 볼 수 있게, 상호·취급품목에 그 문자열이 몇 번 나오는지 붙인다
     text = (corpus["store_name"].fillna("") + " " + corpus["item_text"].fillna("")).str.replace(" ", "", regex=False)
@@ -113,13 +123,6 @@ def main() -> None:
         logger.info("[dry-run] 파일을 쓰지 않았습니다.")
         return
 
-    out = Path(icfg["output"])
-    if out.exists():   # 판정(qrels)은 query_id에 묶여 있다 — 기존 쿼리의 ID가 다른 문자열을 가리키게 되면 멈춘다
-        old = pd.read_csv(out, encoding="utf-8-sig", keep_default_na=False).set_index("query_id")["query"]
-        new = queries.set_index("query_id")["query"]
-        moved = [qid for qid in old.index if qid not in new.index or new[qid] != old[qid]]
-        if moved:
-            raise SystemExit(f"기존 query_id {len(moved)}개가 바뀝니다(예: {moved[:5]}) — 판정과 어긋나므로 저장하지 않습니다.")
     queries.to_csv(out, index=False, encoding="utf-8-sig", lineterminator="\n")
     meta = {
         "version": cfg["version"],

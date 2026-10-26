@@ -3,7 +3,9 @@ import pandas as pd
 from store_search_ai.data.service_import import (
     assign_locations,
     auto_location,
+    assign_query_ids,
     build_service_queries,
+    changes_from_previous,
     detect_region_text,
     merge_duplicates,
     split_groups,
@@ -117,3 +119,15 @@ def test_split_groups_keeps_fixed_groups_when_new_groups_are_added():
     second = split_groups(more, 0.25, seed=7, fixed=fixed)
     assert second[:30].tolist() == first.tolist()                      # 기존 쿼리는 그대로
     assert 0.15 <= (second == "dev").mean() <= 0.35
+
+
+def test_query_ids_are_inherited_and_new_ones_append_after_max():
+    prev = pd.DataFrame({"query_id": ["sq_E001", "sq_E002", "sq_B001"], "query": ["우체국", "신세계", "GS25"],
+                         "bundle": ["E", "E", "B"]})
+    now = pd.DataFrame({"query": ["우체국", "공항", "신세계", "GS 25", "빽다방"], "bundle": ["E", "E", "E", "B", "B"]})
+    assert assign_query_ids(now, prev) == ["sq_E001", "sq_E003", "sq_E002", "sq_B001", "sq_B002"]   # 줄 순서와 무관
+    moved = pd.DataFrame({"query_id": ["sq_E001", "sq_B001"], "query": ["우체국", "신세계"], "bundle": ["E", "B"],
+                          "status": "active", "split": "test", "latitude": 37.0, "longitude": 127.0})
+    prev2 = moved.assign(query=["우체국", "GS25"], split=["dev", "test"])
+    msgs = changes_from_previous(prev2, moved)
+    assert len(msgs) == 2 and any("split" in m for m in msgs)

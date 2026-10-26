@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from store_search_ai.data.service_pool import candidates_within, top_k_run
+from store_search_ai.data.service_pool import candidates_within, distances_km, top_k_run
 
 NOTEBOOK = Path(__file__).resolve().parents[1] / "colab" / "service_dense_runs.ipynb"
 
@@ -38,3 +38,25 @@ def test_notebook_radius_runs_match_local_rules():
     want = pd.concat([top_k_run(qid, cands[qid], doc_emb[cands[qid]] @ q_emb[i], docs["doc_id"].to_numpy(), 10, "m")
                       for i, qid in enumerate(queries["query_id"])], ignore_index=True)
     pd.testing.assert_frame_equal(got.reset_index(drop=True), want.reset_index(drop=True), check_dtype=False)
+
+
+def test_notebook_radius_runs_keep_top_depth_per_radius_like_local():
+    rng = np.random.default_rng(1)
+    n = 400
+    docs = pd.DataFrame({"doc_id": [f"d{i}" for i in range(n)], "latitude": 37.5 + rng.normal(0, 0.01, n),
+                         "longitude": 127.0 + rng.normal(0, 0.01, n)})
+    queries = pd.DataFrame({"query_id": ["q1", "q2"], "latitude": [37.5, 37.505], "longitude": [127.0, 127.004]})
+    doc_emb = rng.normal(size=(n, 8)).astype("float32")
+    q_emb = rng.normal(size=(2, 8)).astype("float32")
+
+    got = _cell_namespace()["radius_runs"](docs, queries, doc_emb, q_emb, 2.0, 5, "m", [0.3, 2.0])
+
+    cands = candidates_within(queries, docs, 2.0)
+    dist = distances_km(queries, docs, cands)
+    want = pd.concat([top_k_run(qid, cands[qid], doc_emb[cands[qid]] @ q_emb[i], docs["doc_id"].to_numpy(), 5, "m",
+                                dist[qid], [0.3, 2.0]) for i, qid in enumerate(queries["query_id"])], ignore_index=True)
+    pd.testing.assert_frame_equal(got.reset_index(drop=True), want.reset_index(drop=True), check_dtype=False)
+    near = set(docs["doc_id"][distances_km(queries.iloc[:1], docs, {"q1": np.arange(n)})["q1"] <= 0.3])
+    q1 = got[got["query_id"] == "q1"]
+    assert q1["doc_id"].isin(near).sum() == min(5, len(near))      # 작은 반경 상위 5개가 다 들어 있다
+    assert (q1["rank"].head(5).to_numpy() == np.arange(1, 6)).all()

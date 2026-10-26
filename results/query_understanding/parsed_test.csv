@@ -111,6 +111,54 @@ sq_B147,B,광주 선경미디어,광주,광주,선경미디어,name,34470,True,3
 sq_B148,B,바이셀폰 김천점,,,바이셀폰 김천점,name,0,,,,,,1,True,True
 sq_B149,B,통영 짱이상회,통영,통영,짱이상회,name,673,True,0.0901874069056693,True,통영,True,1,True,True
 sq_B150,B,구미역 망고케이스,,구미역,망고케이스,name,1102,True,0.20360109626861098,True,구미역,False,4,True,False
+sq_B151,B,온무드,,,온무드,name,0,,,,,,1,True,True
+sq_B152,B,천금주단,,,천금주단,name,0,,,,,,1,True,True
+sq_B153,B,GS,,,GS,category,0,,,,,,0,False,True
+sq_B155,B,효준,,,효준,category,0,,,,,,0,False,True
+sq_B156,B,경민,,,경민,category,0,,,,,,0,False,True
+sq_B157,B,반월당 보물창고,반월당,,반월당 보물창고,name,0,,,,,,13,True,False
+sq_B159,B,맑은샘 피아노,,,맑은샘 피아노,category,0,,,,,,0,False,True
+sq_B160,B,청송,,,청송,name,0,,,,,,2,False,True
+sq_B161,B,이근철,,,이근철,name,0,,,,,,1,True,True
+sq_B162,B,샐리스,,,샐리스,name,0,,,,,,2,False,True
+sq_B164,B,한결 축산,,,한결 축산,category,0,,,,,,0,False,True
+sq_B166,B,광원,,,광원,name,0,,,,,,1,False,True
+sq_B167,B,달콤 마켓,,,달콤 마켓,category,0,,,,,,0,False,True
+sq_B168,B,제이엘,,,제이엘,name,0,,,,,,11,True,True
+sq_B169,B,바운드,,,바운드,name,0,,,,,,1,True,True
+sq_B170,B,송도 올룸,송도,송도,올룸,name,522,True,1.3713053158671131,True,송도,True,1,True,True
+sq_B172,B,냉삼맛집,한대앞,,냉삼맛집,name,0,,,,,,1,True,False
+sq_B173,B,방구 족발,,,방구 족발,category,0,,,,,,0,False,True
+sq_B175,B,부평 해피맘,부평,부평,해피맘,name,1279,True,0.17873783092628157,True,부평,False,2,True,True
+sq_B176,B,구의역 반코디,구의역,구의역,반코디,name,62,True,0.07009015125042387,True,구의역,True,1,True,True
+sq_B178,B,선산상회 채소,,,선산상회 채소,category,0,,,,,,0,False,True
+sq_B179,B,전남대 제이헤어,전남대,전남대,제이헤어,brand,208,False,1.097492544305703,False,전남대,False,47,False,True
+sq_B181,B,평화시장 대원사,평화시장,평화시장,대원사,brand,415,True,0.16955515330529766,True,평화시장,True,4,True,True
+sq_B182,B,영산포 닭갈비마을,영산포,영산포,닭갈비마을,name,169,True,0.23207373205634074,True,영산포,True,1,True,True
+sq_B184,B,금복커텐,,,금복커텐,name,0,,,,,,1,True,True
+sq_B185,B,서면 경주상회,서면,서면,경주상회,brand,74,True,0.005046136966059822,True,서면,True,43,True,True
+sq_B187,B,덕산종합상사 청소용품,,,덕산종합상사 청소용품,name,0,,,,,,4,True,True
+sq_B188,B,영암 한우,,,영암 한우,category,0,,,,,,0,False,True
+sq_B189,B,무안 시내산,무안,무안,시내산,name,844,True,2.6119707613156566,True,무안,True,2,True,True
+sq_B190,B,두암동 닥터스 통증의학과,두암동,두암동,닥터스 통증의학과,category,882,True,0.6410685931801352,True,두암동,True,0,False,True
+sq_B192,B,월곡시장 만남의 광장,월곡시장,월곡시장,만남의 광장,name,47,True,0.0,True,월곡시장,True,7,True,True
+sq_B193,B,더벤티 신봉점,신봉,,더벤티 신봉점,name,0,,,,,,19,False,False
+sq_B194,B,엘스테이,,,엘스테이,name,0,,,,,,9,True,True
+sq_B195,B,살롱드 브로우,,,살롱드 브로우,name,0,,,,,,2,True,True
+sq_B196,B,팜스 골프,,,팜스 골프,category,0,,,,,,0,False,True
+sq_B197,B,남양 수산,,,남양 수산,category,0,,,,,,0,False,True
+sq_B198,B,역전상회,,,역전상회,brand,0,,,,,,10,True,True
+sq_B199,B,화성 회관,,,화성 회관,name,0,,,,,,1,True,True
+sq_B200,B,경안 깡통,경안,경안,깡통,brand,84,True,0.12021853080154027,True,경안,True,7,True,True
+sq_B201,B,강촌 엘리시안,,강촌,엘리시안,name,38,True,0.14733356380051252,True,강촌,True,1,True,False
+sq_B202,B,먹보 대감 식당,,,먹보 대감 식당,category,0,,,,,,0,False,True
+sq_B206,B,정선 더덕 직판장,,정선,더덕 직판장,category,342,False,93.71621092013923,False,정선,False,0,False,False
+sq_B207,B,곰 네일,,,곰 네일,category,0,,,,,,0,False,True
+sq_B209,B,현대 이발,,,현대 이발,category,0,,,,,,0,False,True
+sq_B210,B,재해석,,,재해석,name,0,,,,,,1,True,True
+sq_B211,B,이지,,,이지,brand,0,,,,,,4,False,True
+sq_B212,B,짐 나인,,,짐 나인,name,0,,,,,,2,True,True
+sq_B214,B,성남프라자 황금주단,성남프라자,성남프라자,황금주단,brand,54,True,0.0,True,성남프라자,True,4,True,True
 sq_D005,D,영일시장 채소,영일시장,영일시장,채소,category,93,,0.04731487661791584,True,영일시장,True,0,,True
 sq_D006,D,양곡시장 음식,양곡시장,양곡시장,음식,category,36,,0.013499419992785896,True,양곡시장,False,0,,True
 sq_D007,D,세곡 학원,세곡,세곡,학원,category,35,,0.008898119044066358,True,세곡,True,0,,True

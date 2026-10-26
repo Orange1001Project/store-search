@@ -39,13 +39,46 @@ def append_new(path: Path, cfg: dict, batch: str) -> None:
                 rows.groupby(["bundle", "split"]).size().to_dict(), len(out))
 
 
+def add_anchors(path: Path, cfg: dict, bench: dict, batch: str, dry_run: bool) -> None:
+    """anchor가 없는 활성 쿼리 중 기본 위치 1km 안에 정답이 없는 것에 anchor 사례를 덧붙인다(처음 만들 때와 같은 규칙).
+
+    --append-new로 나중에 더한 쿼리는 random 사례만 있어, 판정 뒤 정답이 없으면 주 평가셋 후보가 될 수 없었다
+    (2026-10-26 점검 4번: 추가 C 15개). 판정이 끝난 쿼리에만 쓴다 — 정답 유무를 qrels로 보기 때문이다.
+    """
+
+    inst = pd.read_csv(path, encoding="utf-8-sig", keep_default_na=False)
+    qrels = pd.read_csv(path.parent / "qrels.csv", encoding="utf-8-sig")
+    corpus = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "store_name", "item_text", "latitude", "longitude",
+                                                            "geo_status"])
+    corpus = corpus[corpus["geo_status"] == "VALID"]
+    has_anchor = set(inst.loc[inst["context"] == "anchor", "query_id"])
+    judged = set(qrels["query_id"])
+    base = inst[(inst["context"] == "random") & ~inst["query_id"].isin(has_anchor) & inst["query_id"].isin(judged)]
+    built = build_instances(base.drop(columns=["instance_id", "context", "anchor_doc_id", "anchor_rule", "batch"]), qrels,
+                            corpus, cfg["chain"]["aliases"], radius_km=min(cfg["judging"]["report_radii_km"]),
+                            anchor_keywords=cfg["judging"].get("anchor_keywords"))
+    rows = built[built["context"] == "anchor"].assign(batch=batch)
+    logger.info("anchor 없는 판정 완료 쿼리 %d개 → 새 anchor 사례 %d개(batch=%s): %s", len(base), len(rows), batch,
+                rows.groupby(["bundle", "split"]).size().to_dict())
+    if len(rows):
+        logger.info("  %s", ", ".join(f"{q}({b})" for q, b in zip(rows["query"], rows["batch"], strict=True)))
+    if dry_run or rows.empty:
+        return
+    out = pd.concat([inst, rows[inst.columns.intersection(rows.columns)]], ignore_index=True).fillna("")
+    out.to_csv(path, index=False, encoding="utf-8-sig", lineterminator="\n")
+    logger.info("저장: %s (전체 %d개)", path, len(out))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument("--append-new", action="store_true",
                         help="이미 있는 instances.csv는 그대로 두고, 아직 사례가 없는 활성 쿼리만 random 사례로 덧붙인다")
-    parser.add_argument("--batch", default="extra", help="--append-new로 더한 사례의 batch 이름(pool --set과 같음)")
+    parser.add_argument("--add-anchors", action="store_true",
+                        help="anchor가 없는 판정 완료 쿼리 중 1km 안 정답이 없는 것에 anchor 사례를 덧붙인다(batch 기본 anchor_extra)")
+    parser.add_argument("--batch", default=None, help="덧붙인 사례의 batch 이름(pool --set과 같음). 기본 extra / anchor_extra")
+    parser.add_argument("--dry-run", action="store_true", help="--add-anchors: 저장하지 않고 개수만")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -53,8 +86,11 @@ def main() -> None:
     bench = load_config(args.benchmark_config)
     bdir = Path(cfg["judging"]["benchmark_dir"])
     out = bdir / "instances.csv"
+    if out.exists() and args.add_anchors:
+        add_anchors(out, cfg, bench, args.batch or "anchor_extra", args.dry_run)
+        return
     if out.exists() and args.append_new:
-        append_new(out, cfg, args.batch)
+        append_new(out, cfg, args.batch or "extra")
         return
     if out.exists():
         raise SystemExit(f"{out}이 이미 있습니다 — anchor 판정을 시작했다면 바꾸면 안 됩니다. 새 쿼리만 더하려면 --append-new, "
