@@ -120,6 +120,7 @@ class ParsedQuery:
     core: str                         # 지역을 뺀 나머지(상호 또는 업종·상황)
     intent: str                       # name | brand | category
     name_doc_idx: np.ndarray = field(default_factory=lambda: np.array([], dtype=int))
+    name_key: str = ""                # 상호 일치에 쓸 말. 보통 core, 띄어 쓴 상호('남양 수산')면 쿼리 전체
 
     @property
     def region_text(self) -> str:
@@ -202,19 +203,19 @@ class QueryUnderstanding:
         # '우산 파는 곳' — 남는 게 서술·장소어뿐이면 그 토큰이 찾는 대상. '강남 맛집'·'망원 근처'는 지역을 남긴다
         if rest and all(t in GENERIC - REGION_MODIFIERS for t in rest):
             region_pos = []
-        # '남양 수산', '영암 한우', '현대 이발' — 띄어 쓴 상호의 앞부분이 지명과 같은 경우. 붙여 쓴 쿼리가 상호에 있고, 지명 토큰에
-        # 지명 끝말(동·역·시장…)이 없고, 남는 말이 상호가 아니면 지역으로 떼지 않는다(상호 일치를 먼저 보는 지도 검색 관례)
-        if region_pos and not any(tokens[i].endswith(PLACE_ENDINGS) for i in region_pos):
-            whole = normalize_name(query)
-            core_try = " ".join(t for i, t in enumerate(tokens) if i not in set(region_pos))
-            if len(whole) >= 3 and self._names_s.str.contains(whole, regex=False).any() \
-                    and self._intent(core_try)[0] == "category":
-                region_pos = []
         region = (self._resolve([tokens[i] for i in region_pos], [found[i] for i in region_pos], user_lat, user_lon)
                   if region_pos else None)
         core = " ".join(t for i, t in enumerate(tokens) if i not in set(region_pos))
         intent, name_idx = self._intent(core)
-        return ParsedQuery(query, region, core, intent, name_idx)
+        # '남양 수산', '영암 한우' — 띄어 쓴 상호의 앞부분이 지명과 같은 경우. 지역은 그대로 두고(수원 갈비·강남 치과의 지역을
+        # 지우지 않게), 상호 일치는 쿼리 전체로 본다: 지명 끝말(동·역·시장…)이 없고 붙여 쓴 쿼리가 실제 상호에 들어 있을 때.
+        # 서비스에서는 상호가 정확히 맞는 가게를 지역 필터와 무관하게 올린다(지도 검색의 상호 우선 관례).
+        name_key = core
+        if region_pos and not any(tokens[i].endswith(PLACE_ENDINGS) for i in region_pos):
+            whole = normalize_name(query)
+            if len(whole) >= 3 and self._names_s.str.contains(whole, regex=False).any():
+                name_key = query
+        return ParsedQuery(query, region, core, intent, name_idx, name_key)
 
     @staticmethod
     def _run(found: dict[int, np.ndarray], order) -> list[int]:

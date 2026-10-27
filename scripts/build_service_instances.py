@@ -4,10 +4,12 @@
 입력: <benchmark_dir>/queries.csv(판정에 쓴 활성 쿼리), <benchmark_dir>/qrels.csv, 코퍼스
 출력: <benchmark_dir>/instances.csv  instance_id, query_id, context(random|anchor), latitude, longitude, anchor_doc_id, …
 
-anchor 사례의 pool은 `build_service_pool.py --set anchor`로 만든다(export → Colab → runs → pool).
+anchor 사례의 pool은 `build_service_pool.py --set anchor`(나중에 붙인 것은 `--set anchor_extra`)로 만든다(export → Colab → runs → pool).
 
 사용법:
-    python scripts/build_service_instances.py
+    python scripts/build_service_instances.py                            # 처음 한 번(파일이 있으면 멈춤)
+    python scripts/build_service_instances.py --append-new --batch extra_b # 새 활성 쿼리의 random 사례만 덧붙임
+    python scripts/build_service_instances.py --add-anchors [--dry-run]   # 판정 뒤 정답 없는 쿼리에 anchor(batch anchor_extra)
 """
 
 from __future__ import annotations

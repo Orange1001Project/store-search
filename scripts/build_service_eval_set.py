@@ -1,12 +1,13 @@
 """서비스셋 주 평가셋(eval_set.csv)을 만든다 — 쿼리 수를 가정한 실제 쿼리 비율에 맞춘 사례 목록. 설명은 docs/SERVICE_QUERYSET.md 1절.
 
 설정 `eval_set`: 묶음 비율(shares), 반경, 해시 salt, 출력 경로.
-- 쿼리마다 사례 하나(반경 안 정답이 있는 random, 없으면 anchor).
+- 쿼리마다 사례 하나(반경 안 정답이 있는 random, 없으면 anchor). 이전 셋에 있던 사례는 정답이 남아 있는 한 그대로 쓴다.
 - split마다 가장 모자란 묶음이 크기를 정한다. 이미 있는 eval_set.csv의 쿼리·사례를 먼저 남기고(정답이 남아 있는 한),
   나머지는 해시 순으로 채운다. 이전 쿼리가 빠지는 것은 그 묶음 자체가 줄 때뿐이다.
-- 빠진 사례·쿼리는 지우지 않는다(instances.csv·qrels 그대로). 채점 스크립트가 이 목록으로 거른다(--set main).
+- 빠진 사례·쿼리는 지우지 않는다(instances.csv·qrels 그대로). eval_service_pipeline.py가 이 목록으로 거른다(--set main, 기본).
+  score_service_eval.py는 거르지 않고 모든 사례를 채점한다.
 
-다시 실행해도 같은 결과(해시 순). 판정(qrels)이 바뀌거나 쿼리를 더한 뒤 다시 돌린다.
+결과는 이전 eval_set.csv에 따라 정해진다(같은 입력이면 같은 결과). 판정(qrels)이 바뀌거나 쿼리를 더한 뒤 다시 돌린다.
 
 사용법:
     python scripts/build_service_eval_set.py

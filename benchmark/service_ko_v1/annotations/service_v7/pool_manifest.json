@@ -36,12 +36,29 @@
     }
   },
   "runs_sha256": {
-    "bge_m3.csv": "89d7aab4abde85670cb55d0d3c6c167e9c7bb7a9822ece054734d67d834b3382",
-    "bge_m3_ft_mj_20261014_0743.csv": "91c0dfb820118220db45896798dbb330419f75e13bc1459b5f1976b9080bfce2",
-    "char_bm25.csv": "0c0e100fb2e7fc2f77537b9a103721ec0f0f941a5f20c725f3c5ed344b8005bc",
-    "keyword.csv": "e7ed205b08d61efff97a71a34c9e8034fc685474cb984febe9244cbec05288f4"
+    "runs/bge_m3.csv": "fca052f80f338271ea43d86bf4750e97e3e2ed644cb7a154249ec2bcdff0d548",
+    "runs/bge_m3_ft_mj_20261014_0743.csv": "c0a56ff754d279a17f02d921a1fab53ce911fe5b5c25bcfbcfb31a21ca8722a4",
+    "runs/char_bm25.csv": "4a7cdc8a68300ec4ced131f0e147299b4d27118ccdc873bf3967f4d140b76d06",
+    "runs/keyword.csv": "b516ff04d24e71e191d763633b0662ad6a805ca6deca543b2d40ec396af2af92",
+    "runs_anchor/bge_m3.csv": "51a64e71a62117df369f81bb1f2033a159d5e37de1455fc6cc4cc3ebde6997b3",
+    "runs_anchor/bge_m3_ft_mj_20261014_0743.csv": "773da5b2ee8a0937b87a0174d32fd2d1f49f1ce13dacee4f38f277124f10d92e",
+    "runs_anchor/char_bm25.csv": "0f299648727670df497df0a7ba138f32369a3bcfb5d772b16268cc55e6c4fe84",
+    "runs_anchor/keyword.csv": "b75e14054d0f654051d1bd9eb5a319614905e273ceaec9fd4916d57771d44cf5",
+    "runs_extra/bge_m3.csv": "1c216e4c188aec0bde604876790eb6e4d77a45b665cdfdff6f2cca158d05a709",
+    "runs_extra/bge_m3_ft_mj_20261014_0743.csv": "5d61b360630459d8ddc0458a5787ec361dc057a843f5124d8b54e43b45b6c272",
+    "runs_extra/char_bm25.csv": "16699dfbd154df4343020b2e75ad8dc7297932b0cf9de319fac3028f1a46dfa0",
+    "runs_extra/keyword.csv": "f64c264db11bb54a05f94674def943f85999340164b61bde4cb9f92bb0a00e74",
+    "runs_extra_b/bge_m3.csv": "5e3004f1b2e3cf10663539f9e49f15e73dc663c97d65e5394cbde74dab601a21",
+    "runs_extra_b/bge_m3_ft_mj_20261014_0743.csv": "17d958329c3e0cc43dcd4850d944cb3dfe0f9f699f73872019c7b9be14d52308",
+    "runs_extra_b/char_bm25.csv": "42e9d39692e5ff1a9aa856d3bb22690363ba01b8e65cd2a94b1ee14481d2c609",
+    "runs_extra_b/keyword.csv": "cb032ecee0730694a7c8f9f8b04960aea0c1d155616a83289be32311e46ba74f",
+    "runs_anchor_extra/bge_m3.csv": "89d7aab4abde85670cb55d0d3c6c167e9c7bb7a9822ece054734d67d834b3382",
+    "runs_anchor_extra/bge_m3_ft_mj_20261014_0743.csv": "91c0dfb820118220db45896798dbb330419f75e13bc1459b5f1976b9080bfce2",
+    "runs_anchor_extra/char_bm25.csv": "0c0e100fb2e7fc2f77537b9a103721ec0f0f941a5f20c725f3c5ed344b8005bc",
+    "runs_anchor_extra/keyword.csv": "e7ed205b08d61efff97a71a34c9e8034fc685474cb984febe9244cbec05288f4"
   },
   "queries_sha256": "2471e92e0e86ce18644a8e6ce25504f99add1ae7014dd8c644cbb268f596b252",
   "instances_sha256": "fd074fc8ea50872b50631b3da07ae23371145d68e3d7c3c1b6b65e8c685ef743",
-  "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)"
+  "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
+  "runs_sha256_note": "2026-10-27 다시 계산(처음 기록은 파일 이름이 겹쳐 4개만 남음). run 파일은 라운드 생성(acc053d) 뒤 바뀌지 않음"
 }

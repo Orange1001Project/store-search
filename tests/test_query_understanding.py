@@ -79,3 +79,18 @@ def test_region_modifier_keeps_region_and_half_coordinates_do_not_crash():
     assert p.region_text == "안산" and p.core == "맛집"
     assert qu.parse("우산 파는 곳").region is None                # 서술·장소어만 남으면 여전히 지역이 아님
     assert qu.parse("신림 옷가게", 37.23, None).region is not None  # 경도 없음 → 가까운 곳 대신 가장 큰 곳
+
+
+def test_spaced_store_name_keeps_region_but_matches_whole_name():
+    rows = [("남양수산", "수산물", "경기도 화성시 남양읍 시청로 1", "", "경기도", "4159025300", 37.2, 126.8),
+            *[(f"남양가게{i}", "의류", "경기도 화성시 남양읍 남양로 2", "", "경기도", "4159025300", 37.2, 126.8) for i in range(3)],
+            ("수원갈비집", "갈비", "경기도 수원시 팔달구 정조로 1 (남창동)", "", "경기도", "4111514100", 37.28, 127.01),
+            *[(f"수원가게{i}", "한식", "경기도 수원시 팔달구 정조로 3 (남창동)", "", "경기도", "4111514100", 37.28, 127.01)
+              for i in range(3)]]
+    qu = QueryUnderstanding(pd.DataFrame(rows, columns=["store_name", "item_text", "address", "market_name", "source_region",
+                                                        "legal_dong_code", "latitude", "longitude"]))
+    p = qu.parse("남양 수산", 37.2, 126.8)
+    assert p.region_text == "남양" and p.name_key == "남양 수산"      # 지역은 두고 상호 일치는 쿼리 전체로
+    p = qu.parse("수원 갈비", 37.28, 127.01)
+    assert p.region_text == "수원"                                  # 지역+업종 쿼리의 지역을 지우지 않는다
+    assert qu.parse("남양동 수산").name_key == "수산"                  # 지명 끝말이 있으면 지명

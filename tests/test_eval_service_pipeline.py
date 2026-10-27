@@ -24,3 +24,13 @@ def test_rerank_reorders_head_only_and_keeps_tail_in_first_stage_order():
     full = out[f"rr m k={RERANK_DEPTH}"].sort_values("rank")["doc_id"].tolist()
     assert full[:RERANK_DEPTH] == docs[:RERANK_DEPTH][::-1] and full[RERANK_DEPTH:] == docs[RERANK_DEPTH:]
     assert f"rr m k={RERANK_DEPTH} mix a=0.5" in out and out["v1+name b=0.5"] is stage
+
+
+def test_union_v1_breaks_ties_by_bm25_not_doc_id():
+    from eval_service_pipeline import union_v1
+
+    v1 = pd.DataFrame({"query_id": "q", "doc_id": ["a", "b"], "rank": [1, 2], "score": [0.9, 0.1], "system": "v1"})
+    bm25 = pd.DataFrame({"query_id": "q", "doc_id": ["z", "y"], "rank": [1, 2], "score": [5.0, 1.0], "system": "bm25"})
+    out = union_v1(v1, bm25)
+    assert out["doc_id"].tolist()[0] == "a"            # v1 순서는 그대로
+    assert out["doc_id"].tolist().index("z") < out["doc_id"].tolist().index("y")   # BM25만 찾은 문서는 BM25 순

@@ -269,7 +269,9 @@ def changes_from_previous(previous: pd.DataFrame, queries: pd.DataFrame) -> list
         cur = new.loc[row.query_id]
         if normalize(cur["query"]) != normalize(row.query) or cur["bundle"] != row.bundle:
             out.append(f"{row.query_id} '{row.query}'({row.bundle}) → '{cur['query']}'({cur['bundle']})")
-        elif row.status == "active" and cur["status"] == "active":
+        elif row.status != cur["status"]:
+            out.append(f"{row.query_id} status {row.status} → {cur['status']}")
+        elif row.status == "active":
             if cur["split"] != row.split:
                 out.append(f"{row.query_id} split {row.split} → {cur['split']}")
             if (round(float(cur["latitude"]), 6), round(float(cur["longitude"]), 6)) != (

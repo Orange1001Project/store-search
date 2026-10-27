@@ -1,7 +1,8 @@
 """서비스셋 채점: 시스템 × 반경(1km·2km) × split × 묶음 × 맥락(random·anchor). 규칙은
 src/store_search_ai/evaluation/service_eval.py 머리말.
 
-입력: <benchmark_dir>/instances.csv, qrels.csv, runs/(random 사례), runs_anchor/(anchor 사례), 코퍼스 좌표
+입력: <benchmark_dir>/instances.csv, qrels.csv, 사례 묶음별 run 폴더(build_service_pool.SETS: runs, runs_anchor, runs_extra, …),
+      코퍼스 좌표. 주 평가셋으로 거르지 않고 모든 사례를 채점한다(주 평가셋 점수는 eval_service_pipeline.py)
 출력: results/service_eval/
   summary.csv      시스템·반경·split·묶음·맥락별 사례 수, 정답 없는 사례 수, nDCG@10(95% CI), Judged@10, bad@3, top1_ok
   pairs.csv        기준 시스템(설정 judging.dense_models 첫째 = v1) 대비 다른 시스템의 nDCG@10 차이·CI·p (같은 사례끼리).
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -57,8 +59,11 @@ def main() -> None:
     iq = instance_qrels(instances, qrels, coords)
 
     runs: dict[str, list[pd.DataFrame]] = {}
-    for run_dir in sorted(p for p in bdir.glob("runs*") if p.is_dir()):   # 사례 묶음마다 run 폴더(build_service_pool.SETS)
-        for path in sorted(run_dir.glob("*.csv")):
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from build_service_pool import RUN_DIRS   # 사례 묶음마다 run 폴더(SETS) — 백업 폴더 등은 읽지 않는다
+
+    for run_dir in RUN_DIRS:
+        for path in sorted((bdir / run_dir).glob("*.csv")):
             if path.stem not in SYSTEMS_EXCLUDED:
                 runs.setdefault(path.stem, []).append(pd.read_csv(path, encoding="utf-8-sig"))
     baseline = load_config(jcfg["dense_models"][0])["name"]

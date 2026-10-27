@@ -47,7 +47,7 @@ sq_B177,B,양동 유동상회,양동,양동,유동상회,name,914,True,0.1748320
 sq_B180,B,현대자동차 보성점,보성,,현대자동차 보성점,category,0,,,,,,0,False,False
 sq_B183,B,비헤어,,,비헤어,name,0,,,,,,57,True,True
 sq_B186,B,와이투케이,,,와이투케이,name,0,,,,,,1,False,True
-sq_B191,B,대림 침구,,,대림 침구,category,0,,,,,,0,False,True
+sq_B191,B,대림 침구,,대림,침구,category,5,False,0.44984049971508544,False,대림,False,0,False,False
 sq_B203,B,밝은 경희 한의,,,밝은 경희 한의,category,0,,,,,,0,False,True
 sq_B204,B,오케이 정형외과,,오케이,정형외과,category,62,False,4.543721326718537,False,오케이,False,0,False,False
 sq_B205,B,아이콘 안경,,,아이콘 안경,category,0,,,,,,0,False,True

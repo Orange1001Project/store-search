@@ -117,7 +117,7 @@ sq_B153,B,GS,,,GS,category,0,,,,,,0,False,True
 sq_B155,B,효준,,,효준,category,0,,,,,,0,False,True
 sq_B156,B,경민,,,경민,category,0,,,,,,0,False,True
 sq_B157,B,반월당 보물창고,반월당,,반월당 보물창고,name,0,,,,,,13,True,False
-sq_B159,B,맑은샘 피아노,,,맑은샘 피아노,category,0,,,,,,0,False,True
+sq_B159,B,맑은샘 피아노,,맑은샘,피아노,category,17,False,230.0897426214795,False,맑은샘,False,0,False,False
 sq_B160,B,청송,,,청송,name,0,,,,,,2,False,True
 sq_B161,B,이근철,,,이근철,name,0,,,,,,1,True,True
 sq_B162,B,샐리스,,,샐리스,name,0,,,,,,2,False,True
@@ -138,7 +138,7 @@ sq_B182,B,영산포 닭갈비마을,영산포,영산포,닭갈비마을,name,169
 sq_B184,B,금복커텐,,,금복커텐,name,0,,,,,,1,True,True
 sq_B185,B,서면 경주상회,서면,서면,경주상회,brand,74,True,0.005046136966059822,True,서면,True,43,True,True
 sq_B187,B,덕산종합상사 청소용품,,,덕산종합상사 청소용품,name,0,,,,,,4,True,True
-sq_B188,B,영암 한우,,,영암 한우,category,0,,,,,,0,False,True
+sq_B188,B,영암 한우,,영암,한우,category,136,False,56.85496666874092,False,영암,False,0,False,False
 sq_B189,B,무안 시내산,무안,무안,시내산,name,844,True,2.6119707613156566,True,무안,True,2,True,True
 sq_B190,B,두암동 닥터스 통증의학과,두암동,두암동,닥터스 통증의학과,category,882,True,0.6410685931801352,True,두암동,True,0,False,True
 sq_B192,B,월곡시장 만남의 광장,월곡시장,월곡시장,만남의 광장,name,47,True,0.0,True,월곡시장,True,7,True,True
@@ -146,15 +146,15 @@ sq_B193,B,더벤티 신봉점,신봉,,더벤티 신봉점,name,0,,,,,,19,False,F
 sq_B194,B,엘스테이,,,엘스테이,name,0,,,,,,9,True,True
 sq_B195,B,살롱드 브로우,,,살롱드 브로우,name,0,,,,,,2,True,True
 sq_B196,B,팜스 골프,,,팜스 골프,category,0,,,,,,0,False,True
-sq_B197,B,남양 수산,,,남양 수산,category,0,,,,,,0,False,True
+sq_B197,B,남양 수산,,남양,수산,category,143,False,227.99953932198648,False,남양,False,0,False,False
 sq_B198,B,역전상회,,,역전상회,brand,0,,,,,,10,True,True
-sq_B199,B,화성 회관,,,화성 회관,name,0,,,,,,1,True,True
+sq_B199,B,화성 회관,,화성,회관,category,1628,False,229.74875556774143,False,화성,False,0,False,False
 sq_B200,B,경안 깡통,경안,경안,깡통,brand,84,True,0.12021853080154027,True,경안,True,7,True,True
 sq_B201,B,강촌 엘리시안,,강촌,엘리시안,name,38,True,0.14733356380051252,True,강촌,True,1,True,False
 sq_B202,B,먹보 대감 식당,,,먹보 대감 식당,category,0,,,,,,0,False,True
 sq_B206,B,정선 더덕 직판장,,정선,더덕 직판장,category,342,False,93.71621092013923,False,정선,False,0,False,False
 sq_B207,B,곰 네일,,,곰 네일,category,0,,,,,,0,False,True
-sq_B209,B,현대 이발,,,현대 이발,category,0,,,,,,0,False,True
+sq_B209,B,현대 이발,,현대,이발,category,102,False,259.02669649291687,False,현대,False,0,False,False
 sq_B210,B,재해석,,,재해석,name,0,,,,,,1,True,True
 sq_B211,B,이지,,,이지,brand,0,,,,,,4,False,True
 sq_B212,B,짐 나인,,,짐 나인,name,0,,,,,,2,True,True

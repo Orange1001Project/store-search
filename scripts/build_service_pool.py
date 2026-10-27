@@ -16,10 +16,13 @@
     python scripts/build_service_pool.py runs
     python scripts/build_service_pool.py pool --dry-run
     python scripts/build_service_pool.py pool --round service_v1 --depth 10
-    # anchor 사례(정답 없는 쿼리에 앵커 근처 위치 추가): 같은 단계를 --set anchor로
-    python scripts/build_service_pool.py export --set anchor   # → colab_upload/service_eval_anchor/
-    python scripts/build_service_pool.py runs --set anchor     # Colab run은 <benchmark_dir>/runs_anchor/에
-    python scripts/build_service_pool.py pool --set anchor --round service_v2 --depth 10
+    # 다른 사례 묶음(SETS: anchor, extra, extra_b, anchor_extra — instances.csv의 batch): 같은 단계를 --set으로
+    python scripts/build_service_pool.py export --set anchor extra   # 묶음마다 colab_upload/service_eval_<묶음>/
+    python scripts/build_service_pool.py runs --set anchor extra     # Colab run은 <benchmark_dir>/runs_<묶음>/에
+    # 여러 묶음의 새 쌍을 한 라운드로(2026-10-27 service_v7)
+    python scripts/build_service_pool.py pool --set main anchor extra extra_b anchor_extra --round service_v7 --depth 10
+
+run은 채점 반경(1km·2km)마다 그 안 상위 run_depth개를 합쳐 저장한다(2026-10-26 — 전에는 2km 상위 50개만 남겨 1km 순위가 잘렸다).
 """
 
 from __future__ import annotations
@@ -65,6 +68,7 @@ SETS = {
     "extra_b": (Path("colab_upload/service_eval_extra_b"), "runs_extra_b"),   # 추가 B(2026-10-26, 주 평가셋 비율)
     "anchor_extra": (Path("colab_upload/service_eval_anchor_extra"), "runs_anchor_extra"),   # 추가 쿼리의 anchor(2026-10-26)
 }
+RUN_DIRS = [d for _, d in SETS.values()]
 
 
 def load_inputs(cfg: dict, bench: dict, set_name: str = "main") -> tuple[pd.DataFrame, pd.DataFrame, dict[str, np.ndarray]]:
@@ -273,7 +277,7 @@ def pool(args, cfg: dict, bench: dict) -> None:
         "double_annotation_pairs": int(sheet["query_id"].isin(double).sum()),
         "annotators": {name: {"writer_id": jcfg["annotators"][name], "queries": len(qids),
                               "pairs": int(sheet["query_id"].isin(qids).sum())} for name, qids in assignment.items()},
-        "runs_sha256": {p.name: sha256_file(p) for p in run_files},
+        "runs_sha256": {f"{p.parent.name}/{p.name}": sha256_file(p) for p in run_files},   # 묶음마다 같은 파일 이름
         "queries_sha256": hashlib.sha256((bdir / "queries.csv").read_bytes()).hexdigest(),
         "instances_sha256": sha256_file(bdir / "instances.csv") if (bdir / "instances.csv").exists() else None,
         "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
@@ -316,7 +320,8 @@ def judging_pairs(runs: pd.DataFrame, queries: pd.DataFrame, depth: int, judged:
     to_base = dict(zip(queries["query_id"], queries["base_query_id"], strict=True))
     pairs["query_id"] = pairs["instance_id"].map(to_base)
     if "anchor_doc_id" in queries:
-        anchors = queries.loc[queries["anchor_doc_id"] != "", ["query_id", "base_query_id", "anchor_doc_id"]]
+        has = queries["anchor_doc_id"].fillna("").astype(str) != ""   # main과 섞으면 main 행은 NaN
+        anchors = queries.loc[has, ["query_id", "base_query_id", "anchor_doc_id"]]
         pairs = pd.concat([pairs, pd.DataFrame({"instance_id": anchors["query_id"], "doc_id": anchors["anchor_doc_id"],
                                                 "pool_sources": "anchor", "query_id": anchors["base_query_id"]})])
     pairs = (pairs.groupby(["query_id", "doc_id"], as_index=False)

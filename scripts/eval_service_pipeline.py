@@ -48,8 +48,10 @@ DOC_TEXT_COLUMN = "search_text_t1_minimal"   # 모델 평가·판정 pool과 같
 
 def load_runs(bdir: Path) -> dict[str, pd.DataFrame]:
     runs: dict[str, list[pd.DataFrame]] = {}
-    for d in sorted(p for p in bdir.glob("runs*") if p.is_dir()):   # 사례 묶음마다 run 폴더(build_service_pool.SETS)
-        for path in sorted(d.glob("*.csv")):
+    from build_service_pool import RUN_DIRS   # 사례 묶음마다 run 폴더(SETS) — 백업 폴더 등은 읽지 않는다
+
+    for d in RUN_DIRS:
+        for path in sorted((bdir / d).glob("*.csv")):
             runs.setdefault(path.stem, []).append(pd.read_csv(path, encoding="utf-8-sig"))
     return {k: pd.concat(v, ignore_index=True) for k, v in runs.items()}
 
@@ -81,7 +83,7 @@ def name_hits(run: pd.DataFrame, instances: pd.DataFrame, names: pd.Series, core
 
 
 def parsed_cores(instances: pd.DataFrame, corpus_path: str) -> dict[str, str]:
-    """사례마다 쿼리 이해로 지역을 뺀 나머지(사용자 위치 = 사례 위치)."""
+    """사례마다 상호 일치에 쓸 말 — 쿼리 이해로 지역을 뺀 나머지, 띄어 쓴 상호면 쿼리 전체(name_key). 사용자 위치 = 사례 위치."""
 
     from store_search_ai.query.understanding import QueryUnderstanding
 
@@ -94,7 +96,7 @@ def parsed_cores(instances: pd.DataFrame, corpus_path: str) -> dict[str, str]:
                             strict=True):
         key = (q, round(float(la), 3), round(float(lo), 3))
         if key not in parsed:
-            parsed[key] = qu.parse(q, float(la), float(lo)).core
+            parsed[key] = qu.parse(q, float(la), float(lo)).name_key
         out[i] = parsed[key]
     return out
 

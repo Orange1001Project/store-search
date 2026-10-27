@@ -95,3 +95,11 @@ def test_top_k_run_keeps_top_depth_inside_each_radius():
     assert plain["doc_id"].tolist() == ["d0", "d1"]           # 2km 상위 2개만 — 1km 순위가 비어 버림
     both = top_k_run("q", cand, scores, ids, 2, "s", dist, [1.0, 2.0])
     assert both["doc_id"].tolist() == ["d0", "d1", "d2", "d4"] and both["rank"].tolist() == [1, 2, 3, 4]
+
+
+def test_keyword_run_keeps_small_radius_hits():
+    texts = np.array(["떡집 a", "떡집 b", "떡집 c", "옷"])
+    ids = np.array(["d0", "d1", "d2", "d3"])
+    dist = np.array([1.5, 1.5, 0.5, 0.5])
+    run = keyword_run("q", "떡집", np.arange(4), texts, ids, 1, dist, [1.0, 2.0])
+    assert run["doc_id"].tolist() == ["d0", "d2"]             # 2km 상위 1개 + 1km 상위 1개

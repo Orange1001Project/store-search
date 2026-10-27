@@ -131,3 +131,11 @@ def test_query_ids_are_inherited_and_new_ones_append_after_max():
     prev2 = moved.assign(query=["우체국", "GS25"], split=["dev", "test"])
     msgs = changes_from_previous(prev2, moved)
     assert len(msgs) == 2 and any("split" in m for m in msgs)
+
+
+def test_changes_from_previous_reports_status_and_missing():
+    prev = pd.DataFrame({"query_id": ["sq_C001", "sq_C002"], "query": ["떡", "죽"], "bundle": "C", "status": "active",
+                         "split": "test", "latitude": 37.0, "longitude": 127.0})
+    now = prev.iloc[:1].assign(status="excluded")
+    msgs = changes_from_previous(prev, now)
+    assert any("status" in m for m in msgs) and any("없어짐" in m for m in msgs)

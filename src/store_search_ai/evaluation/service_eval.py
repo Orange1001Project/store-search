@@ -3,7 +3,8 @@
 - 반경 안 정답(2점 이상)이 하나도 없는 사례는 순위 지표에서 뺀다(TREC 관례: 정답 없는 토픽은 nDCG 평균에서 제외). 개수는 따로 센다.
 - 이상적인 순위(IDCG)는 그 반경 안 판정된 가맹점으로만 만든다 — 반경 밖 정답은 서비스에서 보이지 않으므로.
 - nDCG@10·Judged@10은 공식 evaluator와 같은 ir_measures로 계산한다. bad@3 = 상위 3개에 정답이 없음, top1_ok = 1위가 정답.
-- run은 판정 반경(2km) 안 상위 run_depth개다. 1km 지표는 그 목록에서 1km 안만 남겨 순위를 다시 매긴다.
+- run은 채점 반경(1km·2km)마다 그 안 상위 run_depth개를 합친 목록이다(2026-10-26부터, build_service_pool.top_k_run).
+  반경 R 지표는 그 목록에서 R 안만 남겨 순위를 다시 매긴다.
 """
 
 from __future__ import annotations
@@ -94,7 +95,8 @@ def build_eval_set(instances: pd.DataFrame, answerable: pd.Series, shares: dict[
                    previous: pd.DataFrame | None = None) -> pd.DataFrame:
     """주 평가셋: 쿼리마다 사례 하나, split마다 묶음 비율을 `shares`로 맞춘다.
 
-    - 사례는 반경 안 정답이 있는 것만. random 사례를 먼저, 없으면 anchor.
+    - 사례는 반경 안 정답이 있는 것만. 이전 셋의 사례가 아직 정답이 있으면 그 사례를 그대로 쓰고(셋이 흔들리지 않게 —
+      나중 판정으로 random에도 정답이 생겨도 anchor를 유지한다), 새 쿼리는 random을 먼저, 없으면 anchor.
     - 가장 모자란 묶음이 split 크기를 정하고, 나머지 묶음은 앞에서부터 남긴다. 순서는 ① 이전 셋(`previous`)에 있던 쿼리
       ② (salt, query_id) 해시 순. 그래서 다시 만들어도 이전 셋의 쿼리와 사례는 정답이 남아 있는 한 그대로이고,
       빠지는 것은 그 묶음 자체가 줄 때뿐이다(2026-10-26 점검 2번 — 전에는 해시 순만 써서 가장 모자란 묶음이 바뀌면 이전 쿼리가 밀렸다).
