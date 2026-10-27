@@ -129,5 +129,27 @@
       "binary_kappa": 1.0,
       "quadratic_weighted_kappa": 0.9139
     }
+  },
+  "service_v7": {
+    "annotators": [
+      "A",
+      "B"
+    ],
+    "pairs": 1169,
+    "qrels_rows": 1139,
+    "needs_adjudication": 30,
+    "adjudication_pending": 30,
+    "excluded_from_gold": 0,
+    "reasons": {
+      "아무도 점수를 주지 않음(판단 보류)": 15,
+      "이진 판정이 다름": 15
+    },
+    "agreement": {
+      "pairs_scored_by_both": 336,
+      "exact_agreement": 0.8839,
+      "binary_agreement": 0.9554,
+      "binary_kappa": 0.7896,
+      "quadratic_weighted_kappa": 0.9204
+    }
   }
 }
