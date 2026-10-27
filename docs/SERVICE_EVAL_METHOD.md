@@ -35,7 +35,7 @@
 | service_v4 | 추가 C 쿼리 50개(random) | 1,483 |
 | service_v5 | 1단계·reranker 상위 10 보충(1-4) | 4,463 |
 | service_v6 | 추가 B 쿼리 64개(random) | 1,601 |
-| service_v7(예정) | 반경별 run 보충(아래) + 추가 C의 anchor 15개 | Colab 뒤 확정 |
+| service_v7 | 반경별 run 보충(5개 묶음 한 라운드, `pool --set main anchor extra extra_b anchor_extra`) + 추가 C의 anchor 15개 | 1,169 |
 
 - **반경별 run(2026-10-26 수정)**: run은 채점 반경(1km·2km)마다 그 안 상위 50개를 합쳐 저장한다. 전에는 2km 상위 50개만 남겨,
   그 안에 1km 가게가 10개보다 적은 사례(주 평가셋 406개 중 v1 21개, BM25 47개)에서 1km 순위가 잘렸고 그만큼 1km 점수가 낮게 나왔다.

@@ -205,11 +205,15 @@ def write_run(run: pd.DataFrame, path: Path) -> None:
 def pool(args, cfg: dict, bench: dict) -> None:
     jcfg = cfg["judging"]
     bdir = Path(jcfg["benchmark_dir"])
-    run_files = sorted((bdir / SETS[args.set][1]).glob("*.csv"))
+    # 여러 묶음을 한 라운드로 판정할 수 있다(--set a b …). 사례 ID는 묶음끼리 겹치지 않는다.
+    run_files = [p for s in args.sets for p in sorted((bdir / SETS[s][1]).glob("*.csv"))]
     if not run_files:
         raise SystemExit("run이 없습니다 — 먼저 runs")
     all_runs = pd.concat([pd.read_csv(p, encoding="utf-8-sig") for p in run_files], ignore_index=True)
-    queries, corpus, _cands = load_inputs(cfg, bench, args.set)
+    loaded = [load_inputs(cfg, bench, s) for s in args.sets]
+    queries, corpus = pd.concat([q for q, _, _ in loaded], ignore_index=True), loaded[0][1]
+    if queries["query_id"].duplicated().any():
+        raise SystemExit("묶음 사이에 같은 사례 ID가 있습니다")
     stale = {k: v for k, v in runs_outside_radius(all_runs, queries, corpus, jcfg["judge_radius_km"]).items() if v}
     if stale:
         raise SystemExit(f"반경 밖이거나 지금 쿼리에 없는 run 행이 있습니다 {stale} — 쿼리 위치가 바뀐 뒤의 옛 run입니다. "
@@ -239,7 +243,7 @@ def pool(args, cfg: dict, bench: dict) -> None:
     pairs = judging_pairs(all_runs, queries, depth, judged, corpus, radii)
     seed = cfg["random_seed"]
     base = (pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
-            if args.set != "main" else queries)   # 판정 시트의 쿼리 정보(문자열·묶음·의도)
+            if args.sets != ["main"] else queries)   # 판정 시트의 쿼리 정보(문자열·묶음·의도)
     sheet = annotation_sheet(pairs, base, corpus, seed)
     double = double_annotation_queries(sorted(pairs["query_id"].unique()), share, seed)
     writers = {qid: set(str(w).split("|")) for qid, w in zip(base["query_id"], base["writers"], strict=True)}
@@ -251,12 +255,12 @@ def pool(args, cfg: dict, bench: dict) -> None:
         write_annotation_xlsx(part, round_dir / f"판정_{name}.xlsx")
         logger.info("판정자 %s: 쿼리 %d개(이중 판정 %d 포함), %d쌍", name, len(qids), len(double), len(part))
     pairs.to_csv(round_dir / "pool.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
-    if args.set == "main":
+    if args.sets == ["main"]:
         queries.drop(columns=["base_query_id"]).to_csv(bdir / "queries.csv", index=False, encoding="utf-8-sig",
                                                        lineterminator="\n")
     manifest = {
         "round": args.round,
-        "set": args.set,
+        "set": args.sets[0] if len(args.sets) == 1 else args.sets,
         "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
         "created_at": datetime.now(UTC).isoformat(),
         "judge_radius_km": jcfg["judge_radius_km"],
@@ -361,14 +365,19 @@ def main() -> None:
     parser.add_argument("--round", help="pool: 판정 라운드 이름(예: service_v1)")
     parser.add_argument("--depth", type=int, help="pool: 시스템마다 상위 몇 개(기본: 설정 judging.depth)")
     parser.add_argument("--dry-run", action="store_true", help="pool: 판정 건수 표만")
-    parser.add_argument("--set", choices=sorted(SETS), default="main",
-                        help="평가 사례 묶음: main(활성 쿼리의 기본 위치) / anchor(정답 없는 쿼리의 앵커 근처 위치, instances.csv)")
+    parser.add_argument("--set", dest="sets", nargs="+", choices=sorted(SETS), default=["main"],
+                        help="평가 사례 묶음(SETS). export·runs는 묶음마다 차례로, pool은 여러 묶음을 한 라운드로 합친다")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     cfg = load_config(args.config)
     bench = load_config(args.benchmark_config)
-    {"export": export, "encode": encode, "runs": runs, "pool": pool}[args.command](args, cfg, bench)
+    if args.command == "pool":
+        pool(args, cfg, bench)
+        return
+    for s in args.sets:
+        args.set = s
+        {"export": export, "encode": encode, "runs": runs}[args.command](args, cfg, bench)
 
 
 if __name__ == "__main__":

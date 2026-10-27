@@ -302,3 +302,6 @@ reranker 기반(쌍 export·Colab 채점·재정렬 평가)은 2-1 미세조정 
   더 고치지 않는다.
 - 남은 일: Colab 반경별 dense run(5개 묶음) → `build_service_pool.py pool --set <묶음> --round service_v7` 보충 판정 → qrels →
   `build_service_eval_set.py` → 기준선 재측정(1단계 test 1회).
+- **반경별 dense run 반영·service_v7(2026-10-27)**: Colab 결과를 기존 run과 비교해 기존 행·순위·점수 차이 0을 확인한 뒤 바꿨다
+  (예: runs/v1 24,435 → 34,465행). `build_service_pool.py pool --set`이 여러 묶음을 한 라운드로 받게 고쳐, 5개 묶음의 새 쌍을
+  service_v7 한 라운드로 만들었다: 1,169쌍(156개 쿼리, 주 평가셋 쿼리 96개 포함), 이중 판정 31개 쿼리 341쌍(A 755 / B 755쌍).
