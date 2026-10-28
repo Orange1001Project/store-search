@@ -1,5 +1,5 @@
 ﻿area,query_id,query,bundle,split,eval_set,proposed,rule,needs_review,note
-C,sq_C001,술안주 파는 곳,C,test,,C,C3,Y,안주 범위가 넓음
+C,sq_C001,술안주 파는 곳,C,test,,C,C3,,검토 후 결정(2026-10-28): 정답이 여러 종류 가게로 퍼짐 — 안주 범위가 넓음
 C,sq_C003,생일 파티 준비,C,test,,C,C1,,
 C,sq_C004,가벼운 음식,C,test,,C,C3,,
 C,sq_C005,화분,C,test,,A,A2,,
@@ -9,7 +9,7 @@ C,sq_C008,보양식 재료 파는 곳,C,dev,,C,C1,,
 C,sq_C009,따뜻한 국물,C,test,,C,C3,,
 C,sq_C010,커튼,C,test,,A,A2,,
 C,sq_C011,캠핑도구,C,test,,A,A2,,
-C,sq_C012,이력서 사진,C,test,,C,C1,Y,목적어 + 서비스(사진관)
+C,sq_C012,이력서 사진,C,test,,A,A2,,검토 후 결정(2026-10-28): 정답이 한 종류 가게로 모임 — 목적어 + 서비스(사진관)
 C,sq_C013,부모님 선물,C,dev,,C,C1,,
 C,sq_C014,농장 준비,C,dev,,C,C1,,
 C,sq_C015,간단한 아침,C,test,,C,C3,,
@@ -38,8 +38,8 @@ C,sq_C038,피아노 학원,C,dev,,A,A1,,
 C,sq_C039,차례상 재료 파는 곳,C,dev,,C,C1,,
 C,sq_C040,어버이날 선물,C,test,,C,C1,,
 C,sq_C041,노트북 수리점,C,test,,A,A1,,
-C,sq_C042,야식,C,test,,C,C3,Y,"시간대 상황, 여러 종류 음식점"
-C,sq_C043,하객룩,C,test,,C,C1,Y,옷가게 한 종류로 모이지만 상황어
+C,sq_C042,야식,C,test,,C,C3,,"검토 후 결정(2026-10-28): 정답이 여러 종류 가게로 퍼짐 — 시간대 상황, 여러 종류 음식점"
+C,sq_C043,하객룩,C,test,,A,A2,,검토 후 결정(2026-10-28): 정답이 한 종류 가게로 모임 — 옷가게 한 종류로 모이지만 상황어
 C,sq_C044,학교 준비물,C,test,,C,C1,,
 C,sq_C045,맥주 안주 파는 곳,C,test,,C,C3,,
 C,sq_C046,커트 가능한 미용실,C,test,,A,A1,,
@@ -56,7 +56,7 @@ C,sq_C056,증명사진 찍을 곳,C,test,,A,A2,,
 C,sq_C057,어른 선물 살 곳,C,dev,,C,C1,,
 C,sq_C058,텃밭 농기구,C,dev,,A,A2,,
 C,sq_C059,아침 간단히 먹을 곳,C,test,,C,C3,,
-C,sq_C060,자전거 바람 넣는 곳,C,dev,,A,A3,Y,할 일(문제 해결)이지만 자전거점 한 종류
+C,sq_C060,자전거 바람 넣는 곳,C,dev,,A,A3,,검토 후 결정(2026-10-28): 정답이 한 종류 가게로 모임 — 할 일(문제 해결)이지만 자전거점 한 종류
 C,sq_C061,등산 장비 살 곳,C,test,test/anchor,A,A2,,
 C,sq_C062,10명 회식 식당,C,test,,A,A1,,
 C,sq_C063,바지 길이 수선,C,test,,A,A3,,
@@ -69,7 +69,7 @@ C,sq_C070,낚시 채비 파는 곳,C,test,,A,A2,,
 C,sq_C071,이불 세탁 맡길 곳,C,test,,A,A3,,
 C,sq_C072,길거리 간식,C,test,,C,C3,,
 C,sq_C073,삼계탕 먹을 곳,C,test,,A,A2,,
-C,sq_C074,눈 검사할 곳,C,dev,,C,C1,Y,안과·안경점 두 종류
+C,sq_C074,눈 검사할 곳,C,dev,,A,A1,,검토 후 결정(2026-10-28): 정답이 한 종류 가게로 모임 — 안과·안경점 두 종류
 C,sq_C075,어깨 통증 치료,C,test,,C,C1,,
 C,sq_C076,한국 전통 선물,C,test,,C,C1,,
 C,sq_C077,목감기 진료,C,dev,,C,C1,,
@@ -80,7 +80,7 @@ C,sq_C081,구두 굽 수선,C,test,,A,A3,,
 C,sq_C082,피아노 레슨,C,dev,,A,A2,,
 C,sq_C083,차례 음식 재료,C,dev,,C,C1,,
 C,sq_C084,어버이날 선물 살 곳,C,test,,C,C1,,
-C,sq_C085,노트북 고장 수리,C,test,,A,A3,Y,"노트북수리 가게는 전국 2곳, 컴퓨터수리로 봄"
+C,sq_C085,노트북 고장 수리,C,test,,A,A3,,"검토 후 결정(2026-10-28): 정답이 한 종류 가게로 모임 — 노트북수리 가게는 전국 2곳, 컴퓨터수리로 봄"
 C,sq_C086,늦은 밤 식사할 곳,C,test,,C,C3,,
 C,sq_C087,결혼식 옷 살 곳,C,test,,C,C1,,
 C,sq_C088,새학기 준비물,C,test,,C,C1,,
@@ -96,11 +96,11 @@ C,sq_C097,해물칼국수,C,test,test/anchor,A,A2,,
 C,sq_C098,맞춤 커튼,C,test,,A,A2,,
 C,sq_C099,캠핑용품점,C,test,,A,A1,,
 C,sq_C100,증명사진 잘 찍는 곳,C,test,test/anchor,A,A2,,
-C,sq_C101,과일 선물세트,C,dev,,C,C1,Y,선물(목적) + 물건
+C,sq_C101,과일 선물세트,C,dev,,A,A2,,검토 후 결정(2026-10-28): 정답이 한 종류 가게로 모임 — 선물(목적) + 물건
 C,sq_C102,모종 파는 곳,C,dev,dev/anchor,A,A2,,
 C,sq_C103,아침 식사,C,test,,C,C3,,
 C,sq_C104,등산화 파는 곳,C,test,test/anchor,A,A2,,
-C,sq_C105,단체 회식 고깃집,C,test,,A,A1,Y,고깃집 + 속성(attribute)
+C,sq_C105,단체 회식 고깃집,C,test,,A,A1,,검토 후 결정(2026-10-28): 정답이 한 종류 가게로 모임 — 고깃집 + 속성(attribute)
 C,sq_C106,옷 수리점,C,test,,A,A1,,
 C,sq_C107,동네 반찬가게,C,test,test/random,A,A1,,
 C,sq_C108,이유식 재료,C,dev,,C,C1,,
@@ -120,17 +120,17 @@ C,sq_C121,김장 배추 젓갈,C,test,,C,C1,,
 C,sq_C122,철물점 수리,C,test,,A,A1,,
 C,sq_C123,보청기 상담,C,dev,,A,A2,,
 C,sq_C124,차례상 떡 과일,C,dev,,C,C1,,
-C,sq_C125,카네이션 화분,C,test,,A,A2,Y,물건이지만 어버이날을 떠올림
+C,sq_C125,카네이션 화분,C,test,,A,A2,,검토 후 결정(2026-10-28): 정답이 한 종류 가게로 모임 — 물건이지만 어버이날을 떠올림
 C,sq_C126,컴퓨터 수리점,C,test,,A,A1,,
 C,sq_C127,심야 야식 분식,C,test,,A,A1,,
-C,sq_C128,하객 원피스,C,test,,C,C1,Y,하객(상황) + 원피스(물건)
+C,sq_C128,하객 원피스,C,test,,A,A2,,검토 후 결정(2026-10-28): 정답이 한 종류 가게로 모임 — 하객(상황) + 원피스(물건)
 C,sq_C129,학생 책가방 문구,C,test,,A,A2,,
 C,sq_C130,시린이 치료,C,test,,C,C1,,
 C,sq_C131,손님용 그릇 파는 곳,C,test,,A,A2,,
 C,sq_C132,도시락 음식,C,dev,dev/random,C,C3,,
 C,sq_C133,예쁜 그릇,C,dev,,A,A2,,
 C,sq_C134,제사용 술,C,test,,C,C1,,
-C,sq_C135,바비큐,C,test,,C,C1,Y,활동인지 음식인지
+C,sq_C135,바비큐,C,test,,C,C1,,검토 후 결정(2026-10-28): 정답이 여러 종류 가게로 퍼짐 — 활동인지 음식인지
 C,sq_C136,쌀 사는 곳,C,test,,A,A2,,
 C,sq_C137,잔치 음식,C,test,,C,C3,,
 C,sq_C138,동물 미용실,C,test,,A,A1,,
@@ -153,7 +153,7 @@ C,sq_C156,학생 체육복,C,dev,,A,A2,,
 C,sq_C157,어린이 해열제,C,test,,A,A2,,
 C,sq_C158,과일 바구니,C,dev,,A,A2,,
 C,sq_C159,개업 화분,C,test,,C,C1,,
-C,sq_C160,시린이 치약,C,test,,C,C1,Y,증상 + 물건
+C,sq_C160,시린이 치약,C,test,,A,A2,,검토 후 결정(2026-10-28): 정답이 한 종류 가게로 모임 — 증상 + 물건
 C,sq_C161,환갑 떡,C,test,,C,C1,,
 C,sq_C162,자동차 와이퍼,C,test,test/anchor,A,A2,,
 C,sq_C163,쌀,C,test,,A,A2,,
