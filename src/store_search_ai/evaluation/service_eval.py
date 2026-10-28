@@ -89,7 +89,8 @@ def score_system(run: pd.DataFrame, iq: pd.DataFrame, instances: pd.DataFrame, c
             out[col] = default
         out[col] = out[col].fillna(default)   # 반경 안 결과가 하나도 없으면 0점·bad
     out["n_relevant"] = n_rel.reindex(out.index).astype(int)
-    return out.reset_index()
+    # 행·열 순서를 고정한다 — answerable이 set이라 순서가 실행마다 달라졌고, 그러면 같은 seed의 bootstrap CI도 달라졌다
+    return out.sort_index()[[*METRIC_COLUMNS, "n_relevant"]].reset_index()
 
 
 def condense(run: pd.DataFrame, instances: pd.DataFrame, qrels: pd.DataFrame) -> pd.DataFrame:

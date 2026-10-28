@@ -14,7 +14,7 @@ from store_search_ai.data.service_qrels import (
     build_qrels,
     merge_judgments,
 )
-from store_search_ai.evaluation.service_eval import build_eval_set, condense, instance_qrels, paired, score_system
+from store_search_ai.evaluation.service_eval import METRIC_COLUMNS, build_eval_set, condense, instance_qrels, paired, score_system
 
 
 def _sheet(rel, ids):
@@ -162,3 +162,13 @@ def test_build_eval_set_strata_split_bundle_and_fill_shortfall():
     a = out[out["bundle"] == "A"]["instance_id"].map(inst.set_index("instance_id")["stratum"]).value_counts().to_dict()
     assert a == {"head": 3, "tail": 7}                             # head 5자리 중 3개만 있음 → tail이 채워 A는 10 그대로
     assert out["bundle"].value_counts().to_dict() == {"B": 10, "A": 10}
+
+
+def test_score_system_row_and_column_order_is_fixed():
+    corpus = _corpus()
+    inst = pd.DataFrame({"instance_id": ["q2", "q1"], "query_id": ["q2", "q1"], "latitude": 37.5, "longitude": 127.0})
+    qrels = pd.DataFrame({"query_id": ["q1", "q2"], "doc_id": ["a", "a"], "relevance": [3, 3]})
+    run = pd.DataFrame({"query_id": ["q2", "q1"], "doc_id": ["a", "a"], "rank": [1, 1]})
+    out = score_system(run, instance_qrels(inst, qrels, corpus), inst, corpus, 1)
+    assert out["instance_id"].tolist() == ["q1", "q2"]
+    assert out.columns.tolist() == ["instance_id", *METRIC_COLUMNS, "n_relevant"]
