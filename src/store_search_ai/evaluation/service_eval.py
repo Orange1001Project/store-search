@@ -2,7 +2,8 @@
 
 - 반경 안 정답(2점 이상)이 하나도 없는 사례는 순위 지표에서 뺀다(TREC 관례: 정답 없는 토픽은 nDCG 평균에서 제외). 개수는 따로 센다.
 - 이상적인 순위(IDCG)는 그 반경 안 판정된 가맹점으로만 만든다 — 반경 밖 정답은 서비스에서 보이지 않으므로.
-- nDCG@10·Judged@10은 공식 evaluator와 같은 ir_measures로 계산한다. bad@3 = 상위 3개에 정답이 없음, top1_ok = 1위가 정답.
+- nDCG@10·P@10·MRR@50·Recall@50·Bpref·Judged@10은 공식 evaluator와 같은 ir_measures로 계산한다(METRIC_SPECS).
+  bad@3 = 상위 3개에 정답이 없음, top1_ok = 1위가 정답. 판정만 남긴 nDCG@10(condensed)은 condense()로 run을 줄여 다시 채점한다.
 - run은 채점 반경(1km·2km)마다 그 안 상위 run_depth개를 합친 목록이다(2026-10-26부터, build_service_pool.top_k_run).
   반경 R 지표는 그 목록에서 R 안만 남겨 순위를 다시 매긴다.
 """
@@ -21,7 +22,20 @@ from store_search_ai.evaluation import (
 )
 
 BINARY_THRESHOLD = 2
-MEASURES = [ir_measures.parse_measure("nDCG@10"), ir_measures.parse_measure("Judged@10")]
+# 기존 벤치마크(evaluation/evaluator.py METRIC_SPECS)와 같은 지표. run은 반경마다 상위 run_depth(50)개라 Recall·MRR은 @50까지만 잰다
+# (Recall@50 = 1차 검색 재현율, Huang et al. 2020 EBR의 오프라인 지표에 해당).
+METRIC_SPECS = {
+    "nDCG@10": "nDCG@10",
+    "P@10": "P(rel=2)@10",
+    "MRR@50": "RR(rel=2)@50",
+    "Recall@50": "R(rel=2)@50",
+    "Bpref": "Bpref(rel=2)",
+    "Judged@10": "Judged@10",
+}
+MEASURES = [ir_measures.parse_measure(s) for s in METRIC_SPECS.values()]
+_MEASURE_NAME = {str(m): name for m, name in zip(MEASURES, METRIC_SPECS, strict=True)}
+# 요약표에 올리는 사례별 지표 순서(score_system 출력 열). nDCG@10_condensed는 condense()로 따로 채점해 붙인다.
+METRIC_COLUMNS = [*METRIC_SPECS, "bad@3", "top1_ok"]
 
 
 def attach_distance(frame: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame, key: str = "instance_id") -> pd.DataFrame:
@@ -59,7 +73,7 @@ def score_system(run: pd.DataFrame, iq: pd.DataFrame, instances: pd.DataFrame, c
               if i in answerable]
     rows: dict[str, dict] = {i: {} for i in answerable}
     for m in ir_measures.iter_calc(MEASURES, qrels, scored):
-        rows[m.query_id][str(m.measure)] = float(m.value)
+        rows[m.query_id][_MEASURE_NAME[str(m.measure)]] = float(m.value)
     rel = {(i, d): g for i, d, g in zip(q["instance_id"], q["doc_id"], q["relevance"], strict=True)}
     for i, g in r.groupby("instance_id"):
         if i not in answerable:
@@ -69,12 +83,22 @@ def score_system(run: pd.DataFrame, iq: pd.DataFrame, instances: pd.DataFrame, c
         rows[i]["top1_ok"] = float(bool(grades) and grades[0] >= BINARY_THRESHOLD)
     out = pd.DataFrame.from_dict(rows, orient="index")
     out.index.name = "instance_id"
-    for col, default in (("nDCG@10", 0.0), ("Judged@10", 0.0), ("bad@3", 1.0), ("top1_ok", 0.0)):
+    for col in METRIC_COLUMNS:
+        default = 1.0 if col == "bad@3" else 0.0
         if col not in out:
             out[col] = default
         out[col] = out[col].fillna(default)   # 반경 안 결과가 하나도 없으면 0점·bad
     out["n_relevant"] = n_rel.reindex(out.index).astype(int)
     return out.reset_index()
+
+
+def condense(run: pd.DataFrame, instances: pd.DataFrame, qrels: pd.DataFrame) -> pd.DataFrame:
+    """판정된 (쿼리, 가맹점)만 남긴 run(Sakai 2007 condensed list). 판정 누락이 있는 새 구성을 공정하게 비교하려고 같이 본다."""
+
+    base = instances.set_index("instance_id")["query_id"]
+    judged = set(zip(qrels["query_id"], qrels["doc_id"], strict=True))
+    keep = [(base.get(i), d) in judged for i, d in zip(run["query_id"], run["doc_id"], strict=True)]
+    return run[keep]
 
 
 def paired(a: pd.Series, b: pd.Series, samples: int = 10_000, seed: int = 20261021) -> dict:
@@ -92,7 +116,8 @@ def paired(a: pd.Series, b: pd.Series, samples: int = 10_000, seed: int = 202610
 
 
 def build_eval_set(instances: pd.DataFrame, answerable: pd.Series, shares: dict[str, float], salt: str,
-                   previous: pd.DataFrame | None = None) -> pd.DataFrame:
+                   previous: pd.DataFrame | None = None,
+                   strata: dict[str, dict[str, float]] | None = None) -> pd.DataFrame:
     """주 평가셋: 쿼리마다 사례 하나, split마다 묶음 비율을 `shares`로 맞춘다.
 
     - 사례는 반경 안 정답이 있는 것만. 이전 셋의 사례가 아직 정답이 있으면 그 사례를 그대로 쓰고(셋이 흔들리지 않게 —
@@ -100,6 +125,8 @@ def build_eval_set(instances: pd.DataFrame, answerable: pd.Series, shares: dict[
     - 가장 모자란 묶음이 split 크기를 정하고, 나머지 묶음은 앞에서부터 남긴다. 순서는 ① 이전 셋(`previous`)에 있던 쿼리
       ② (salt, query_id) 해시 순. 그래서 다시 만들어도 이전 셋의 쿼리와 사례는 정답이 남아 있는 한 그대로이고,
       빠지는 것은 그 묶음 자체가 줄 때뿐이다(2026-10-26 점검 2번 — 전에는 해시 순만 써서 가장 모자란 묶음이 바뀌면 이전 쿼리가 밀렸다).
+    - `strata`({묶음: {층: 비율}})가 있으면 그 묶음 몫을 instances의 `stratum` 열로 다시 나눈다(A head:tail, 2026-10-28).
+      층이 모자라면 있는 만큼 쓰고 남는 자리는 다른 층이 채운다 — 묶음 크기는 바뀌지 않는다.
     `answerable`은 instances와 같은 순서의 불리언(no_answer_counts 결과).
     """
 
@@ -120,12 +147,27 @@ def build_eval_set(instances: pd.DataFrame, answerable: pd.Series, shares: dict[
         total = min(avail[b] / s for b, s in shares.items())
         for b, s in shares.items():
             n = min(int(avail[b]), int(np.floor(total * s + 0.5)))
-            picked.append(frame[frame["bundle"] == b].sort_values(["_prev", "_key"]).head(n))
+            pool = frame[frame["bundle"] == b].sort_values(["_prev", "_key"])
+            picked.append(_take_strata(pool, n, strata[b]) if strata and b in strata else pool.head(n))
     if not picked:
         raise ValueError("정답 있는 사례가 없습니다")
     out = pd.concat(picked, ignore_index=True)
     return out[["instance_id", "query_id", "query", "split", "bundle", "context"]].sort_values(
         ["split", "bundle", "query_id"]).reset_index(drop=True)
+
+
+def _take_strata(pool: pd.DataFrame, n: int, shares: dict[str, float]) -> pd.DataFrame:
+    """`pool`(이미 고를 순서로 정렬)에서 n개를 층 비율대로. 모자란 층의 자리는 남은 층이 순서대로 채운다."""
+
+    unknown = set(pool["stratum"]) - set(shares)
+    if unknown:
+        raise ValueError(f"비율이 없는 층 {sorted(unknown)}")
+    groups = {k: pool[pool["stratum"] == k] for k in shares}
+    want = {k: min(len(g), int(np.floor(n * shares[k] + 0.5))) for k, g in groups.items()}
+    taken = {k: g.head(want[k]) for k, g in groups.items()}
+    rest = pool.drop(index=pd.concat(taken.values()).index)
+    left = n - sum(want.values())
+    return pd.concat([*taken.values(), rest.head(max(left, 0))]).head(n)
 
 
 def no_answer_counts(instances: pd.DataFrame, iq: pd.DataFrame, radius_km: float) -> pd.Series:
@@ -134,4 +176,4 @@ def no_answer_counts(instances: pd.DataFrame, iq: pd.DataFrame, radius_km: float
     return instances.assign(answerable=instances["instance_id"].isin(has))["answerable"]
 
 
-__all__ = ["attach_distance", "build_eval_set","haversine_km", "instance_qrels", "no_answer_counts", "paired", "score_system"]
+__all__ = ["METRIC_COLUMNS", "METRIC_SPECS", "attach_distance", "build_eval_set", "condense", "haversine_km", "instance_qrels", "no_answer_counts", "paired", "score_system"]

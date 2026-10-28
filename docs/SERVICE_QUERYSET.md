@@ -125,3 +125,31 @@ python scripts/build_service_pool.py pool --round service_v1 --depth 10
 - 쿼리 위치가 바뀌면 모든 run을 다시 만든다. `pool`은 run 결과가 지금 쿼리 위치의 반경 밖이면 멈춘다(옛 Colab run을 쓰는 실수 방지).
   Colab 노트북은 Drive에 같은 이름의 결과가 있으면 건너뛰므로, 다시 돌릴 때는 Drive의 옛 `<모델>.csv`를 먼저 지운다.
 - 판정 건수(첫 위치 기준, 4개 run): depth 10이면 10,549쌍(쿼리당 21.2), depth 20이면 20,562쌍.
+
+### A head — 기존 벤치마크 업종 쿼리 추가 (2026-10-27)
+
+- **왜**: A는 기존 셋에 없던 드문 업종(tail)으로만 만들어 많이 찾는 업종(head)이 빠져 있었다. 사람이 새로 쓰는 대신 기존 벤치마크
+  val/test 업종에서 가져온다(차선안, 노션 "회의 Q&A" 2절). train 업종은 v1 학습에 써서 쓰지 않는다. 업종은 split끼리 겹치지 않는다.
+- **고르기**(`scripts/select_old_benchmark_a.py` → `data/query/service_old_benchmark_A.csv`, 설정 `import.old_benchmark_a`)
+  - 업종당 최대 2개: 짧은 형태(T1) 1개 + 자연스러운 형태(T4·T5) 1개, 없으면 T2·T3. T6 기계변형·비활성·서비스셋에 이미 있는 문자열은 뺀다.
+    같은 업종의 변형은 점수가 함께 움직여 3개째부터는 표본을 거의 늘리지 못한다.
+  - 업종 의도와 어긋나는 문자열은 검토로 뺐다(설정 `skip`: 배달, 교정, 먹거리, 명절 선물세트).
+  - 의도는 기존 정의의 대분류("생활·마트 중 …")를 빼고 "'가구' 업종 매장(판매·제공)"으로 쓴다 — 대분류 말이 앵커를 '마트'로 끌고 갔다.
+  - 결과: 업종 42개 → 78개(dev 30: 기존 val 15개 업종 / test 48: 기존 test 27개 업종). split은 업종 단위로 val→dev, test→test 고정.
+- **사례**: random 78개(batch `extra_a`) + 판정 전 anchor 66개(batch `anchor_extra_a`). anchor는 기존 벤치마크 판정(같은 문자열)으로
+  1km 안 정답이 확인되지 않은 쿼리에 붙였다(`build_service_instances.py --add-anchors --proxy-old-qrels --only-batch extra_a
+  --batch anchor_extra_a`). 기존 판정은 전국 일부만 본 것이라 anchor가 필요 이상으로 붙을 수는 있어도 빠지지는 않는다 — 한 라운드로
+  판정하려는 것이다. 앵커 단어는 쿼리가 취급품목에 5번 이상 나오면 쿼리, 아니면 업종 이름(의료는 '내과').
+- **주 평가셋**: A 안을 head:tail = 50:50으로 나눈다(설정 `eval_set.strata`, 층은 작성자 `old_benchmark` 여부). head가 모자라면
+  있는 만큼 쓰고 나머지는 tail로 채운다(A 크기는 그대로).
+- **판정(2026-10-28)**: 라운드 service_v8(3,864쌍, 이중 842쌍) — 이진 κ 0.96, 조정 54쌍(빈칸 39 · 이진 불일치 15 → 16쌍 확정, 38쌍 판단 불가로 gold 제외). 1km 안 정답이
+  있는 head 쿼리 test 47/48, dev 29/30(없는 쿼리 2개는 조정 대상과 겹치지 않아 조정으로 셋 구성이 바뀌지 않는다).
+- **주 평가셋 재구성**: A가 늘어 가장 모자란 묶음이 A→B로 바뀌었다. test 320(B160/A112 = head 47 + tail 65/D32/C16),
+  dev 108(B54/A38 = head 19 + tail 19/D11/C5). 이전 셋 대비 58개 빠짐(대부분 tail A — 50:50 때문), 80개 더해짐.
+
+### 최신 전체 쿼리 표 (2026-10-27)
+
+`python scripts/export_service_query_table.py` → `benchmark/service_ko_v1/queries.csv`. 가져온 쿼리 표에 batch(처음 들어온 묶음),
+source(작성자/팀/진행자/기존 벤치마크), freq(A head/tail), eval_set(주 평가셋 split/사례), n_judged·n_relevant를 붙인 회의·검토용
+전체 표다(695개, 활성 690). 예전에는 1차 판정 쿼리 498개만 담았고, pool의 main 묶음은 이제 이 표의 batch == v1로 고른다(같은 498개).
+쿼리·판정·사례가 바뀌면 다시 실행한다.

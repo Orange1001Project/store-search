@@ -4,7 +4,7 @@ src/store_search_ai/evaluation/service_eval.py 머리말.
 입력: <benchmark_dir>/instances.csv, qrels.csv, 사례 묶음별 run 폴더(build_service_pool.SETS: runs, runs_anchor, runs_extra, …),
       코퍼스 좌표. 주 평가셋으로 거르지 않고 모든 사례를 채점한다(주 평가셋 점수는 eval_service_pipeline.py)
 출력: results/service_eval/
-  summary.csv      시스템·반경·split·묶음·맥락별 사례 수, 정답 없는 사례 수, nDCG@10(95% CI), Judged@10, bad@3, top1_ok
+  summary.csv      시스템·반경·split·묶음·맥락별 사례 수, 정답 없는 사례 수, nDCG@10(95% CI), nDCG@10(판정만), P@10, MRR@50, Recall@50, Bpref, Judged@10, bad@3, top1_ok
   pairs.csv        기준 시스템(설정 judging.dense_models 첫째 = v1) 대비 다른 시스템의 nDCG@10 차이·CI·p (같은 사례끼리).
                    delta = 그 시스템 − 기준, wins/losses도 그 시스템 쪽에서 센다(2026-10-26 전에는 기준 − 시스템이었다)
   per_instance.csv 사례별 지표
@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from store_search_ai.evaluation.service_eval import instance_qrels, paired, score_system
+from store_search_ai.evaluation.service_eval import METRIC_COLUMNS, condense, instance_qrels, paired, score_system
 from store_search_ai.pipeline.common import load_config
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,8 @@ def main() -> None:
         run = pd.concat(frames, ignore_index=True)
         for radius in jcfg["report_radii_km"]:
             s = score_system(run, iq, instances, coords, radius)
+            c = score_system(condense(run, instances, qrels), iq, instances, coords, radius)
+            s = s.merge(c[["instance_id", "nDCG@10"]].rename(columns={"nDCG@10": "nDCG@10_condensed"}), on="instance_id")
             per.append(s.assign(system=system, radius_km=radius))
     per = pd.concat(per, ignore_index=True).merge(
         instances[["instance_id", "query_id", "query", "bundle", "split", "context", "attribute"]], on="instance_id")
@@ -103,7 +105,7 @@ def main() -> None:
                     rows.append({"scope": scope, "radius_km": radius, "group": group_name, **label,
                                  "instances": len(g), "no_answer_instances": len(total) - len(g) if group_name != "속성 쿼리" else None,
                                  "nDCG@10": g["nDCG@10"].mean(), "ci_low": lo, "ci_high": hi,
-                                 "Judged@10": g["Judged@10"].mean(), "bad@3": g["bad@3"].mean(), "top1_ok": g["top1_ok"].mean()})
+                                 **{c: g[c].mean() for c in ["nDCG@10_condensed", *METRIC_COLUMNS[1:]]}})
                     if label["system"] != baseline:
                         base = per[(per["system"] == baseline) & (per["radius_km"] == radius)].set_index("instance_id")["nDCG@10"]
                         mine = g.set_index("instance_id")["nDCG@10"]

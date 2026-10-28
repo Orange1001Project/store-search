@@ -1,42 +1,42 @@
 ﻿instance_id,query_id,query,split,bundle,context
-sq_A001,sq_A001,샐러드 가게,dev,A,random
 sq_A002@a,sq_A002,포케,dev,A,anchor
 sq_A003@a,sq_A003,다이어트 음식,dev,A,anchor
-sq_A004,sq_A004,건강한 음식,dev,A,random
 sq_A005@a,sq_A005,샐러드 파는 곳,dev,A,anchor
-sq_A016@a,sq_A016,무인 사진관,dev,A,anchor
-sq_A017@a,sq_A017,스냅 사진,dev,A,anchor
 sq_A018@a,sq_A018,프로필 사진,dev,A,anchor
 sq_A019,sq_A019,단체 사진,dev,A,random
 sq_A020@a,sq_A020,곱창 파는 곳,dev,A,anchor
-sq_A021@a,sq_A021,고기 내장,dev,A,anchor
 sq_A022@a,sq_A022,곱창 구이,dev,A,anchor
 sq_A023@a,sq_A023,곱창 잘하는 집,dev,A,anchor
-sq_A024,sq_A024,야채곱창,dev,A,random
 sq_A034@a,sq_A034,농자재 파는 곳,dev,A,anchor
-sq_A035@a,sq_A035,농사 기구 파는 곳,dev,A,anchor
 sq_A036@a,sq_A036,농사 준비,dev,A,anchor
-sq_A037@a,sq_A037,농사에 필요한 기구,dev,A,anchor
 sq_A038@a,sq_A038,농자재 가게,dev,A,anchor
 sq_A084@a,sq_A084,커튼 가게,dev,A,anchor
-sq_A085@a,sq_A085,창문 가리개,dev,A,anchor
-sq_A086,sq_A086,거실 커튼,dev,A,random
 sq_A087,sq_A087,햇빛 가릴 커튼,dev,A,random
 sq_A088,sq_A088,커튼 맞춤 제작,dev,A,random
-sq_A094,sq_A094,태권도장,dev,A,random
-sq_A095@a,sq_A095,무술 학원,dev,A,anchor
 sq_A096,sq_A096,아이 운동,dev,A,random
-sq_A097@a,sq_A097,무술 배우는 곳,dev,A,anchor
-sq_A098@a,sq_A098,태권도 배우는 곳,dev,A,anchor
 sq_A109@a,sq_A109,마라탕집,dev,A,anchor
-sq_A110@a,sq_A110,마라샹궈,dev,A,anchor
-sq_A111,sq_A111,매운 탕요리,dev,A,random
 sq_A112@a,sq_A112,마라탕 맛있는 곳,dev,A,anchor
-sq_A113@a,sq_A113,훠궈,dev,A,anchor
 sq_A114@a,sq_A114,청각 보조기,dev,A,anchor
-sq_A115,sq_A115,귀 안 들릴 때,dev,A,random
-sq_A116@a,sq_A116,보청기 배터리,dev,A,anchor
 sq_A117,sq_A117,보청기 맞추는 곳,dev,A,random
+sq_A157,sq_A157,공예,dev,A,random
+sq_A158@a,sq_A158,가죽 공방,dev,A,anchor
+sq_A160,sq_A160,과일 사는 곳,dev,A,random
+sq_A163,sq_A163,꽃,dev,A,random
+sq_A168,sq_A168,문구,dev,A,random
+sq_A169,sq_A169,학용품 파는 곳,dev,A,random
+sq_A173,sq_A173,서점,dev,A,random
+sq_A174,sq_A174,책 파는 곳,dev,A,random
+sq_A177,sq_A177,수산물,dev,A,random
+sq_A178@a,sq_A178,해산물 파는 곳,dev,A,anchor
+sq_A180,sq_A180,식자재,dev,A,random
+sq_A181,sq_A181,쌀 파는 곳,dev,A,random
+sq_A186,sq_A186,애견용품,dev,A,random
+sq_A187@a,sq_A187,반려동물 용품 파는 곳,dev,A,anchor
+sq_A193,sq_A193,원단,dev,A,random
+sq_A194@a,sq_A194,주단,dev,A,anchor
+sq_A200,sq_A200,자동차,dev,A,random
+sq_A201@a,sq_A201,타이어,dev,A,anchor
+sq_A219@a,sq_A219,편의점 갈 데,dev,A,anchor
 sq_B004,sq_B004,파리바게트,dev,B,random
 sq_B005@a,sq_B005,컴포즈커피,dev,B,anchor
 sq_B015@a,sq_B015,텐퍼센트커피,dev,B,anchor
@@ -108,92 +108,57 @@ sq_D042,sq_D042,달서로 식당,dev,D,random
 sq_D044,sq_D044,진잠 칼국수,dev,D,random
 sq_D051,sq_D051,봉담 아울렛 옷가게,dev,D,random
 sq_A006,sq_A006,닭갈비 먹을 곳,test,A,random
-sq_A007,sq_A007,닭고기,test,A,random
 sq_A008@a,sq_A008,닭갈비 파는 곳,test,A,anchor
 sq_A009@a,sq_A009,닭갈비 식당,test,A,anchor
-sq_A010,sq_A010,닭,test,A,random
 sq_A011,sq_A011,자전거 파는 곳,test,A,random
 sq_A012,sq_A012,자전거 가게,test,A,random
-sq_A013,sq_A013,자전거 용품,test,A,random
-sq_A014@a,sq_A014,사이클,test,A,anchor
-sq_A026@a,sq_A026,낚시 용품샵,test,A,anchor
 sq_A027@a,sq_A027,낚시 준비,test,A,anchor
-sq_A028@a,sq_A028,낚싯대 파는 곳,test,A,anchor
 sq_A029,sq_A029,디저트 가게,test,A,random
-sq_A030,sq_A030,구움과자,test,A,random
 sq_A031,sq_A031,분위기 좋은 디저트 가게,test,A,random
-sq_A032,sq_A032,달달한 디저트,test,A,random
 sq_A033@a,sq_A033,넓은 디저트 가게,test,A,anchor
 sq_A039,sq_A039,식료품 가게,test,A,random
 sq_A040,sq_A040,요리 재료,test,A,random
 sq_A041@a,sq_A041,과자,test,A,anchor
-sq_A042,sq_A042,간식,test,A,random
-sq_A043@a,sq_A043,냉동음식,test,A,anchor
-sq_A044@a,sq_A044,프린트,test,A,anchor
-sq_A045@a,sq_A045,프린트카페,test,A,anchor
-sq_A046@a,sq_A046,제본,test,A,anchor
-sq_A047@a,sq_A047,다량 인쇄,test,A,anchor
 sq_A049@a,sq_A049,약재상,test,A,anchor
 sq_A050@a,sq_A050,한방 재료,test,A,anchor
 sq_A051,sq_A051,도라지 파는 곳,test,A,random
 sq_A052@a,sq_A052,말린 약재,test,A,anchor
 sq_A053@a,sq_A053,약초 어디서 사지,test,A,anchor
-sq_A054,sq_A054,장어구이집,test,A,random
 sq_A055@a,sq_A055,민물장어 요리,test,A,anchor
 sq_A056,sq_A056,보양식 먹을 곳,test,A,random
 sq_A057@a,sq_A057,민물고기 구이,test,A,anchor
 sq_A058@a,sq_A058,장어 먹으러 갈 곳,test,A,anchor
-sq_A059@a,sq_A059,감자탕집,test,A,anchor
 sq_A060,sq_A060,뼈해장국,test,A,random
 sq_A061,sq_A061,돼지등뼈 요리,test,A,random
 sq_A062,sq_A062,뜨끈한 국물 먹고 싶어,test,A,random
 sq_A063@a,sq_A063,감자탕 먹을 곳,test,A,anchor
-sq_A064,sq_A064,고추 파는 곳,test,A,random
 sq_A065,sq_A065,고춧가루,test,A,random
-sq_A066,sq_A066,매운 고추,test,A,random
 sq_A067@a,sq_A067,김장용 고추,test,A,anchor
-sq_A068,sq_A068,매운맛 재료,test,A,random
 sq_A069@a,sq_A069,숙박업소,test,A,anchor
 sq_A070@a,sq_A070,하루 묵을 곳,test,A,anchor
-sq_A071@a,sq_A071,하룻밤 잘 곳,test,A,anchor
 sq_A072@a,sq_A072,모텔,test,A,anchor
 sq_A073,sq_A073,방 잡을 곳,test,A,random
 sq_A074,sq_A074,시계 가게,test,A,random
-sq_A075@a,sq_A075,손목시계,test,A,anchor
 sq_A076@a,sq_A076,시계 배터리 교체,test,A,anchor
 sq_A077@a,sq_A077,시간 확인할 시계,test,A,anchor
-sq_A078,sq_A078,손목에 찰 시계,test,A,random
 sq_A079,sq_A079,닭발집,test,A,random
 sq_A080,sq_A080,매운 안주,test,A,random
 sq_A081,sq_A081,불닭발,test,A,random
 sq_A082,sq_A082,야식 먹을 곳,test,A,random
 sq_A083@a,sq_A083,닭발 먹으러 갈 곳,test,A,anchor
-sq_A089,sq_A089,조명 가게,test,A,random
 sq_A090@a,sq_A090,전등 파는 곳,test,A,anchor
-sq_A091,sq_A091,전구,test,A,random
-sq_A092@a,sq_A092,천장등,test,A,anchor
 sq_A093@a,sq_A093,방 밝힐 전등,test,A,anchor
-sq_A099,sq_A099,아기용품점,test,A,random
 sq_A100,sq_A100,장난감 가게,test,A,random
-sq_A101,sq_A101,유아복 파는 곳,test,A,random
-sq_A102,sq_A102,아기 분유,test,A,random
-sq_A103@a,sq_A103,유모차 매장,test,A,anchor
 sq_A104@a,sq_A104,조립 PC,test,A,anchor
 sq_A105,sq_A105,컴퓨터 수리,test,A,random
-sq_A106@a,sq_A106,노트북 파는 곳,test,A,anchor
-sq_A107@a,sq_A107,키보드 마우스,test,A,anchor
 sq_A108,sq_A108,컴퓨터 가게,test,A,random
 sq_A119@a,sq_A119,골프 연습장,test,A,anchor
-sq_A120@a,sq_A120,스크린 골프,test,A,anchor
 sq_A122,sq_A122,골프웨어,test,A,random
 sq_A123@a,sq_A123,골프 레슨,test,A,anchor
 sq_A124@a,sq_A124,당구장,test,A,anchor
-sq_A125@a,sq_A125,포켓볼 칠 수 있는 곳,test,A,anchor
 sq_A126@a,sq_A126,24시 당구장,test,A,anchor
 sq_A128@a,sq_A128,3구 4구 당구,test,A,anchor
-sq_A129@a,sq_A129,악기점,test,A,anchor
 sq_A130,sq_A130,통 기타 파는 곳,test,A,random
-sq_A131@a,sq_A131,바이올린 조율,test,A,anchor
 sq_A132@a,sq_A132,피아노 판매,test,A,anchor
 sq_A133,sq_A133,리코더 악보,test,A,random
 sq_A134@a,sq_A134,동전 노래방,test,A,anchor
@@ -203,15 +168,59 @@ sq_A137@a,sq_A137,시설 좋은 노래방,test,A,anchor
 sq_A138,sq_A138,노래 부르는 곳,test,A,random
 sq_A139,sq_A139,아동 심리상담,test,A,random
 sq_A140@a,sq_A140,마음 치료,test,A,anchor
-sq_A141,sq_A141,성인 심리검사,test,A,random
 sq_A142@a,sq_A142,상담 센터,test,A,anchor
 sq_A143@a,sq_A143,부부 상담,test,A,anchor
 sq_A144@a,sq_A144,명랑핫도그,test,A,anchor
-sq_A145@a,sq_A145,핫도그 가게,test,A,anchor
 sq_A146@a,sq_A146,쌀핫도그,test,A,anchor
-sq_A147@a,sq_A147,수제 핫도그,test,A,anchor
-sq_A148,sq_A148,핫도그 파는 곳,test,A,random
+sq_A149,sq_A149,가구,test,A,random
+sq_A151,sq_A151,전자제품,test,A,random
+sq_A152@a,sq_A152,가전제품 파는 곳,test,A,anchor
+sq_A153,sq_A153,샌드위치,test,A,random
+sq_A154@a,sq_A154,꽈배기,test,A,anchor
+sq_A155,sq_A155,건강즙 짜는 곳,test,A,random
+sq_A156@a,sq_A156,건강식품,test,A,anchor
+sq_A161,sq_A161,귀금속,test,A,random
+sq_A162@a,sq_A162,시계 배터리 가는 곳,test,A,anchor
+sq_A165,sq_A165,도시락 사는 곳,test,A,random
+sq_A166,sq_A166,두부,test,A,random
+sq_A167@a,sq_A167,두부 사고 싶어,test,A,anchor
+sq_A170,sq_A170,분식,test,A,random
+sq_A171,sq_A171,어묵,test,A,random
+sq_A172,sq_A172,증명사진 찍는 곳,test,A,random
+sq_A175,sq_A175,속옷,test,A,random
+sq_A176,sq_A176,속옷 파는 데,test,A,random
+sq_A179,sq_A179,옷 수선하는 곳,test,A,random
+sq_A182,sq_A182,아이스크림,test,A,random
+sq_A183,sq_A183,아이스크림 먹을 데,test,A,random
+sq_A190@a,sq_A190,열쇠 복사,test,A,anchor
+sq_A195@a,sq_A195,의료,test,A,anchor
+sq_A196,sq_A196,병원 갈 데,test,A,random
+sq_A197@a,sq_A197,명함 인쇄,test,A,anchor
+sq_A198,sq_A198,일식,test,A,random
+sq_A199,sq_A199,돈까스 먹을 곳,test,A,random
+sq_A204,sq_A204,제사용품 사는 곳,test,A,random
+sq_A205@a,sq_A205,불교용품,test,A,anchor
+sq_A206,sq_A206,주방용품,test,A,random
+sq_A207,sq_A207,그릇,test,A,random
+sq_A208@a,sq_A208,주유소,test,A,anchor
+sq_A209@a,sq_A209,기름 넣으러 갈 데,test,A,anchor
+sq_A210@a,sq_A210,중식,test,A,anchor
+sq_A211@a,sq_A211,중국요리 먹을 곳,test,A,anchor
+sq_A212,sq_A212,이빨 아플 때 가는 곳,test,A,random
+sq_A213@a,sq_A213,임플란트,test,A,anchor
+sq_A214,sq_A214,침구,test,A,random
+sq_A215,sq_A215,이불 사려면,test,A,random
+sq_A216,sq_A216,칼국수,test,A,random
+sq_A217@a,sq_A217,면요리 먹을 곳,test,A,anchor
+sq_A220@a,sq_A220,피부관리,test,A,anchor
+sq_A221,sq_A221,피부관리 받는 곳,test,A,random
+sq_A222,sq_A222,한복 맞추는 곳,test,A,random
+sq_A223,sq_A223,한의원,test,A,random
+sq_A224@a,sq_A224,침 맞는 곳,test,A,anchor
+sq_A225,sq_A225,햄버거,test,A,random
+sq_A226,sq_A226,버거 먹을 데,test,A,random
 sq_B001,sq_B001,GS25,test,B,random
+sq_B002,sq_B002,씨유,test,B,random
 sq_B003@a,sq_B003,세븐일레븐,test,B,anchor
 sq_B006,sq_B006,메가커피,test,B,random
 sq_B007@a,sq_B007,베스킨라빈스,test,B,anchor
@@ -242,11 +251,13 @@ sq_B037@a,sq_B037,오렌즈,test,B,anchor
 sq_B038@a,sq_B038,국수나무,test,B,anchor
 sq_B039,sq_B039,올포유,test,B,random
 sq_B040@a,sq_B040,프랭크버거,test,B,anchor
+sq_B041@a,sq_B041,슈올즈,test,B,anchor
 sq_B042@a,sq_B042,이브자리,test,B,anchor
 sq_B045,sq_B045,우리농산물,test,B,random
 sq_B049,sq_B049,기장시장 부경초장,test,B,random
 sq_B050,sq_B050,세종 모두의 미술학원,test,B,random
 sq_B052,sq_B052,할매꼬마김밥,test,B,random
+sq_B053,sq_B053,민락회타운 청도상회,test,B,random
 sq_B054,sq_B054,김포 르르뱅,test,B,random
 sq_B055,sq_B055,서문시장 동창섬유,test,B,random
 sq_B058,sq_B058,천왕동 한얼합기도,test,B,random
@@ -254,6 +265,7 @@ sq_B059,sq_B059,전주 행복약국,test,B,random
 sq_B060,sq_B060,화곡 올리비아하슬러,test,B,random
 sq_B061,sq_B061,평화진짬뽕,test,B,random
 sq_B062,sq_B062,효목동 서울떡집,test,B,random
+sq_B063,sq_B063,목포 유달산식당,test,B,random
 sq_B064,sq_B064,자양동 족발 집배원,test,B,random
 sq_B065,sq_B065,조박사함흥냉면,test,B,random
 sq_B067,sq_B067,남평그릇종합유통,test,B,random
@@ -272,11 +284,13 @@ sq_B085,sq_B085,대박농산,test,B,random
 sq_B086,sq_B086,맘스베이커리,test,B,random
 sq_B087,sq_B087,오늘도감자탕 효천점,test,B,random
 sq_B088,sq_B088,안동본가갈비,test,B,random
+sq_B089,sq_B089,첨단 이마트24,test,B,random
 sq_B090,sq_B090,곰소 공주네백반,test,B,random
 sq_B091,sq_B091,초롱네일,test,B,random
 sq_B092,sq_B092,한올 재봉틀,test,B,random
 sq_B094,sq_B094,장흥 귀뚜라미보일러,test,B,random
 sq_B095,sq_B095,파티노래연습장,test,B,random
+sq_B097,sq_B097,세종 역북집,test,B,random
 sq_B098,sq_B098,송도만두 보정점,test,B,random
 sq_B099,sq_B099,광복카센타,test,B,random
 sq_B100,sq_B100,프랭크버거 광주효천점,test,B,random
@@ -306,12 +320,14 @@ sq_B135,sq_B135,가마솥무교동왕족발,test,B,random
 sq_B136,sq_B136,트라이 부천한신시장,test,B,random
 sq_B137,sq_B137,남포동 사량도건어물,test,B,random
 sq_B138,sq_B138,달서송림시장 장수약국,test,B,random
+sq_B139,sq_B139,서천 서해건어물,test,B,random
 sq_B140,sq_B140,한민시장 김가네순대편육,test,B,random
 sq_B141,sq_B141,마포 사임당떡고을,test,B,random
 sq_B142,sq_B142,쌍문역 사진관 오마이포토,test,B,random
 sq_B144,sq_B144,이천 진미즉석떡볶이,test,B,random
 sq_B145,sq_B145,신림 이태리안경,test,B,random
 sq_B146,sq_B146,강진 옷바구니,test,B,random
+sq_B147,sq_B147,광주 선경미디어,test,B,random
 sq_B148,sq_B148,바이셀폰 김천점,test,B,random
 sq_B149,sq_B149,통영 짱이상회,test,B,random
 sq_B150,sq_B150,구미역 망고케이스,test,B,random
@@ -321,6 +337,7 @@ sq_B153,sq_B153,GS,test,B,random
 sq_B155,sq_B155,효준,test,B,random
 sq_B156,sq_B156,경민,test,B,random
 sq_B157,sq_B157,반월당 보물창고,test,B,random
+sq_B159,sq_B159,맑은샘 피아노,test,B,random
 sq_B160,sq_B160,청송,test,B,random
 sq_B161,sq_B161,이근철,test,B,random
 sq_B162,sq_B162,샐리스,test,B,random
@@ -341,6 +358,7 @@ sq_B182,sq_B182,영산포 닭갈비마을,test,B,random
 sq_B184,sq_B184,금복커텐,test,B,random
 sq_B185,sq_B185,서면 경주상회,test,B,random
 sq_B187,sq_B187,덕산종합상사 청소용품,test,B,random
+sq_B188,sq_B188,영암 한우,test,B,random
 sq_B189,sq_B189,무안 시내산,test,B,random
 sq_B190,sq_B190,두암동 닥터스 통증의학과,test,B,random
 sq_B192,sq_B192,월곡시장 만남의 광장,test,B,random
@@ -349,6 +367,7 @@ sq_B194,sq_B194,엘스테이,test,B,random
 sq_B195,sq_B195,살롱드 브로우,test,B,random
 sq_B196,sq_B196,팜스 골프,test,B,random
 sq_B197,sq_B197,남양 수산,test,B,random
+sq_B198,sq_B198,역전상회,test,B,random
 sq_B199,sq_B199,화성 회관,test,B,random
 sq_B200,sq_B200,경안 깡통,test,B,random
 sq_B201,sq_B201,강촌 엘리시안,test,B,random
@@ -375,6 +394,7 @@ sq_C104@a,sq_C104,등산화 파는 곳,test,C,anchor
 sq_C107,sq_C107,동네 반찬가게,test,C,random
 sq_C113@a,sq_C113,낚시 용품점,test,C,anchor
 sq_C148,sq_C148,잠금장치,test,C,random
+sq_C162@a,sq_C162,자동차 와이퍼,test,C,anchor
 sq_D005,sq_D005,영일시장 채소,test,D,random
 sq_D006,sq_D006,양곡시장 음식,test,D,random
 sq_D007,sq_D007,세곡 학원,test,D,random
@@ -384,6 +404,7 @@ sq_D011,sq_D011,고촌 카페,test,D,random
 sq_D012,sq_D012,동산 패션,test,D,random
 sq_D013,sq_D013,야사문화골목 고기,test,D,random
 sq_D014,sq_D014,고암 디저트,test,D,random
+sq_D016,sq_D016,매곡신천 식당,test,D,random
 sq_D017,sq_D017,산내마을 음식,test,D,random
 sq_D018,sq_D018,역곡남부시장 반찬,test,D,random
 sq_D019,sq_D019,석계역 안경,test,D,random
@@ -405,3 +426,4 @@ sq_D046,sq_D046,산울림 미용실,test,D,random
 sq_D047,sq_D047,서둔동 만두,test,D,random
 sq_D048,sq_D048,새봄 음악학원,test,D,random
 sq_D049,sq_D049,서면몰 옷가게,test,D,random
+sq_D050,sq_D050,신기시장 한식,test,D,random

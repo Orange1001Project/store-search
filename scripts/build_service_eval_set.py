@@ -1,6 +1,6 @@
 """서비스셋 주 평가셋(eval_set.csv)을 만든다 — 쿼리 수를 가정한 실제 쿼리 비율에 맞춘 사례 목록. 설명은 docs/SERVICE_QUERYSET.md 1절.
 
-설정 `eval_set`: 묶음 비율(shares), 반경, 해시 salt, 출력 경로.
+설정 `eval_set`: 묶음 비율(shares), 묶음 안 층 비율(strata — A head:tail), 반경, 해시 salt, 출력 경로.
 - 쿼리마다 사례 하나(반경 안 정답이 있는 random, 없으면 anchor). 이전 셋에 있던 사례는 정답이 남아 있는 한 그대로 쓴다.
 - split마다 가장 모자란 묶음이 크기를 정한다. 이미 있는 eval_set.csv의 쿼리·사례를 먼저 남기고(정답이 남아 있는 한),
   나머지는 해시 순으로 채운다. 이전 쿼리가 빠지는 것은 그 묶음 자체가 줄 때뿐이다.
@@ -58,11 +58,13 @@ def main() -> None:
     coords = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "latitude", "longitude", "geo_status"])
     coords = coords[coords["geo_status"] == "VALID"]
 
+    # A head = 기존 벤치마크 업종(작성자 old_benchmark), tail = 사람이 새로 쓴 드문 업종
+    instances["stratum"] = ["head" if "old_benchmark" in w else "tail" for w in instances["writers"]]
     answerable = no_answer_counts(instances, instance_qrels(instances, qrels, coords), ecfg["radius_km"])
     shares = ecfg["shares"]
     out = Path(ecfg["output"])
     previous = pd.read_csv(out, encoding="utf-8-sig") if out.exists() else None
-    picked = build_eval_set(instances, answerable, shares, ecfg["salt"], previous)
+    picked = build_eval_set(instances, answerable, shares, ecfg["salt"], previous, ecfg.get("strata"))
     if previous is not None:
         dropped = sorted(set(previous["instance_id"]) - set(picked["instance_id"]))
         added = sorted(set(picked["instance_id"]) - set(previous["instance_id"]))
@@ -74,6 +76,11 @@ def main() -> None:
         got = picked[picked["split"] == split]["bundle"].value_counts()
         logger.info("%s: 채점 가능 쿼리 %s → 주 평가셋 %s (계 %d)", split, {b: int(avail.get(b, 0)) for b in shares},
                     {b: int(got.get(b, 0)) for b in shares}, int(got.sum()))
+        for b in ecfg.get("strata") or {}:
+            st = instances.set_index("instance_id")["stratum"]
+            have = scored[(scored["split"] == split) & (scored["bundle"] == b)]["stratum"].value_counts()
+            took = picked[(picked["split"] == split) & (picked["bundle"] == b)]["instance_id"].map(st).value_counts()
+            logger.info("  %s 층: 채점 가능 %s → %s", b, have.to_dict(), took.to_dict())
         need = shortfall(avail, shares)
         if need:
             logger.info("  다른 묶음을 줄이지 않으려면 더 필요한 쿼리: %s", need)

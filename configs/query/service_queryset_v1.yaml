@@ -178,6 +178,22 @@ import:
   # 작성 줄 단위로 뺄 것 {writer, basis_id, reason} — 같은 문자열의 기존 쿼리는 남긴다.
   drop_rows:
     - {writer: W1, basis_id: S235, reason: "추가 B '샤넬'(코코샤넬) — 기존 E 쿼리 '샤넬'(범위 밖 명품 브랜드, 판정 완료)과 같은 문자열"}
+  # A head(2026-10-27): 기존 벤치마크 val/test 업종에서 업종당 최대 2개(scripts/select_old_benchmark_a.py가 path를 만든다).
+  # 서비스 A는 드문 업종(tail)뿐이라 많이 찾는 업종을 더한다. train 업종은 v1 학습에 써서 제외. split은 업종 단위로 val→dev, test→test.
+  old_benchmark_a:
+    path: data/query/service_old_benchmark_A.csv
+    split_map: {val: dev, test: test}
+    per_family: 2
+    salt: old_a_v1
+    # 기존 업종에 묶여 있지만 그 업종 의도와 어긋나는 문자열(검토로 뺌) — 판정 의도(업종 정의)와 쿼리가 달라진다
+    skip:
+      - {query: 배달, reason: "족발 업종의 쿼리지만 업종을 특정하지 않는 상위 개념"}
+      - {query: 교정, reason: "치과 업종이지만 치아·자세 교정이 모호"}
+      - {query: 먹거리, reason: "'복합' 업종 — 업종을 특정하지 않음"}
+      - {query: 명절 선물세트, reason: "'복합' 업종 — 계절 한정이고 맞는 업종이 정해지지 않음(취급품목 '선물세트' 2곳)"}
+    # 업종 이름만으로는 의도가 흐린 업종의 판정 의도·앵커 단어
+    intent_overrides: {의료: "병원·의원(진료)"}
+    anchor_overrides: {의료: 내과}
   # 진행자가 직접 더한 쿼리(작성자 파일 밖). writer는 facilitator로 기록된다.
   # E: 이름이 겹치는 가맹점(신세계약국·샤넬의상실, 숙박업소)은 있어도 그 의도를 채우는 가맹점은 없는 함정형(2026-10-20).
   extra_queries:
@@ -191,6 +207,8 @@ import:
 # E(결과 없음)는 순위 지표가 없어 비율 밖에서 따로 본다.
 eval_set:
   shares: {B: 0.50, A: 0.35, D: 0.10, C: 0.05}
+  # A 안 층(2026-10-28): head = 기존 벤치마크 val/test 업종, tail = 사람이 새로 쓴 드문 업종. head가 모자라면 tail로 채운다.
+  strata: {A: {head: 0.5, tail: 0.5}}
   radius_km: 1
   salt: eval_set_v1
   output: benchmark/service_ko_v1/eval_set.csv

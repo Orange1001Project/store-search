@@ -1,6 +1,7 @@
 import pandas as pd
 
 from store_search_ai.data.service_import import (
+    select_old_benchmark_queries,
     assign_locations,
     auto_location,
     assign_query_ids,
@@ -139,3 +140,24 @@ def test_changes_from_previous_reports_status_and_missing():
     now = prev.iloc[:1].assign(status="excluded")
     msgs = changes_from_previous(prev, now)
     assert any("status" in m for m in msgs) and any("없어짐" in m for m in msgs)
+
+
+def test_select_old_benchmark_queries_short_plus_natural_per_family():
+    fams = [
+        {"family": "가구", "split": "test", "intent_definition": "생활·마트 중 '가구'를 판매·제공하는 매장", "queries": [
+            {"type": "T1 정확표기", "text": "가구"}, {"type": "T2 동의어", "text": "가구점"},
+            {"type": "T4 구어·문장", "text": "가구 사는 데"}, {"type": "T6 기계변형", "text": "가구추천"}]},
+        {"family": "족발", "split": "val", "intent_definition": "x", "queries": [
+            {"type": "T2 동의어", "text": "배달"}, {"type": "T2 동의어", "text": "보쌈"}, {"type": "T4 구어·문장", "text": "족발"}]},
+        {"family": "가방", "split": "train", "intent_definition": "x", "queries": [{"type": "T1 정확표기", "text": "가방"}]},
+        {"family": "치과", "split": "test", "intent_definition": "x", "queries": [
+            {"type": "T1 정확표기", "text": "치과"}, {"type": "T4 구어·문장", "text": "이빨 아플 때 가는 곳"}]},
+    ]
+    out = select_old_benchmark_queries(fams, {"q_치과_02"}, existing={"치과"}, splits={"val": "dev", "test": "test"},
+                                       per_family=2, salt="s", skip={"배달"})
+    got = {f: list(g["query"]) for f, g in out.groupby("old_family")}
+    assert got["가구"] == ["가구", "가구 사는 데"]          # T1 + 자연스러운 형태, T6 제외
+    assert got["족발"] == ["족발", "보쌈"]                 # T4 하나 + 남은 자리는 T2(skip한 '배달' 제외)
+    assert "가방" not in got and "치과" not in got         # train 업종 제외 / 기존 문자열·비활성 제외로 남는 쿼리 없음
+    assert set(out.loc[out["old_family"] == "족발", "split"]) == {"dev"}
+    assert out["intent"].iloc[0] == "'가구' 업종 매장(판매·제공)" and (out["basis_id"] == "old:" + out["old_family"]).all()

@@ -278,3 +278,53 @@ def changes_from_previous(previous: pd.DataFrame, queries: pd.DataFrame) -> list
                     round(float(row.latitude), 6), round(float(row.longitude), 6)):
                 out.append(f"{row.query_id} 가정위치 바뀜")
     return out
+
+
+SHORT_TYPES = ("T1",)              # 짧은 정확 표기
+NATURAL_TYPES = ("T4", "T5")       # 구어·문장, 서비스(자연스러운 표현)
+FALLBACK_TYPES = ("T2", "T3")      # 동의어·개념확장 — 위 형태가 없을 때만. T6(기계변형)은 쓰지 않는다
+
+
+def select_old_benchmark_queries(families: list[dict], inactive_ids: set[str], existing: set[str],
+                                 splits: dict[str, str], per_family: int, salt: str,
+                                 skip: set[str] | None = None, intent_overrides: dict[str, str] | None = None) -> pd.DataFrame:
+    """기존 벤치마크 val/test 업종에서 A head 쿼리를 고른다(2026-10-27, 노션 "회의 Q&A" 2절).
+
+    - 업종마다 최대 `per_family`(2)개: ① 짧은 형태(T1, 업종 이름과 같은 것 우선) ② 자연스러운 형태(T4·T5).
+      한쪽이 없으면 T2·T3에서 채운다. 같은 업종의 변형은 점수가 함께 움직여 3개째부터는 표본을 거의 늘리지 못한다.
+    - T6(기계변형)·비활성 쿼리·이미 서비스셋에 있는 문자열(`existing`, 정규화)·`skip`(업종 의도와 어긋나 검토로 뺀 문자열)은
+      쓰지 않는다.
+    - 같은 형태 안에서는 (salt, 문자열) 해시 순 — 다시 돌려도 같다.
+    - `splits`: 기존 split → 서비스 split(val → dev, test → test). 업종 단위로 같은 쪽에 둔다.
+    """
+
+    def key(text: str) -> str:
+        return hashlib.sha256(f"{salt}:{normalize(text)}".encode()).hexdigest()
+
+    rows = []
+    for fam in families:
+        if fam["split"] not in splits:
+            continue
+        cands = [(q["type"].split()[0], q["text"]) for i, q in enumerate(fam["queries"], start=1)
+                 if f"q_{fam['family']}_{i:02d}" not in inactive_ids and not q["type"].startswith("T6")
+                 and normalize(q["text"]) not in existing and normalize(q["text"]) not in (skip or set())]
+        picked: list[tuple[str, str]] = []
+
+        def take(types: tuple[str, ...], prefer: str | None = None, cands=cands, picked=picked) -> None:
+            pool = [c for c in cands if c[0] in types and c not in picked]
+            pool.sort(key=lambda c: (normalize(c[1]) != prefer, key(c[1])))
+            if pool and len(picked) < per_family:
+                picked.append(pool[0])
+
+        take(SHORT_TYPES, prefer=normalize(fam["family"]))
+        take(NATURAL_TYPES)
+        while len(picked) < per_family and any(c[0] in FALLBACK_TYPES and c not in picked for c in cands):
+            take(FALLBACK_TYPES, prefer=normalize(fam["family"]))
+        for qtype, text in picked:
+            # 기존 의도 정의("생활·마트 중 '가구'를 …")의 대분류 말은 판정·앵커에 엉뚱한 단어('마트')를 끌어들여 빼고 업종만 남긴다
+            intent = (intent_overrides or {}).get(fam["family"], f"'{fam['family']}' 업종 매장(판매·제공)")
+            rows.append({"query": text, "bundle": "A", "intent": intent, "basis_id": f"old:{fam['family']}",
+                         "split": splits[fam["split"]], "old_family": fam["family"], "old_split": fam["split"],
+                         "old_type": qtype})
+    return pd.DataFrame(rows, columns=["query", "bundle", "intent", "basis_id", "split", "old_family", "old_split",
+                                       "old_type"])

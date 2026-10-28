@@ -14,7 +14,7 @@
 채점 대상(--set): main(기본) = 주 평가셋(eval_set.csv, 묶음 비율을 가정 쿼리 비율에 맞춘 쿼리당 사례 하나,
   scripts/build_service_eval_set.py) / all = instances.csv의 모든 사례(2026-10-26 이전 방식)
 
-출력: results/service_pipeline/<exp>_<split>[_all].csv — 구성 × 반경 × 묶음별 nDCG@10, nDCG@10(판정만), Judged@10, bad@3, top1_ok
+출력: results/service_pipeline/<exp>_<split>[_all].csv — 구성 × 반경 × 묶음별 nDCG@10, nDCG@10(판정만), P@10, MRR@50, Recall@50, Bpref, Judged@10, bad@3, top1_ok
 
 사용법:
     python scripts/eval_service_pipeline.py --exp hybrid
@@ -34,7 +34,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from store_search_ai.evaluation.service_eval import attach_distance, instance_qrels, score_system
+from store_search_ai.evaluation.service_eval import METRIC_COLUMNS, attach_distance, condense, instance_qrels, score_system
 from store_search_ai.pipeline.common import load_config
 from store_search_ai.retrieval.fusion import _rerank, boost, convex, name_match, rrf
 
@@ -269,15 +269,6 @@ def supplement_pool(args, cfg: dict, bench: dict, stage: pd.DataFrame, scores: d
     logger.info("저장: %s (전체 %d쌍, 이중 판정 %d쌍)", round_dir, len(sheet), manifest["double_annotation_pairs"])
 
 
-def condense(run: pd.DataFrame, instances: pd.DataFrame, qrels: pd.DataFrame) -> pd.DataFrame:
-    """판정된 (쿼리, 가맹점)만 남긴 run(Sakai 2007 condensed list). 판정 누락이 있는 새 구성을 공정하게 비교하려고 같이 본다."""
-
-    base = instances.set_index("instance_id")["query_id"]
-    judged = set(zip(qrels["query_id"], qrels["doc_id"], strict=True))
-    keep = [(base.get(i), d) in judged for i, d in zip(run["query_id"], run["doc_id"], strict=True)]
-    return run[keep]
-
-
 def summarize(per: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for keys, g in per.groupby(["config", "radius_km"]):
@@ -288,8 +279,7 @@ def summarize(per: pd.DataFrame) -> pd.DataFrame:
 
 
 def _agg(g: pd.DataFrame) -> dict:
-    return {"instances": len(g), "nDCG@10": g["nDCG@10"].mean(), "nDCG@10_condensed": g["nDCG@10_condensed"].mean(),
-            "Judged@10": g["Judged@10"].mean(), "bad@3": g["bad@3"].mean(), "top1_ok": g["top1_ok"].mean()}
+    return {"instances": len(g), **{c: g[c].mean() for c in ["nDCG@10", "nDCG@10_condensed", *METRIC_COLUMNS[1:]]}}
 
 
 def main() -> None:

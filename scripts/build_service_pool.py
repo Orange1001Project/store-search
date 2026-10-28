@@ -16,7 +16,7 @@
     python scripts/build_service_pool.py runs
     python scripts/build_service_pool.py pool --dry-run
     python scripts/build_service_pool.py pool --round service_v1 --depth 10
-    # 다른 사례 묶음(SETS: anchor, extra, extra_b, anchor_extra — instances.csv의 batch): 같은 단계를 --set으로
+    # 다른 사례 묶음(SETS: anchor, extra, extra_b, anchor_extra, extra_a, anchor_extra_a — instances.csv의 batch): 같은 단계를 --set으로
     python scripts/build_service_pool.py export --set anchor extra   # 묶음마다 colab_upload/service_eval_<묶음>/
     python scripts/build_service_pool.py runs --set anchor extra     # Colab run은 <benchmark_dir>/runs_<묶음>/에
     # 여러 묶음의 새 쌍을 한 라운드로(2026-10-27 service_v7)
@@ -67,6 +67,8 @@ SETS = {
     "extra": (Path("colab_upload/service_eval_extra"), "runs_extra"),
     "extra_b": (Path("colab_upload/service_eval_extra_b"), "runs_extra_b"),   # 추가 B(2026-10-26, 주 평가셋 비율)
     "anchor_extra": (Path("colab_upload/service_eval_anchor_extra"), "runs_anchor_extra"),   # 추가 쿼리의 anchor(2026-10-26)
+    "extra_a": (Path("colab_upload/service_eval_extra_a"), "runs_extra_a"),   # A head — 기존 벤치마크 val/test 업종(2026-10-27)
+    "anchor_extra_a": (Path("colab_upload/service_eval_anchor_extra_a"), "runs_anchor_extra_a"),   # A head의 anchor(판정 전, 기존 판정 기준)
 }
 RUN_DIRS = [d for _, d in SETS.values()]
 
@@ -85,13 +87,14 @@ def load_inputs(cfg: dict, bench: dict, set_name: str = "main") -> tuple[pd.Data
         pick = inst["batch"] == set_name
         queries = inst[pick].rename(columns={"query_id": "base_query_id"})
         queries = queries.rename(columns={"instance_id": "query_id"}).reset_index(drop=True)
-    else:   # main: 처음 판정한 v1 쿼리(benchmark_dir/queries.csv가 있으면 그 목록, 없으면 가져온 활성 쿼리 전부)
+    else:   # main: 처음 판정한 v1 쿼리. benchmark_dir/queries.csv(2026-10-27부터 전체 표)의 batch == v1, 예전 형식이면 그 목록 전부
         queries = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
         queries = queries[queries["status"] == "active"].reset_index(drop=True)
         v1_list = Path(cfg["judging"]["benchmark_dir"]) / "queries.csv"
         if v1_list.exists():
-            v1 = set(pd.read_csv(v1_list, encoding="utf-8-sig", keep_default_na=False)["query_id"])
-            queries =queries[queries["query_id"].isin(v1)].reset_index(drop=True)
+            table = pd.read_csv(v1_list, encoding="utf-8-sig", keep_default_na=False)
+            v1 = set(table.loc[table["batch"] == "v1", "query_id"] if "batch" in table else table["query_id"])
+            queries = queries[queries["query_id"].isin(v1)].reset_index(drop=True)
         queries = queries.assign(base_query_id=queries["query_id"])
     corpus = pd.read_parquet(bench["corpus_path"], columns=[
         "doc_id", "store_name", "item_text", "market_name", "latitude", "longitude", "geo_status", DOC_TEXT_COLUMN])
@@ -259,7 +262,7 @@ def pool(args, cfg: dict, bench: dict) -> None:
         write_annotation_xlsx(part, round_dir / f"판정_{name}.xlsx")
         logger.info("판정자 %s: 쿼리 %d개(이중 판정 %d 포함), %d쌍", name, len(qids), len(double), len(part))
     pairs.to_csv(round_dir / "pool.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
-    if args.sets == ["main"]:
+    if args.sets == ["main"] and not (bdir / "queries.csv").exists():   # 처음 한 번만 — 이후엔 export_service_query_table.py가 관리
         queries.drop(columns=["base_query_id"]).to_csv(bdir / "queries.csv", index=False, encoding="utf-8-sig",
                                                        lineterminator="\n")
     manifest = {

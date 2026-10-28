@@ -4,6 +4,7 @@
   - 작성자 완료본(data/query/writers_completed/…_completed.xlsx): W1~W3의 A·C·D·E
   - 팀 작성본(data/query/service_queryset_v1_team_completed.xlsx): 사람이 쓴 B 150개만 쓴다(나머지는 AI 초안이라 버림)
   - 설정 `import.extra_queries`: 진행자가 직접 더한 쿼리
+  - 설정 `import.old_benchmark_a`: 기존 벤치마크 val/test 업종에서 고른 A head 쿼리(scripts/select_old_benchmark_a.py, split 고정)
   - 서비스셋 템플릿(B_가맹점표본·D_시장표본 좌표), 기존 벤치마크 쿼리(중복 확인)
 
 출력
@@ -63,7 +64,16 @@ def main() -> None:
          "basis_id": "", "writer": "facilitator", "note": "진행자 추가"}
         for e in icfg.get("extra_queries", [])
     ])
-    rows = pd.concat([b_rows, writers, extra], ignore_index=True)
+    # A head(설정 import.old_benchmark_a): 기존 벤치마크 val/test 업종에서 고른 쿼리. split은 업종 단위로 그 파일의 값을 쓴다.
+    oa_cfg = icfg.get("old_benchmark_a")
+    old_a = pd.DataFrame(columns=["query", "bundle", "intent", "basis_id", "split"])
+    if oa_cfg and Path(oa_cfg["path"]).exists():
+        old_a = pd.read_csv(oa_cfg["path"], encoding="utf-8-sig", keep_default_na=False)
+    old_rows = old_a.assign(region_text="", location_id="", writer="old_benchmark",
+                            note=[f"기존 {s} {f} {t}" for s, f, t in zip(old_a.get("old_split", []), old_a.get("old_family", []),
+                                                                        old_a.get("old_type", []), strict=True)])
+    rows = pd.concat([b_rows, writers, extra, old_rows.drop(columns=[c for c in old_rows.columns if c.startswith("old_")]
+                                                            + ["split"])], ignore_index=True)
     drop = {(d["writer"], d["basis_id"]): d["reason"] for d in icfg.get("drop_rows", [])}
     if drop:   # 작성자 한 줄만 뺀다(같은 문자열의 다른 묶음 쿼리는 그대로 — exclude_queries는 문자열 단위라 둘 다 빠짐)
         keys = list(zip(rows["writer"], rows["basis_id"], strict=True))
@@ -87,7 +97,9 @@ def main() -> None:
     queries = build_service_queries(
         rows, icfg["bundle_priority"], old_benchmark_splits(families, inactive), icfg["exclude_queries"],
         template["B_가맹점표본"], template["D_시장표본"], points, cfg["split"]["dev_share"], cfg["random_seed"],
-        split_fixed_from(previous) if previous is not None else None, previous,
+        {**(split_fixed_from(previous) if previous is not None else {}),
+         **{f"{b}|{k}": sp for b, k, sp in zip(old_a["bundle"], old_a["basis_id"], old_a["split"], strict=True)}},
+        previous,
     )
     # 판정(qrels)·사례·dev/test가 기존 query_id에 묶여 있다 — 기존 쿼리가 없어지거나 문자열·묶음·split·위치가 바뀌면 멈춘다(dry-run도)
     changed = changes_from_previous(previous, queries) if previous is not None else []
@@ -106,8 +118,8 @@ def main() -> None:
 
     active = queries[queries["status"] == "active"]
     counts = active.groupby(["bundle", "split"]).size().unstack(fill_value=0)
-    logger.info("입력 %d줄(사람 B %d + 작성자 %d + 진행자 %d) → 쿼리 %d개(합친 중복 %d)", len(rows), len(b_rows),
-                len(writers), len(extra), len(queries), len(rows) - len(queries))
+    logger.info("입력 %d줄(사람 B %d + 작성자 %d + 진행자 %d + 기존 벤치마크 A %d) → 쿼리 %d개(합친 중복 %d)", len(rows),
+                len(b_rows), len(writers), len(extra), len(old_a), len(queries), len(rows) - len(queries))
     logger.info("묶음 × split(활성):\n%s", counts.to_string())
     excluded = queries[queries["status"] == "excluded"]
     if len(excluded):
