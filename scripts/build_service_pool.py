@@ -21,6 +21,8 @@
     python scripts/build_service_pool.py runs --set anchor extra     # Colab run은 <benchmark_dir>/runs_<묶음>/에
     # 여러 묶음의 새 쌍을 한 라운드로(2026-10-27 service_v7)
     python scripts/build_service_pool.py pool --set main anchor extra extra_b anchor_extra --round service_v7 --depth 10
+    # 새 시스템(kse16·arcticLee) 보충 — 주 평가셋(eval_set.csv) 사례만, 모든 묶음에서(2026-10-28 service_v9)
+    python scripts/build_service_pool.py pool --set main anchor extra extra_b anchor_extra extra_a anchor_extra_a         --eval-set-only --round service_v9 --depth 10
 
 run은 채점 반경(1km·2km)마다 그 안 상위 run_depth개를 합쳐 저장한다(2026-10-26 — 전에는 2km 상위 50개만 남겨 1km 순위가 잘렸다).
 """
@@ -221,6 +223,10 @@ def pool(args, cfg: dict, bench: dict) -> None:
     queries, corpus = pd.concat([q for q, _, _ in loaded], ignore_index=True), loaded[0][1]
     if queries["query_id"].duplicated().any():
         raise SystemExit("묶음 사이에 같은 사례 ID가 있습니다")
+    if args.eval_set_only:   # 보고에 쓰는 주 평가셋 사례만 — 새 시스템 비교용 보충 판정을 작게 한다
+        keep = set(pd.read_csv(cfg["eval_set"]["output"], encoding="utf-8-sig")["instance_id"])
+        queries = queries[queries["query_id"].isin(keep)].reset_index(drop=True)
+        all_runs = all_runs[all_runs["query_id"].isin(keep)].reset_index(drop=True)
     stale = {k: v for k, v in runs_outside_radius(all_runs, queries, corpus, jcfg["judge_radius_km"]).items() if v}
     if stale:
         raise SystemExit(f"반경 밖이거나 지금 쿼리에 없는 run 행이 있습니다 {stale} — 쿼리 위치가 바뀐 뒤의 옛 run입니다. "
@@ -273,6 +279,7 @@ def pool(args, cfg: dict, bench: dict) -> None:
         "judge_radius_km": jcfg["judge_radius_km"],
         "report_radii_km": jcfg["report_radii_km"],
         "depth": depth,
+        "eval_set_only": bool(args.eval_set_only),
         "depth_radii_km": radii,
         "queries": int(pairs["query_id"].nunique()),
         "pairs": len(pairs),
@@ -373,6 +380,7 @@ def main() -> None:
     parser.add_argument("--round", help="pool: 판정 라운드 이름(예: service_v1)")
     parser.add_argument("--depth", type=int, help="pool: 시스템마다 상위 몇 개(기본: 설정 judging.depth)")
     parser.add_argument("--dry-run", action="store_true", help="pool: 판정 건수 표만")
+    parser.add_argument("--eval-set-only", action="store_true", help="pool: 주 평가셋(eval_set.csv) 사례만 판정 후보로")
     parser.add_argument("--set", dest="sets", nargs="+", choices=sorted(SETS), default=["main"],
                         help="평가 사례 묶음(SETS). export·runs는 묶음마다 차례로, pool은 여러 묶음을 한 라운드로 합친다")
     args = parser.parse_args()
