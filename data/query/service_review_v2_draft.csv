@@ -175,22 +175,22 @@ C,sq_C178,바비큐 고기,C,test,,A,A2,,
 C,sq_C179,치과,C,test,,A,A1,,
 C,sq_C180,소풍 도시락,C,dev,,C,C1,,
 C,sq_C181,야간 약국,C,test,,A,A1,,
-B,sq_B153,GS,B,test,test/random,GS25로 수정,B1-3 다른 뜻,,찾는 가게: GS25
-B,sq_B160,청송,B,test,test/random,제외,B1-2 지역명,,찾는 가게: 청송반찬
-B,sq_B155,효준,B,test,test/random,효준횟집으로 수정,B1-2 사람 이름,,찾는 가게: 효준횟집
-B,sq_B156,경민,B,test,test/random,경민상회로 수정,B1-2 사람 이름,,찾는 가게: 경민상회
-B,sq_B161,이근철,B,test,test/random,이근철청과로 수정,B1-2 사람 이름,,찾는 가게: 이근철청과
-B,sq_B211,이지,B,test,test/random,제외,B1-2 일반 단어,,찾는 가게: 이지+
-B,sq_B210,재해석,B,test,test/random,회의 (상호 전체가 이 단어),B1-2 일반 단어,Y,찾는 가게: 재해석
-B,sq_B169,바운드,B,test,test/random,회의,B1-2 일반 단어,Y,찾는 가게: 바운드본점
-B,sq_B166,광원,B,test,test/random,광원세라믹으로 수정,B1-2 일반 단어,,찾는 가게: 광원세라믹
-B,sq_B168,제이엘,B,test,test/random,제이엘 필라테스로 수정,B1-1 고유하지 않음,,찾는 가게: 제이엘 필라테스
-B,sq_B171,공백,B,dev,dev/random,공백커피로 수정,B1-2 일반 단어,,찾는 가게: 공백커피
-B,sq_B117,부산 신평시장 손칼국수,B,test,test/random,D로 이동,B2 상호가 업종명,,찾는 가게: 손칼국수
-B,sq_B101,성남 속풀이 해장국,B,test,test/random,D로 이동,B2 상호가 업종명,,찾는 가게: 속풀이 해장국
-B,sq_B172,냉삼맛집,B,test,test/random,A + attribute로 이동,B2 상호가 업종명,,찾는 가게: 여기는 냉삼맛집
-B,sq_B182,영산포 닭갈비마을,B,test,test/random,D로 이동,B2 상호가 업종명,,찾는 가게: 닭갈비 마을
-B,sq_B201,강촌 엘리시안,B,test,test/random,회의 (수정 또는 제외),B3 유명 장소와 겹침,Y,찾는 가게: 엘리시안 강촌 렌탈샵
-B,sq_B192,월곡시장 만남의 광장,B,test,test/random,회의,B3 유명 장소와 겹침,Y,찾는 가게: 만남의 광장
-B,sq_B004,파리바게트,B,dev,dev/random,회의 (오타 정책),B4 철자 오기,Y,찾는 가게: 파리바게뜨
-B,sq_B007,베스킨라빈스,B,test,test/anchor,회의 (오타 정책),B4 철자 오기,Y,찾는 가게: 배스킨라빈스
+B,sq_B153,GS,B,test,test/random,유지,B1,,찾는 가게: GS25 / 1km 안 같은 단어 상호: 3 (모두 GS25)
+B,sq_B160,청송,B,test,test/random,유지,B1,,찾는 가게: 청송반찬 / 1km 안 같은 단어 상호: 1
+B,sq_B155,효준,B,test,test/random,유지,B1,,"찾는 가게: 효준횟집 / 1km 안 같은 단어 상호: 2 (효준수산, 효준횟집)"
+B,sq_B156,경민,B,test,test/random,유지,B1,,찾는 가게: 경민상회 / 1km 안 같은 단어 상호: 1
+B,sq_B161,이근철,B,test,test/random,유지,B1,,찾는 가게: 이근철청과 / 1km 안 같은 단어 상호: 1
+B,sq_B211,이지,B,test,test/random,유지,B1,,찾는 가게: 이지+ / 1km 안 같은 단어 상호: 1
+B,sq_B210,재해석,B,test,test/random,유지,B1,,찾는 가게: 재해석 / 1km 안 같은 단어 상호: 1
+B,sq_B169,바운드,B,test,test/random,유지,B1,,찾는 가게: 바운드본점 / 1km 안 같은 단어 상호: 1
+B,sq_B166,광원,B,test,test/random,유지,B1,,찾는 가게: 광원세라믹 / 1km 안 같은 단어 상호: 1
+B,sq_B168,제이엘,B,test,test/random,유지,B1,,찾는 가게: 제이엘 필라테스 / 1km 안 같은 단어 상호: 1
+B,sq_B171,공백,B,dev,dev/random,유지,B1,,찾는 가게: 공백커피 / 1km 안 같은 단어 상호: 1
+B,sq_B117,부산 신평시장 손칼국수,B,test,test/random,"유지, 판정 확인",B2,Y,"찾는 가게: 손칼국수 / 1km 안 같은 단어 상호: 3 (고향손칼국수, 정가네칼국수, 손칼국수)"
+B,sq_B101,성남 속풀이 해장국,B,test,test/random,유지,B1,,찾는 가게: 속풀이 해장국 / 1km 안 같은 단어 상호: 1
+B,sq_B172,냉삼맛집,B,test,test/random,유지,B1,,찾는 가게: 여기는 냉삼맛집 / 1km 안 같은 단어 상호: 2
+B,sq_B182,영산포 닭갈비마을,B,test,test/random,유지,B1,,찾는 가게: 닭갈비 마을 / 1km 안 같은 단어 상호: 1
+B,sq_B201,강촌 엘리시안,B,test,test/random,유지,B1,,찾는 가게: 엘리시안 강촌 렌탈샵 / 1km 안 같은 단어 상호: 1
+B,sq_B192,월곡시장 만남의 광장,B,test,test/random,유지,B1,,찾는 가게: 만남의 광장 / 1km 안 같은 단어 상호: 1
+B,sq_B004,파리바게트,B,dev,dev/random,유지 (데이터 표기),B3,,찾는 가게: 파리바게뜨 / 1km 안 같은 단어 상호: 1 (가게 이름이 파리바게트(불광현대))
+B,sq_B007,베스킨라빈스,B,test,test/anchor,오타 정책에 따름,B3,Y,"찾는 가게: 배스킨라빈스 / 1km 안 같은 단어 상호: 0 (랜덤 위치), anchor 사례로 채점"
