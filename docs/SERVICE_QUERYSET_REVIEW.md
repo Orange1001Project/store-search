@@ -1,8 +1,7 @@
 # 서비스 쿼리셋 보완 제안 (2026-10-28, 초안)
 
 서비스 쿼리셋 v1(`benchmark/service_ko_v1/queries.csv`, 695개)을 검토하고, 보완할 기준과 보충할 양을 정리한 제안이다.
-C → A 재분류는 평가용 묶음 칸(`eval_set.bundle_overrides`)으로 코드·설정에 넣었다. 주 평가셋·채점 결과 파일은 아직 다시 만들지 않았다
-(팀 합의 뒤에 돌린다). 쿼리별 제안은 `data/query/service_review_v2_draft.csv`에 있다.
+C → A 재분류는 평가용 묶음 칸(`eval_set.bundle_overrides`)으로 코드·설정에 넣고, 주 평가셋·채점 결과를 다시 만들었다(6절). 쿼리별 제안은 `data/query/service_review_v2_draft.csv`에 있다.
 
 - 기준 데이터: `f94c2eb`의 `queries.csv`, `qrels.csv`, `results/service_eval/per_instance.csv`
 - 점수: v1(bge-m3 mj), 1km, 정답이 있는 사례, dev+test. 쿼리마다 사례 점수 평균.
@@ -171,10 +170,52 @@ B는 표본 가게·체인에서 거꾸로 쓴 쿼리라 어느 가게를 찾는
 - test는 stage 1에서 이미 채점했다. 쿼리를 옮기거나 빼는 것은 점수가 아니라 이 문서의 규칙으로만 하고, 쿼리마다 이유를 남긴다.
   고치기 전 결과는 따로 보관한다. 문자열이 바뀌는 쿼리는 새 query_id로 다시 판정한다.
 
+## 6. 다시 만든 결과 (2026-10-29)
+
+평가용 묶음을 적용해 주 평가셋과 채점 결과를 다시 만들었다(로컬, Colab 없음). 판정·run은 그대로다. 바꾸기 전 결과는 `*_before_eval_bundle.csv`.
+
+```bash
+python scripts/build_service_eval_set.py
+python scripts/score_service_eval.py
+python scripts/eval_service_pipeline.py --exp hybrid    # dev, hybrid2·qu도 같은 방식
+python scripts/eval_service_pipeline.py --exp hybrid2 --split test --only "v1" --only "v1+name b=0.5"
+python scripts/eval_service_pipeline.py --exp qu --split test --only "v1" --only "v1+bm25 union b=0" --only "v1+name b=0.5" --only "v1+name(qu) b=0.5"
+```
+
+**주 평가셋 test 1km (`qu_test.csv`, v1+name b=0.5 = stage 1 기준)**
+
+| 묶음 | 사례 | nDCG@10 전 → 후 | bad@3 전 → 후 |
+|---|---|---|---|
+| 전체 | 320 | 0.825 → 0.822 | 0.053 → 0.053 |
+| A | 112 | 0.784 → 0.806 | 0.089 → 0.071 |
+| B | 160 | 0.868 → 0.868 | 0.012 → 0.012 |
+| C | 16 | 0.730 → **0.526** | 0.250 → **0.375** |
+| D | 32 | 0.793 → 0.793 | 0.031 → 0.031 |
+
+- 전체 점수는 거의 그대로다(쿼리 14개만 바뀜). C는 상황형만 남아 크게 떨어진다 — C 점수가 이제 상황 검색 실력을 보여준다.
+- v1 단독도 같은 방향이다(전체 0.808 → 0.806, C 0.730 → 0.526).
+
+**전체 사례 test 1km (`results/service_eval/summary.csv`, 주 평가셋으로 거르지 않음)**
+
+| 시스템 | 전체 | A 전 → 후 (사례 181 → 267) | C 전 → 후 (사례 138 → 52) |
+|---|---|---|---|
+| v1 (bge-m3 mj) | 0.793 (같음) | 0.803 → 0.814 | 0.723 → 0.534 |
+| Arctic | 0.764 (같음) | 0.792 → 0.789 | 0.658 → 0.450 |
+| kse16 | 0.753 (같음) | 0.767 → 0.771 | 0.657 → 0.456 |
+
+같은 사례를 묶음만 다르게 세므로 전체는 바뀌지 않는다. 상황형 C에서는 v1이 다른 후보보다 약 0.08 높다.
+
+**다시 만들지 않은 것**
+
+- `rerank_*`: reranker 점수(`results/service_pipeline/rerank/`, 2026-10-23 Colab)에 그 뒤 추가된 쿼리(extra_b 64, extra_a 78)가
+  없어 다시 돌릴 수 없다(점수 없는 쌍 794개). 이번 변경과 무관하게 10/26 이후로 이미 예전 셋 기준이다. 다시 하려면 `--export-pairs` → Colab.
+- `main_set_baselines.csv`: 만드는 스크립트가 없어 그대로 둔다.
+- `hybrid2_test_before_eval_bundle.csv`는 10/26 이전 주 평가셋 기준이라 위 비교에 쓰지 않았다.
+
 ## 5. 정할 것
 
 - [ ] 1절 기준(A1~A3, C1~C3)과 109개 목록 확인(애매했던 13개는 정함)
-- [ ] 평가용 묶음 칸 방식으로 반영(코드·설정 넣음) — 결과 파일을 다시 만들 시점
+- [x] 평가용 묶음 칸 방식으로 반영, 결과 파일 다시 만듦(2026-10-29, 6절)
 - [x] 옮긴 쿼리의 재판정 — 하지 않는다(2026-10-29)
 - [x] 주 평가셋 비율(설정값)에서 C 5% 유지, C 보충 — 하지 않는다(2026-10-29)
 - [ ] D를 보충할지
