@@ -23,7 +23,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from store_search_ai.evaluation.service_eval import METRIC_COLUMNS, condense, instance_qrels, paired, score_system
+from store_search_ai.evaluation.service_eval import (
+    METRIC_COLUMNS,
+    apply_eval_bundle,
+    condense,
+    instance_qrels,
+    load_bundle_overrides,
+    paired,
+    score_system,
+)
 from store_search_ai.pipeline.common import load_config
 
 logger = logging.getLogger(__name__)
@@ -51,6 +59,8 @@ def main() -> None:
     bdir = Path(jcfg["benchmark_dir"])
     bench = load_config(args.benchmark_config)
     instances = pd.read_csv(bdir / "instances.csv", encoding="utf-8-sig", keep_default_na=False)
+    # 묶음별 집계는 평가용 묶음(eval_set.bundle_overrides)으로, 원래 묶음은 source_bundle
+    instances = apply_eval_bundle(instances, load_bundle_overrides(cfg["eval_set"].get("bundle_overrides")))
     queries = pd.read_csv(bdir / "queries.csv", encoding="utf-8-sig", keep_default_na=False).set_index("query_id")
     instances["attribute"] = instances["query_id"].map(queries["attribute"]).fillna("")
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")
@@ -77,7 +87,8 @@ def main() -> None:
             s = s.merge(c[["instance_id", "nDCG@10"]].rename(columns={"nDCG@10": "nDCG@10_condensed"}), on="instance_id")
             per.append(s.assign(system=system, radius_km=radius))
     per = pd.concat(per, ignore_index=True).merge(
-        instances[["instance_id", "query_id", "query", "bundle", "split", "context", "attribute"]], on="instance_id")
+        instances[["instance_id", "query_id", "query", "bundle", "source_bundle", "split", "context", "attribute"]],
+        on="instance_id")
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     per.to_csv(out / "per_instance.csv", index=False, encoding="utf-8-sig", lineterminator="\n")

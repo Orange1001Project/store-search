@@ -34,7 +34,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from store_search_ai.evaluation.service_eval import METRIC_COLUMNS, attach_distance, condense, instance_qrels, score_system
+from store_search_ai.evaluation.service_eval import (
+    METRIC_COLUMNS,
+    apply_eval_bundle,
+    attach_distance,
+    condense,
+    instance_qrels,
+    load_bundle_overrides,
+    score_system,
+)
 from store_search_ai.pipeline.common import load_config
 from store_search_ai.retrieval.fusion import _rerank, boost, convex, name_match, rrf
 
@@ -307,6 +315,8 @@ def main() -> None:
     bdir = Path(cfg["judging"]["benchmark_dir"])
     bench = load_config(args.benchmark_config)
     all_instances = pd.read_csv(bdir / "instances.csv", encoding="utf-8-sig", keep_default_na=False)
+    # 묶음별 집계는 평가용 묶음(eval_set.bundle_overrides)으로
+    all_instances = apply_eval_bundle(all_instances, load_bundle_overrides(cfg["eval_set"].get("bundle_overrides")))
     instances = all_instances[all_instances["split"] == args.split]
     if args.set == "main":
         main_ids = pd.read_csv(cfg["eval_set"]["output"], encoding="utf-8-sig")["instance_id"]

@@ -23,7 +23,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from store_search_ai.evaluation.service_eval import build_eval_set, instance_qrels, no_answer_counts
+from store_search_ai.evaluation.service_eval import (
+    apply_eval_bundle,
+    build_eval_set,
+    instance_qrels,
+    load_bundle_overrides,
+    no_answer_counts,
+)
 from store_search_ai.pipeline.common import load_config
 
 logger = logging.getLogger(__name__)
@@ -54,6 +60,8 @@ def main() -> None:
     bench = load_config(args.benchmark_config)
     bdir = Path(cfg["judging"]["benchmark_dir"])
     instances = pd.read_csv(bdir / "instances.csv", encoding="utf-8-sig", keep_default_na=False)
+    # 평가용 묶음(eval_set.bundle_overrides) — 주 평가셋의 묶음 비율은 이 묶음으로 센다
+    instances = apply_eval_bundle(instances, load_bundle_overrides(ecfg.get("bundle_overrides")))
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")
     coords = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "latitude", "longitude", "geo_status"])
     coords = coords[coords["geo_status"] == "VALID"]
