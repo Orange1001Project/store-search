@@ -91,6 +91,10 @@
 ## 5. 진행 기록
 (실험마다 결과를 여기에 적는다 — 구성, dev 지표, 채택 여부)
 
+> 주의(2026-10-30): 이 절의 1-1~1-5 수치(test 1km 0.814 등)는 **10/23 셋**(dev 1km 139 사례, test 1km 390 사례, 그때 판정) 기준이다.
+> `results/service_pipeline/hybrid*_{dev,test}.csv`는 그 뒤 새 주 평가셋·평가용 묶음으로 덮어써져 이 수치와 맞지 않는다.
+> 당시 파일은 git `c132edd`에 있다(`docs/SERVICE_QUERYSET_REVIEW.md` 6절).
+
 ### 1-1 하이브리드 (2026-10-23, dev 1km 139 사례) — **채택: v1 + 상호 일치 가산점(β=0.5)**
 
 `python scripts/eval_service_pipeline.py --exp hybrid` / `--exp hybrid2` → `results/service_pipeline/hybrid*_dev.csv`
