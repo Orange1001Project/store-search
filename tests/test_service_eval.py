@@ -14,7 +14,15 @@ from store_search_ai.data.service_qrels import (
     build_qrels,
     merge_judgments,
 )
-from store_search_ai.evaluation.service_eval import METRIC_COLUMNS, build_eval_set, condense, instance_qrels, paired, score_system
+from store_search_ai.evaluation.service_eval import (
+    METRIC_COLUMNS,
+    apply_eval_bundle,
+    build_eval_set,
+    condense,
+    instance_qrels,
+    paired,
+    score_system,
+)
 
 
 def _sheet(rel, ids):
@@ -172,3 +180,49 @@ def test_score_system_row_and_column_order_is_fixed():
     out = score_system(run, instance_qrels(inst, qrels, corpus), inst, corpus, 1)
     assert out["instance_id"].tolist() == ["q1", "q2"]
     assert out.columns.tolist() == ["instance_id", *METRIC_COLUMNS, "n_relevant"]
+
+
+def _bundle_instances():
+    return pd.DataFrame({"instance_id": ["c1", "c1@a", "c2", "a1"], "query_id": ["sq_C001", "sq_C001", "sq_C002", "sq_A001"],
+                         "bundle": ["C", "C", "C", "A"]})
+
+
+def test_apply_eval_bundle_moves_listed_queries_and_keeps_source():
+    ov = pd.DataFrame({"query_id": ["sq_C001"], "query": ["치과"], "bundle": ["C"], "eval_bundle": ["A"], "rule": ["A1"]})
+    out = apply_eval_bundle(_bundle_instances(), ov)
+    assert out["bundle"].tolist() == ["A", "A", "C", "A"]           # 같은 쿼리의 anchor 사례도 함께
+    assert out["source_bundle"].tolist() == ["C", "C", "C", "A"]
+    assert apply_eval_bundle(_bundle_instances(), None)["bundle"].tolist() == ["C", "C", "C", "A"]
+
+
+@pytest.mark.parametrize("row, message", [
+    ({"query_id": "sq_C001", "bundle": "A", "eval_bundle": "A"}, "지금 묶음과 다름"),   # 쿼리 표가 바뀐 뒤 목록을 안 고침
+    ({"query_id": "sq_C999", "bundle": "C", "eval_bundle": "A"}, "사례에 없음"),
+    ({"query_id": "sq_C001", "bundle": "C", "eval_bundle": "Z"}, "모르는 묶음"),
+])
+def test_apply_eval_bundle_rejects_stale_or_unknown_rows(row, message):
+    with pytest.raises(ValueError, match=message):
+        apply_eval_bundle(_bundle_instances(), pd.DataFrame([row]))
+
+
+def test_apply_eval_bundle_rejects_duplicate_query_ids():
+    ov = pd.DataFrame({"query_id": ["sq_C001", "sq_C001"], "bundle": ["C", "C"], "eval_bundle": ["A", "A"]})
+    with pytest.raises(ValueError, match="두 번"):
+        apply_eval_bundle(_bundle_instances(), ov)
+
+
+def test_eval_bundle_list_in_config_matches_queries():
+    """설정의 평가용 묶음 목록이 지금 쿼리 표와 맞는다(묶음 C → A, 활성 쿼리)."""
+    from pathlib import Path
+
+    from store_search_ai.pipeline.common import load_config
+
+    path = load_config("configs/query/service_queryset_v1.yaml")["eval_set"].get("bundle_overrides")
+    if not path or not Path(path).exists():
+        pytest.skip("평가용 묶음 목록 없음")
+    ov = pd.read_csv(path, encoding="utf-8-sig", keep_default_na=False, dtype=str)
+    queries = pd.read_csv("benchmark/service_ko_v1/queries.csv", encoding="utf-8-sig", keep_default_na=False)
+    inst = queries[queries["status"] == "active"][["query_id", "bundle"]].assign(instance_id=lambda f: f["query_id"])
+    out = apply_eval_bundle(inst, ov)
+    assert set(ov["eval_bundle"]) == {"A"} and set(ov["bundle"]) == {"C"}
+    assert (out["bundle"] != out["source_bundle"]).sum() == len(ov)

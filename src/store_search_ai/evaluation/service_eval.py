@@ -36,6 +36,7 @@ MEASURES = [ir_measures.parse_measure(s) for s in METRIC_SPECS.values()]
 _MEASURE_NAME = {str(m): name for m, name in zip(MEASURES, METRIC_SPECS, strict=True)}
 # 요약표에 올리는 사례별 지표 순서(score_system 출력 열). nDCG@10_condensed는 condense()로 따로 채점해 붙인다.
 METRIC_COLUMNS = [*METRIC_SPECS, "bad@3", "top1_ok"]
+EVAL_BUNDLES = ("A", "B", "C", "D", "E")
 
 
 def attach_distance(frame: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame, key: str = "instance_id") -> pd.DataFrame:
@@ -47,6 +48,43 @@ def attach_distance(frame: pd.DataFrame, instances: pd.DataFrame, coords: pd.Dat
     h = np.sin((b[:, 0] - a[:, 0]) / 2) ** 2 + np.cos(a[:, 0]) * np.cos(b[:, 0]) * np.sin((b[:, 1] - a[:, 1]) / 2) ** 2
     f["dist_km"] = 2 * 6371.0 * np.arcsin(np.sqrt(h))
     return f
+
+
+def load_bundle_overrides(path: str | None) -> pd.DataFrame | None:
+    """평가용 묶음 목록(설정 `eval_set.bundle_overrides`). 경로를 비우면 None — 원래 묶음 그대로."""
+
+    if not path:
+        return None
+    return pd.read_csv(path, encoding="utf-8-sig", keep_default_na=False, dtype=str)
+
+
+def apply_eval_bundle(instances: pd.DataFrame, overrides: pd.DataFrame | None) -> pd.DataFrame:
+    """사례의 `bundle`을 평가용 묶음으로 바꾸고 원래 묶음은 `source_bundle`에 남긴다.
+
+    query_id·판정·split은 그대로 두고 주 평가셋·채점에서만 묶음을 옮긴다(C 중 업종·품목 이름을 그대로 쓴 쿼리 → A,
+    docs/SERVICE_QUERYSET_REVIEW.md 1절). 목록(query_id, bundle, eval_bundle)의 bundle이 지금 묶음과 다르면 —
+    쿼리 표가 바뀌었는데 목록을 안 고친 경우 — 멈춘다. 없는 query_id, 모르는 묶음, 같은 query_id 두 줄도 멈춘다.
+    """
+
+    out = instances.assign(source_bundle=instances["bundle"])
+    if overrides is None or overrides.empty:
+        return out
+    unknown = sorted(set(overrides["eval_bundle"]) - set(EVAL_BUNDLES))
+    if unknown:
+        raise ValueError(f"평가용 묶음 목록에 모르는 묶음 {unknown}")
+    dup = sorted(overrides.loc[overrides["query_id"].duplicated(), "query_id"])
+    if dup:
+        raise ValueError(f"평가용 묶음 목록에 같은 query_id가 두 번: {dup[:10]}")
+    current = instances.drop_duplicates("query_id").set_index("query_id")["bundle"]
+    missing = sorted(set(overrides["query_id"]) - set(current.index))
+    if missing:
+        raise ValueError(f"평가용 묶음 목록의 query_id가 사례에 없음: {missing[:10]}")
+    ov = overrides.set_index("query_id")
+    stale = [q for q in ov.index if current[q] != ov.at[q, "bundle"]]
+    if stale:
+        raise ValueError(f"평가용 묶음 목록의 bundle이 지금 묶음과 다름(목록을 다시 확인): {stale[:10]}")
+    out["bundle"] = out["query_id"].map(ov["eval_bundle"]).fillna(out["bundle"])
+    return out
 
 
 def instance_qrels(instances: pd.DataFrame, qrels: pd.DataFrame, coords: pd.DataFrame) -> pd.DataFrame:

@@ -209,6 +209,10 @@ eval_set:
   shares: {B: 0.50, A: 0.35, D: 0.10, C: 0.05}
   # A 안 층(2026-10-28): head = 기존 벤치마크 val/test 업종, tail = 사람이 새로 쓴 드문 업종. head가 모자라면 tail로 채운다.
   strata: {A: {head: 0.5, tail: 0.5}}
+  # 평가용 묶음(2026-10-28 제안, docs/SERVICE_QUERYSET_REVIEW.md 1절): C 중 업종·품목 이름을 그대로 쓴 쿼리를 A로 센다.
+  # query_id·판정·split·판정 규칙은 그대로 — 주 평가셋·채점(build_service_eval_set, score_service_eval, eval_service_pipeline)의
+  # 묶음만 바뀐다. 파일 열: query_id, query, bundle(지금 묶음, 어긋나면 멈춤), eval_bundle, rule. 비우면 원래 묶음 그대로.
+  bundle_overrides: data/query/service_eval_bundle_v1.csv
   radius_km: 1
   salt: eval_set_v1
   output: benchmark/service_ko_v1/eval_set.csv
