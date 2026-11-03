@@ -1,0 +1,163 @@
+import pandas as pd
+
+from store_search_ai.data.service_import import (
+    select_old_benchmark_queries,
+    assign_locations,
+    auto_location,
+    assign_query_ids,
+    build_service_queries,
+    changes_from_previous,
+    detect_region_text,
+    merge_duplicates,
+    split_groups,
+    team_b_rows,
+    writer_rows,
+)
+
+
+def _rows(items):
+    """(query, bundle, basis, writer[, location]) → writer_rows와 같은 열의 표."""
+
+    out = []
+    for item in items:
+        query, bundle, basis, writer, *loc = item
+        out.append({"query": query, "bundle": bundle, "intent": "", "region_text": "", "location_id": loc[0] if loc else "",
+                    "basis_id": basis, "writer": writer, "note": ""})
+    return pd.DataFrame(out)
+
+
+def _markets():
+    return pd.DataFrame({"시장ID": ["M001", "M002"], "위도": [37.5, 35.1], "경도": [127.0, 129.0]})
+
+
+def _points():
+    return pd.DataFrame({"doc_id": ["z9", "a1", "m5"], "latitude": [36.0, 37.0, 35.0], "longitude": [127.0, 128.0, 129.0]})
+
+
+def _stores():
+    return pd.DataFrame({"표본ID": ["S001"], "가맹점명": ["대박축산"], "주소": ["서울특별시 중랑구 묵동 1"],
+                         "시장명": ["묵동시장"], "위도": [37.6], "경도": [127.08]})
+
+
+def test_writer_rows_keeps_only_filled_writer_sheets():
+    sheet = pd.DataFrame({"작성자": ["W1", "W1"], "묶음": ["C", "E"], "근거ID": ["C001", None], "재료": ["가", None],
+                          "질의": ["구두 수선", None], "의도": ["수선집", None], "지역표현": [None, None],
+                          "가정위치ID": [None, None], "작성방식": ["직접", "직접"], "비고": [None, None]})
+    out = writer_rows({"W1_1부_C_E": sheet, "배정표": pd.DataFrame({"x": [1]})})
+    assert out["query"].tolist() == ["구두 수선"]
+    assert out.loc[0, "writer"] == "W1" and out.loc[0, "basis_id"] == "C001"
+
+
+def test_team_b_rows_takes_only_human_b():
+    team = pd.DataFrame({"작성자": ["B_개별점포", "A_식생활"], "묶음": ["B", "A"], "질의": ["묵동 대박축산", "식품점"],
+                         "의도": ["대박축산", "식료품"], "지역표현": [None, None], "가정위치ID": [None, "M001"],
+                         "근거ID": ["S001", "A001"], "작성방식": ["개별 가맹점 표본 기반(독립 표본)", "AI 역할별 업종 초안"],
+                         "비고": [None, None]})
+    b, draft = team_b_rows(team, ["개별 가맹점 표본 기반(독립 표본)"])
+    assert b["query"].tolist() == ["묵동 대박축산"] and b.loc[0, "writer"] == "team:B_개별점포"
+    assert draft["질의"].tolist() == ["식품점"]
+
+
+def test_detect_region_text_uses_address_and_market_not_store_name():
+    assert detect_region_text("묵동 대박축산", "대박축산", "서울특별시 중랑구 묵동 1", "묵동시장") == "묵동"
+    assert detect_region_text("묵동시장 대박축산", "대박축산", "서울 중랑구", "묵동시장") == "묵동시장"
+    assert detect_region_text("대박축산", "대박축산", "서울 중랑구 묵동", "묵동시장") == ""
+
+
+def test_merge_duplicates_counts_writers_and_prefers_bundle_order():
+    rows = _rows([("야식", "A", "A001", "W2"), ("야식", "C", "C022", "W1"), ("야 식", "C", "C022", "W3"),
+                  ("화분", "C", "C027", "W1")])
+    out = merge_duplicates(rows, ["B", "D", "C", "A", "E"]).set_index("query")
+    assert out.loc["야식", "bundle"] == "C"            # C가 A보다 앞
+    assert out.loc["야식", "n_writers"] == 3
+    assert out.loc["야식", "also_in_bundles"] == "A"
+    assert len(out) == 2
+
+
+def test_split_groups_keeps_same_basis_together_and_is_deterministic():
+    rows = _rows([(f"q{i}", "C", f"C{i // 3:03d}", "W1") for i in range(30)])
+    queries = merge_duplicates(rows, ["C"])
+    a = split_groups(queries, 0.25, seed=7)
+    assert a.equals(split_groups(queries, 0.25, seed=7))
+    by_basis = pd.DataFrame({"basis": queries["basis_id"], "split": a}).groupby("basis")["split"].nunique()
+    assert (by_basis == 1).all()                         # 한 카드의 쿼리는 한쪽에만
+    assert 6 <= (a == "dev").sum() <= 9
+
+
+def test_assign_locations_by_bundle():
+    queries = merge_duplicates(_rows([("묵동 대박축산", "B", "S001", "team:x"), ("망원시장 떡집", "D", "M002", "W1", "M002"),
+                                      ("화분", "C", "C027", "W1")]), ["B", "D", "C"])
+    out = assign_locations(queries, _stores(), _markets(), _points()).set_index("query")
+    assert out.loc["묵동 대박축산", "location_source"] == "store" and out.loc["묵동 대박축산", "region_text"] == "묵동"
+    assert out.loc["망원시장 떡집", "location_id"] == "M002" and out.loc["망원시장 떡집", "location_source"] == "market"
+    assert out.loc["화분", "location_source"] == "auto_store"
+    sorted_points = _points().sort_values("doc_id").reset_index(drop=True)
+    assert out.loc["화분", "location_id"] == f"doc:{auto_location('화 분', sorted_points)['doc_id']}"   # 공백과 무관
+    shuffled = assign_locations(queries, _stores(), _markets(), _points().iloc[::-1]).set_index("query")
+    assert shuffled.loc["화분", "location_id"] == out.loc["화분", "location_id"]      # 코퍼스 행 순서와 무관
+
+
+def test_build_excludes_old_train_and_configured_queries():
+    rows = _rows([("반찬가게", "C", "C037", "W1"), ("커튼", "C", "C026", "W1"), ("백화점", "E", "", "W1"),
+                  ("화분", "C", "C027", "W2")])
+    out = build_service_queries(
+        rows, ["C", "E"], {"반찬가게": "train", "커튼": "test"}, [{"query": "백화점", "reason": "가맹점 있음"}],
+        _stores(), _markets(), _points(), 0.25, 1,
+    ).set_index("query")
+    assert out.loc["반찬가게", "status"] == "excluded" and out.loc["반찬가게", "split"] == ""
+    assert out.loc["백화점", "exclude_reason"] == "가맹점 있음"
+    assert out.loc["커튼", "status"] == "active" and out.loc["커튼", "old_benchmark_split"] == "test"
+    assert set(out["query_id"]) == {"sq_C001", "sq_C002", "sq_C003", "sq_E001"}
+
+
+def test_split_groups_keeps_fixed_groups_when_new_groups_are_added():
+    rows = _rows([(f"q{i}", "C", f"C{i // 3:03d}", "W1") for i in range(30)])
+    before = merge_duplicates(rows, ["C"])
+    first = split_groups(before, 0.25, seed=7)
+    fixed = {f"C|{b}": sp for b, sp in zip(before["basis_id"], first, strict=True)}
+    more = merge_duplicates(_rows([*[(f"q{i}", "C", f"C{i // 3:03d}", "W1") for i in range(30)],
+                                   *[(f"n{i}", "C", f"C{100 + i // 3:03d}", "W2") for i in range(15)]]), ["C"])
+    second = split_groups(more, 0.25, seed=7, fixed=fixed)
+    assert second[:30].tolist() == first.tolist()                      # 기존 쿼리는 그대로
+    assert 0.15 <= (second == "dev").mean() <= 0.35
+
+
+def test_query_ids_are_inherited_and_new_ones_append_after_max():
+    prev = pd.DataFrame({"query_id": ["sq_E001", "sq_E002", "sq_B001"], "query": ["우체국", "신세계", "GS25"],
+                         "bundle": ["E", "E", "B"]})
+    now = pd.DataFrame({"query": ["우체국", "공항", "신세계", "GS 25", "빽다방"], "bundle": ["E", "E", "E", "B", "B"]})
+    assert assign_query_ids(now, prev) == ["sq_E001", "sq_E003", "sq_E002", "sq_B001", "sq_B002"]   # 줄 순서와 무관
+    moved = pd.DataFrame({"query_id": ["sq_E001", "sq_B001"], "query": ["우체국", "신세계"], "bundle": ["E", "B"],
+                          "status": "active", "split": "test", "latitude": 37.0, "longitude": 127.0})
+    prev2 = moved.assign(query=["우체국", "GS25"], split=["dev", "test"])
+    msgs = changes_from_previous(prev2, moved)
+    assert len(msgs) == 2 and any("split" in m for m in msgs)
+
+
+def test_changes_from_previous_reports_status_and_missing():
+    prev = pd.DataFrame({"query_id": ["sq_C001", "sq_C002"], "query": ["떡", "죽"], "bundle": "C", "status": "active",
+                         "split": "test", "latitude": 37.0, "longitude": 127.0})
+    now = prev.iloc[:1].assign(status="excluded")
+    msgs = changes_from_previous(prev, now)
+    assert any("status" in m for m in msgs) and any("없어짐" in m for m in msgs)
+
+
+def test_select_old_benchmark_queries_short_plus_natural_per_family():
+    fams = [
+        {"family": "가구", "split": "test", "intent_definition": "생활·마트 중 '가구'를 판매·제공하는 매장", "queries": [
+            {"type": "T1 정확표기", "text": "가구"}, {"type": "T2 동의어", "text": "가구점"},
+            {"type": "T4 구어·문장", "text": "가구 사는 데"}, {"type": "T6 기계변형", "text": "가구추천"}]},
+        {"family": "족발", "split": "val", "intent_definition": "x", "queries": [
+            {"type": "T2 동의어", "text": "배달"}, {"type": "T2 동의어", "text": "보쌈"}, {"type": "T4 구어·문장", "text": "족발"}]},
+        {"family": "가방", "split": "train", "intent_definition": "x", "queries": [{"type": "T1 정확표기", "text": "가방"}]},
+        {"family": "치과", "split": "test", "intent_definition": "x", "queries": [
+            {"type": "T1 정확표기", "text": "치과"}, {"type": "T4 구어·문장", "text": "이빨 아플 때 가는 곳"}]},
+    ]
+    out = select_old_benchmark_queries(fams, {"q_치과_02"}, existing={"치과"}, splits={"val": "dev", "test": "test"},
+                                       per_family=2, salt="s", skip={"배달"})
+    got = {f: list(g["query"]) for f, g in out.groupby("old_family")}
+    assert got["가구"] == ["가구", "가구 사는 데"]          # T1 + 자연스러운 형태, T6 제외
+    assert got["족발"] == ["족발", "보쌈"]                 # T4 하나 + 남은 자리는 T2(skip한 '배달' 제외)
+    assert "가방" not in got and "치과" not in got         # train 업종 제외 / 기존 문자열·비활성 제외로 남는 쿼리 없음
+    assert set(out.loc[out["old_family"] == "족발", "split"]) == {"dev"}
+    assert out["intent"].iloc[0] == "'가구' 업종 매장(판매·제공)" and (out["basis_id"] == "old:" + out["old_family"]).all()

@@ -1,0 +1,45 @@
+{
+  "round": "service_v5",
+  "set": "service_pipeline 1-4 보충 판정(reranker 구성, dev+test 모든 사례)",
+  "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
+  "created_at": "2026-10-23T04:16:32.973335+00:00",
+  "first_stage": "v1+name b=0.5",
+  "rerankers": [
+    "bge-reranker-v2-m3"
+  ],
+  "systems": [
+    "rr bge-reranker-v2-m3 k=20",
+    "rr bge-reranker-v2-m3 k=30",
+    "rr bge-reranker-v2-m3 k=50",
+    "rr bge-reranker-v2-m3 k=50 +name b=0.5",
+    "rr bge-reranker-v2-m3 k=50 mix a=0.3",
+    "rr bge-reranker-v2-m3 k=50 mix a=0.5",
+    "rr bge-reranker-v2-m3 k=50 mix a=0.7"
+  ],
+  "report_radii_km": [
+    1,
+    2
+  ],
+  "depth": 10,
+  "queries": 529,
+  "pairs": 4463,
+  "double_annotation_queries": 106,
+  "double_annotation_pairs": 934,
+  "annotators": {
+    "A": {
+      "writer_id": null,
+      "queries": 318,
+      "pairs": 2699
+    },
+    "B": {
+      "writer_id": null,
+      "queries": 317,
+      "pairs": 2698
+    }
+  },
+  "rerank_scores_sha256": {
+    "rerank_scores_bge-reranker-v2-m3.csv": "e4811e6b4aac3b976527da72f51ade24eb9e634e2f07ef5c374d187a65ba0fe8"
+  },
+  "instances_sha256": "84178579ea0fe8aa5ca8f6304c4611e3ddf21c7f03520f16b55eadc9555983ae",
+  "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)"
+}

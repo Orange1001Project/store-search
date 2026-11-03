@@ -8,6 +8,7 @@ docs/PIPELINE.md 및 각 스크립트 상단 주석 참고).
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -38,6 +39,25 @@ def get_annotation_round_dirs(benchmark_dir: str | Path, round_name: str) -> tup
     annotations_dir = benchmark_dir / "annotations" / round_name
     provisional_qrels_dir = benchmark_dir / "qrels" / round_name
     return annotations_dir, provisional_qrels_dir
+
+
+def read_sheet_csv(path: str | Path) -> pd.DataFrame:
+    """사람이 엑셀로 저장한 CSV를 읽는다 — 쉼표/탭 구분, UTF-8(BOM)/cp949(엑셀 한국어 기본) 어느 쪽이든.
+    열 이름 끝의 빈 열(탭 저장 시 생김)은 버린다."""
+
+    raw = Path(path).read_bytes()
+    for enc in ("utf-8-sig", "cp949"):
+        try:
+            text = raw.decode(enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        raise ValueError(f"{path}: 인코딩을 알 수 없습니다(UTF-8·cp949 아님)")
+    header = text.split("\n", 1)[0]
+    sep = "\t" if header.count("\t") > header.count(",") else ","
+    frame = pd.read_csv(io.StringIO(text), sep=sep)
+    return frame.loc[:, ~frame.columns.astype(str).str.startswith("Unnamed")]
 
 
 def load_config(path: str | Path) -> dict:

@@ -1,0 +1,34 @@
+{
+  "round": "service_v1",
+  "created_at": "2026-10-20T06:49:36.010494+00:00",
+  "judge_radius_km": 2,
+  "report_radii_km": [
+    1,
+    2
+  ],
+  "depth": 10,
+  "queries": 498,
+  "pairs": 10558,
+  "double_annotation_queries": 100,
+  "double_annotation_pairs": 2192,
+  "annotators": {
+    "A": {
+      "writer_id": null,
+      "queries": 299,
+      "pairs": 6375
+    },
+    "B": {
+      "writer_id": null,
+      "queries": 299,
+      "pairs": 6375
+    }
+  },
+  "runs_sha256": {
+    "bge_m3.csv": "a1999a306ad46f2b21816bea267bebaec3ea4f671b21b878b39f1fb8a6834197",
+    "bge_m3_ft_mj_20261014_0743.csv": "407ec9d46b949f7ebe394baf2eb8456cd54f23516fa872a4906cca477463be70",
+    "char_bm25.csv": "00ea460dfa603b315d4d323dad10654ab5d5b9dfa8cf3b3937f768260e6ac7fa",
+    "keyword.csv": "ec61a23252b8baff74977557e6fd815eac47bb3dcdb6cefddba6eccf2c83d1f6"
+  },
+  "queries_sha256": "2471e92e0e86ce18644a8e6ce25504f99add1ae7014dd8c644cbb268f596b252",
+  "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)"
+}

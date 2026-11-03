@@ -1,0 +1,218 @@
+"""서비스셋 채점 — 사례(쿼리 × 가정위치)마다 반경 R km 안의 결과만으로 지표를 낸다(docs/SERVICE_ANNOTATION_GUIDELINE.md).
+
+- 반경 안 정답(2점 이상)이 하나도 없는 사례는 순위 지표에서 뺀다(TREC 관례: 정답 없는 토픽은 nDCG 평균에서 제외). 개수는 따로 센다.
+- 이상적인 순위(IDCG)는 그 반경 안 판정된 가맹점으로만 만든다 — 반경 밖 정답은 서비스에서 보이지 않으므로.
+- nDCG@10·P@10·MRR@50·Recall@50·Bpref·Judged@10은 공식 evaluator와 같은 ir_measures로 계산한다(METRIC_SPECS).
+  bad@3 = 상위 3개에 정답이 없음, top1_ok = 1위가 정답. 판정만 남긴 nDCG@10(condensed)은 condense()로 run을 줄여 다시 채점한다.
+- run은 채점 반경(1km·2km)마다 그 안 상위 run_depth개를 합친 목록이다(2026-10-26부터, build_service_pool.top_k_run).
+  반경 R 지표는 그 목록에서 R 안만 남겨 순위를 다시 매긴다.
+"""
+
+from __future__ import annotations
+
+import hashlib
+
+import ir_measures
+import numpy as np
+import pandas as pd
+
+from store_search_ai.data.service_pool import haversine_km
+from store_search_ai.evaluation import (
+    evaluator as _ir_compat,  # noqa: F401  — Python 3.12+용 ir_measures 패치를 먼저 적용
+)
+
+BINARY_THRESHOLD = 2
+# 기존 벤치마크(evaluation/evaluator.py METRIC_SPECS)와 같은 지표. run은 반경마다 상위 run_depth(50)개라 Recall·MRR은 @50까지만 잰다
+# (Recall@50 = 1차 검색 재현율, Huang et al. 2020 EBR의 오프라인 지표에 해당).
+METRIC_SPECS = {
+    "nDCG@10": "nDCG@10",
+    "P@10": "P(rel=2)@10",
+    "MRR@50": "RR(rel=2)@50",
+    "Recall@50": "R(rel=2)@50",
+    "Bpref": "Bpref(rel=2)",
+    "Judged@10": "Judged@10",
+}
+MEASURES = [ir_measures.parse_measure(s) for s in METRIC_SPECS.values()]
+_MEASURE_NAME = {str(m): name for m, name in zip(MEASURES, METRIC_SPECS, strict=True)}
+# 요약표에 올리는 사례별 지표 순서(score_system 출력 열). nDCG@10_condensed는 condense()로 따로 채점해 붙인다.
+METRIC_COLUMNS = [*METRIC_SPECS, "bad@3", "top1_ok"]
+EVAL_BUNDLES = ("A", "B", "C", "D", "E")
+
+
+def attach_distance(frame: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame, key: str = "instance_id") -> pd.DataFrame:
+    loc = instances.set_index("instance_id")[["latitude", "longitude"]]
+    c = coords.set_index("doc_id")[["latitude", "longitude"]]
+    f = frame[frame[key].isin(loc.index) & frame["doc_id"].isin(c.index)].copy()
+    q, d = loc.loc[f[key]].to_numpy(float), c.loc[f["doc_id"]].to_numpy(float)
+    a, b = np.radians(q), np.radians(d)
+    h = np.sin((b[:, 0] - a[:, 0]) / 2) ** 2 + np.cos(a[:, 0]) * np.cos(b[:, 0]) * np.sin((b[:, 1] - a[:, 1]) / 2) ** 2
+    f["dist_km"] = 2 * 6371.0 * np.arcsin(np.sqrt(h))
+    return f
+
+
+def load_bundle_overrides(path: str | None) -> pd.DataFrame | None:
+    """평가용 묶음 목록(설정 `eval_set.bundle_overrides`). 경로를 비우면 None — 원래 묶음 그대로."""
+
+    if not path:
+        return None
+    return pd.read_csv(path, encoding="utf-8-sig", keep_default_na=False, dtype=str)
+
+
+def apply_eval_bundle(instances: pd.DataFrame, overrides: pd.DataFrame | None) -> pd.DataFrame:
+    """사례의 `bundle`을 평가용 묶음으로 바꾸고 원래 묶음은 `source_bundle`에 남긴다.
+
+    query_id·판정·split은 그대로 두고 주 평가셋·채점에서만 묶음을 옮긴다(C 중 업종·품목 이름을 그대로 쓴 쿼리 → A,
+    docs/SERVICE_QUERYSET_REVIEW.md 1절). 목록(query_id, bundle, eval_bundle)의 bundle이 지금 묶음과 다르면 —
+    쿼리 표가 바뀌었는데 목록을 안 고친 경우 — 멈춘다. 없는 query_id, 모르는 묶음, 같은 query_id 두 줄도 멈춘다.
+    """
+
+    out = instances.assign(source_bundle=instances["bundle"])
+    if overrides is None or overrides.empty:
+        return out
+    unknown = sorted(set(overrides["eval_bundle"]) - set(EVAL_BUNDLES))
+    if unknown:
+        raise ValueError(f"평가용 묶음 목록에 모르는 묶음 {unknown}")
+    dup = sorted(overrides.loc[overrides["query_id"].duplicated(), "query_id"])
+    if dup:
+        raise ValueError(f"평가용 묶음 목록에 같은 query_id가 두 번: {dup[:10]}")
+    current = instances.drop_duplicates("query_id").set_index("query_id")["bundle"]
+    missing = sorted(set(overrides["query_id"]) - set(current.index))
+    if missing:
+        raise ValueError(f"평가용 묶음 목록의 query_id가 사례에 없음: {missing[:10]}")
+    ov = overrides.set_index("query_id")
+    stale = [q for q in ov.index if current[q] != ov.at[q, "bundle"]]
+    if stale:
+        raise ValueError(f"평가용 묶음 목록의 bundle이 지금 묶음과 다름(목록을 다시 확인): {stale[:10]}")
+    out["bundle"] = out["query_id"].map(ov["eval_bundle"]).fillna(out["bundle"])
+    return out
+
+
+def instance_qrels(instances: pd.DataFrame, qrels: pd.DataFrame, coords: pd.DataFrame) -> pd.DataFrame:
+    """쿼리 판정을 사례로 펼치고 거리를 붙인다(판정은 위치와 무관)."""
+
+    expanded = instances[["instance_id", "query_id"]].merge(qrels, on="query_id")
+    return attach_distance(expanded, instances, coords)
+
+
+def score_system(run: pd.DataFrame, iq: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame,
+                 radius_km: float) -> pd.DataFrame:
+    """사례별 지표(nDCG@10, Judged@10, bad@3, top1_ok, 정답 수). run의 query_id 열은 사례 ID다."""
+
+    r = attach_distance(run.rename(columns={"query_id": "instance_id"}), instances, coords)
+    r = r[r["dist_km"] <= radius_km].sort_values(["instance_id", "rank"])
+    r = r.assign(rank=r.groupby("instance_id").cumcount() + 1)
+    q = iq[iq["dist_km"] <= radius_km]
+    n_rel = q[q["relevance"] >= BINARY_THRESHOLD].groupby("instance_id").size()
+    answerable = set(n_rel.index)
+
+    qrels = [ir_measures.Qrel(i, d, int(g)) for i, d, g in zip(q["instance_id"], q["doc_id"], q["relevance"], strict=True)
+             if i in answerable]
+    scored = [ir_measures.ScoredDoc(i, d, float(-k)) for i, d, k in zip(r["instance_id"], r["doc_id"], r["rank"], strict=True)
+              if i in answerable]
+    rows: dict[str, dict] = {i: {} for i in answerable}
+    for m in ir_measures.iter_calc(MEASURES, qrels, scored):
+        rows[m.query_id][_MEASURE_NAME[str(m.measure)]] = float(m.value)
+    rel = {(i, d): g for i, d, g in zip(q["instance_id"], q["doc_id"], q["relevance"], strict=True)}
+    for i, g in r.groupby("instance_id"):
+        if i not in answerable:
+            continue
+        grades = [rel.get((i, d), -1) for d in g["doc_id"]]
+        rows[i]["bad@3"] = float(not any(x >= BINARY_THRESHOLD for x in grades[:3]))
+        rows[i]["top1_ok"] = float(bool(grades) and grades[0] >= BINARY_THRESHOLD)
+    out = pd.DataFrame.from_dict(rows, orient="index")
+    out.index.name = "instance_id"
+    for col in METRIC_COLUMNS:
+        default = 1.0 if col == "bad@3" else 0.0
+        if col not in out:
+            out[col] = default
+        out[col] = out[col].fillna(default)   # 반경 안 결과가 하나도 없으면 0점·bad
+    out["n_relevant"] = n_rel.reindex(out.index).astype(int)
+    # 행·열 순서를 고정한다 — answerable이 set이라 순서가 실행마다 달라졌고, 그러면 같은 seed의 bootstrap CI도 달라졌다
+    return out.sort_index()[[*METRIC_COLUMNS, "n_relevant"]].reset_index()
+
+
+def condense(run: pd.DataFrame, instances: pd.DataFrame, qrels: pd.DataFrame) -> pd.DataFrame:
+    """판정된 (쿼리, 가맹점)만 남긴 run(Sakai 2007 condensed list). 판정 누락이 있는 새 구성을 공정하게 비교하려고 같이 본다."""
+
+    base = instances.set_index("instance_id")["query_id"]
+    judged = set(zip(qrels["query_id"], qrels["doc_id"], strict=True))
+    keep = [(base.get(i), d) in judged for i, d in zip(run["query_id"], run["doc_id"], strict=True)]
+    return run[keep]
+
+
+def paired(a: pd.Series, b: pd.Series, samples: int = 10_000, seed: int = 20261021) -> dict:
+    """같은 사례에서 a − b의 평균 차이, 부트스트랩 95% CI, 양측 부호 뒤집기 순열검정 p."""
+
+    d = (a - b).dropna().to_numpy(float)
+    if len(d) == 0:
+        return {}
+    rng = np.random.default_rng(seed)
+    boot = rng.choice(d, size=(samples, len(d)), replace=True).mean(axis=1)
+    perm = np.abs((rng.choice([-1.0, 1.0], size=(samples, len(d))) * d).mean(axis=1))
+    return {"delta": float(d.mean()), "ci_low": float(np.quantile(boot, 0.025)), "ci_high": float(np.quantile(boot, 0.975)),
+            "p": float((np.sum(perm >= abs(d.mean())) + 1) / (samples + 1)), "n": len(d),
+            "wins": int((d > 1e-9).sum()), "losses": int((d < -1e-9).sum())}
+
+
+def build_eval_set(instances: pd.DataFrame, answerable: pd.Series, shares: dict[str, float], salt: str,
+                   previous: pd.DataFrame | None = None,
+                   strata: dict[str, dict[str, float]] | None = None) -> pd.DataFrame:
+    """주 평가셋: 쿼리마다 사례 하나, split마다 묶음 비율을 `shares`로 맞춘다.
+
+    - 사례는 반경 안 정답이 있는 것만. 이전 셋의 사례가 아직 정답이 있으면 그 사례를 그대로 쓰고(셋이 흔들리지 않게 —
+      나중 판정으로 random에도 정답이 생겨도 anchor를 유지한다), 새 쿼리는 random을 먼저, 없으면 anchor.
+    - 가장 모자란 묶음이 split 크기를 정하고, 나머지 묶음은 앞에서부터 남긴다. 순서는 ① 이전 셋(`previous`)에 있던 쿼리
+      ② (salt, query_id) 해시 순. 그래서 다시 만들어도 이전 셋의 쿼리와 사례는 정답이 남아 있는 한 그대로이고,
+      빠지는 것은 그 묶음 자체가 줄 때뿐이다(2026-10-26 점검 2번 — 전에는 해시 순만 써서 가장 모자란 묶음이 바뀌면 이전 쿼리가 밀렸다).
+    - `strata`({묶음: {층: 비율}})가 있으면 그 묶음 몫을 instances의 `stratum` 열로 다시 나눈다(A head:tail, 2026-10-28).
+      층이 모자라면 있는 만큼 쓰고 남는 자리는 다른 층이 채운다 — 묶음 크기는 바뀌지 않는다.
+    `answerable`은 instances와 같은 순서의 불리언(no_answer_counts 결과).
+    """
+
+    if not shares or any(s <= 0 for s in shares.values()):
+        raise ValueError(f"묶음 비율은 0보다 커야 합니다: {shares}")
+    prev_inst = set(previous["instance_id"]) if previous is not None else set()
+    cand = instances[instances["bundle"].isin(list(shares)) & answerable.to_numpy()]
+    cand = (cand.assign(_prev=(~cand["instance_id"].isin(prev_inst)).astype(int),
+                        _anchor=(cand["context"] != "random").astype(int))
+            .sort_values(["query_id", "_prev", "_anchor", "instance_id"]).drop_duplicates("query_id"))
+    cand = cand.assign(_key=[hashlib.sha256(f"{salt}:{q}".encode()).hexdigest() for q in cand["query_id"]])
+    picked = []
+    for split, frame in cand.groupby("split"):
+        avail = frame["bundle"].value_counts()
+        missing = [b for b in shares if avail.get(b, 0) == 0]
+        if missing:
+            raise ValueError(f"{split}: 정답 있는 쿼리가 없는 묶음 {missing} — 이 split은 비율을 맞출 수 없습니다")
+        total = min(avail[b] / s for b, s in shares.items())
+        for b, s in shares.items():
+            n = min(int(avail[b]), int(np.floor(total * s + 0.5)))
+            pool = frame[frame["bundle"] == b].sort_values(["_prev", "_key"])
+            picked.append(_take_strata(pool, n, strata[b]) if strata and b in strata else pool.head(n))
+    if not picked:
+        raise ValueError("정답 있는 사례가 없습니다")
+    out = pd.concat(picked, ignore_index=True)
+    return out[["instance_id", "query_id", "query", "split", "bundle", "context"]].sort_values(
+        ["split", "bundle", "query_id"]).reset_index(drop=True)
+
+
+def _take_strata(pool: pd.DataFrame, n: int, shares: dict[str, float]) -> pd.DataFrame:
+    """`pool`(이미 고를 순서로 정렬)에서 n개를 층 비율대로. 모자란 층의 자리는 남은 층이 순서대로 채운다."""
+
+    unknown = set(pool["stratum"]) - set(shares)
+    if unknown:
+        raise ValueError(f"비율이 없는 층 {sorted(unknown)}")
+    groups = {k: pool[pool["stratum"] == k] for k in shares}
+    want = {k: min(len(g), int(np.floor(n * shares[k] + 0.5))) for k, g in groups.items()}
+    taken = {k: g.head(want[k]) for k, g in groups.items()}
+    rest = pool.drop(index=pd.concat(taken.values()).index)
+    left = n - sum(want.values())
+    return pd.concat([*taken.values(), rest.head(max(left, 0))]).head(n)
+
+
+def no_answer_counts(instances: pd.DataFrame, iq: pd.DataFrame, radius_km: float) -> pd.Series:
+    q = iq[(iq["dist_km"] <= radius_km) & (iq["relevance"] >= BINARY_THRESHOLD)]
+    has = set(q["instance_id"])
+    return instances.assign(answerable=instances["instance_id"].isin(has))["answerable"]
+
+
+__all__ = ["METRIC_COLUMNS", "METRIC_SPECS", "attach_distance", "build_eval_set", "condense", "haversine_km", "instance_qrels", "no_answer_counts", "paired", "score_system"]

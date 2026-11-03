@@ -1,0 +1,88 @@
+{
+  "round": "service_v9",
+  "set": [
+    "main",
+    "anchor",
+    "extra",
+    "extra_b",
+    "anchor_extra",
+    "extra_a",
+    "anchor_extra_a"
+  ],
+  "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
+  "created_at": "2026-10-28T04:50:47.647299+00:00",
+  "judge_radius_km": 2,
+  "report_radii_km": [
+    1,
+    2
+  ],
+  "depth": 10,
+  "eval_set_only": true,
+  "depth_radii_km": [
+    1,
+    2
+  ],
+  "queries": 418,
+  "pairs": 3553,
+  "double_annotation_queries": 84,
+  "double_annotation_pairs": 715,
+  "annotators": {
+    "A": {
+      "writer_id": null,
+      "queries": 251,
+      "pairs": 2134
+    },
+    "B": {
+      "writer_id": null,
+      "queries": 251,
+      "pairs": 2134
+    }
+  },
+  "runs_sha256": {
+    "runs/arcticLee.csv": "4be891742f7676bfafd8ee3111c40ffaaff073291457234467fc420144a5a77c",
+    "runs/bge_m3.csv": "fca052f80f338271ea43d86bf4750e97e3e2ed644cb7a154249ec2bcdff0d548",
+    "runs/bge_m3_ft_mj_20261014_0743.csv": "c0a56ff754d279a17f02d921a1fab53ce911fe5b5c25bcfbcfb31a21ca8722a4",
+    "runs/char_bm25.csv": "4a7cdc8a68300ec4ced131f0e147299b4d27118ccdc873bf3967f4d140b76d06",
+    "runs/keyword.csv": "b516ff04d24e71e191d763633b0662ad6a805ca6deca543b2d40ec396af2af92",
+    "runs/kse16.csv": "40f6d77a9a8ecad2398e05e9e3bf22013017cd0d6c4c4a65bf1627dad35d308f",
+    "runs_anchor/arcticLee.csv": "32da49094e63d9633bb65aea6702f0bbd8f87754412808aa85193e309410a7e1",
+    "runs_anchor/bge_m3.csv": "51a64e71a62117df369f81bb1f2033a159d5e37de1455fc6cc4cc3ebde6997b3",
+    "runs_anchor/bge_m3_ft_mj_20261014_0743.csv": "773da5b2ee8a0937b87a0174d32fd2d1f49f1ce13dacee4f38f277124f10d92e",
+    "runs_anchor/char_bm25.csv": "0f299648727670df497df0a7ba138f32369a3bcfb5d772b16268cc55e6c4fe84",
+    "runs_anchor/keyword.csv": "b75e14054d0f654051d1bd9eb5a319614905e273ceaec9fd4916d57771d44cf5",
+    "runs_anchor/kse16.csv": "766b10bf4115a15e955adb2fc5ba433f1a269480f43d1cce276185767e96958c",
+    "runs_extra/arcticLee.csv": "6b1256f24d7341db3f73af9af626c16db6757be629b1903804dedcc9f84dcf32",
+    "runs_extra/bge_m3.csv": "1c216e4c188aec0bde604876790eb6e4d77a45b665cdfdff6f2cca158d05a709",
+    "runs_extra/bge_m3_ft_mj_20261014_0743.csv": "5d61b360630459d8ddc0458a5787ec361dc057a843f5124d8b54e43b45b6c272",
+    "runs_extra/char_bm25.csv": "16699dfbd154df4343020b2e75ad8dc7297932b0cf9de319fac3028f1a46dfa0",
+    "runs_extra/keyword.csv": "f64c264db11bb54a05f94674def943f85999340164b61bde4cb9f92bb0a00e74",
+    "runs_extra/kse16.csv": "ad5bd59bbba599ebe6225913cee3d64ebec4feaa621a32a936b27eae84a371ce",
+    "runs_extra_b/arcticLee.csv": "c35c23bc27045436865e3b4270bf78ed47d0e6b95cb99044d95c7367981d9e5a",
+    "runs_extra_b/bge_m3.csv": "5e3004f1b2e3cf10663539f9e49f15e73dc663c97d65e5394cbde74dab601a21",
+    "runs_extra_b/bge_m3_ft_mj_20261014_0743.csv": "17d958329c3e0cc43dcd4850d944cb3dfe0f9f699f73872019c7b9be14d52308",
+    "runs_extra_b/char_bm25.csv": "42e9d39692e5ff1a9aa856d3bb22690363ba01b8e65cd2a94b1ee14481d2c609",
+    "runs_extra_b/keyword.csv": "cb032ecee0730694a7c8f9f8b04960aea0c1d155616a83289be32311e46ba74f",
+    "runs_extra_b/kse16.csv": "db735c03463b21cffc7ed2e713e5fb5a8df0787e9bd24ac9ed1195edd672af60",
+    "runs_anchor_extra/arcticLee.csv": "43503ab6590f370505d6c5fd90dc7341101a593ab4b6b3027067ce433ebb9e3f",
+    "runs_anchor_extra/bge_m3.csv": "89d7aab4abde85670cb55d0d3c6c167e9c7bb7a9822ece054734d67d834b3382",
+    "runs_anchor_extra/bge_m3_ft_mj_20261014_0743.csv": "91c0dfb820118220db45896798dbb330419f75e13bc1459b5f1976b9080bfce2",
+    "runs_anchor_extra/char_bm25.csv": "0c0e100fb2e7fc2f77537b9a103721ec0f0f941a5f20c725f3c5ed344b8005bc",
+    "runs_anchor_extra/keyword.csv": "e7ed205b08d61efff97a71a34c9e8034fc685474cb984febe9244cbec05288f4",
+    "runs_anchor_extra/kse16.csv": "789f5224a52ddd35caba36c386e6649f77465db88e5870a7a59a9ab6da39f98b",
+    "runs_extra_a/arcticLee.csv": "31009964a7f03d55415e2c03eca04b24fb5daf6f3df2680d69e687263dfae468",
+    "runs_extra_a/bge_m3.csv": "4d263846e727c99104c09bea42b1595f768b09420f78025463a165ea3ab75d30",
+    "runs_extra_a/bge_m3_ft_mj_20261014_0743.csv": "8f340f7bbae90ca1276cc7bc08a862d33894f5a8a97ed2297b9ea709d4007623",
+    "runs_extra_a/char_bm25.csv": "468b7a2cb44208374481587ec6d9db33941e514fd13b41a3b35d8e764f508fa3",
+    "runs_extra_a/keyword.csv": "ed1ca21598d43bd735115cfb531fc0d476469f2d7bb3e69ea517e40276e43f26",
+    "runs_extra_a/kse16.csv": "c59f25241933dd69f30e8ccdf16f875c0eb889cd38382635f616738d2c24a5bf",
+    "runs_anchor_extra_a/arcticLee.csv": "dfe47c6c5c2b85b8fa9c3cc7980a9c6203ec3f90293e6e425a54066f5e4120d4",
+    "runs_anchor_extra_a/bge_m3.csv": "741b824de304f83a764fb453df35ca64ca60ae9833be7502e3249ea5e87fbedd",
+    "runs_anchor_extra_a/bge_m3_ft_mj_20261014_0743.csv": "e1093a3a52a8512ff882b58f442c69072ccc1db384b6d4fb6e209b16c3f6a284",
+    "runs_anchor_extra_a/char_bm25.csv": "2c050fedf292fd896e142376d69f7d4a6d91f51bc139cde8f79676aff58809a5",
+    "runs_anchor_extra_a/keyword.csv": "a4dd452537458604e5016f1d057f37f02986626f9aeafb834c20b2b1033df9e0",
+    "runs_anchor_extra_a/kse16.csv": "95106e5dca6ab3a0ecf9e19065f5a8f05595e65141854d04878912eeb86c57aa"
+  },
+  "queries_sha256": "124b85a1c6db877ad89c12c23b2891b6c8c95d7217fc6f7cbb0cb59cb4d88477",
+  "instances_sha256": "818c03dd924cd05a8873ba6db3e34c8463b85d60df92c5d1cebba46e9562edd2",
+  "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)"
+}

@@ -1,0 +1,41 @@
+{
+  "round": "service_v3",
+  "set": "anchor",
+  "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
+  "created_at": "2026-10-22T06:52:56.973545+00:00",
+  "judge_radius_km": 2,
+  "report_radii_km": [
+    1,
+    2
+  ],
+  "depth": 10,
+  "depth_radii_km": [
+    1,
+    2
+  ],
+  "queries": 183,
+  "pairs": 4976,
+  "double_annotation_queries": 37,
+  "double_annotation_pairs": 1002,
+  "annotators": {
+    "A": {
+      "writer_id": null,
+      "queries": 110,
+      "pairs": 2994
+    },
+    "B": {
+      "writer_id": null,
+      "queries": 110,
+      "pairs": 2984
+    }
+  },
+  "runs_sha256": {
+    "bge_m3.csv": "28a519e514e45e7d28a84e6f5922c04413de11cf4bf342d3bb8d3d8ced4410d6",
+    "bge_m3_ft_mj_20261014_0743.csv": "df43bd04f82e404644daa88c5004ece9968079645b277f67ab41859c75367fb0",
+    "char_bm25.csv": "c0f56665fc9c8b6f9696b2f732ef3a30719b0df8a00da8f0877bf77a25dcb661",
+    "keyword.csv": "10cd860140e347c2cd9a06534a0ecf1d92a54359ee325d41cde5ae21c2a8d675"
+  },
+  "queries_sha256": "2471e92e0e86ce18644a8e6ce25504f99add1ae7014dd8c644cbb268f596b252",
+  "instances_sha256": "84178579ea0fe8aa5ca8f6304c4611e3ddf21c7f03520f16b55eadc9555983ae",
+  "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)"
+}
