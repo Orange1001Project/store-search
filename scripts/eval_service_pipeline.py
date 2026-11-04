@@ -62,6 +62,10 @@ logger = logging.getLogger(__name__)
 V1 ="bge_m3_ft_mj_20261014_0743"
 RERANK_DIR = Path("results/service_pipeline/rerank")
 RERANK_DEPTH = 50          # 재정렬 후보 수(반경 안 1단계 상위). 실험은 이 안에서 k=20·30·50을 본다
+# 브랜드 지점 점수 = BRAND_SCORE − 거리(km). 반경이 10km여도 BRAND_MIN 이상이라 '점수 ≥ BRAND_MIN'으로 브랜드 지점을 가른다
+# (2026-11-04 코드 점검 — 예전 10 − 거리는 5km 넘는 지점이 일반 가게로 섞였다)
+BRAND_SCORE = 100.0
+BRAND_MIN = 50.0
 DOC_TEXT_COLUMN = "search_text_t1_minimal"   # 모델 평가·판정 pool과 같은 문서 텍스트(가맹점명 + 취급품목)
 
 
@@ -169,7 +173,7 @@ def brand_distance_sort(run: pd.DataFrame, instances: pd.DataFrame, parsed: pd.D
     out = run[["query_id", "doc_id", "score"]].merge(extra, on=["query_id", "doc_id"], how="outer")
     out["score"] = out["score"].fillna(out.groupby("query_id")["score"].transform("min")).fillna(0.0)
     top = out["dist"].notna()
-    out.loc[top, "score"] = 10.0 - out.loc[top, "dist"]       # 브랜드 지점: 가까운 순으로 맨 위(다른 후보 점수는 1.5 이하)
+    out.loc[top, "score"] = BRAND_SCORE - out.loc[top, "dist"]   # 브랜드 지점: 가까운 순으로 맨 위(다른 후보 점수는 1.6 이하)
     return _rerank(out[["query_id", "doc_id", "score"]], name)
 
 

@@ -24,6 +24,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eval_relevance_threshold import GRID, TARGET_HIDDEN, oof_predictions
 from eval_service_pipeline import (
+    BRAND_MIN,
     V1,
     alias_name_hits,
     brand_distance_sort,
@@ -103,7 +104,7 @@ def main() -> None:
     bm = bm25.rename(columns={"query_id": "instance_id", "score": "bm25"})[["instance_id", "doc_id", "bm25"]]
     bm = bm.drop_duplicates(["instance_id", "doc_id"])
     brand_rows = brand_distance_sort(alias_run, instances, parsed, geo, aliases, 2.0, "b")
-    brand_pairs = set(zip(brand_rows.loc[brand_rows["score"] >= 5.0, "query_id"], brand_rows.loc[brand_rows["score"] >= 5.0, "doc_id"],
+    brand_pairs = set(zip(brand_rows.loc[brand_rows["score"] >= BRAND_MIN, "query_id"], brand_rows.loc[brand_rows["score"] >= BRAND_MIN, "doc_id"],
                           strict=True))
     iq = instance_qrels(instances, qrels, coords)
     OUT.mkdir(parents=True, exist_ok=True)

@@ -38,8 +38,9 @@ from build_x23_round import (
     load_runs_x23,
     policy_runs,
 )
+from eval_service_pipeline import BRAND_MIN
 
-from store_search_ai.data.service_pool import haversine_km
+from store_search_ai.data.service_pool import filter_mask, haversine_km
 from store_search_ai.evaluation.threshold import BINARY, add_features
 from store_search_ai.pipeline.common import load_config
 
@@ -63,6 +64,21 @@ def relevance_probability(stage: pd.DataFrame, raw: pd.DataFrame, req: pd.DataFr
         z = coef["intercept"] + sum(coef["coef"][k] * f.loc[m, k].to_numpy() for k in calibrator["features"])
         p[m] = 1 / (1 + np.exp(-z))
     return pd.Series(p, index=pd.MultiIndex.from_arrays([f["instance_id"], f["doc_id"]]))
+
+
+def within_km(raw: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, km: float) -> np.ndarray:
+    """run 행이 그 요청 중심에서 km 안인가."""
+
+    loc = req.set_index("query_id")[["latitude", "longitude"]]
+    c = corpus.set_index("doc_id")[["latitude", "longitude"]]
+    ok = np.zeros(len(raw), dtype=bool)
+    for qid, ix in raw.groupby("query_id").indices.items():
+        if qid not in loc.index:
+            continue
+        d = c.loc[raw["doc_id"].to_numpy()[ix]]
+        ok[ix] = haversine_km(float(loc.at[qid, "latitude"]), float(loc.at[qid, "longitude"]), d["latitude"].to_numpy(float),
+                              d["longitude"].to_numpy(float)) <= km + 1e-9
+    return ok
 
 
 def dcg(grades: list[int]) -> float:
@@ -92,7 +108,8 @@ def main() -> None:
     bdir = Path(cfg["judging"]["benchmark_dir"])
     tau = float(policy["relevance"]["threshold_p"])
     # test는 정책 파일에 정한 구성 하나만 계산한다(X7 — test로 고르지 않는다, docs/EVALUATION_POLICY.md)
-    n_grid, orders = ((int(policy["radius"]["expand_if_relevant_below"]),), (policy["ranking"]["expanded_order"],))         if args.split == "test" else (N_GRID, ORDERS)
+    n_grid, orders = (((int(policy["radius"]["expand_if_relevant_below"]),), (policy["ranking"]["expanded_order"],))
+                      if args.split == "test" else (N_GRID, ORDERS))
     calibrator = json.loads(Path(policy["relevance"]["calibrator"]).read_text(encoding="utf-8"))
 
     req = load_requests(cfg)
@@ -113,8 +130,12 @@ def main() -> None:
     intents = dict(zip(req["query_id"], req["intent"], strict=True))
     sim = runs["sim"]
     base = runs["sim_base"]
-    base_stage = base[base["score"] < 5.0]               # 관련 확률은 업종 가산점 전 점수로
-    p = relevance_probability(base_stage, raw, req, calibrator, intents)
+    p = relevance_probability(base[base["score"] < BRAND_MIN], raw, req, calibrator, intents)   # 10km 단계(업종 가산점 전 점수)
+    # 1km 단계: 서비스처럼 1km 후보만으로 1단계를 다시 만들어(점수 정규화·쿼리 안 순위·BM25 비율이 1km 기준) 확률을 계산한다
+    circle = req[req["kind"].isin(["expand", "region_point"])]
+    raw1 = raw[raw["query_id"].isin(circle["query_id"]) & within_km(raw, circle, corpus, 1.0)]
+    base1 = policy_runs(raw1, circle, corpus)["sim_base"]
+    p1 = relevance_probability(base1[base1["score"] < BRAND_MIN], raw1, circle, calibrator, intents)
 
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")
     judged_by_q = {q: dict(zip(g["doc_id"], g["relevance"], strict=True)) for q, g in qrels.groupby("query_id")}
@@ -128,15 +149,19 @@ def main() -> None:
             continue
         lat, lon = c.loc[docs, "latitude"].to_numpy(float), c.loc[docs, "longitude"].to_numpy(float)
         dist = haversine_km(float(r.latitude), float(r.longitude), lat, lon)
-        is_brand = (s["score"] >= 5.0).to_numpy()
-        prob = np.array([1.0 if b else p.get((r.query_id, d), 0.0) for d, b in zip(docs, is_brand, strict=True)])
+        is_brand = (s["score"] >= BRAND_MIN).to_numpy()
+        within1 = dist <= 1.0 + 1e-9
+        circle_req = r.kind in ("expand", "region_point")
+        prob = np.array([1.0 if b else (p1.get((r.query_id, d), 0.0) if circle_req and w else p.get((r.query_id, d), 0.0))
+                         for d, b, w in zip(docs, is_brand, within1, strict=True)])
         rel_shown = prob >= tau
-        # 이 요청 범위에서 판정된 정답(판정 위치와 무관 — 범위 안 가맹점만)
-        rng_docs = set(docs) if r.kind in ("region_area", "map5") else None
-        pool_rel = [g for d, g in judged.items() if d in c.index and (
-            d in rng_docs if rng_docs is not None else
-            float(haversine_km(float(r.latitude), float(r.longitude), np.array([c.at[d, "latitude"]]),
-                               np.array([c.at[d, "longitude"]]))[0]) <= MAX_KM)]
+        # 이 요청 범위에서 판정된 정답(판정 위치와 무관 — 범위 안 가맹점 전부: 반경 요청은 10km 안, 지역·지도는 필터 안)
+        jd = [d for d in judged if d in c.index]
+        jl, jo = c.loc[jd, "latitude"].to_numpy(float), c.loc[jd, "longitude"].to_numpy(float)
+        inside = filter_mask(r.code_prefix, r.bbox, c.loc[jd, "legal_dong_code"].astype(str).to_numpy(), jl, jo)
+        if inside is None:
+            inside = haversine_km(float(r.latitude), float(r.longitude), jl, jo) <= MAX_KM + 1e-6
+        pool_rel = [judged[d] for d, k in zip(jd, inside, strict=True) if k]
         answerable = any(g >= BINARY for g in pool_rel)
         base = {"query_id": r.query_id, "kind": r.kind, "bundle": r.bundle, "intent": r.intent, "answerable": answerable}
         if r.kind in ("region_area", "map5"):
@@ -147,7 +172,6 @@ def main() -> None:
                    **score_list(shown, judged, [g for g in pool_rel])}
             rows.append(out)
             continue
-        within1 = dist <= 1.0 + 1e-9
         n1 = int((rel_shown & within1).sum())
         for n in n_grid:
             expanded = n1 < n

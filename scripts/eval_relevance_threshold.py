@@ -28,7 +28,15 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from eval_service_pipeline import first_stage, load_runs
+from eval_service_pipeline import (
+    BRAND_MIN,
+    V1,
+    alias_name_hits,
+    brand_distance_sort,
+    load_runs,
+    parsed_queries,
+    union_v1,
+)
 
 from store_search_ai.evaluation.service_eval import (
     apply_eval_bundle,
@@ -47,10 +55,12 @@ from store_search_ai.evaluation.threshold import (
     summarize_outcomes,
 )
 from store_search_ai.pipeline.common import load_config
+from store_search_ai.query.aliases import BrandAliases
 from store_search_ai.query.understanding import (
     QueryUnderstanding,
     load_gazetteer,
 )
+from store_search_ai.retrieval.fusion import boost
 
 logger = logging.getLogger(__name__)
 OUT = Path("results/service_pipeline/x1")
@@ -129,15 +139,30 @@ def main() -> None:
     bm25 = (runs["char_bm25"].rename(columns={"query_id": "instance_id", "score": "bm25"})[["instance_id", "doc_id", "bm25"]]
             .drop_duplicates(["instance_id", "doc_id"]))
 
-    parsed = parse_instances(instances, bench["corpus_path"])
-    stage = first_stage(runs, instances, names, dict(zip(parsed["instance_id"], parsed["name_key"], strict=True)),
-                        "v1+name(qu) b=0.5")
+    # 1단계 = 최종 구성(11-8: 상호 일치에 브랜드 별칭). 브랜드 쿼리의 브랜드 지점은 확률 없이 관련 — 보정 학습에서 빼고 결과 집계에는 넣는다
+    # (2026-11-04 코드 점검 — 처음 X1은 별칭 없는 1단계로 맞춰 서비스 구성과 특성이 조금 달랐다)
+    parsed = parsed_queries(instances, bench["corpus_path"])
+    parsed["group"] = parsed["intent"].map(lambda i: "name" if i in ("name", "brand") else "category")
+    aliases = BrandAliases.load()
+    v1 = runs[V1][runs[V1]["query_id"].isin(instances["instance_id"])]
+    bm = runs["char_bm25"][runs["char_bm25"]["query_id"].isin(instances["instance_id"])]
+    union = union_v1(v1, bm)
+    stage = boost(union, alias_name_hits(union, dict(zip(parsed["instance_id"], parsed["name_key"], strict=True)), names, aliases),
+                  0.5, "v1+name(qu+alias) b=0.5")
+    geo = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "store_name", "latitude", "longitude", "geo_status"])
+    geo = geo[geo["geo_status"] == "VALID"].reset_index(drop=True)
+    branded = brand_distance_sort(stage, instances, parsed, geo, aliases, 2.0, "b")
+    brand_pairs = set(zip(branded.loc[branded["score"] >= BRAND_MIN, "query_id"], branded.loc[branded["score"] >= BRAND_MIN, "doc_id"],
+                          strict=True))
     iq = instance_qrels(instances, qrels, coords)
     OUT.mkdir(parents=True, exist_ok=True)
 
     calib, curve, per_rows = [], [], []
     for radius in cfg["judging"]["report_radii_km"]:
-        cands = candidates(stage, instances, coords, qrels, parsed, radius, bm25)
+        allc = candidates(stage, instances, coords, qrels, parsed, radius, bm25)
+        is_brand = np.array([(i, d) in brand_pairs for i, d in zip(allc["instance_id"], allc["doc_id"], strict=True)])
+        brand_rows = allc[is_brand].assign(p=1.0)
+        cands = allc[~is_brand].reset_index(drop=True)
         answerable = set(iq[(iq["dist_km"] <= radius) & (iq["relevance"] >= BINARY)]["instance_id"])
         judged = cands["relevance"].notna().to_numpy()
         y = (cands["relevance"] >= BINARY).to_numpy(int)
@@ -146,7 +171,7 @@ def main() -> None:
             for g in ["전체", "name", "category"]:
                 m = judged & (True if g == "전체" else (cands["group"] == g).to_numpy())
                 calib.append({"radius_km": radius, "model": kind, "group": g, **calibration_metrics(p[m], y[m])})
-            c = cands.assign(p=p)
+            c = pd.concat([cands.assign(p=p), brand_rows], ignore_index=True)
             for t in GRID:
                 for subset, ids in [("all", None), ("main", main_ids)]:
                     cc = c if ids is None else c[c["instance_id"].isin(ids)]
@@ -177,8 +202,10 @@ def main() -> None:
 
     # dev 전체로 다시 학습 → 백엔드로 넘길 계수(1km 후보 기준 특성)
     cands1 = candidates(stage, instances, coords, qrels, parsed, 1, bm25)
+    cands1 = cands1[[(i, d) not in brand_pairs for i, d in zip(cands1["instance_id"], cands1["doc_id"], strict=True)]]
     calibrator = {"model": best, "threshold_p": t_star, "features": FEATURE_SETS.get(best, ["score"]),
-                  "score": "min-max(v1 코사인, 사례 후보 = v1·문자 BM25 상위 합집합 안) + 0.5 × 상호 일치(쿼리 이해 키) — scripts/eval_service_pipeline.py first_stage / fusion.boost",
+                  "score": "min-max(v1 코사인, 후보 = v1·문자 BM25 상위 합집합 안) + 0.5 × 상호 일치(쿼리 이해 키 + 브랜드 별칭) — fusion.boost",
+                  "brand": "브랜드 쿼리의 브랜드 지점은 이 확률을 쓰지 않고 관련으로 센다(학습에서도 뺐다)",
                   "feature_scope": "반경 안 후보 기준(gap = 점수 − 반경 안 1위 점수, log_rank = log(반경 안 순위), "
                                    "bm25_rel = 문자 BM25 ÷ 반경 안 최댓값, BM25 상위 50 밖이면 0)",
                   "trained_on": f"dev {args.set} 1km judged pairs", "groups": {}}
