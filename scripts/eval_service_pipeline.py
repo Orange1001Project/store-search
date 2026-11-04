@@ -93,11 +93,11 @@ def name_hits(run: pd.DataFrame, instances: pd.DataFrame, names: pd.Series, core
 def parsed_cores(instances: pd.DataFrame, corpus_path: str) -> dict[str, str]:
     """사례마다 상호 일치에 쓸 말 — 쿼리 이해로 지역을 뺀 나머지, 띄어 쓴 상호면 쿼리 전체(name_key). 사용자 위치 = 사례 위치."""
 
-    from store_search_ai.query.understanding import QueryUnderstanding
+    from store_search_ai.query.understanding import QueryUnderstanding, load_gazetteer
 
     corpus = pd.read_parquet(corpus_path, columns=["store_name", "item_text", "address", "market_name", "source_region",
                                                    "legal_dong_code", "latitude", "longitude", "geo_status"])
-    qu = QueryUnderstanding(corpus[corpus["geo_status"] == "VALID"])
+    qu = QueryUnderstanding(corpus[corpus["geo_status"] == "VALID"], gazetteer=load_gazetteer())
     parsed: dict[tuple, str] = {}
     out = {}
     for i, q, la, lo in zip(instances["instance_id"], instances["query"], instances["latitude"], instances["longitude"],

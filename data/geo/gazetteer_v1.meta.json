@@ -1,0 +1,40 @@
+{
+  "sources": {
+    "[행정안전부] 행정표준코드 법정동코드 정보.csv": "3bb080373d9f3ee3f37073c8a05a838b13d4f060995a0ada250c55ea4f8effcf",
+    "센서스 공간정보 지역 코드.xlsx": "6342dec331d7db5b7febfba5b20d3951ca904cc869540f784970c83048fee2ff",
+    "BND_ADM_DONG_PG/BND_ADM_DONG_PG.shp": "44599ba4f17c8155abd43682f6332181da81129bce0f72d840e231dfb4a1079c",
+    "BND_ADM_DONG_PG/BND_ADM_DONG_PG.dbf": "439d04ccf070ff69066065309ede02661fb6323d44cf81ae788d0514b7fe9075",
+    "전체_도시철도역사정보_20260630.xlsx": "cdf1d84a7e5c898b2aacd622783ba8ba9af35c40bee0561dc97d55ce8e063f94",
+    "전국전통시장표준데이터.csv": "959aabf13005fe6e6d14b4f0a1b44c47bc645694969397a3f67bd5ebec97934f"
+  },
+  "stats": {
+    "rows": 21859,
+    "kinds": {
+      "dong": 7159,
+      "hdong": 6699,
+      "eupmyeon": 2779,
+      "market": 2698,
+      "station": 1978,
+      "sigungu": 490,
+      "sido": 30,
+      "city": 26
+    },
+    "sgis_unmatched_sigungu": [
+      "인천광역시 동구",
+      "인천광역시 서구",
+      "인천광역시 중구"
+    ],
+    "hdong_code5_from_nearest_store": 43,
+    "hdong_without_code5": 3,
+    "dong_center_from_sigungu": 4808
+  },
+  "check": {
+    "sigungu_center_vs_store_median_km": {
+      "median": 4.02,
+      "p90": 9.44,
+      "max": 78.87,
+      "n": 255
+    },
+    "corpus_stores_with_known_sigungu": 1.0
+  }
+}

@@ -7,6 +7,8 @@
 기본은 dev. test는 규칙을 다 고친 뒤 한 번(--split test).
 
 출력: results/query_understanding/parsed_<split>.csv, summary_<split>.csv
+지명 사전: 기본은 data/geo/gazetteer_v1.parquet(있으면). 비교는 --gazetteer none --suffix _no_gazetteer.
+'지역 안'은 실제 검색 범위(Region.doc_idx — 넓은 지역 = 코드 범위, 좁은 지역 = 지명 가게 ∪ 중심 1km)로 센다(2026-11-03부터).
 """
 
 from __future__ import annotations
@@ -19,7 +21,11 @@ import numpy as np
 import pandas as pd
 
 from store_search_ai.pipeline.common import load_config
-from store_search_ai.query.understanding import QueryUnderstanding
+from store_search_ai.query.understanding import (
+    GAZETTEER_PATH,
+    QueryUnderstanding,
+    load_gazetteer,
+)
 
 logger = logging.getLogger(__name__)
 REMOTE = [(37.5663, 126.9779), (35.1798, 129.0750)]   # 서울시청, 부산시청
@@ -38,6 +44,8 @@ def main() -> None:
     parser.add_argument("--split", choices=["dev", "test"], default="dev")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
+    parser.add_argument("--gazetteer", default=GAZETTEER_PATH, help="공공데이터 지명 사전. 'none'이면 가맹점 주소 지명만")
+    parser.add_argument("--suffix", default="", help="출력 파일 이름 뒤에 붙임(비교용, 예: _no_gazetteer)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -45,7 +53,7 @@ def main() -> None:
     bench = load_config(args.benchmark_config)
     corpus = pd.read_parquet(bench["corpus_path"], columns=CORPUS_COLUMNS)
     corpus = corpus[corpus["geo_status"] == "VALID"].reset_index(drop=True)
-    qu = QueryUnderstanding(corpus)
+    qu = QueryUnderstanding(corpus, gazetteer=None if args.gazetteer == "none" else load_gazetteer(args.gazetteer))
     lat, lon = corpus["latitude"].to_numpy(float), corpus["longitude"].to_numpy(float)
     queries = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
     queries = queries[(queries["status"] == "active") & (queries["split"] == args.split)]
@@ -72,7 +80,8 @@ def main() -> None:
         local_ok = bool(np.isin(here, p.region.doc_idx).any()) if p.region else None
         remote_ok = bool(np.isin(here, r.region.doc_idx).any()) if r.region else None
         rows.append({"query_id": q.query_id, "bundle": q.bundle, "query": q.query, "gold_region": q.region_text,
-                     "parsed_region": p.region_text, "core": p.core, "intent": p.intent,
+                     "parsed_region": p.region_text, "core": p.core, "intent": p.intent, "name_first": p.name_first,
+                     "region_scope": p.region.scope if p.region else "", "region_kinds": "+".join(sorted(p.region.kinds)) if p.region else "",
                      "region_stores": len(p.region.doc_idx) if p.region else 0,
                      "target_in_region": in_region,
                      "center_km_from_location": (km(*p.region.center, float(q.latitude), float(q.longitude))
@@ -104,8 +113,8 @@ def main() -> None:
     summary = pd.DataFrame(summary)
     od = Path("results/query_understanding")
     od.mkdir(parents=True, exist_ok=True)
-    out.to_csv(od / f"parsed_{args.split}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
-    summary.to_csv(od / f"summary_{args.split}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    out.to_csv(od / f"parsed_{args.split}{args.suffix}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    summary.to_csv(od / f"summary_{args.split}{args.suffix}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     pd.set_option("display.width", 250)
     logger.info("%s:\n%s", args.split, summary.to_string(index=False))
 
