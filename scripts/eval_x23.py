@@ -101,6 +101,7 @@ def main() -> None:
     raw, stale, notes = clean_runs(raw, req, corpus, bdir)
     # 임베딩 결과가 없는 요청(지명 사전 수정으로 범위가 바뀐 요청 중 일부)은 1단계 순위를 흉내 낼 수 없어 채점에서 뺀다
     req = req[~req["query_id"].isin(stale | set(notes["dense_missing_requests"]))].reset_index(drop=True)
+    raw = raw[raw["query_id"].isin(req["query_id"])]
     runs = policy_runs(raw, req, corpus)
     intents = dict(zip(req["query_id"], req["intent"], strict=True))
     sim = runs["sim"]
