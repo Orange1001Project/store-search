@@ -16,6 +16,7 @@
 | 1단계 구성 | `scripts/eval_service_pipeline.py` `first_stage`, `brand_distance_sort` | v1 + 문자 BM25 후보 합집합(v1 점수 min-max 정규화) + 상호 일치 가산점 β=0.5(별칭 포함), 브랜드 쿼리는 반경 안 지점을 이름으로 찾아 가까운 순 |
 | 브랜드 별칭 사전 | `configs/service/brand_alias_v1.csv` | 같은 브랜드의 다른 표기(GS25·지에스25, 파리바게뜨·파리바게트) 53행 — 상호 일치·브랜드 지점 찾기 |
 | 관련 확률 계수 | `results/service_pipeline/x1/calibrator.json` | 로지스틱 식 하나(점수·1위와 차이·log 순위·BM25), 임계값 P ≥ 0.35(X1) |
+| 가게 업종(임시 v0) | `data/category/store_category_v0.parquet`, `configs/category/taxonomy_v0.yaml` | 공식 업종 17개 이름으로 붙인 가게 업종 — 화면 업종 칩 필터용(순위에는 안 씀). 공식 업종 데이터가 오면 교체 |
 | 로그 설계 | `docs/SEARCH_LOGGING.md` | 이벤트·필드·지표 추천안 |
 
 ## 2. 백엔드에서 정할 것
