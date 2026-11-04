@@ -34,10 +34,12 @@ map_mode:                     # [확정] 지표에 영향이 있는 부분만. �
 
 ranking:
   sort: similarity            # [실험 X2] 회의안. 확장분은 similarity × 거리 감쇠(Lv et al. SIGIR 2012)와 비교
-  brand_sort: distance        # [확정] 체인 브랜드 쿼리('GS25')는 가까운 지점부터(미구현 — X5)
+  brand_sort: distance        # [확정·X5] 브랜드 쿼리(쿼리 이해 intent=brand)는 반경 안 지점을 이름으로 찾아 가까운 순으로 맨 위
+  brand_aliases: configs/service/brand_alias_v1.csv   # [X5] 같은 브랜드의 다른 표기(GS25·지에스25) — 상호 일치·지점 찾기에 씀
 
 relevance:                    # [실험 X1] 2026-11-04 dev — docs/SERVICE_PIPELINE_PLAN.md 11-7
   # P(관련) = 1 / (1 + exp(−(b0 + b1·score + b2·gap + b3·log_rank + b4·bm25_rel))), 의도 묶음(name/category)마다 계수 따로.
+  # score = 사례 후보 안 min-max 정규화한 v1 코사인 + 0.5 × 상호 일치. 브랜드 쿼리의 브랜드 지점은 이 확률 없이 관련으로 센다(판정 기준: 지점은 모두 3점).
   # 특성은 반경 안 후보 기준. 계수는 calibrator 파일. 이 값 이상만 '관련'으로 세고 보여 준다(반경 확장 N, "없음", 지도 노출).
   model: logistic_bm25
   calibrator: results/service_pipeline/x1/calibrator.json

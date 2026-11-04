@@ -13,7 +13,8 @@
 | 지명 사전 | `data/geo/gazetteer_v1.parquet` (+ `.meta.json` 원본 해시) | 공공데이터 지명 21,859행: key, kind, scope, 코드, 중심 좌표 |
 | 쿼리 이해 규칙 | `src/store_search_ai/query/understanding.py` | 지역·상호·업종 분리, 같은 이름 지명 선택, 상호 우선 — 테스트 `tests/test_query_understanding.py`, `tests/test_gazetteer.py` |
 | 임베딩 모델 | v1 = bge-m3 mj (Colab·Drive, `docs/EMBEDDING_V1_PLAN.md`) | 질의·가게 인코딩 |
-| 1단계 구성 | `scripts/eval_service_pipeline.py` `first_stage` | v1 + 문자 BM25 후보 합집합 + 상호 일치 가산점 β=0.5 |
+| 1단계 구성 | `scripts/eval_service_pipeline.py` `first_stage`, `brand_distance_sort` | v1 + 문자 BM25 후보 합집합(v1 점수 min-max 정규화) + 상호 일치 가산점 β=0.5(별칭 포함), 브랜드 쿼리는 반경 안 지점을 이름으로 찾아 가까운 순 |
+| 브랜드 별칭 사전 | `configs/service/brand_alias_v1.csv` | 같은 브랜드의 다른 표기(GS25·지에스25, 파리바게뜨·파리바게트) 53행 — 상호 일치·브랜드 지점 찾기 |
 | 관련 확률 계수 | `results/service_pipeline/x1/calibrator.json` | 로지스틱 식 하나(점수·1위와 차이·log 순위·BM25), 임계값 P ≥ 0.35(X1) |
 | 로그 설계 | `docs/SEARCH_LOGGING.md` | 이벤트·필드·지표 추천안 |
 

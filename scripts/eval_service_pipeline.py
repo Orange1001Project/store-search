@@ -4,6 +4,9 @@
 실험(--exp)
   hybrid   v1 + char BM25: RRF(k=10·30·60), min-max 가중합(v1 가중치 α=0.1~0.9). 기준 = v1 단독, BM25 단독
   hybrid2  상호 일치 가산점(name match boost): v1+이름, 가중합+이름
+  qu       쿼리 이해(지역 뺀 상호 키)로 상호 일치 — 1단계 채택 구성 v1+name(qu) b=0.5
+  brand    X5(11-8): 브랜드 별칭 사전(configs/service/brand_alias_v1.csv)을 상호 일치에, 브랜드 쿼리는 반경 안 지점을 이름으로 찾아
+           가까운 순(정책 ranking.brand_sort). 결과에 '브랜드' 묶음(쿼리 이해 intent=brand)과 '1위가 가장 가까운 정답 지점' 비율을 더한다
   rerank   1단계(v1+이름 β=0.5, 1-1 채택) 반경 안 상위 k개를 reranker로 재정렬, 1단계 점수와 결합, 재정렬 뒤 상호 일치
            1) --exp rerank --export-pairs → results/service_pipeline/rerank/rerank_pairs.csv(dev+test 쌍, 위치 무관이라 쿼리 단위)
               → Drive store-search-ai/stack_eval/service/에 올리고 colab/rerank_scores.ipynb(SPLIT="service") 실행
@@ -34,6 +37,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from store_search_ai.data.service_pool import haversine_km
 from store_search_ai.evaluation.service_eval import (
     METRIC_COLUMNS,
     apply_eval_bundle,
@@ -44,7 +48,14 @@ from store_search_ai.evaluation.service_eval import (
     score_system,
 )
 from store_search_ai.pipeline.common import load_config
-from store_search_ai.retrieval.fusion import _rerank, boost, convex, name_match, rrf
+from store_search_ai.retrieval.fusion import (
+    _rerank,
+    boost,
+    convex,
+    name_match,
+    normalize_name,
+    rrf,
+)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # 보충 판정 시트는 build_service_pool.py와 같은 함수로 만든다
 logger = logging.getLogger(__name__)
@@ -56,7 +67,9 @@ DOC_TEXT_COLUMN = "search_text_t1_minimal"   # 모델 평가·판정 pool과 같
 
 def load_runs(bdir: Path) -> dict[str, pd.DataFrame]:
     runs: dict[str, list[pd.DataFrame]] = {}
-    from build_service_pool import RUN_DIRS   # 사례 묶음마다 run 폴더(SETS) — 백업 폴더 등은 읽지 않는다
+    from build_service_pool import (
+        RUN_DIRS,  # 사례 묶음마다 run 폴더(SETS) — 백업 폴더 등은 읽지 않는다
+    )
 
     for d in RUN_DIRS:
         for path in sorted((bdir / d).glob("*.csv")):
@@ -90,23 +103,90 @@ def name_hits(run: pd.DataFrame, instances: pd.DataFrame, names: pd.Series, core
                      index=run.index)
 
 
-def parsed_cores(instances: pd.DataFrame, corpus_path: str) -> dict[str, str]:
-    """사례마다 상호 일치에 쓸 말 — 쿼리 이해로 지역을 뺀 나머지, 띄어 쓴 상호면 쿼리 전체(name_key). 사용자 위치 = 사례 위치."""
+def parsed_queries(instances: pd.DataFrame, corpus_path: str) -> pd.DataFrame:
+    """사례마다 쿼리 이해 결과(instance_id, name_key, core, intent). 사용자 위치 = 사례 위치."""
 
     from store_search_ai.query.understanding import QueryUnderstanding, load_gazetteer
 
     corpus = pd.read_parquet(corpus_path, columns=["store_name", "item_text", "address", "market_name", "source_region",
                                                    "legal_dong_code", "latitude", "longitude", "geo_status"])
     qu = QueryUnderstanding(corpus[corpus["geo_status"] == "VALID"], gazetteer=load_gazetteer())
-    parsed: dict[tuple, str] = {}
-    out = {}
+    parsed: dict[tuple, tuple] = {}
+    rows = []
     for i, q, la, lo in zip(instances["instance_id"], instances["query"], instances["latitude"], instances["longitude"],
                             strict=True):
         key = (q, round(float(la), 3), round(float(lo), 3))
         if key not in parsed:
-            parsed[key] = qu.parse(q, float(la), float(lo)).name_key
-        out[i] = parsed[key]
-    return out
+            p = qu.parse(q, float(la), float(lo))
+            parsed[key] = (p.name_key, p.core, p.intent)
+        rows.append({"instance_id": i, "name_key": parsed[key][0], "core": parsed[key][1], "intent": parsed[key][2]})
+    return pd.DataFrame(rows, columns=["instance_id", "name_key", "core", "intent"])
+
+
+def parsed_cores(instances: pd.DataFrame, corpus_path: str) -> dict[str, str]:
+    """사례마다 상호 일치에 쓸 말 — 쿼리 이해로 지역을 뺀 나머지, 띄어 쓴 상호면 쿼리 전체(name_key)."""
+
+    p = parsed_queries(instances, corpus_path)
+    return dict(zip(p["instance_id"], p["name_key"], strict=True))
+
+
+def alias_name_hits(run: pd.DataFrame, cores: dict[str, str], names: pd.Series, aliases) -> pd.Series:
+    """상호 일치 + 브랜드 별칭: 쿼리 키의 표기 중 하나라도 상호와 일치하면(3글자 이상은 서로 포함, 짧은 표기는 상호 앞부분)."""
+
+    from store_search_ai.query.aliases import brand_store
+
+    variants = {i: aliases.variants(k) for i, k in cores.items()}
+    hits = []
+    for i, d in zip(run["query_id"], run["doc_id"], strict=True):
+        n = names.get(d, "")
+        vs = variants.get(i, frozenset())
+        hits.append(name_match(cores.get(i, ""), n) or (len(vs) > 1 and brand_store(vs, n)))
+    return pd.Series(hits, index=run.index)
+
+
+def brand_distance_sort(run: pd.DataFrame, instances: pd.DataFrame, parsed: pd.DataFrame, corpus: pd.DataFrame, aliases,
+                        max_km: float, name: str) -> pd.DataFrame:
+    """브랜드 쿼리(intent=brand): 반경(max_km) 안 그 브랜드 지점을 이름으로 찾아 후보에 더하고 가까운 순으로 맨 위에 둔다(정책
+    ranking.brand_sort — 지점은 모두 같은 정도로 맞으므로 유사도 차이가 의미 없다, navigational 질의 Broder 2002, 거리에 따른
+    클릭률 감소 Lv et al. 2012). 서비스의 상호 검색처럼 임베딩 상위 50에 없던 지점도 이름으로 찾는다. 다른 쿼리는 그대로."""
+
+    from store_search_ai.query.aliases import brand_store
+
+    brand = parsed[parsed["intent"] == "brand"].set_index("instance_id")
+    if brand.empty:
+        return run.assign(system=name)
+    inst = instances.set_index("instance_id")
+    lat, lon = corpus["latitude"].to_numpy(float), corpus["longitude"].to_numpy(float)
+    norm = corpus["store_name"].map(normalize_name)
+    extra = []
+    for i, key in brand["core"].items():
+        vs = aliases.variants(key)
+        d = haversine_km(float(inst.at[i, "latitude"]), float(inst.at[i, "longitude"]), lat, lon)
+        near = np.flatnonzero(d <= max_km)
+        hit = [j for j in near if brand_store(vs, norm.iat[j])]
+        extra.append(pd.DataFrame({"query_id": i, "doc_id": corpus["doc_id"].to_numpy()[hit], "dist": d[hit]}))
+    extra = pd.concat(extra, ignore_index=True)
+    out = run[["query_id", "doc_id", "score"]].merge(extra, on=["query_id", "doc_id"], how="outer")
+    out["score"] = out["score"].fillna(out.groupby("query_id")["score"].transform("min")).fillna(0.0)
+    top = out["dist"].notna()
+    out.loc[top, "score"] = 10.0 - out.loc[top, "dist"]       # 브랜드 지점: 가까운 순으로 맨 위(다른 후보 점수는 1.5 이하)
+    return _rerank(out[["query_id", "doc_id", "score"]], name)
+
+
+def nearest_brand_top1(run: pd.DataFrame, iq: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame, ids: set,
+                       radius_km: float) -> pd.Series:
+    """브랜드 사례: 1위가 반경 안 판정된 정답 지점 중 가장 가까운 곳인가(정답이 있는 사례만)."""
+
+    r = attach_distance(run.rename(columns={"query_id": "instance_id"}), instances, coords)
+    r = r[(r["dist_km"] <= radius_km) & r["instance_id"].isin(ids)].sort_values(["instance_id", "rank"])
+    q = iq[(iq["dist_km"] <= radius_km) & (iq["relevance"] >= 2) & iq["instance_id"].isin(ids)]
+    nearest = q.groupby("instance_id")["dist_km"].min()
+    top = r.groupby("instance_id").head(1).set_index("instance_id")
+    out = {}
+    for i, dmin in nearest.items():
+        rel = set(q.loc[q["instance_id"] == i, "doc_id"])
+        out[i] = float(i in top.index and top.at[i, "doc_id"] in rel and abs(top.at[i, "dist_km"] - dmin) < 1e-9)
+    return pd.Series(out, name="top1_nearest", dtype=float)
 
 
 def hybrid2_variants(runs: dict[str, pd.DataFrame], instances: pd.DataFrame, names: pd.Series) -> dict[str, pd.DataFrame]:
@@ -207,7 +287,11 @@ def supplement_pool(args, cfg: dict, bench: dict, stage: pd.DataFrame, scores: d
 
     from build_service_pool import previously_judged, write_annotation_xlsx
 
-    from store_search_ai.data.service_pool import annotation_sheet, assign_annotators, double_annotation_queries
+    from store_search_ai.data.service_pool import (
+        annotation_sheet,
+        assign_annotators,
+        double_annotation_queries,
+    )
     from store_search_ai.pipeline.common import sha256_file
 
     jcfg = cfg["judging"]
@@ -292,7 +376,7 @@ def _agg(g: pd.DataFrame) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--exp", choices=["hybrid", "hybrid2", "rerank", "qu"], required=True)
+    parser.add_argument("--exp", choices=["hybrid", "hybrid2", "rerank", "qu", "brand"], required=True)
     parser.add_argument("--split", choices=["dev", "test"], default="dev")
     parser.add_argument("--only", action="append", help="채점할 구성 이름(여러 번). test는 반드시 지정")
     parser.add_argument("--export-pairs", action="store_true", help="rerank: Colab에서 채점할 쌍만 내보내고 끝")
@@ -359,6 +443,26 @@ def main() -> None:
 
         def variants_for(radius: float) -> dict[str, pd.DataFrame]:
             return fixed
+    elif args.exp == "brand":
+        from store_search_ai.query.aliases import BrandAliases
+
+        parsed = parsed_queries(instances, bench["corpus_path"])
+        cores = dict(zip(parsed["instance_id"], parsed["name_key"], strict=True))
+        aliases = BrandAliases.load()
+        v1 = runs[V1][runs[V1]["query_id"].isin(instances["instance_id"])]
+        bm25 = runs["char_bm25"][runs["char_bm25"]["query_id"].isin(instances["instance_id"])]
+        union = union_v1(v1, bm25)
+        alias_run = boost(union, alias_name_hits(union, cores, names, aliases), 0.5, "v1+name(qu+alias) b=0.5")
+        corpus_geo = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "store_name", "latitude", "longitude", "geo_status"])
+        corpus_geo = corpus_geo[corpus_geo["geo_status"] == "VALID"].reset_index(drop=True)
+        fixed = {"v1+name(qu) b=0.5": first_stage(runs, instances, names, cores, "v1+name(qu) b=0.5"),
+                 "v1+name(qu+alias) b=0.5": alias_run,
+                 "+brand distance": brand_distance_sort(alias_run, instances, parsed, corpus_geo, aliases, max(radii),
+                                                        "+brand distance")}
+        brand_ids = set(parsed.loc[parsed["intent"] == "brand", "instance_id"])
+
+        def variants_for(radius: float) -> dict[str, pd.DataFrame]:
+            return fixed
     else:
         fixed = hybrid_variants(runs) if args.exp == "hybrid" else hybrid2_variants(runs, instances, names)
 
@@ -374,9 +478,17 @@ def main() -> None:
             s = score_system(run, iq, instances, coords, radius)
             c = score_system(condense(run, instances, qrels), iq, instances, coords, radius)
             s = s.merge(c[["instance_id", "nDCG@10"]].rename(columns={"nDCG@10": "nDCG@10_condensed"}), on="instance_id")
+            if args.exp == "brand":
+                s = s.merge(nearest_brand_top1(run, iq, instances, coords, brand_ids, radius), left_on="instance_id",
+                            right_index=True, how="left")
             per.append(s.assign(config=name, radius_km=radius))
     per = pd.concat(per, ignore_index=True).merge(instances[["instance_id", "bundle"]], on="instance_id")
     summary = summarize(per)
+    if args.exp == "brand":   # 브랜드 묶음(쿼리 이해 intent=brand — 평가 묶음과 별개)과 '1위가 가장 가까운 정답 지점'
+        pb = per[per["instance_id"].isin(brand_ids)]
+        rows = [{"config": k[0], "radius_km": k[1], "bundle": "브랜드", **_agg(g), "top1_nearest": g["top1_nearest"].mean()}
+                for k, g in pb.groupby(["config", "radius_km"])]
+        summary = pd.concat([summary, pd.DataFrame(rows)], ignore_index=True)
     out = Path("results/service_pipeline")
     out.mkdir(parents=True, exist_ok=True)
     stem = f"{args.exp}_{args.split}" + ("_all" if args.set == "all" else "")

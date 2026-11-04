@@ -178,7 +178,7 @@ def main() -> None:
     # dev 전체로 다시 학습 → 백엔드로 넘길 계수(1km 후보 기준 특성)
     cands1 = candidates(stage, instances, coords, qrels, parsed, 1, bm25)
     calibrator = {"model": best, "threshold_p": t_star, "features": FEATURE_SETS.get(best, ["score"]),
-                  "score": "v1 cosine + 0.5 × name_match(qu) — scripts/eval_service_pipeline.py first_stage",
+                  "score": "min-max(v1 코사인, 사례 후보 = v1·문자 BM25 상위 합집합 안) + 0.5 × 상호 일치(쿼리 이해 키) — scripts/eval_service_pipeline.py first_stage / fusion.boost",
                   "feature_scope": "반경 안 후보 기준(gap = 점수 − 반경 안 1위 점수, log_rank = log(반경 안 순위), "
                                    "bm25_rel = 문자 BM25 ÷ 반경 안 최댓값, BM25 상위 50 밖이면 0)",
                   "trained_on": f"dev {args.set} 1km judged pairs", "groups": {}}
