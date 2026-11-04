@@ -14,7 +14,7 @@
 상위 3개 평균 거리, Judged@10. 지도: 노출 정밀도, 헛된 "없음".
 
     python scripts/eval_x23.py                # dev(결정용)
-    python scripts/eval_x23.py --split test   # X7에서 고른 정책 하나만 보고
+    python scripts/eval_x23.py --split test   # X7: 정책 파일의 N·정렬 하나만 계산
 """
 
 from __future__ import annotations
@@ -89,6 +89,8 @@ def main() -> None:
     cfg, bench, policy = load_config(args.config), load_config(args.benchmark_config), load_config(args.policy)
     bdir = Path(cfg["judging"]["benchmark_dir"])
     tau = float(policy["relevance"]["threshold_p"])
+    # test는 정책 파일에 정한 구성 하나만 계산한다(X7 — test로 고르지 않는다, docs/EVALUATION_POLICY.md)
+    n_grid, orders = ((int(policy["radius"]["expand_if_relevant_below"]),), (policy["ranking"]["expanded_order"],))         if args.split == "test" else (N_GRID, ORDERS)
     calibrator = json.loads(Path(policy["relevance"]["calibrator"]).read_text(encoding="utf-8"))
 
     req = load_requests(cfg)
@@ -142,9 +144,9 @@ def main() -> None:
             continue
         within1 = dist <= 1.0 + 1e-9
         n1 = int((rel_shown & within1).sum())
-        for n in N_GRID:
+        for n in n_grid:
             expanded = n1 < n
-            for order in ORDERS:
+            for order in orders:
                 if not expanded:
                     shown = list(docs[rel_shown & within1])
                 else:

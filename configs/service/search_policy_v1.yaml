@@ -18,7 +18,7 @@ location:                     # [확정]
 radius:
   first_km: 1                 # [확정] 사용자 위치·좁은 지역(동·역·시장)의 첫 반경 = understanding.POINT_KM
   max_km: 10                  # [확정] 한 번에 넓힌다(1 → 10, 중간 단계 없음)
-  expand_if_relevant_below: 10   # [X2 dev 잠정 — 유지] 회의안. '관련 있음'은 relevance.threshold_p 이상. 96% 확장되지만 N=10이 N=3보다 nDCG +0.073(유의)
+  expand_if_relevant_below: 10   # [X2 확정 2026-11-04, dev·조정 후] 회의안. '관련 있음'은 relevance.threshold_p 이상. 96% 확장되지만 N=10이 N=3보다 nDCG +0.073(유의)
   no_expand_if_exact_name_within_first: true   # [실험 X2] 상호명 쿼리는 첫 반경 안에서 상호가 맞으면 넓히지 않는다(미구현)
 
 region:                       # [확정] 규칙, 수치는 X3에서 확인
@@ -34,7 +34,7 @@ map_mode:                     # [확정] 지표에 영향이 있는 부분만. �
 
 ranking:
   sort: similarity            # 회의안 — 1km 안(확장 안 함)과 확장분 각각의 정렬
-  expanded_order: tier        # [X2 dev 잠정] 확장하면 1km 관련 가게 먼저, 그다음 10km 관련 가게 유사도순(문구 '1km 안에 n곳, 10km까지 넓혀 m곳 더'와 같은 순서).
+  expanded_order: tier        # [X2 확정 2026-11-04, dev·조정 후] 확장하면 1km 관련 가게 먼저, 그다음 10km 관련 가게 유사도순(문구 '1km 안에 n곳, 10km까지 넓혀 m곳 더'와 같은 순서).
                               # dev: 유사도순 대비 nDCG@10 −0.008(CI −0.017~0), 상위 3개 평균 거리 −1.2km(2.5 → 1.4km)
   brand_sort: distance        # [확정·X5] 브랜드 쿼리(쿼리 이해 intent=brand)는 반경 안 지점을 이름으로 찾아 가까운 순으로 맨 위
   brand_aliases: configs/service/brand_alias_v1.csv   # [X5] 같은 브랜드의 다른 표기(GS25·지에스25) — 상호 일치·지점 찾기에 씀
