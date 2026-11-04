@@ -47,6 +47,35 @@ def candidates_within(queries: pd.DataFrame, corpus: pd.DataFrame, radius_km: fl
     return out
 
 
+def filter_mask(code_prefix: str, bbox: str, codes: np.ndarray, lats: np.ndarray, lons: np.ndarray) -> np.ndarray | None:
+    """요청별 후보 필터(X2+X3, 2026-11-04). code_prefix: 법정동 코드 앞자리('|'로 여러 개 — 넓은 지역), bbox: 'south,west,north,east'
+    (지도 화면 범위). 둘 다 비면 None — 반경 규칙을 쓴다. colab/service_dense_runs.ipynb의 `# @cell runs`와 같은 규칙."""
+
+    if isinstance(code_prefix, str) and code_prefix:
+        return np.char.startswith(codes.astype(str)[:, None], np.array(code_prefix.split("|"))).any(axis=1)
+    if isinstance(bbox, str) and bbox:
+        s, w, n, e = (float(x) for x in bbox.split(","))
+        return (lats >= s) & (lats <= n) & (lons >= w) & (lons <= e)
+    return None
+
+
+def candidates_filtered(queries: pd.DataFrame, corpus: pd.DataFrame, radius_km: float) -> dict[str, np.ndarray]:
+    """candidates_within에 요청별 필터(code_prefix·bbox 열, 있으면)를 더한 것. 필터가 있는 요청은 반경 대신 필터 안 가맹점."""
+
+    out = candidates_within(queries, corpus, radius_km)
+    if not {"code_prefix", "bbox"} & set(queries.columns):
+        return out
+    codes = corpus["legal_dong_code"].astype(str).to_numpy()
+    lats = corpus["latitude"].to_numpy(dtype=float)
+    lons = corpus["longitude"].to_numpy(dtype=float)
+    for qid, cp, bb in zip(queries["query_id"], queries.get("code_prefix", pd.Series("", index=queries.index)).fillna(""),
+                           queries.get("bbox", pd.Series("", index=queries.index)).fillna(""), strict=True):
+        m = filter_mask(cp, bb, codes, lats, lons)
+        if m is not None:
+            out[qid] = np.flatnonzero(m)
+    return out
+
+
 def distances_km(queries: pd.DataFrame, corpus: pd.DataFrame, cands: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     lats = corpus["latitude"].to_numpy(dtype=float)
     lons = corpus["longitude"].to_numpy(dtype=float)
