@@ -18,6 +18,14 @@
   python scripts/build_x23_round.py pool --dry-run    # 판정 건수(종류·depth별)
   python scripts/build_x23_round.py pool --round service_v11 --depth 10
 
+필터 요청(region_area·map5)만 Colab에서 다시 돌릴 때(2026-11-04 — 처음 실행이 필터 없는 옛 노트북이었다):
+  python scripts/build_x23_round.py export --filtered-only   # colab_upload/service_eval_x23f/ → runs_x23f/
+  필터 요청의 임베딩 결과는 runs_x23f가 있으면 그것을 쓰고 runs_x23의 같은 요청 행은 버린다. 요청 범위 밖 행이 하나라도 있으면
+  판정 라운드를 만들지 않는다.
+
+판정 대상(pool): 평가할 정책 변형이 실제로 상위 depth에 올리는 가게(TREC pooling — 평가하는 시스템의 상위를 판정한다).
+변형 = 1단계(v1 + 문자 BM25 후보 합집합, 상호 일치·별칭 가산점, 브랜드 거리순)의 유사도순, 반경 요청은 거리 감쇠(점수 × 2^(−거리/h),
+h = 2km·5km — Lv et al. SIGIR 2012의 거리에 따른 클릭률 감소를 반영한 정렬 후보)를 더한다.
 판정은 (쿼리, 가맹점) 단위·위치 무관이라 앞 라운드에서 판정한 쌍은 다시 판정하지 않는다(build_service_pool과 같음).
 """
 
@@ -67,6 +75,9 @@ RADII = [1.0, MAX_KM]   # 반경 요청은 반경마다 상위 run_depth개
 MAP_HALF_KM = 2.5       # 지도 화면 5km × 5km
 REMOTE = [(37.5663, 126.9779), (35.1798, 129.0750)]   # 서울시청, 부산시청(eval_query_understanding.py와 같음)
 DENSE = "bge_m3_ft_mj_20261014_0743"
+FILTERED_SET_DIR = Path("colab_upload/service_eval_x23f")
+FILTERED_RUN_DIR = "runs_x23f"
+DECAY_HALF_KM = (2.0, 5.0)   # 거리 감쇠 정렬 후보(반경 요청)
 
 
 def km(lat1, lon1, lat2, lon2) -> float:
@@ -113,26 +124,108 @@ def build_requests(cfg: dict, corpus: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def export(cfg: dict, bench: dict) -> None:
+def export(cfg: dict, bench: dict, filtered_only: bool = False) -> None:
     corpus = load_corpus(bench)
-    req = build_requests(cfg, corpus)
     bdir = Path(cfg["judging"]["benchmark_dir"])
-    (bdir / "x23").mkdir(parents=True, exist_ok=True)
-    req.to_csv(bdir / "x23" / "requests.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    if filtered_only:   # 요청표는 그대로 두고 필터 요청만 다시 내보낸다(요청 ID·위치가 바뀌면 안 됨)
+        req = load_requests(cfg)
+        req = req[(req["code_prefix"] != "") | (req["bbox"] != "")].reset_index(drop=True)
+        set_dir, run_dir = FILTERED_SET_DIR, FILTERED_RUN_DIR
+    else:
+        req = build_requests(cfg, corpus)
+        (bdir / "x23").mkdir(parents=True, exist_ok=True)
+        req.to_csv(bdir / "x23" / "requests.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+        set_dir, run_dir = SET_DIR, RUN_DIR
     cands = candidates_filtered(req, corpus, MAX_KM)
     idx = np.unique(np.concatenate(list(cands.values())))
-    SET_DIR.mkdir(parents=True, exist_ok=True)
+    set_dir.mkdir(parents=True, exist_ok=True)
     docs = corpus.iloc[idx][["doc_id", DOC_TEXT_COLUMN, "latitude", "longitude", "legal_dong_code"]]
-    docs.rename(columns={DOC_TEXT_COLUMN: "text"}).to_csv(SET_DIR / "docs.csv", index=False, encoding="utf-8-sig",
+    docs.rename(columns={DOC_TEXT_COLUMN: "text"}).to_csv(set_dir / "docs.csv", index=False, encoding="utf-8-sig",
                                                          lineterminator="\n")
     req[["query_id", "query", "latitude", "longitude", "code_prefix", "bbox"]].to_csv(
-        SET_DIR / "queries.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
-    meta = {"judge_radius_km": MAX_KM, "run_depth": cfg["judging"]["run_depth"], "report_radii_km": RADII, "run_dir": RUN_DIR,
+        set_dir / "queries.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    meta = {"judge_radius_km": MAX_KM, "run_depth": cfg["judging"]["run_depth"], "report_radii_km": RADII, "run_dir": run_dir,
             "docs": len(docs), "queries": len(req), "doc_text": DOC_TEXT_COLUMN, "corpus_path": bench["corpus_path"],
             "filters": "code_prefix(법정동 코드 앞자리, '|' 여러 개) · bbox(south,west,north,east) — 있으면 반경 대신"}
-    (SET_DIR / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    (set_dir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("요청 %s, 가맹점 %d개 → %s (Drive store-search-ai/%s/에 올림)", req["kind"].value_counts().to_dict(),
-                len(docs), SET_DIR, SET_DIR.name)
+                len(docs), set_dir, set_dir.name)
+
+
+def load_runs_x23(bdir: Path, req: pd.DataFrame) -> pd.DataFrame:
+    """runs_x23(+ 필터 요청은 runs_x23f가 있으면 그것)을 읽는다."""
+
+    frames = [pd.read_csv(p, encoding="utf-8-sig") for p in sorted((bdir / RUN_DIR).glob("*.csv"))]
+    if not frames:
+        raise SystemExit("run이 없습니다 — 먼저 runs")
+    runs = pd.concat(frames, ignore_index=True)
+    fdir = bdir / FILTERED_RUN_DIR
+    if fdir.exists() and any(fdir.glob("*.csv")):
+        filtered = set(req.loc[(req["code_prefix"] != "") | (req["bbox"] != ""), "query_id"])
+        redo = pd.concat([pd.read_csv(p, encoding="utf-8-sig") for p in sorted(fdir.glob("*.csv"))], ignore_index=True)
+        drop = runs["query_id"].isin(filtered) & runs["system"].isin(set(redo["system"]))
+        runs = pd.concat([runs[~drop], redo[redo["query_id"].isin(filtered)]], ignore_index=True)
+    return runs
+
+
+def in_range(frame: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame) -> np.ndarray:
+    """행(query_id = 요청, doc_id)이 그 요청의 후보 범위(필터 또는 반경 10km) 안인가."""
+
+    from store_search_ai.data.service_pool import filter_mask, haversine_km
+
+    c = corpus.set_index("doc_id")
+    q = req.set_index("query_id")
+    ok = np.zeros(len(frame), dtype=bool)
+    for qid, ix in frame.groupby("query_id").indices.items():
+        d = c.loc[frame["doc_id"].to_numpy()[ix]]
+        row = q.loc[qid]
+        lats, lons = d["latitude"].to_numpy(float), d["longitude"].to_numpy(float)
+        m = filter_mask(row["code_prefix"], row["bbox"], d["legal_dong_code"].astype(str).to_numpy(), lats, lons)
+        if m is None:
+            m = haversine_km(float(row["latitude"]), float(row["longitude"]), lats, lons) <= MAX_KM + 1e-6
+        ok[ix] = m
+    return ok
+
+
+def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """평가할 정책 변형의 순위: 1단계(11-8 채택 — v1+문자 BM25 합집합, 상호 일치·별칭 가산점, 브랜드 거리순)의 유사도순,
+    반경 요청은 거리 감쇠(h = 2·5km)도. query_id = 요청 ID."""
+
+    from eval_service_pipeline import alias_name_hits, brand_distance_sort, union_v1
+
+    from store_search_ai.data.service_pool import haversine_km
+    from store_search_ai.query.aliases import BrandAliases
+    from store_search_ai.retrieval.fusion import _rerank, boost
+
+    qu = QueryUnderstanding(corpus, gazetteer=load_gazetteer())
+    parsed = []
+    for r in req.itertuples():
+        p = qu.parse(r.query, float(r.latitude), float(r.longitude))
+        parsed.append({"instance_id": r.query_id, "name_key": p.name_key, "core": p.core, "intent": p.intent})
+    parsed = pd.DataFrame(parsed)
+    aliases = BrandAliases.load()
+    names = corpus.set_index("doc_id")["store_name"]
+    v1, bm25 = runs[runs["system"] == DENSE], runs[runs["system"] == "char_bm25"]
+    union = union_v1(v1, bm25)
+    cores = dict(zip(parsed["instance_id"], parsed["name_key"], strict=True))
+    stage = boost(union, alias_name_hits(union, cores, names, aliases), 0.5, "stage1")
+    geo = corpus[["doc_id", "store_name", "latitude", "longitude"]]
+    loc = req[["query_id", "latitude", "longitude"]].rename(columns={"query_id": "instance_id"})   # 요청 ID = 사례 자리
+    stage = brand_distance_sort(stage, loc, parsed, geo, aliases, MAX_KM, "stage1")
+    stage = stage[in_range(stage, req, corpus)]                 # 브랜드 지점 찾기가 필터 밖을 더하지 않게
+    stage = stage.sort_values(["query_id", "rank"]).assign(rank=lambda d: d.groupby("query_id").cumcount() + 1)
+    out = {"sim": stage}
+    circle = set(req.loc[req["kind"].isin(["expand", "region_point"]), "query_id"])
+    s = stage[stage["query_id"].isin(circle)].copy()
+    loc = req.set_index("query_id")[["latitude", "longitude"]]
+    c = corpus.set_index("doc_id")[["latitude", "longitude"]]
+    a = loc.loc[s["query_id"]].to_numpy(float)
+    b = c.loc[s["doc_id"]].to_numpy(float)
+    dist = np.array([float(haversine_km(x[0], x[1], np.array([y[0]]), np.array([y[1]]))[0]) for x, y in zip(a, b, strict=True)])
+    for h in DECAY_HALF_KM:
+        out[f"decay{h:g}"] = _rerank(s.assign(score=s["score"] * np.power(2.0, -dist / h))[["query_id", "doc_id", "score"]],
+                                     f"decay{h:g}")
+    return out
 
 
 def load_requests(cfg: dict) -> pd.DataFrame:
@@ -172,13 +265,20 @@ def pool(args, cfg: dict, bench: dict) -> None:
     bdir = Path(cfg["judging"]["benchmark_dir"])
     req = load_requests(cfg)
     run_dir = bdir / RUN_DIR
-    files = sorted(run_dir.glob("*.csv"))
-    if not files:
-        raise SystemExit("run이 없습니다 — 먼저 runs")
-    all_runs = pd.concat([pd.read_csv(p, encoding="utf-8-sig") for p in files], ignore_index=True)
-    systems = sorted(all_runs["system"].unique())
+    files = sorted(run_dir.glob("*.csv")) + sorted((bdir / FILTERED_RUN_DIR).glob("*.csv"))
+    raw = load_runs_x23(bdir, req)
+    systems = sorted(raw["system"].unique())
+    corpus = load_corpus(bench)
+    bad = ~in_range(raw, req, corpus)
+    if bad.any():
+        by = raw[bad].merge(req[["query_id", "kind"]], on="query_id").groupby(["system", "kind"]).size()
+        logger.warning("요청 범위 밖 run 행 %d개(시스템·종류별 %s) — 필터 없는 옛 노트북 결과. 그 요청은 판정에서 빼고 센다. "
+                       "export --filtered-only → Colab(새 노트북) → runs_x23f/", int(bad.sum()), by.to_dict())
+    stale = set(raw.loc[bad, "query_id"])
     if DENSE not in systems:
-        logger.warning("임베딩 run이 아직 없음 — BM25만으로 센 건수(실제는 더 많다)")
+        raise SystemExit("임베딩 run이 없습니다")
+    all_runs = pd.concat([r.assign(system=k) for k, r in policy_runs(raw[~raw["query_id"].isin(stale)], req, corpus).items()],
+                         ignore_index=True)
     judged = previously_judged(bdir)
     to_base = dict(zip(req["query_id"], req["base_query_id"], strict=True))
     kind = dict(zip(req["query_id"], req["kind"], strict=True))
@@ -198,7 +298,9 @@ def pool(args, cfg: dict, bench: dict) -> None:
         p = new_pairs(d)
         by_kind = {k: int(p["kinds"].str.contains(k).sum()) for k in ["expand", "region_point", "region_area", "map5"]}
         rows.append({"depth": d, "새 판정 쌍": len(p), "쿼리 수": p["query_id"].nunique(), **by_kind})
-    print(f"========== 판정 건수(시스템 {systems}, 요청 {req['kind'].value_counts().to_dict()}) ==========")
+    ok_req = req[~req["query_id"].isin(stale)]
+    print(f"========== 판정 건수(정책 변형 {sorted(all_runs['system'].unique())}, 판정 가능한 요청 "
+          f"{ok_req['kind'].value_counts().to_dict()}, 범위 밖 결과로 뺀 요청 {len(stale)}) ==========")
     print(pd.DataFrame(rows).to_string(index=False))
     share = cfg["judging"]["double_annotation_share"]
     print(f"(쿼리의 {share:.0%}는 A·B 두 명이 판정 — 사람 판정 건수는 그만큼 더 많음. 종류별 수는 겹침 포함)")
@@ -206,8 +308,8 @@ def pool(args, cfg: dict, bench: dict) -> None:
         return
     if not args.round:
         raise SystemExit("--round가 필요합니다.")
-    if DENSE not in systems:
-        raise SystemExit(f"{DENSE} run이 없습니다 — Colab 결과를 {run_dir}에 넣은 뒤 판정 라운드를 만드세요.")
+    if stale and not args.allow_partial:
+        raise SystemExit(f"범위 밖 결과가 있는 요청 {len(stale)}개 — runs_x23f를 넣거나, 나머지 요청만 먼저 판정하려면 --allow-partial")
     round_dir = bdir / "annotations" / args.round
     if (round_dir / "pool_manifest.json").exists():
         raise SystemExit(f"{round_dir}에 이미 라운드가 있습니다 — 다른 --round를 쓰세요.")
@@ -215,7 +317,6 @@ def pool(args, cfg: dict, bench: dict) -> None:
     pairs = new_pairs(depth)
     seed = cfg["random_seed"]
     base = pd.read_csv(cfg["import"]["output"], encoding="utf-8-sig", keep_default_na=False)
-    corpus = load_corpus(bench)
     sheet = annotation_sheet(pairs[["query_id", "doc_id", "pool_sources", "instance_ids"]], base, corpus, seed)
     double = double_annotation_queries(sorted(pairs["query_id"].unique()), share, seed)
     writers = {qid: set(str(w).split("|")) for qid, w in zip(base["query_id"], base["writers"], strict=True)}
@@ -231,7 +332,8 @@ def pool(args, cfg: dict, bench: dict) -> None:
     manifest = {
         "round": args.round, "set": "x23", "created_at": datetime.now(UTC).isoformat(),
         "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
-        "requests": req["kind"].value_counts().to_dict(), "max_km": MAX_KM, "radii_km": RADII, "map_half_km": MAP_HALF_KM,
+        "requests": ok_req["kind"].value_counts().to_dict(), "excluded_requests": sorted(stale),
+        "pool": "정책 변형(1단계 유사도순, 반경 요청은 거리 감쇠 h=2·5km) 상위 depth", "max_km": MAX_KM, "radii_km": RADII, "map_half_km": MAP_HALF_KM,
         "depth": depth, "queries": int(pairs["query_id"].nunique()), "pairs": len(pairs),
         "pairs_by_kind": {k: int(pairs["kinds"].str.contains(k).sum()) for k in ["expand", "region_point", "region_area", "map5"]},
         "double_annotation_queries": len(double), "double_annotation_pairs": int(sheet["query_id"].isin(double).sum()),
@@ -251,13 +353,15 @@ def main() -> None:
     parser.add_argument("--round", help="pool: 판정 라운드 이름(예: service_v11)")
     parser.add_argument("--depth", type=int, help="pool: 요청·시스템마다 상위 몇 개를 판정할지(기본 10)")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--filtered-only", action="store_true", help="export: 필터 요청만 다시(colab_upload/service_eval_x23f)")
+    parser.add_argument("--allow-partial", action="store_true", help="pool: 범위 밖 결과가 있는 요청을 빼고 라운드를 만든다")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     cfg = load_config(args.config)
     bench = load_config(args.benchmark_config)
-    {"export": lambda: export(cfg, bench), "runs": lambda: runs(cfg, bench), "pool": lambda: pool(args, cfg, bench)}[args.command]()
+    {"export": lambda: export(cfg, bench, args.filtered_only), "runs": lambda: runs(cfg, bench), "pool": lambda: pool(args, cfg, bench)}[args.command]()
 
 
 if __name__ == "__main__":
