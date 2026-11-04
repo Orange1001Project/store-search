@@ -209,9 +209,12 @@ def clean_runs(raw: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, bdir:
     return out, stale, notes
 
 
-def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame) -> dict[str, pd.DataFrame]:
+def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, category_gamma: float = 0.0,
+                categories: pd.Series | None = None) -> dict[str, pd.DataFrame]:
     """평가할 정책 변형의 순위: 1단계(11-8 채택 — v1+문자 BM25 합집합, 상호 일치·별칭 가산점, 브랜드 거리순)의 유사도순,
-    반경 요청은 거리 감쇠(h = 2·5km)도. query_id = 요청 ID."""
+    반경 요청은 거리 감쇠(h = 2·5km)도. query_id = 요청 ID.
+    category_gamma > 0이면 업종 쿼리에 업종 가산점(γ × 1단계 상위 10개 업종 분포에서 그 가게 업종의 비중, 11-15)을 더한 순서를 'sim'으로,
+    가산점 전 순서를 'sim_base'로 돌려준다 — 관련 확률(X1)은 가산점 전 점수로 계산한다."""
 
     from eval_service_pipeline import alias_name_hits, brand_distance_sort, union_v1
 
@@ -233,10 +236,22 @@ def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame) -> 
     stage = boost(union, alias_name_hits(union, cores, names, aliases), 0.5, "stage1")
     geo = corpus[["doc_id", "store_name", "latitude", "longitude"]]
     loc = req[["query_id", "latitude", "longitude"]].rename(columns={"query_id": "instance_id"})   # 요청 ID = 사례 자리
-    stage = brand_distance_sort(stage, loc, parsed, geo, aliases, MAX_KM, "stage1")
-    stage = stage[in_range(stage, req, corpus)]                 # 브랜드 지점 찾기가 필터 밖을 더하지 않게
-    stage = stage.sort_values(["query_id", "rank"]).assign(rank=lambda d: d.groupby("query_id").cumcount() + 1)
-    out = {"sim": stage}
+
+    def finish(st: pd.DataFrame) -> pd.DataFrame:
+        st = brand_distance_sort(st, loc, parsed, geo, aliases, MAX_KM, "stage1")
+        st = st[in_range(st, req, corpus)]                     # 브랜드 지점 찾기가 필터 밖을 더하지 않게
+        return st.sort_values(["query_id", "rank"]).assign(rank=lambda d: d.groupby("query_id").cumcount() + 1)
+
+    out = {"sim_base": finish(stage)}
+    if category_gamma > 0 and categories is not None:
+        from store_search_ai.retrieval.category_boost import category_share
+
+        share = category_share(stage, categories)
+        cat_q = set(parsed.loc[~parsed["intent"].isin(["name", "brand"]), "instance_id"])
+        add = share.to_numpy() * stage["query_id"].isin(cat_q).to_numpy()
+        stage = _rerank(stage.assign(score=stage["score"] + category_gamma * add)[["query_id", "doc_id", "score"]], "stage1")
+    out["sim"] = finish(stage) if category_gamma > 0 and categories is not None else out["sim_base"]
+    stage = out["sim"]
     circle = set(req.loc[req["kind"].isin(["expand", "region_point"]), "query_id"])
     s = stage[stage["query_id"].isin(circle)].copy()
     loc = req.set_index("query_id")[["latitude", "longitude"]]

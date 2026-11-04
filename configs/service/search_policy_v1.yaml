@@ -50,7 +50,9 @@ relevance:                    # [실험 X1] 2026-11-04 dev — docs/SERVICE_PIPE
 category:                     # [X4 확인 2026-11-04] 임시 업종 v0으로 확인 — 순위·관련 판단에는 쓰지 않는다(11-14), 화면 업종 칩(필터)용으로만
   taxonomy: configs/category/taxonomy_v0.yaml      # 공식 업종 17개 이름 + 취급품목 키워드. 공식 업종 데이터가 오면 교체
   store_labels: data/category/store_category_v0.parquet   # doc_id, category(대분류), categories, source, subcategory(세부 업종)
-  use: filter                 # 사용자가 고른 업종 칩에만 필터. boost는 dev nDCG +0.008(대분류 γ=0.1)로 0.02 기준 미만이라 안 씀
+  use: filter                 # 사용자가 고른 업종 칩에만 필터
+  boost_gamma: 0.0            # 순위 업종 가산점(retrieval/category_boost.py). 1km 1단계는 dev nDCG +0.0076(CI 0.0035~0.0121)이지만
+                              # 정책 전체(임계값·확장 뒤 실제 노출)에서는 −0.001(n.s.)이라 끔 — 공식 업종이 오면 다시 확인(11-15)
 
 messages:                     # [백엔드] 문구 확정은 화면 개발에서. 조건(언제 어느 문구)은 radius·map_mode 규칙을 따른다
   expanded_none_in_first: "1km 안에 없어 10km까지 찾았어요"

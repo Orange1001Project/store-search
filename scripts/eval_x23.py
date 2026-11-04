@@ -84,6 +84,8 @@ def main() -> None:
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument("--policy", default="configs/service/search_policy_v1.yaml")
+    parser.add_argument("--category-gamma", type=float, help="업종 가산점 γ(기본: 정책 category.boost_gamma). dev 비교용")
+    parser.add_argument("--suffix", default="", help="출력 파일 이름 뒤에 붙임")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     cfg, bench, policy = load_config(args.config), load_config(args.benchmark_config), load_config(args.policy)
@@ -104,11 +106,14 @@ def main() -> None:
     # 임베딩 결과가 없는 요청(지명 사전 수정으로 범위가 바뀐 요청 중 일부)은 1단계 순위를 흉내 낼 수 없어 채점에서 뺀다
     req = req[~req["query_id"].isin(stale | set(notes["dense_missing_requests"]))].reset_index(drop=True)
     raw = raw[raw["query_id"].isin(req["query_id"])]
-    runs = policy_runs(raw, req, corpus)
+    gamma = args.category_gamma if args.category_gamma is not None else float(policy["category"].get("boost_gamma", 0.0))
+    cats = pd.read_parquet(policy["category"]["store_labels"]).set_index("doc_id")["category"] if gamma > 0 else None
+    runs = policy_runs(raw, req, corpus, gamma, cats)
+    logger.info("업종 가산점 γ = %.2f", gamma)
     intents = dict(zip(req["query_id"], req["intent"], strict=True))
     sim = runs["sim"]
-    brand_hit = sim["score"] >= 5.0                      # brand_distance_sort가 브랜드 지점에 준 점수(10 − 거리)
-    base_stage = sim[~brand_hit]
+    base = runs["sim_base"]
+    base_stage = base[base["score"] < 5.0]               # 관련 확률은 업종 가산점 전 점수로
     p = relevance_probability(base_stage, raw, req, calibrator, intents)
 
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")
@@ -165,7 +170,7 @@ def main() -> None:
     per = pd.DataFrame(rows)
     per["false_none"] = per["answerable"] & per["none"]
     OUT.mkdir(parents=True, exist_ok=True)
-    per.to_csv(OUT / f"per_request_{args.split}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    per.to_csv(OUT / f"per_request_{args.split}{args.suffix}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     ans = per[per["answerable"]]
     summary = (per.groupby(["kind", "N", "order"]).agg(requests=("query_id", "size"), expanded=("expanded", "mean"),
                                                         false_none=("false_none", "mean"), mean_shown=("n_shown", "mean"),
@@ -173,7 +178,7 @@ def main() -> None:
                .join(ans.groupby(["kind", "N", "order"])[["nDCG@10", "bad@3", "top1_ok", "Judged@10"]].mean())
                .join(per.groupby(["kind", "N", "order"])["precision"].mean() if "precision" in per else None)
                .reset_index())
-    summary.to_csv(OUT / f"summary_{args.split}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    summary.to_csv(OUT / f"summary_{args.split}{args.suffix}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     pd.set_option("display.width", 250)
     logger.info("%s (τ = %.2f):\n%s", args.split, tau, summary.round(3).to_string(index=False))
 
