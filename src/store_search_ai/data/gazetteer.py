@@ -217,6 +217,22 @@ def build_gazetteer(src: str | Path, corpus: pd.DataFrame | None = None) -> tupl
         return float(np.average(g["lat"], weights=w)), float(np.average(g["lon"], weights=w))
 
     sgg_center = {k: weighted(g) for k, g in adm.dropna(subset=["code5"]).groupby("code5")}
+    # 경계 데이터(2025-06) 뒤 새로 생긴 시군구(2026 화성시 4개 구 등)는 경계 중심이 없다 → 그 코드 가맹점 위치 중앙값으로 채운다
+    store_center: dict[str, tuple[float, float]] = {}
+    if corpus is not None:
+        cc = corpus.assign(code5=corpus["legal_dong_code"].astype(str).str[:5])
+        store_center = {k: (float(g["latitude"].median()), float(g["longitude"].median())) for k, g in cc.groupby("code5")}
+
+    def center_of(code5: str) -> tuple[tuple[float, float], str]:
+        """시군구 중심: 경계 → 가맹점 중앙값 → 옛 상위 시(구가 생기기 전 코드, 앞 4자리 + 0)의 경계."""
+
+        if code5 in sgg_center:
+            return sgg_center[code5], "polygon"
+        if code5 in store_center:
+            return store_center[code5], "corpus"
+        return sgg_center.get(code5[:4] + "0", (np.nan, np.nan)), "parent"
+
+    gu_parents = {c[:4] for c, n in zip(sgg["code5"], sgg["sgg_name"], strict=True) if len(str(n).split()) == 2}
     rows: list[dict] = []
 
     def add(keys, name, kind, scope, sido, code5, prefix, lat, lon, center_source, source):
@@ -244,21 +260,19 @@ def build_gazetteer(src: str | Path, corpus: pd.DataFrame | None = None) -> tupl
         words = r.sgg_name.split()
         if len(words) == 2:                                        # '성남시 분당구' → 분당구, 분당
             keys, kind, prefix = [words[1]] + ([words[1][:-1]] if len(words[1]) >= 3 else []), "sigungu", r.code5
-        elif r.code5 in sgg_center:
+        elif r.code5[:4] in gu_parents and r.code5.endswith("0"):  # 구가 있는 시(성남시, 2026 화성시): 법정동코드표 기준
+            w = words[0]
+            kids = sorted(c for c in sgg["code5"] if c[:4] == r.code5[:4] and c != r.code5)
+            cs = [center_of(c)[0] for c in kids]
+            cs = [c for c in cs if not np.isnan(c[0])] or [center_of(r.code5)[0]]
+            add([w] + ([w[:-1]] if len(w) >= 3 else []), r.지역주소명, "city", "area", r.시도코드, r.code5, r.code5[:4],
+                float(np.mean([c[0] for c in cs])), float(np.mean([c[1] for c in cs])), "polygon", "법정동코드+SGIS")
+            continue
+        else:
             w = words[0]
             keys, kind, prefix = [w] + ([w[:-1]] if len(w) >= 3 else []), "sigungu", r.code5
-        else:                                                      # 구가 있는 시(성남시): 자식 구들의 중심
-            w = words[0]
-            kids = [c for c in sgg_center if c[:4] == r.code5[:4] and c != r.code5]
-            if not kids:
-                continue
-            lat = float(np.mean([sgg_center[c][0] for c in kids]))
-            lon = float(np.mean([sgg_center[c][1] for c in kids]))
-            add([w] + ([w[:-1]] if len(w) >= 3 else []), r.지역주소명, "city", "area", r.시도코드, r.code5, r.code5[:4],
-                lat, lon, "polygon", "법정동코드+SGIS")
-            continue
-        lat, lon = sgg_center.get(r.code5, (np.nan, np.nan))
-        add(keys, r.지역주소명, kind, "area", r.시도코드, r.code5, prefix, lat, lon, "polygon", "법정동코드+SGIS")
+        (lat, lon), src_c = center_of(r.code5)
+        add(keys, r.지역주소명, kind, "area", r.시도코드, r.code5, prefix, lat, lon, src_c, "법정동코드+SGIS")
     # 행정동
     hd_index: dict[tuple[str, str], tuple[float, float]] = {}
     for r in adm.dropna(subset=["code5"]).itertuples():
@@ -271,14 +285,14 @@ def build_gazetteer(src: str | Path, corpus: pd.DataFrame | None = None) -> tupl
         name = r.최하위지역명
         code5 = r.법정동코드[:5]
         if name.endswith(("읍", "면")):
-            lat, lon = sgg_center.get(code5, (np.nan, np.nan))
+            lat, lon = center_of(code5)[0]
             keys = [name] + ([name[:-1]] if len(name) >= 3 else [])
             add(keys, r.지역주소명, "eupmyeon", "area", r.시도코드, code5, r.법정동코드[:8], lat, lon, "sigungu", "법정동코드")
             continue
         keys = dong_keys(name)
         center = next((hd_index[(code5, k)] for k in keys if (code5, k) in hd_index), None)
         src_c = "hdong" if center else "sigungu"
-        lat, lon = center or sgg_center.get(code5, (np.nan, np.nan))
+        lat, lon = center or center_of(code5)[0]
         add(keys, r.지역주소명, "dong", "point", r.시도코드, code5, r.법정동코드[:8], lat, lon, src_c, "법정동코드")
 
     # 역·시장: 시군구는 가장 가까운 행정동의 것

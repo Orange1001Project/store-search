@@ -15,9 +15,9 @@
       "eupmyeon": 2779,
       "market": 2698,
       "station": 1978,
-      "sigungu": 490,
+      "sigungu": 488,
       "sido": 30,
-      "city": 26
+      "city": 28
     },
     "sgis_unmatched_sigungu": [
       "인천광역시 동구",
@@ -30,8 +30,8 @@
   },
   "check": {
     "sigungu_center_vs_store_median_km": {
-      "median": 4.02,
-      "p90": 9.44,
+      "median": 3.91,
+      "p90": 9.22,
       "max": 78.87,
       "n": 255
     },

@@ -187,6 +187,28 @@ def in_range(frame: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame) -> np
     return ok
 
 
+def clean_runs(raw: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, bdir: Path) -> tuple[pd.DataFrame, set, dict]:
+    """요청 범위 밖 run 행 처리. x23/requests_changed.csv에 적힌 요청(Colab 실행 뒤 지명 사전 수정으로 범위가 바뀜)은 범위 밖 행만
+    버리고, 그 밖의 범위 밖 행이 있는 요청은 통째로 뺀다(필터 없는 옛 노트북 결과처럼 순위 자체가 틀린 경우). 반환: (run, 뺀 요청, 기록)."""
+
+    changed_path = bdir / "x23" / "requests_changed.csv"
+    changed = set(pd.read_csv(changed_path, encoding="utf-8-sig")["query_id"]) if changed_path.exists() else set()
+    bad = ~in_range(raw, req, corpus)
+    drop_rows = bad & raw["query_id"].isin(changed).to_numpy()
+    stale = set(raw.loc[bad & ~drop_rows, "query_id"])
+    if stale:
+        by = raw[bad & ~drop_rows].merge(req[["query_id", "kind"]], on="query_id").groupby(["system", "kind"]).size()
+        logger.warning("요청 범위 밖 run 행이 있는 요청 %d개(시스템·종류별 행 %s)는 뺀다 — 필터 없는 옛 노트북 결과 등",
+                       len(stale), by.to_dict())
+    out = raw[~drop_rows & ~raw["query_id"].isin(stale)]
+    dense_missing = sorted(set(req["query_id"]) - stale - set(out.loc[out["system"] == DENSE, "query_id"]))
+    notes = {"changed_requests_rows_dropped": int(drop_rows.sum()), "changed_requests": sorted(changed),
+             "dense_missing_requests": dense_missing}
+    if dense_missing:
+        logger.warning("임베딩 결과가 없는 요청 %d개(BM25만): %s", len(dense_missing), dense_missing[:10])
+    return out, stale, notes
+
+
 def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame) -> dict[str, pd.DataFrame]:
     """평가할 정책 변형의 순위: 1단계(11-8 채택 — v1+문자 BM25 합집합, 상호 일치·별칭 가산점, 브랜드 거리순)의 유사도순,
     반경 요청은 거리 감쇠(h = 2·5km)도. query_id = 요청 ID."""
@@ -269,16 +291,10 @@ def pool(args, cfg: dict, bench: dict) -> None:
     raw = load_runs_x23(bdir, req)
     systems = sorted(raw["system"].unique())
     corpus = load_corpus(bench)
-    bad = ~in_range(raw, req, corpus)
-    if bad.any():
-        by = raw[bad].merge(req[["query_id", "kind"]], on="query_id").groupby(["system", "kind"]).size()
-        logger.warning("요청 범위 밖 run 행 %d개(시스템·종류별 %s) — 필터 없는 옛 노트북 결과. 그 요청은 판정에서 빼고 센다. "
-                       "export --filtered-only → Colab(새 노트북) → runs_x23f/", int(bad.sum()), by.to_dict())
-    stale = set(raw.loc[bad, "query_id"])
     if DENSE not in systems:
         raise SystemExit("임베딩 run이 없습니다")
-    all_runs = pd.concat([r.assign(system=k) for k, r in policy_runs(raw[~raw["query_id"].isin(stale)], req, corpus).items()],
-                         ignore_index=True)
+    raw, stale, notes = clean_runs(raw, req, corpus, bdir)
+    all_runs = pd.concat([r.assign(system=k) for k, r in policy_runs(raw, req, corpus).items()], ignore_index=True)
     judged = previously_judged(bdir)
     to_base = dict(zip(req["query_id"], req["base_query_id"], strict=True))
     kind = dict(zip(req["query_id"], req["kind"], strict=True))
@@ -332,7 +348,7 @@ def pool(args, cfg: dict, bench: dict) -> None:
     manifest = {
         "round": args.round, "set": "x23", "created_at": datetime.now(UTC).isoformat(),
         "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
-        "requests": ok_req["kind"].value_counts().to_dict(), "excluded_requests": sorted(stale),
+        "requests": ok_req["kind"].value_counts().to_dict(), "excluded_requests": sorted(stale), **notes,
         "pool": "정책 변형(1단계 유사도순, 반경 요청은 거리 감쇠 h=2·5km) 상위 depth", "max_km": MAX_KM, "radii_km": RADII, "map_half_km": MAP_HALF_KM,
         "depth": depth, "queries": int(pairs["query_id"].nunique()), "pairs": len(pairs),
         "pairs_by_kind": {k: int(pairs["kinds"].str.contains(k).sum()) for k in ["expand", "region_point", "region_area", "map5"]},

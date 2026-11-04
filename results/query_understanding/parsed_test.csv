@@ -49,7 +49,7 @@ sq_B063,B,목포 유달산식당,목포,목포,유달산식당,name,False,area,c
 sq_B064,B,자양동 족발 집배원,자양동,자양동,족발 집배원,category,False,point,corpus+dong+hdong,733,True,0.442188381078774,True,자양동,True,0,False,True
 sq_B065,B,조박사함흥냉면,,,조박사함흥냉면,name,False,,,0,,,,,,5,True,True
 sq_B067,B,남평그릇종합유통,,,남평그릇종합유통,name,False,,,0,,,,,,2,True,True
-sq_B069,B,반월동 국수나무,반월동,반월동,국수나무,brand,False,point,corpus+hdong,69,True,0.8821536219448882,True,반월동,False,82,True,True
+sq_B069,B,반월동 국수나무,반월동,반월동,국수나무,brand,False,point,corpus+dong+hdong,69,True,0.8821536219448882,True,반월동,False,82,True,True
 sq_B070,B,사당 착한탕국,사당,사당,착한탕국,brand,False,point,corpus+dong+hdong+station,603,True,1.377660269572073,True,사당,True,12,True,True
 sq_B072,B,천안 멘야마쯔리,천안,천안,멘야마쯔리,brand,False,area,city+corpus+station,1938,True,5.681358152904886,True,천안,True,8,True,True
 sq_B073,B,대전노루표상사,,,대전노루표상사,name,False,,,0,,,,,,1,True,True
@@ -146,9 +146,9 @@ sq_B193,B,더벤티 신봉점,신봉,,더벤티 신봉점,name,False,,,0,,,,,,19
 sq_B194,B,엘스테이,,,엘스테이,name,False,,,0,,,,,,9,True,True
 sq_B195,B,살롱드 브로우,,,살롱드 브로우,name,False,,,0,,,,,,2,True,True
 sq_B196,B,팜스 골프,,,팜스 골프,category,False,,,0,,,,,,0,False,True
-sq_B197,B,남양 수산,,남양,수산,category,True,point,corpus+market,143,False,228.6706311751142,False,남양,False,0,False,False
+sq_B197,B,남양 수산,,남양,수산,category,True,area,corpus+eupmyeon+market,143,False,220.17688477428806,False,남양,False,0,False,False
 sq_B198,B,역전상회,,,역전상회,brand,False,,,0,,,,,,10,True,True
-sq_B199,B,화성 회관,,화성,회관,category,True,area,corpus+sigungu,1628,False,225.6297397613854,False,화성,False,0,False,False
+sq_B199,B,화성 회관,,화성,회관,category,True,area,city+corpus,1628,False,228.4261129619196,False,화성,False,0,False,False
 sq_B200,B,경안 깡통,경안,경안,깡통,brand,False,point,corpus+dong+hdong+market,84,True,0.14499513038075856,True,경안,True,7,True,True
 sq_B201,B,강촌 엘리시안,,강촌,엘리시안,name,False,point,corpus+station,38,True,0.8593743940313733,True,강촌,True,1,True,False
 sq_B202,B,먹보 대감 식당,,,먹보 대감 식당,category,False,,,0,,,,,,0,False,True

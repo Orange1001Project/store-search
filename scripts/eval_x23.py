@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_x23_round import (
     DENSE,
     MAX_KM,
-    in_range,
+    clean_runs,
     load_corpus,
     load_requests,
     load_runs_x23,
@@ -98,12 +98,9 @@ def main() -> None:
     raw = raw[raw["query_id"].isin(req["query_id"])]
     if DENSE not in set(raw["system"]):
         raise SystemExit("임베딩 run이 없습니다")
-    bad = ~in_range(raw, req, corpus)
-    stale = set(raw.loc[bad, "query_id"])
-    if stale:
-        logger.warning("범위 밖 결과가 있는 요청 %d개는 뺀다(필터 요청 Colab 재실행 전)", len(stale))
-    req = req[~req["query_id"].isin(stale)].reset_index(drop=True)
-    raw = raw[~raw["query_id"].isin(stale)]
+    raw, stale, notes = clean_runs(raw, req, corpus, bdir)
+    # 임베딩 결과가 없는 요청(지명 사전 수정으로 범위가 바뀐 요청 중 일부)은 1단계 순위를 흉내 낼 수 없어 채점에서 뺀다
+    req = req[~req["query_id"].isin(stale | set(notes["dense_missing_requests"]))].reset_index(drop=True)
     runs = policy_runs(raw, req, corpus)
     intents = dict(zip(req["query_id"], req["intent"], strict=True))
     sim = runs["sim"]

@@ -54,7 +54,7 @@ sq_B205,B,아이콘 안경,,,아이콘 안경,category,False,,,0,,,,,,0,False,Tr
 sq_B208,B,신내챙이 농약,,,신내챙이 농약,category,False,,,0,,,,,,0,False,True
 sq_B213,B,선경사 한복,,,선경사 한복,category,False,,,0,,,,,,0,False,True
 sq_D001,D,보문산 카페,보문산,보문산,카페,category,False,point,corpus,119,,0.05330767486490896,True,보문산,True,0,,True
-sq_D002,D,화성 분식,화성,화성,분식,category,False,area,corpus+sigungu,1628,,18.54719421736768,True,화성,True,0,,True
+sq_D002,D,화성 분식,화성,화성,분식,category,False,area,city+corpus,1628,,7.607256031926532,True,화성,True,0,,True
 sq_D003,D,을지로 옷가게,을지로,을지로,옷가게,category,False,point,corpus+dong+hdong,1834,,0.47177669352916884,True,을지로,True,0,,True
 sq_D004,D,평화시장 패션,평화시장,평화시장,패션,category,False,point,market,2708,,0.3361926914040281,True,평화시장,True,0,,True
 sq_D021,D,표선사거리 치킨,표선사거리,표선사거리,치킨,category,False,point,corpus,58,,0.00799339361739242,True,표선사거리,True,0,,True
@@ -65,7 +65,7 @@ sq_D028,D,금산인삼약령시장 약초,금산인삼약령시장,금산인삼�
 sq_D040,D,일곡동 세탁소,일곡동,일곡동,세탁소,category,False,point,corpus+dong+hdong,661,,0.44698093759083424,True,일곡동,True,0,,True
 sq_D042,D,달서로 식당,달서로,달서로,식당,category,False,point,corpus,1547,,0.21788303943009393,True,달서로,True,0,,True
 sq_D044,D,진잠 칼국수,진잠,진잠,칼국수,category,False,point,corpus+hdong,149,,2.47756385520545,True,진잠,True,0,,True
-sq_D051,D,봉담 아울렛 옷가게,봉담,봉담,아울렛 옷가게,category,False,area,corpus,1628,,2.7149647915697708,True,봉담,True,0,,True
+sq_D051,D,봉담 아울렛 옷가게,봉담,봉담,아울렛 옷가게,category,False,area,corpus+eupmyeon,188,,2.7149627704201476,True,봉담,True,0,,True
 sq_C008,C,보양식 재료 파는 곳,,,보양식 재료 파는 곳,category,False,,,0,,,,,,0,,True
 sq_C013,C,부모님 선물,,,부모님 선물,category,False,,,0,,,,,,0,,True
 sq_C014,C,농장 준비,,,농장 준비,category,False,,,0,,,,,,0,,True
