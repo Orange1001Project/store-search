@@ -14,6 +14,7 @@
 | 쿼리 이해 규칙 | `src/store_search_ai/query/understanding.py` | 지역·상호·업종 분리, 같은 이름 지명 선택, 상호 우선 — 테스트 `tests/test_query_understanding.py`, `tests/test_gazetteer.py` |
 | 임베딩 모델 | v1 = bge-m3 mj (Colab·Drive, `docs/EMBEDDING_V1_PLAN.md`) | 질의·가게 인코딩 |
 | 1단계 구성 | `scripts/eval_service_pipeline.py` `first_stage` | v1 + 문자 BM25 후보 합집합 + 상호 일치 가산점 β=0.5 |
+| 관련 확률 계수 | `results/service_pipeline/x1/calibrator.json` | 로지스틱 식 하나(점수·1위와 차이·log 순위·BM25), 임계값 P ≥ 0.35(X1) |
 | 로그 설계 | `docs/SEARCH_LOGGING.md` | 이벤트·필드·지표 추천안 |
 
 ## 2. 백엔드에서 정할 것

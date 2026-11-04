@@ -1,0 +1,35 @@
+{
+ "model": "logistic_bm25",
+ "threshold_p": 0.35,
+ "features": [
+  "score",
+  "gap",
+  "log_rank",
+  "bm25_rel"
+ ],
+ "score": "v1 cosine + 0.5 × name_match(qu) — scripts/eval_service_pipeline.py first_stage",
+ "feature_scope": "반경 안 후보 기준(gap = 점수 − 반경 안 1위 점수, log_rank = log(반경 안 순위), bm25_rel = 문자 BM25 ÷ 반경 안 최댓값, BM25 상위 50 밖이면 0)",
+ "trained_on": "dev all 1km judged pairs",
+ "groups": {
+  "name": {
+   "intercept": -3.6773205468675205,
+   "coef": {
+    "score": 2.5411363814551184,
+    "gap": 0.9654450328214456,
+    "log_rank": -0.8687850791383044,
+    "bm25_rel": 2.1575379327359756
+   },
+   "pairs": 1432
+  },
+  "category": {
+   "intercept": -3.6033477367070574,
+   "coef": {
+    "score": 3.6272508808986244,
+    "gap": -0.15096100325160114,
+    "log_rank": 0.119476981268779,
+    "bm25_rel": 1.7142304240091855
+   },
+   "pairs": 4856
+  }
+ }
+}

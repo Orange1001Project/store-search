@@ -18,7 +18,7 @@ location:                     # [확정]
 radius:
   first_km: 1                 # [확정] 사용자 위치·좁은 지역(동·역·시장)의 첫 반경 = understanding.POINT_KM
   max_km: 10                  # [확정] 한 번에 넓힌다(1 → 10, 중간 단계 없음)
-  expand_if_relevant_below: 10   # [실험 X2] 회의안. '관련 있음'은 relevance.threshold 이상(지금 판정 기준 1km 사례 87.5%가 10 미만)
+  expand_if_relevant_below: 10   # [실험 X2] 회의안. '관련 있음'은 relevance.threshold_p 이상 — X1 dev: 1km 안 10개 이상은 3.8%뿐(96% 확장)
   no_expand_if_exact_name_within_first: true   # [실험 X2] 상호명 쿼리는 첫 반경 안에서 상호가 맞으면 넓히지 않는다(미구현)
 
 region:                       # [확정] 규칙, 수치는 X3에서 확인
@@ -30,14 +30,18 @@ region:                       # [확정] 규칙, 수치는 X3에서 확인
 
 map_mode:                     # [확정] 지표에 영향이 있는 부분만. 화면(핀 묶음·버튼·상한·문구)은 [백엔드]
   area: viewport_bbox         # 보이는 화면 사각형 = 지역 필터. 1km → 10km 확장 안 함, 화면 밖은 알리지 않음
-  show: above_threshold       # 화면 안 관련(relevance.threshold 이상) 가게 전부 → 지도 품질 = X1 노출 정밀도
+  show: above_threshold       # 화면 안 관련(relevance.threshold_p 이상) 가게 전부 → 지도 품질 = X1 노출 정밀도
 
 ranking:
   sort: similarity            # [실험 X2] 회의안. 확장분은 similarity × 거리 감쇠(Lv et al. SIGIR 2012)와 비교
   brand_sort: distance        # [확정] 체인 브랜드 쿼리('GS25')는 가까운 지점부터(미구현 — X5)
 
-relevance:
-  threshold: null             # [실험 X1] 1단계 점수 → P(관련) isotonic 보정, 의도별
+relevance:                    # [실험 X1] 2026-11-04 dev — docs/SERVICE_PIPELINE_PLAN.md 11-7
+  # P(관련) = 1 / (1 + exp(−(b0 + b1·score + b2·gap + b3·log_rank + b4·bm25_rel))), 의도 묶음(name/category)마다 계수 따로.
+  # 특성은 반경 안 후보 기준. 계수는 calibrator 파일. 이 값 이상만 '관련'으로 세고 보여 준다(반경 확장 N, "없음", 지도 노출).
+  model: logistic_bm25
+  calibrator: results/service_pipeline/x1/calibrator.json
+  threshold_p: 0.35           # 헛된 "없음" ≤ 5% 중 노출 정밀도 최고(dev 1km: 헛된 없음 3.9%, 노출 정밀도 0.63)
 
 category:                     # [실험 X4, 조건부] 공식 업종(17개)이 오면 만든다 — 임시 업종(X0)은 만들지 않는다
   taxonomy: null
