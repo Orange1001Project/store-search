@@ -103,6 +103,7 @@ def main() -> None:
     parser.add_argument("--policy", default="configs/service/search_policy_v1.yaml")
     parser.add_argument("--category-gamma", type=float, help="업종 가산점 γ(기본: 정책 category.boost_gamma). dev 비교용")
     parser.add_argument("--expansion-w", type=float, help="LLM 쿼리 확장 가중치(기본: 정책 ranking.expansion_w). dev 비교용")
+    parser.add_argument("--dump", action="store_true", help="정책 구성의 노출 목록(상위 20)을 shown_<split><suffix>.csv로 — 정성 점검용")
     parser.add_argument("--suffix", default="", help="출력 파일 이름 뒤에 붙임")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -144,7 +145,20 @@ def main() -> None:
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")
     judged_by_q = {q: dict(zip(g["doc_id"], g["relevance"], strict=True)) for q, g in qrels.groupby("query_id")}
     c = corpus.set_index("doc_id")
-    rows = []
+    rows, dump = [], []
+    pol_n, pol_order = int(policy["radius"]["expand_if_relevant_below"]), policy["ranking"]["expanded_order"]
+
+    def keep_dump(r, shown, docs, dist, prob, judged, expanded):
+        pos = {d: i for i, d in enumerate(docs)}
+        for k, d in enumerate(shown[:20]):
+            i = pos[d]
+            dump.append({"query_id": r.query_id, "kind": r.kind, "query": r.query, "region_text": r.region_text, "expanded": expanded,
+                         "n_shown": len(shown), "rank": k + 1, "doc_id": d, "dist_km": round(float(dist[i]), 2),
+                         "p": round(float(prob[i]), 3), "grade": judged.get(d, -1)})
+        if not shown:
+            dump.append({"query_id": r.query_id, "kind": r.kind, "query": r.query, "region_text": r.region_text, "expanded": expanded,
+                         "n_shown": 0, "rank": 0})
+
     for r in req.itertuples():
         judged = judged_by_q.get(r.base_query_id, {})
         s = sim[sim["query_id"] == r.query_id]
@@ -170,6 +184,7 @@ def main() -> None:
         base = {"query_id": r.query_id, "kind": r.kind, "bundle": r.bundle, "intent": r.intent, "answerable": answerable}
         if r.kind in ("region_area", "map5"):
             shown = list(docs[rel_shown])
+            keep_dump(r, shown, docs, dist, prob, judged, False)
             out = {**base, "N": 0, "order": "sim", "expanded": False, "n_shown": len(shown), "none": not shown,
                    "precision": (float(np.mean([judged.get(d, 0) >= BINARY for d in shown if d in judged]))
                                  if any(d in judged for d in shown) else np.nan),
@@ -190,6 +205,8 @@ def main() -> None:
                     if order == "tier":
                         near = set(docs[within1])
                         shown = [d for d in shown if d in near] + [d for d in shown if d not in near]
+                if n == pol_n and order == pol_order:
+                    keep_dump(r, shown, docs, dist, prob, judged, expanded)
                 pos = {d: i for i, d in enumerate(docs)}
                 top3 = [dist[pos[d]] for d in shown[:3]]
                 rows.append({**base, "N": n, "order": order, "expanded": expanded, "n_shown": len(shown), "none": not shown,
@@ -199,6 +216,9 @@ def main() -> None:
     per["false_none"] = per["answerable"] & per["none"]
     OUT.mkdir(parents=True, exist_ok=True)
     per.to_csv(OUT / f"per_request_{args.split}{args.suffix}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    if args.dump:
+        d = pd.DataFrame(dump).merge(corpus[["doc_id", "store_name", "item_text", "market_name"]], on="doc_id", how="left")
+        d.to_csv(OUT / f"shown_{args.split}{args.suffix}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     ans = per[per["answerable"]]
     summary = (per.groupby(["kind", "N", "order"]).agg(requests=("query_id", "size"), expanded=("expanded", "mean"),
                                                         false_none=("false_none", "mean"), mean_shown=("n_shown", "mean"),
