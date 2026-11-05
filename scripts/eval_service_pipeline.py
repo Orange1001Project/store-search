@@ -289,6 +289,33 @@ def supplement_pool(args, cfg: dict, bench: dict, stage: pd.DataFrame, scores: d
     """1-4 보충 판정: 고른 reranker 구성들의 반경별 상위 depth개 중 아직 판정 안 된 (쿼리, 가맹점) → 판정 라운드.
     dev·test 모든 사례(묶음 v1·anchor·extra)를 한 라운드로 만든다. 시트 형식·판정자 배정은 build_service_pool.py pool과 같다."""
 
+    from store_search_ai.pipeline.common import sha256_file
+
+    jcfg = cfg["judging"]
+    depth = jcfg["depth"]
+    scores = {m: s for m, s in scores.items() if m in set(args.pool_rerankers)}
+    if len(scores) != len(args.pool_rerankers):
+        raise SystemExit(f"reranker 점수 파일이 없습니다: {sorted(set(args.pool_rerankers) - set(scores))}")
+    tops = []
+    for radius in jcfg["report_radii_km"]:
+        for name, run in rerank_variants(within_radius(stage, instances, coords, radius), scores, instances, names).items():
+            if name != "v1+name b=0.5":     # 1단계는 이미 판정됨
+                tops.append(within_radius(run, instances, coords, radius, depth).assign(system=name))
+    manifest = {
+        "set": "service_pipeline 1-4 보충 판정(reranker 구성, dev+test 모든 사례)",
+        "first_stage": "v1+name b=0.5",
+        "rerankers": sorted(scores),
+        "rerank_scores_sha256": {p.name: sha256_file(p) for p in sorted(RERANK_DIR.glob("rerank_scores_*.csv"))
+                                 if p.stem.removeprefix("rerank_scores_") in scores},
+    }
+    write_pool_round(cfg, bench, tops, instances, args.pool_round, args.dry_run, manifest)
+
+
+def write_pool_round(cfg: dict, bench: dict, tops: list[pd.DataFrame], instances: pd.DataFrame, round_name: str, dry_run: bool,
+                     manifest_extra: dict) -> None:
+    """구성들의 반경별 상위 depth개(tops — query_id 열은 사례 ID, system 열은 구성 이름) 중 아직 판정 안 된 (쿼리, 가맹점) → 판정 라운드.
+    시트 형식·판정자 배정은 build_service_pool.py pool과 같다(1-4 보충 판정, X8 확장 판정이 같이 쓴다)."""
+
     from build_service_pool import previously_judged, write_annotation_xlsx
 
     from store_search_ai.data.service_pool import (
@@ -301,14 +328,6 @@ def supplement_pool(args, cfg: dict, bench: dict, stage: pd.DataFrame, scores: d
     jcfg = cfg["judging"]
     bdir = Path(jcfg["benchmark_dir"])
     depth = jcfg["depth"]
-    scores = {m: s for m, s in scores.items() if m in set(args.pool_rerankers)}
-    if len(scores) != len(args.pool_rerankers):
-        raise SystemExit(f"reranker 점수 파일이 없습니다: {sorted(set(args.pool_rerankers) - set(scores))}")
-    tops = []
-    for radius in jcfg["report_radii_km"]:
-        for name, run in rerank_variants(within_radius(stage, instances, coords, radius), scores, instances, names).items():
-            if name != "v1+name b=0.5":     # 1단계는 이미 판정됨
-                tops.append(within_radius(run, instances, coords, radius, depth).assign(system=name))
     top = pd.concat(tops, ignore_index=True).rename(columns={"query_id": "instance_id"})
     top["query_id"] = top["instance_id"].map(instances.set_index("instance_id")["query_id"])
     judged = previously_judged(bdir)
@@ -320,9 +339,9 @@ def supplement_pool(args, cfg: dict, bench: dict, stage: pd.DataFrame, scores: d
     logger.info("새 판정 쌍 %d개(쿼리 %d개, %s), 구성 %d개 × 반경 %s × 상위 %d", len(pairs), pairs["query_id"].nunique(),
                 pairs["query_id"].map(split).value_counts().to_dict(), len(tops) // len(jcfg["report_radii_km"]),
                 jcfg["report_radii_km"], depth)
-    if args.dry_run:
+    if dry_run:
         return
-    round_dir = bdir / "annotations" / args.pool_round
+    round_dir = bdir / "annotations" / round_name
     if (round_dir / "pool_manifest.json").exists():
         raise SystemExit(f"{round_dir}에 이미 라운드가 있습니다 — 다른 --pool-round를 쓰세요.")
     seed = cfg["random_seed"]
@@ -341,12 +360,10 @@ def supplement_pool(args, cfg: dict, bench: dict, stage: pd.DataFrame, scores: d
         logger.info("판정자 %s: 쿼리 %d개(이중 판정 %d 포함), %d쌍", name, len(qids), len(double), len(part))
     pairs.to_csv(round_dir / "pool.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     manifest = {
-        "round": args.pool_round,
-        "set": "service_pipeline 1-4 보충 판정(reranker 구성, dev+test 모든 사례)",
+        "round": round_name,
+        **manifest_extra,
         "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
         "created_at": datetime.now(UTC).isoformat(),
-        "first_stage": "v1+name b=0.5",
-        "rerankers": sorted(scores),
         "systems": sorted(top["system"].unique()),
         "report_radii_km": jcfg["report_radii_km"],
         "depth": depth,
@@ -356,8 +373,6 @@ def supplement_pool(args, cfg: dict, bench: dict, stage: pd.DataFrame, scores: d
         "double_annotation_pairs": int(sheet["query_id"].isin(double).sum()),
         "annotators": {name: {"writer_id": jcfg["annotators"][name], "queries": len(qids),
                               "pairs": int(sheet["query_id"].isin(qids).sum())} for name, qids in assignment.items()},
-        "rerank_scores_sha256": {p.name: sha256_file(p) for p in sorted(RERANK_DIR.glob("rerank_scores_*.csv"))
-                                 if p.stem.removeprefix("rerank_scores_") in scores},
         "instances_sha256": sha256_file(bdir / "instances.csv"),
         "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
     }

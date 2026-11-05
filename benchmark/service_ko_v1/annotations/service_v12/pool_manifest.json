@@ -1,0 +1,36 @@
+{
+  "round": "service_v12",
+  "set": "X8 LLM 쿼리 확장 보충 판정(확장 구성, dev+test 모든 사례)",
+  "first_stage": "stage1(11-8 최종)",
+  "expansion_llm": "Qwen2.5-14B-Instruct",
+  "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
+  "created_at": "2026-11-05T04:15:38.352329+00:00",
+  "systems": [
+    "exp+0.1 cat",
+    "exp+0.2 cat",
+    "exp+0.3 cat"
+  ],
+  "report_radii_km": [
+    1,
+    2
+  ],
+  "depth": 10,
+  "queries": 275,
+  "pairs": 661,
+  "double_annotation_queries": 55,
+  "double_annotation_pairs": 134,
+  "annotators": {
+    "A": {
+      "writer_id": null,
+      "queries": 165,
+      "pairs": 398
+    },
+    "B": {
+      "writer_id": null,
+      "queries": 165,
+      "pairs": 397
+    }
+  },
+  "instances_sha256": "818c03dd924cd05a8873ba6db3e34c8463b85d60df92c5d1cebba46e9562edd2",
+  "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)"
+}
