@@ -210,11 +210,13 @@ def clean_runs(raw: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, bdir:
 
 
 def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, category_gamma: float = 0.0,
-                categories: pd.Series | None = None) -> dict[str, pd.DataFrame]:
+                categories: pd.Series | None = None, expansion: dict | None = None) -> dict[str, pd.DataFrame]:
     """평가할 정책 변형의 순위: 1단계(11-8 채택 — v1+문자 BM25 합집합, 상호 일치·별칭 가산점, 브랜드 거리순)의 유사도순,
     반경 요청은 거리 감쇠(h = 2·5km)도. query_id = 요청 ID.
     category_gamma > 0이면 업종 쿼리에 업종 가산점(γ × 1단계 상위 10개 업종 분포에서 그 가게 업종의 비중, 11-15)을 더한 순서를 'sim'으로,
-    가산점 전 순서를 'sim_base'로 돌려준다 — 관련 확률(X1)은 가산점 전 점수로 계산한다."""
+    가산점 전 순서를 'sim_base'로 돌려준다 — 관련 확률(X1)은 가산점 전 점수로 계산한다.
+    expansion = {"w", "texts"(기준 쿼리 ID → 확장어), "bm25"(corpus와 같은 행 순서의 SparseBM25)}이면 업종 의도 요청에 LLM 쿼리 확장
+    점수를 더한다(11-18, retrieval/expansion.py). 확장은 1단계의 일부라 'sim_base'에도 들어간다(확장으로 들어온 가게도 관련 확률을 받는다)."""
 
     from eval_service_pipeline import alias_name_hits, brand_distance_sort, union_v1
 
@@ -234,6 +236,18 @@ def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, cat
     union = union_v1(v1, bm25)
     cores = dict(zip(parsed["instance_id"], parsed["name_key"], strict=True))
     stage = boost(union, alias_name_hits(union, cores, names, aliases), 0.5, "stage1")
+    if expansion is not None and expansion["w"] > 0:
+        from eval_service_pipeline import BRAND_MIN
+
+        from store_search_ai.retrieval.expansion import add_expansion, expansion_frame
+
+        cat_req = req[req["query_id"].isin(set(parsed.loc[parsed["intent"] == "category", "instance_id"]))]
+        cands = candidates_filtered(cat_req, corpus, expansion.get("km", MAX_KM))
+        doc_ids = corpus["doc_id"].to_numpy()
+        frames = [expansion_frame(r.query_id, expansion["texts"].get(r.base_query_id, ""), expansion["bm25"], cands[r.query_id],
+                                  doc_ids) for r in cat_req.itertuples()]
+        frames = [f for f in frames if f is not None]
+        stage = add_expansion(stage, pd.concat(frames, ignore_index=True) if frames else None, expansion["w"], "stage1", BRAND_MIN)
     geo = corpus[["doc_id", "store_name", "latitude", "longitude"]]
     loc = req[["query_id", "latitude", "longitude"]].rename(columns={"query_id": "instance_id"})   # 요청 ID = 사례 자리
 
@@ -263,6 +277,18 @@ def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, cat
         out[f"decay{h:g}"] = _rerank(s.assign(score=s["score"] * np.power(2.0, -dist / h))[["query_id", "doc_id", "score"]],
                                      f"decay{h:g}")
     return out
+
+
+def load_expansion(w: float, llm: str, corpus: pd.DataFrame) -> dict | None:
+    """policy_runs의 expansion 인자(11-18). w = 0이면 None."""
+
+    if not w:
+        return None
+    from store_search_ai.retrieval.expansion import SparseBM25, load_expansions
+
+    path = Path("results/service_pipeline/x8") / f"expansions_{llm}.csv"
+    logger.info("LLM 쿼리 확장 w = %.2f (%s), 문자 BM25 색인 %d곳", w, path, len(corpus))
+    return {"w": w, "texts": load_expansions(path), "bm25": SparseBM25(build_pool_document_texts(corpus))}
 
 
 def load_requests(cfg: dict) -> pd.DataFrame:
@@ -309,7 +335,9 @@ def pool(args, cfg: dict, bench: dict) -> None:
     if DENSE not in systems:
         raise SystemExit("임베딩 run이 없습니다")
     raw, stale, notes = clean_runs(raw, req, corpus, bdir)
-    all_runs = pd.concat([r.assign(system=k) for k, r in policy_runs(raw, req, corpus).items()], ignore_index=True)
+    expansion = load_expansion(args.expansion_w, args.llm, corpus)
+    all_runs = pd.concat([r.assign(system=k) for k, r in policy_runs(raw, req, corpus, expansion=expansion).items()],
+                         ignore_index=True)
     judged = previously_judged(bdir)
     to_base = dict(zip(req["query_id"], req["base_query_id"], strict=True))
     kind = dict(zip(req["query_id"], req["kind"], strict=True))
@@ -364,7 +392,8 @@ def pool(args, cfg: dict, bench: dict) -> None:
         "round": args.round, "set": "x23", "created_at": datetime.now(UTC).isoformat(),
         "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
         "requests": ok_req["kind"].value_counts().to_dict(), "excluded_requests": sorted(stale), **notes,
-        "pool": "정책 변형(1단계 유사도순, 반경 요청은 거리 감쇠 h=2·5km) 상위 depth", "max_km": MAX_KM, "radii_km": RADII, "map_half_km": MAP_HALF_KM,
+        "pool": "정책 변형(1단계 유사도순, 반경 요청은 거리 감쇠 h=2·5km) 상위 depth",
+        "expansion": {"w": args.expansion_w, "llm": args.llm} if args.expansion_w else None, "max_km": MAX_KM, "radii_km": RADII, "map_half_km": MAP_HALF_KM,
         "depth": depth, "queries": int(pairs["query_id"].nunique()), "pairs": len(pairs),
         "pairs_by_kind": {k: int(pairs["kinds"].str.contains(k).sum()) for k in ["expand", "region_point", "region_area", "map5"]},
         "double_annotation_queries": len(double), "double_annotation_pairs": int(sheet["query_id"].isin(double).sum()),
@@ -385,6 +414,8 @@ def main() -> None:
     parser.add_argument("--depth", type=int, help="pool: 요청·시스템마다 상위 몇 개를 판정할지(기본 10)")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--filtered-only", action="store_true", help="export: 필터 요청만 다시(colab_upload/service_eval_x23f)")
+    parser.add_argument("--expansion-w", type=float, default=0.0, help="pool: LLM 쿼리 확장을 붙인 정책 목록으로(11-18)")
+    parser.add_argument("--llm", default="Qwen2.5-14B-Instruct", help="pool: 확장 파일 results/service_pipeline/x8/expansions_<llm>.csv")
     parser.add_argument("--allow-partial", action="store_true", help="pool: 범위 밖 결과가 있는 요청을 빼고 라운드를 만든다")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")

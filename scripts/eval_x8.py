@@ -3,7 +3,7 @@
   ① reranker 가산: 반경 안 1단계 상위 k개(브랜드 지점 제외)에 a × reranker 확률을 더한다(1단계 점수·상호 일치 가산점은 그대로 —
      예전 1-4 실험은 reranker 점수로 갈아 끼워 상호 쿼리를 잃었다). 적용 범위: 모든 쿼리 / 업종 의도 쿼리만.
   ② LLM 쿼리 확장: 확장어(찾는 가게 종류·품목)로 반경 안 가맹점을 문자 BM25 채점 → 사례 안 최댓값으로 나눠 w배 더한다.
-     1단계에 없던 가게는 상위 EXP_DEPTH개까지 후보에 더한다(1단계 점수는 사례 최솟값). 업종 의도 쿼리만(상호·브랜드 쿼리는
+     1단계에 없던 가게는 확장 상위 200개까지 후보에 더한다(1단계 점수는 사례 최솟값). 업종 의도 쿼리만(상호·브랜드 쿼리는
      가게를 이미 알고 찾으므로 확장이 해만 된다 — Query2doc, Wang et al. EMNLP 2023도 키워드 질의에서 이득이 크다).
 
 새로 들어온 가게는 판정이 안 됐을 수 있다 — 판정만 남긴 nDCG(condensed, Sakai 2007)와 Judged@10을 같이 보고,
@@ -22,13 +22,11 @@ from __future__ import annotations
 
 import argparse
 import logging
-import re
 import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eval_service_pipeline import (
@@ -57,8 +55,14 @@ from store_search_ai.evaluation.service_eval import (
 )
 from store_search_ai.pipeline.common import load_config
 from store_search_ai.query.aliases import BrandAliases
+from store_search_ai.retrieval.expansion import (
+    SparseBM25,
+    add_expansion,
+    expansion_frame,
+    load_expansions,
+)
 from store_search_ai.retrieval.fusion import _rerank, boost
-from store_search_ai.retrieval.lexical import build_pool_document_texts, char_ngrams
+from store_search_ai.retrieval.lexical import build_pool_document_texts
 
 logger = logging.getLogger(__name__)
 X8_DIR = Path("results/service_pipeline/x8")
@@ -66,31 +70,6 @@ BASE = "stage1"
 RR_K = 50                 # 재정렬 범위(반경 안 1단계 상위 — X8 채점 쌍의 깊이)
 RR_A = (0.25, 0.5, 1.0)
 EXP_W = (0.1, 0.2, 0.3, 0.5)
-EXP_DEPTH = 50
-K1, B = 1.5, 0.75         # BM25Okapi 기본값(rank_bm25와 같음)
-
-
-class SparseBM25:
-    """char n-gram BM25(`lexical.fit_bm25_scorer`와 같은 토큰·식)를 희소 행렬로 — 21만 곳 색인에서 후보만 빠르게 채점."""
-
-    def __init__(self, docs: pd.Series):
-        self.vec = CountVectorizer(analyzer=char_ngrams)
-        tf = self.vec.fit_transform(docs.tolist()).tocsc().astype(np.float32)
-        n = tf.shape[0]
-        df = np.diff(tf.indptr)
-        self.idf = np.maximum(np.log((n - df + 0.5) / (df + 0.5)), 0.0)
-        dl = np.asarray(tf.sum(axis=1)).ravel()
-        self.norm = K1 * (1 - B + B * dl / dl.mean())
-        self.tf = tf.tocsr()
-
-    def score(self, query: str, rows: np.ndarray) -> np.ndarray:
-        q = self.vec.transform([query])
-        if q.nnz == 0 or len(rows) == 0:
-            return np.zeros(len(rows))
-        cols, qtf = q.indices, q.data
-        sub = self.tf[rows][:, cols].toarray()
-        s = sub * (K1 + 1) / (sub + self.norm[rows, None])
-        return (s * (self.idf[cols] * qtf)[None, :]).sum(axis=1)
 
 
 def load_rerank(model: str) -> pd.DataFrame:
@@ -99,11 +78,6 @@ def load_rerank(model: str) -> pd.DataFrame:
         raise SystemExit(f"rerank_scores_{model}.csv가 없습니다")
     sc = pd.concat([pd.read_csv(p, encoding="utf-8-sig") for p in paths], ignore_index=True)
     return sc.drop_duplicates(["query_id", "doc_id"], keep="last")
-
-
-def load_expansions(llm: str) -> dict[str, str]:
-    e = pd.read_csv(X8_DIR / f"expansions_{llm}.csv", encoding="utf-8-sig", keep_default_na=False)
-    return {q: " ".join(w.strip() for w in re.split(r"[,，]", x) if w.strip()) for q, x in zip(e["query_id"], e["expansion"], strict=True)}
 
 
 def rerank_add(stage_r: pd.DataFrame, rr: dict, base: pd.Series, targets: set, a: float, name: str) -> pd.DataFrame:
@@ -120,34 +94,17 @@ def rerank_add(stage_r: pd.DataFrame, rr: dict, base: pd.Series, targets: set, a
 
 
 def expansion_add(stage_r: pd.DataFrame, exp_scores: dict[str, pd.DataFrame], w: float, name: str) -> pd.DataFrame:
-    """확장 BM25(사례 안 최댓값으로 나눔) × w를 더한다. 1단계에 없던 가게는 사례 최솟값에서 시작."""
-
-    s = stage_r[["query_id", "doc_id", "score"]]
-    if not exp_scores:
-        return _rerank(s, name)
-    e = pd.concat(exp_scores.values(), ignore_index=True)
-    out = s.merge(e, on=["query_id", "doc_id"], how="outer")
-    out["score"] = out["score"].fillna(out.groupby("query_id")["score"].transform("min")).fillna(0.0)
-    brand = out["score"] >= BRAND_MIN
-    out.loc[~brand, "score"] = out.loc[~brand, "score"] + w * out.loc[~brand, "exp"].fillna(0.0)
-    return _rerank(out[["query_id", "doc_id", "score"]], name)
+    return add_expansion(stage_r, pd.concat(exp_scores.values(), ignore_index=True) if exp_scores else None, w, name, BRAND_MIN)
 
 
 def expansion_scores(instances: pd.DataFrame, targets: set, expansions: dict[str, str], bm25: SparseBM25,
                      lat: np.ndarray, lon: np.ndarray, doc_ids: np.ndarray, radius: float) -> dict[str, pd.DataFrame]:
     out = {}
     for r in instances[instances["instance_id"].isin(targets)].itertuples():
-        text = expansions.get(r.query_id, "")
-        if not text:
-            continue
         rows = np.flatnonzero(haversine_km(float(r.latitude), float(r.longitude), lat, lon) <= radius)
-        sc = bm25.score(text, rows)
-        if sc.max(initial=0.0) <= 0:
-            continue
-        top = np.argsort(-sc, kind="stable")[:EXP_DEPTH * 4]
-        keep = top[sc[top] > 0]
-        out[r.instance_id] = pd.DataFrame({"query_id": r.instance_id, "doc_id": doc_ids[rows[keep]], "exp": sc[keep] / sc.max(),
-                                           "erank": np.arange(1, len(keep) + 1)})
+        f = expansion_frame(r.instance_id, expansions.get(r.query_id, ""), bm25, rows, doc_ids)
+        if f is not None:
+            out[r.instance_id] = f
     return out
 
 
@@ -202,7 +159,7 @@ def main() -> None:
     base = instances.set_index("instance_id")["query_id"]
     sc = load_rerank(args.reranker)
     rr = dict(zip(zip(sc["query_id"], sc["doc_id"], strict=True), sc["score"], strict=True))
-    expansions = load_expansions(args.llm)
+    expansions = load_expansions(X8_DIR / f"expansions_{args.llm}.csv")
     logger.info("문자 BM25 색인(가맹점 %d곳)", len(corpus))
     bm25 = SparseBM25(build_pool_document_texts(corpus))
     lat, lon, doc_ids = corpus["latitude"].to_numpy(float), corpus["longitude"].to_numpy(float), corpus["doc_id"].to_numpy()

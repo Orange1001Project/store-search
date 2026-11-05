@@ -34,6 +34,7 @@ from build_x23_round import (
     MAX_KM,
     clean_runs,
     load_corpus,
+    load_expansion,
     load_requests,
     load_runs_x23,
     policy_runs,
@@ -101,6 +102,7 @@ def main() -> None:
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument("--policy", default="configs/service/search_policy_v1.yaml")
     parser.add_argument("--category-gamma", type=float, help="업종 가산점 γ(기본: 정책 category.boost_gamma). dev 비교용")
+    parser.add_argument("--expansion-w", type=float, help="LLM 쿼리 확장 가중치(기본: 정책 ranking.expansion_w). dev 비교용")
     parser.add_argument("--suffix", default="", help="출력 파일 이름 뒤에 붙임")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -125,7 +127,9 @@ def main() -> None:
     raw = raw[raw["query_id"].isin(req["query_id"])]
     gamma = args.category_gamma if args.category_gamma is not None else float(policy["category"].get("boost_gamma", 0.0))
     cats = pd.read_parquet(policy["category"]["store_labels"]).set_index("doc_id")["category"] if gamma > 0 else None
-    runs = policy_runs(raw, req, corpus, gamma, cats)
+    ew = args.expansion_w if args.expansion_w is not None else float(policy["ranking"].get("expansion_w", 0.0))
+    expansion = load_expansion(ew, policy["ranking"].get("expansion_llm", "Qwen2.5-14B-Instruct"), corpus)
+    runs = policy_runs(raw, req, corpus, gamma, cats, expansion)
     logger.info("업종 가산점 γ = %.2f", gamma)
     intents = dict(zip(req["query_id"], req["intent"], strict=True))
     sim = runs["sim"]
@@ -134,7 +138,7 @@ def main() -> None:
     # 1km 단계: 서비스처럼 1km 후보만으로 1단계를 다시 만들어(점수 정규화·쿼리 안 순위·BM25 비율이 1km 기준) 확률을 계산한다
     circle = req[req["kind"].isin(["expand", "region_point"])]
     raw1 = raw[raw["query_id"].isin(circle["query_id"]) & within_km(raw, circle, corpus, 1.0)]
-    base1 = policy_runs(raw1, circle, corpus)["sim_base"]
+    base1 = policy_runs(raw1, circle, corpus, expansion=expansion and {**expansion, "km": 1.0})["sim_base"]
     p1 = relevance_probability(base1[base1["score"] < BRAND_MIN], raw1, circle, calibrator, intents)
 
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")

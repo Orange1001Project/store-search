@@ -39,6 +39,9 @@ ranking:
                               # 판정은 거리를 안 보므로 관련성 조금 ↔ 거리 크게의 맞바꿈 — 팀이 1km 먼저로 확정
   brand_sort: distance        # [확정·X5] 브랜드 쿼리(쿼리 이해 intent=brand)는 반경 안 지점을 이름으로 찾아 가까운 순으로 맨 위
   brand_aliases: configs/service/brand_alias_v1.csv   # [X5] 같은 브랜드의 다른 표기(GS25·지에스25) — 상호 일치·지점 찾기에 씀
+  expansion_w: 0.3            # [실험 X8, dev 선택 2026-11-05, test 대기] 업종 의도 쿼리에 LLM 쿼리 확장(찾는 가게 종류·품목) 문자 BM25 ÷ 최댓값 × w를 더함
+                              # (retrieval/expansion.py). dev 1km nDCG@10 +0.018(CI +0.009~+0.029), bad@3 5.6% → 3.7%. 0이면 끔
+  expansion_llm: Qwen2.5-14B-Instruct   # 확장어는 미리 만들어 캐시(results/service_pipeline/x8/expansions_<llm>.csv) — 실시간 호출 없음
 
 relevance:                    # [실험 X1] 2026-11-04 dev — docs/SERVICE_PIPELINE_PLAN.md 11-7
   # P(관련) = 1 / (1 + exp(−(b0 + b1·score + b2·gap + b3·log_rank + b4·bm25_rel))), 의도 묶음(name/category)마다 계수 따로.
