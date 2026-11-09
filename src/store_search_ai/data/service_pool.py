@@ -117,13 +117,32 @@ def query_keywords(query: str) -> list[str]:
     return [t for t in TOKEN_RE.findall(query) if len(t) >= 2 and t not in KEYWORD_STOPWORDS]
 
 
-def lexical_query(query: str, region_text: str = "") -> str:
+def lexical_query(query: str, region_text: str = "", drop: set[str] | frozenset[str] = frozenset()) -> str:
     """pool용 BM25 쿼리: 서술어·장소어('파는', '곳')와 지역 표현을 뺀 단어. 후보는 이미 반경 안이라 지역 단어는
-    지점명이 같은 아무 가게나 끌어온다('뚝섬 식당' → '○○ 뚝섬유원지역점'). 남는 단어가 없으면 원래 쿼리."""
+    지점명이 같은 아무 가게나 끌어온다('뚝섬 식당' → '○○ 뚝섬유원지역점'). `drop`(지점 접미사 '선운점' 등, branch_suffixes)도
+    같은 이유로 뺀다 — 'QED 골프 선운점'이 타이어프로 선운점·벌크커피 선운점을 끌어왔다(2026-11-05 P0). 남는 단어가 없으면 원래 쿼리."""
 
     region = set(TOKEN_RE.findall(region_text or ""))
     words = [w for w in query_keywords(query) if w not in region]
-    return " ".join(words) or query
+    kept = [w for w in words if w not in drop]
+    return " ".join(kept or words) or query
+
+
+def branch_suffixes(corpus: pd.DataFrame, min_stores: int = 3, max_item_hits: int = 20) -> frozenset[str]:
+    """지점 접미사('선운점', '보성점', '중앙점'): 상호 끝 3~5글자가 '…점'인 가게가 min_stores곳 이상이고, '점'을 뗀 말이 취급품목에
+    거의 안 나오는 것. 업종어('정육점', '편의점', '문구점', '안경점' — 품목에 '정육'·'편의'·'문구'·'안경'이 흔함)는 빠진다."""
+
+    counts: dict[str, int] = {}
+    for n in corpus["store_name"].fillna("").map(lambda x: re.sub(r"[\s)\]]+$", "", x)):
+        if n.endswith("점") and len(n) >= 4:
+            for k in (3, 4, 5):
+                if len(n) > k:
+                    counts[n[-k:]] = counts.get(n[-k:], 0) + 1
+    sub: dict[str, int] = {}                      # 품목에 든 2~4글자 부분 문자열 → 가게 수
+    for it in corpus["item_text"].fillna("").str.replace(" ", "", regex=False):
+        for g in {it[i:i + k] for k in (2, 3, 4) for i in range(len(it) - k + 1)}:
+            sub[g] = sub.get(g, 0) + 1
+    return frozenset(t for t, c in counts.items() if c >= min_stores and sub.get(t[:-1], 0) < max_item_hits)
 
 
 def keyword_run(qid: str, query: str, cand_idx: np.ndarray, texts: np.ndarray, doc_ids: np.ndarray, depth: int,

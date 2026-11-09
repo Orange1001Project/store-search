@@ -43,6 +43,7 @@ from store_search_ai.data.service_pool import (
     RUN_COLUMNS,
     annotation_sheet,
     assign_annotators,
+    branch_suffixes,
     candidates_within,
     distances_km,
     double_annotation_queries,
@@ -204,6 +205,27 @@ def runs(args, cfg: dict, bench: dict) -> None:
         frames = [top_k_run(qid, cands[qid], emb[pos[cands[qid]]] @ q_emb[i], doc_ids, depth, mcfg["name"], dist[qid], radii)
                   for i, qid in enumerate(queries["query_id"])]
         write_run(pd.concat(frames, ignore_index=True), run_dir / f"{mcfg['name']}.csv")
+
+
+def bm25_runs(args, cfg: dict, bench: dict) -> None:
+    """char BM25 run만 다시 만든다(임베딩 run은 그대로) — 지점 접미사를 BM25 쿼리에서 빼는 수정(2026-11-05 P0)처럼 BM25만 바뀔 때."""
+
+    jcfg = cfg["judging"]
+    queries, corpus, cands = load_inputs(cfg, bench, args.set)
+    idx = union_index(cands)
+    doc_ids = corpus["doc_id"].to_numpy()
+    run_dir = Path(jcfg["benchmark_dir"]) / SETS[args.set][1]
+    radii = sorted(set(jcfg["report_radii_km"]))
+    dist = distances_km(queries, corpus, cands)
+    texts = build_pool_document_texts(corpus).to_numpy()
+    pos = np.full(len(corpus), -1)
+    pos[idx] = np.arange(len(idx))
+    bm25 = fit_bm25_scorer(pd.Series(texts[idx]))
+    branch = branch_suffixes(corpus)
+    frames = [top_k_run(qid, cands[qid], bm25(lexical_query(q, region, branch))[pos[cands[qid]]], doc_ids, jcfg["run_depth"],
+                        "char_bm25", dist[qid], radii)
+              for qid, q, region in zip(queries["query_id"], queries["query"], queries["region_text"], strict=True)]
+    write_run(pd.concat(frames, ignore_index=True), run_dir / "char_bm25.csv")
 
 
 def write_run(run: pd.DataFrame, path: Path) -> None:
@@ -373,7 +395,7 @@ def write_annotation_xlsx(sheet: pd.DataFrame, path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["export", "encode", "runs", "pool"])
+    parser.add_argument("command", choices=["export", "encode", "runs", "bm25", "pool"])
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument("--model", help="encode할 모델 yaml 하나(기본: 설정의 dense_models 전부)")
@@ -393,7 +415,7 @@ def main() -> None:
         return
     for s in args.sets:
         args.set = s
-        {"export": export, "encode": encode, "runs": runs}[args.command](args, cfg, bench)
+        {"export": export, "encode": encode, "runs": runs, "bm25": bm25_runs}[args.command](args, cfg, bench)
 
 
 if __name__ == "__main__":

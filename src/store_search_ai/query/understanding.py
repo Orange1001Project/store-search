@@ -47,6 +47,7 @@ POINT_KM = 1.0   # 좁은 지역(동·역·시장)의 첫 반경 — 사용자 �
 # 지명 사전(공공데이터) 종류별로 중심 좌표를 믿는 순서. 동 중심을 시군구 중심으로 대신한 것(center_source=sigungu)은 맨 뒤
 CENTER_PRIORITY = ("station", "market", "hdong", "dong", "sido", "city", "sigungu", "eupmyeon")
 AREA_KINDS = ("sido", "city", "sigungu", "eupmyeon")
+MIN_CORPUS_PLACE_DOCS = 5   # 가맹점 주소·시장 이름에서만 나온 지명은 근거 가게가 이만큼은 있어야 지명으로 본다('겨울 패딩'의 겨울 = 주소 1곳)
 EVIDENCE_FAMILY = {"sido": "admin", "city": "admin", "sigungu": "admin", "eupmyeon": "admin", "dong": "admin", "hdong": "admin",
                    "station": "station", "market": "market"}
 PLACE_ENDINGS = ("동", "가", "리", "로", "길", "시장", "상가", "역", "시", "군", "구", "읍", "면")
@@ -177,7 +178,8 @@ class QueryUnderstanding:
     gazetteer(data/geo/gazetteer_v1.parquet, data/gazetteer.py)를 주면 가맹점이 없는 곳의 지명(명동, 역, 시장)도 알아본다."""
 
     def __init__(self, corpus: pd.DataFrame, item_min_count: int = 20, brand_min_stores: int = 3,
-                 gazetteer: pd.DataFrame | None = None):
+                 gazetteer: pd.DataFrame | None = None, min_corpus_place_docs: int = MIN_CORPUS_PLACE_DOCS):
+        self.min_corpus_place_docs = min_corpus_place_docs
         self.corpus = corpus.reset_index(drop=True)
         self.lat = self.corpus["latitude"].to_numpy(float)
         self.lon = self.corpus["longitude"].to_numpy(float)
@@ -277,8 +279,9 @@ class QueryUnderstanding:
             kinds = frozenset({r.kind for r in rows} | ({"corpus"} if len(ix) else set()))
             area_rows = [r for r in rows if r.kind in AREA_KINDS]
             scope = "area" if area_rows or (not rows and key in self.admin_keys) else "point"
-            if area_rows:                                          # 가장 좁은 행정구역(코드가 긴 것)
-                ranked = sorted(area_rows, key=lambda r: -len(str(r.code_prefix)))
+            if area_rows:   # 읍면은 같은 이름의 시군이 있으면 뒤로('정선'·'문경' = 정선군·문경시, 포털 지도 검색 관례 — 2026-11-05 P0),
+                # 그 밖에는 가장 좁은 행정구역(코드가 긴 것 — '제주' = 제주시)
+                ranked = sorted(area_rows, key=lambda r: (r.kind == "eupmyeon", -len(str(r.code_prefix))))
                 prefix = str(ranked[0].code_prefix)
             else:
                 ranked = sorted(rows, key=lambda r: (r.center_source == "sigungu",
@@ -289,6 +292,12 @@ class QueryUnderstanding:
             if ranked and not (scope == "point" and len(ix) and ranked[0].center_source == "sigungu"):
                 lat, lon, name = float(ranked[0].lat), float(ranked[0].lon), str(ranked[0].name)
                 proxy = scope == "point" and ranked[0].center_source == "sigungu"
+                # 넓은 행정동·법정동의 다각형 중심은 산·논일 수 있다('진잠' = 진잠동 중심 1km 안 가게 0곳) — 그 지명 가게들의 중앙값이
+                # 중심 1km 안 가게를 더 많이 덮으면 그쪽을 쓴다(역·시장 좌표는 정확해서 그대로). 2026-11-05 P0
+                if scope == "point" and ranked[0].kind in ("dong", "hdong") and len(ix) >= self.min_corpus_place_docs:
+                    mlat, mlon = float(np.nanmedian(self.lat[ix])), float(np.nanmedian(self.lon[ix]))
+                    if self._count_near(mlat, mlon) > 2 * self._count_near(lat, lon):
+                        lat, lon = mlat, mlon
             else:
                 lat, lon = float(np.nanmedian(self.lat[ix])), float(np.nanmedian(self.lon[ix]))
                 name = str(ranked[0].name) if ranked else key
@@ -297,7 +306,14 @@ class QueryUnderstanding:
         # 가게('대전광역시 동구 …'인데 코드는 대덕구 30230) 하나가 별도 후보가 되어 '근처'로 뽑히는 것을 막는다
         if any(c.scope == "area" and c.kinds - {"corpus"} for c in out):
             out = [c for c in out if not (c.scope == "area" and c.kinds == {"corpus"})]
+        # 후보가 전부 가맹점 주소·시장 이름에서만 나왔고 근거 가게도 적으면 지명이 아니다('겨울 패딩'의 겨울 = 주소 1곳). 다른 근거가
+        # 있는 이름이면 작은 후보도 남긴다 — 버리면 사용자 근처의 작은 '현대'를 놓치고 먼 현대시장으로 넘어간다(2026-11-05 P0)
+        if out and all(c.kinds == {"corpus"} and len(c.docs) < self.min_corpus_place_docs for c in out):
+            return []
         return out
+
+    def _count_near(self, lat: float, lon: float) -> int:
+        return int((np.hypot(self.lat - lat, (self.lon - lon) * 0.8) * 111 <= POINT_KM).sum())
 
     def in_area(self, code_prefix: str) -> np.ndarray:
         """법정동 코드 앞자리(여러 개면 '|')에 드는 가맹점 — 넓은 지역 필터. 옛 광주광역시 = 5개 구 코드."""

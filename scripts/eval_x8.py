@@ -184,7 +184,7 @@ def main() -> None:
         stage_r = within_radius(stage, instances, coords, radius)
         exp = expansion_scores(instances, category, expansions, bm25, lat, lon, doc_ids, radius)
         variants = {BASE: stage_r}
-        for a in RR_A:
+        for a in RR_A if not args.only or any(o.startswith("rr") for o in args.only) else ():
             variants[f"rr+{a} all"] = rerank_add(stage_r, rr, base, ids, a, f"rr+{a} all")
             variants[f"rr+{a} cat"] = rerank_add(stage_r, rr, base, category, a, f"rr+{a} cat")
         for w in EXP_W:

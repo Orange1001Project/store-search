@@ -17,6 +17,9 @@
 | 브랜드 별칭 사전 | `configs/service/brand_alias_v1.csv` | 같은 브랜드의 다른 표기(GS25·지에스25, 파리바게뜨·파리바게트) 53행 — 상호 일치·브랜드 지점 찾기 |
 | 관련 확률 계수 | `results/service_pipeline/x1/calibrator.json` | 로지스틱 식 하나(점수·1위와 차이·log 순위·BM25), 임계값 P ≥ 0.35(X1). **특성은 그 단계의 후보 집합 안에서 계산**: 1km 단계는 1km 후보(점수 min-max·순위·BM25 비율 모두 1km 기준), 10km 단계는 10km 후보. 브랜드 쿼리의 브랜드 지점은 이 확률을 쓰지 않고 관련(지점 점수 = 100 − 거리km, 일반 후보는 1.6 이하) |
 | LLM 쿼리 확장(X8) | `src/store_search_ai/retrieval/expansion.py`, 확장어 캐시 `results/service_pipeline/x8/expansions_Qwen2.5-14B-Instruct.csv`, 생성 `colab/query_expansion.ipynb` | 업종 의도 쿼리만: 확장어(쉼표 목록)로 범위 안 가맹점 문자 BM25(char 2–3gram, k1 1.5, b 0.75) → 사례 안 최댓값으로 나눔 × 0.3을 1단계 점수에 더함, 확장 상위 200 중 1단계에 없던 가게는 사례 최솟값에서 시작. **관련 확률은 확장을 더한 점수로 계산**. 확장어는 미리 만든 캐시(쿼리 → 키워드), 새 쿼리는 배치 생성 — 실시간 LLM 호출 없음. reranker는 쓰지 않음 |
+| 정렬 규칙(P0) | `configs/service/search_policy_v1.yaml` `ranking.tier_min_p`·`brand_others_min_p`, `scripts/eval_x23.py tier_order` | 확장 목록 = 브랜드 지점(거리순) → 1km 안 P ≥ 0.5 → 나머지(1km 약한 가게 + 10km) 유사도순. 브랜드 쿼리의 지점 아닌 가게는 P ≥ 0.7만 |
+| 지점 접미사(P0) | `src/store_search_ai/data/service_pool.py branch_suffixes·lexical_query` | 상호 끝 '…점'(3~5글자)이 3곳 이상이고 '점'을 뗀 말이 품목 20곳 미만인 접미사는 BM25 쿼리에서 뺀다. 가맹점 갱신 때 다시 계산 |
+| 쿼리 이해 규칙(P0) | `src/store_search_ai/query/understanding.py` | 같은 이름이면 읍면보다 시군, 가맹점에서만 나온 지명은 후보가 모두 5곳 미만이면 무시, 넓은 행정동은 가게 중앙값 중심, 3글자 미만 상호는 완전 일치 |
 | 가게 업종(임시 v0) | `data/category/store_category_v0.parquet`, `configs/category/taxonomy_v0.yaml` | 공식 업종 17개 이름으로 붙인 가게 업종 — 화면 업종 칩 필터용(순위에는 안 씀). 공식 업종 데이터가 오면 교체 |
 | 로그 설계 | `docs/SEARCH_LOGGING.md` | 이벤트·필드·지표 추천안 |
 

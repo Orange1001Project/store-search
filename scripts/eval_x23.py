@@ -37,6 +37,7 @@ from build_x23_round import (
     load_expansion,
     load_requests,
     load_runs_x23,
+    p0_pending,
     policy_runs,
 )
 from eval_service_pipeline import BRAND_MIN
@@ -48,7 +49,25 @@ from store_search_ai.pipeline.common import load_config
 logger = logging.getLogger(__name__)
 OUT = Path("results/service_pipeline/x23")
 N_GRID = (1, 3, 5, 10)
-ORDERS = ("sim", "tier", "decay2", "decay5")
+ORDERS = ("sim", "tier", "tier@0.5", "tier@0.6", "tier@0.7", "decay2", "decay5")   # tier@X: 1km 먼저는 P ≥ X만(P0)
+
+
+def policy_order(policy: dict) -> str:
+    """정책의 확장 정렬 이름: expanded_order(tier) + tier_min_p(있으면 'tier@0.5')."""
+
+    o = policy["ranking"]["expanded_order"]
+    t = policy["ranking"].get("tier_min_p")
+    return f"tier@{t:g}" if o == "tier" and t is not None else o
+
+
+def tier_order(shown: list, near: set, prob: dict, brand: set, strong: float) -> list:
+    """확장 목록 순서(P0, 2026-11-05): 브랜드 지점(가까운 순) → 1km 안 '강한' 관련 가게(P ≥ strong) → 나머지 유사도순.
+    strong = τ면 예전 '1km 먼저'(모든 1km 관련 가게가 10km 가게 위). 브랜드 지점은 거리순 결정(ranking.brand_sort)이라 늘 맨 위."""
+
+    b = [d for d in shown if d in brand]
+    first = [d for d in shown if d not in brand and d in near and prob[d] >= strong]
+    lead = set(b) | set(first)
+    return b + first + [d for d in shown if d not in lead]
 
 
 def relevance_probability(stage: pd.DataFrame, raw: pd.DataFrame, req: pd.DataFrame, calibrator: dict,
@@ -103,6 +122,7 @@ def main() -> None:
     parser.add_argument("--policy", default="configs/service/search_policy_v1.yaml")
     parser.add_argument("--category-gamma", type=float, help="업종 가산점 γ(기본: 정책 category.boost_gamma). dev 비교용")
     parser.add_argument("--expansion-w", type=float, help="LLM 쿼리 확장 가중치(기본: 정책 ranking.expansion_w). dev 비교용")
+    parser.add_argument("--brand-others-min", type=float, help="브랜드 쿼리에서 지점 아닌 가게의 최소 관련 확률(기본: 정책). dev 비교용")
     parser.add_argument("--dump", action="store_true", help="정책 구성의 노출 목록(상위 20)을 shown_<split><suffix>.csv로 — 정성 점검용")
     parser.add_argument("--suffix", default="", help="출력 파일 이름 뒤에 붙임")
     args = parser.parse_args()
@@ -110,8 +130,10 @@ def main() -> None:
     cfg, bench, policy = load_config(args.config), load_config(args.benchmark_config), load_config(args.policy)
     bdir = Path(cfg["judging"]["benchmark_dir"])
     tau = float(policy["relevance"]["threshold_p"])
+    brand_others = (args.brand_others_min if args.brand_others_min is not None
+                    else float(policy["ranking"].get("brand_others_min_p", tau)))
     # test는 정책 파일에 정한 구성 하나만 계산한다(X7 — test로 고르지 않는다, docs/EVALUATION_POLICY.md)
-    n_grid, orders = (((int(policy["radius"]["expand_if_relevant_below"]),), (policy["ranking"]["expanded_order"],))
+    n_grid, orders = (((int(policy["radius"]["expand_if_relevant_below"]),), (policy_order(policy),))
                       if args.split == "test" else (N_GRID, ORDERS))
     calibrator = json.loads(Path(policy["relevance"]["calibrator"]).read_text(encoding="utf-8"))
 
@@ -124,7 +146,10 @@ def main() -> None:
         raise SystemExit("임베딩 run이 없습니다")
     raw, stale, notes = clean_runs(raw, req, corpus, bdir)
     # 임베딩 결과가 없는 요청(지명 사전 수정으로 범위가 바뀐 요청 중 일부)은 1단계 순위를 흉내 낼 수 없어 채점에서 뺀다
-    req = req[~req["query_id"].isin(stale | set(notes["dense_missing_requests"]))].reset_index(drop=True)
+    pending = p0_pending(bdir)                              # P0으로 범위가 바뀌어 새 임베딩 run을 기다리는 요청
+    if pending:
+        logger.warning("P0 새 run 대기 요청 %d개는 뺀다: %s", len(pending), sorted(pending))
+    req = req[~req["query_id"].isin(stale | set(notes["dense_missing_requests"]) | pending)].reset_index(drop=True)
     raw = raw[raw["query_id"].isin(req["query_id"])]
     gamma = args.category_gamma if args.category_gamma is not None else float(policy["category"].get("boost_gamma", 0.0))
     cats = pd.read_parquet(policy["category"]["store_labels"]).set_index("doc_id")["category"] if gamma > 0 else None
@@ -146,7 +171,7 @@ def main() -> None:
     judged_by_q = {q: dict(zip(g["doc_id"], g["relevance"], strict=True)) for q, g in qrels.groupby("query_id")}
     c = corpus.set_index("doc_id")
     rows, dump = [], []
-    pol_n, pol_order = int(policy["radius"]["expand_if_relevant_below"]), policy["ranking"]["expanded_order"]
+    pol_n, pol_order = int(policy["radius"]["expand_if_relevant_below"]), policy_order(policy)
 
     def keep_dump(r, shown, docs, dist, prob, judged, expanded):
         pos = {d: i for i, d in enumerate(docs)}
@@ -173,6 +198,10 @@ def main() -> None:
         prob = np.array([1.0 if b else (p1.get((r.query_id, d), 0.0) if circle_req and w else p.get((r.query_id, d), 0.0))
                          for d, b, w in zip(docs, is_brand, within1, strict=True)])
         rel_shown = prob >= tau
+        brand_set = set(docs[is_brand])
+        if brand_set:   # 브랜드 쿼리: 지점이 아닌 가게는 더 높은 확률만(BHC 쿼리에 BYC 같은 이름 닮은 가게를 막는다)
+            rel_shown = rel_shown & (is_brand | (prob >= brand_others))
+        pmap = dict(zip(docs, prob, strict=True))
         # 이 요청 범위에서 판정된 정답(판정 위치와 무관 — 범위 안 가맹점 전부: 반경 요청은 10km 안, 지역·지도는 필터 안)
         jd = [d for d in judged if d in c.index]
         jl, jo = c.loc[jd, "latitude"].to_numpy(float), c.loc[jd, "longitude"].to_numpy(float)
@@ -202,9 +231,9 @@ def main() -> None:
                     ranked = o[o["query_id"] == r.query_id]["doc_id"].tolist() if order.startswith("decay") else list(docs)
                     keep = dict(zip(docs, rel_shown, strict=True))
                     shown = [d for d in ranked if keep.get(d, False)]
-                    if order == "tier":
-                        near = set(docs[within1])
-                        shown = [d for d in shown if d in near] + [d for d in shown if d not in near]
+                    if order.startswith("tier"):
+                        strong = float(order.split("@")[1]) if "@" in order else tau
+                        shown = tier_order(shown, set(docs[within1]), pmap, brand_set, strong)
                 if n == pol_n and order == pol_order:
                     keep_dump(r, shown, docs, dist, prob, judged, expanded)
                 pos = {d: i for i, d in enumerate(docs)}

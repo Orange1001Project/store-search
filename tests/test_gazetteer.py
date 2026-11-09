@@ -69,7 +69,7 @@ def _sinchon():
                 ("신촌", "대전광역시 동구 신촌동", "dong", "point", "30", "30110", "30110131", 36.32, 127.47, "sigungu", "법정동"),
                 ("중구", "대전광역시 중구", "sigungu", "area", "30", "30140", "30140", 36.28, 127.41, "polygon", "법정동"),
                 ("중구", "서울특별시 중구", "sigungu", "area", "11", "11140", "11140", 37.56, 127.0, "polygon", "법정동")])
-    return QueryUnderstanding(corpus, gazetteer=gaz)
+    return QueryUnderstanding(corpus, gazetteer=gaz, min_corpus_place_docs=1)
 
 
 def test_ambiguous_place_prefers_near_then_public_evidence():
@@ -100,7 +100,7 @@ def test_chained_place_must_be_inside_previous():
                       ("아카데미문구", "문구", "경상북도 영천시 아카데미로 1 (대전동)", "", "경상북도", "4723012000", 36.0, 128.94)])
     gaz = _gaz([("대전", "대전광역시", "sido", "area", "30", "", "30", 36.34, 127.39, "polygon", "법정동"),
                 ("대전", "경상북도 영천시 대전동", "dong", "point", "47", "47230", "47230120", 36.0, 128.94, "sigungu", "법정동")])
-    qu = QueryUnderstanding(corpus, gazetteer=gaz)
+    qu = QueryUnderstanding(corpus, gazetteer=gaz, min_corpus_place_docs=1)
     p = qu.parse("대전 아카데미 과학모형", *DAEJEON)
     assert p.region_text == "대전"                                   # 영천 '아카데미로'는 대전 안이 아니다
 
@@ -111,7 +111,7 @@ def test_old_metro_city_uses_several_code_prefixes():
                       ("경기광주가게", "떡갈비", "경기도 광주시 1", "", "경기도", "4161010100", 37.4, 127.25)])
     gaz = _gaz([("광주", "광주광역시(2026-07 통합 전)", "city", "area", "12", "12", "12330|12240", 35.14, 126.85, "polygon", "법정동"),
                 ("광주", "경기도 광주시", "sigungu", "area", "41", "41610", "41610", 37.4, 127.3, "polygon", "법정동")])
-    qu = QueryUnderstanding(corpus, gazetteer=gaz)
+    qu = QueryUnderstanding(corpus, gazetteer=gaz, min_corpus_place_docs=1)
     p = qu.parse("광주 떡갈비", 37.56, 126.94)                         # 서울 사용자(경기 광주는 30km 밖)
     assert set(qu.corpus.loc[p.region.doc_idx, "store_name"]) == {"광산가게"}   # 목포(전남)는 '광주'가 아니다
 
@@ -123,7 +123,7 @@ def test_near_place_without_stores_is_not_chosen_by_proximity():
     gaz = _gaz([("장흥", "전남광주통합특별시 장흥군", "sigungu", "area", "12", "12800", "12800", 34.68, 126.92, "polygon", "법정동"),
                 ("장흥면", "경기도 양주시 장흥면", "eupmyeon", "area", "41", "41630", "41630340", 37.72, 126.95, "sigungu", "법정동"),
                 ("장흥", "경기도 양주시 장흥면", "eupmyeon", "area", "41", "41630", "41630340", 37.72, 126.95, "sigungu", "법정동")])
-    qu = QueryUnderstanding(corpus, gazetteer=gaz)
+    qu = QueryUnderstanding(corpus, gazetteer=gaz, min_corpus_place_docs=1)
     p = qu.parse("장흥 보일러", 37.566, 126.978)                      # 서울 사용자: 양주 장흥면은 가깝지만 가맹점이 없다
     assert p.region.code_prefix == "12800"
 
@@ -134,5 +134,5 @@ def test_corpus_only_area_from_address_code_mismatch_is_dropped():
                         for i in range(3)],
                       ("어긋난가게", "국밥", "대전광역시 동구 오정로 1", "", "대전광역시", "3023010100", 36.384, 127.32)])
     gaz = _gaz([("동구", "대전광역시 동구", "sigungu", "area", "30", "30110", "30110", 36.32, 127.47, "polygon", "법정동")])
-    qu = QueryUnderstanding(corpus, gazetteer=gaz)
+    qu = QueryUnderstanding(corpus, gazetteer=gaz, min_corpus_place_docs=1)
     assert qu.parse("동구 국밥", 36.3832, 127.3192).region.code_prefix == "30110"

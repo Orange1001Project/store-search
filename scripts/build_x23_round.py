@@ -52,6 +52,7 @@ from build_service_pool import (
 from store_search_ai.data.service_pool import (
     annotation_sheet,
     assign_annotators,
+    branch_suffixes,
     candidates_filtered,
     distances_km,
     double_annotation_queries,
@@ -77,6 +78,24 @@ REMOTE = [(37.5663, 126.9779), (35.1798, 129.0750)]   # 서울시청, 부산시�
 DENSE = "bge_m3_ft_mj_20261014_0743"
 FILTERED_SET_DIR = Path("colab_upload/service_eval_x23f")
 FILTERED_RUN_DIR = "runs_x23f"
+P0_SET_DIR = Path("colab_upload/service_eval_x23p0")   # P0(2026-11-05) 쿼리 이해 수정으로 범위가 바뀐 요청만
+P0_RUN_DIR = "runs_x23p0"
+
+
+def p0_requests(bdir: Path) -> set[str]:
+    path = bdir / "x23" / "requests_p0.csv"
+    return set(pd.read_csv(path, encoding="utf-8-sig")["query_id"]) if path.exists() else set()
+
+
+def p0_pending(bdir: Path) -> set[str]:
+    """P0으로 범위가 바뀌었는데 아직 새 임베딩 run(runs_x23p0)이 없는 요청 — 평가·판정에서 뺀다."""
+
+    ids = p0_requests(bdir)
+    d = bdir / P0_RUN_DIR
+    have = set()
+    for p in d.glob("*.csv") if d.exists() else []:
+        have |= set(pd.read_csv(p, encoding="utf-8-sig", usecols=["query_id"])["query_id"])
+    return ids - have
 DECAY_HALF_KM = (2.0, 5.0)   # 거리 감쇠 정렬 후보(반경 요청)
 
 
@@ -124,10 +143,14 @@ def build_requests(cfg: dict, corpus: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def export(cfg: dict, bench: dict, filtered_only: bool = False) -> None:
+def export(cfg: dict, bench: dict, filtered_only: bool = False, p0: bool = False) -> None:
     corpus = load_corpus(bench)
     bdir = Path(cfg["judging"]["benchmark_dir"])
-    if filtered_only:   # 요청표는 그대로 두고 필터 요청만 다시 내보낸다(요청 ID·위치가 바뀌면 안 됨)
+    if p0:              # 요청표는 이미 고쳐 둠(requests_p0.csv의 행만) — 그 요청만 내보낸다
+        req = load_requests(cfg)
+        req = req[req["query_id"].isin(p0_requests(bdir))].reset_index(drop=True)
+        set_dir, run_dir = P0_SET_DIR, P0_RUN_DIR
+    elif filtered_only:   # 요청표는 그대로 두고 필터 요청만 다시 내보낸다(요청 ID·위치가 바뀌면 안 됨)
         req = load_requests(cfg)
         req = req[(req["code_prefix"] != "") | (req["bbox"] != "")].reset_index(drop=True)
         set_dir, run_dir = FILTERED_SET_DIR, FILTERED_RUN_DIR
@@ -165,6 +188,12 @@ def load_runs_x23(bdir: Path, req: pd.DataFrame) -> pd.DataFrame:
         redo = pd.concat([pd.read_csv(p, encoding="utf-8-sig") for p in sorted(fdir.glob("*.csv"))], ignore_index=True)
         drop = runs["query_id"].isin(filtered) & runs["system"].isin(set(redo["system"]))
         runs = pd.concat([runs[~drop], redo[redo["query_id"].isin(filtered)]], ignore_index=True)
+    pdir = bdir / P0_RUN_DIR                               # P0으로 범위가 바뀐 요청의 새 임베딩 run이 있으면 그것
+    if pdir.exists() and any(pdir.glob("*.csv")):
+        redo = pd.concat([pd.read_csv(p, encoding="utf-8-sig") for p in sorted(pdir.glob("*.csv"))], ignore_index=True)
+        ids = p0_requests(bdir) & set(redo["query_id"])
+        drop = runs["query_id"].isin(ids) & runs["system"].isin(set(redo["system"]))
+        runs = pd.concat([runs[~drop], redo[redo["query_id"].isin(ids)]], ignore_index=True)
     return runs
 
 
@@ -309,13 +338,14 @@ def runs(cfg: dict, bench: dict) -> None:
     pos[idx] = np.arange(len(idx))
     logger.info("char BM25 색인: %d개", len(idx))
     bm25 = fit_bm25_scorer(pd.Series(texts[idx]))
+    branch = branch_suffixes(corpus)                     # 지점 접미사는 BM25 쿼리에서 뺀다(P0)
     doc_ids = corpus["doc_id"].to_numpy()
     depth = cfg["judging"]["run_depth"]
     frames = []
     for r in req.itertuples():
         filtered = bool(r.code_prefix or r.bbox)
         c = cands[r.query_id]
-        frames.append(top_k_run(r.query_id, c, bm25(lexical_query(r.query, r.region_text))[pos[c]], doc_ids, depth, "char_bm25",
+        frames.append(top_k_run(r.query_id, c, bm25(lexical_query(r.query, r.region_text, branch))[pos[c]], doc_ids, depth, "char_bm25",
                                 None if filtered else dist[r.query_id], None if filtered else RADII))
     run_dir = Path(cfg["judging"]["benchmark_dir"]) / RUN_DIR
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -335,6 +365,8 @@ def pool(args, cfg: dict, bench: dict) -> None:
     if DENSE not in systems:
         raise SystemExit("임베딩 run이 없습니다")
     raw, stale, notes = clean_runs(raw, req, corpus, bdir)
+    stale = stale | p0_pending(bdir)                      # P0 새 임베딩 run을 기다리는 요청은 판정하지 않는다
+    raw = raw[~raw["query_id"].isin(stale)]
     expansion = load_expansion(args.expansion_w, args.llm, corpus)
     all_runs = pd.concat([r.assign(system=k) for k, r in policy_runs(raw, req, corpus, expansion=expansion).items()],
                          ignore_index=True)
@@ -414,6 +446,7 @@ def main() -> None:
     parser.add_argument("--depth", type=int, help="pool: 요청·시스템마다 상위 몇 개를 판정할지(기본 10)")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--filtered-only", action="store_true", help="export: 필터 요청만 다시(colab_upload/service_eval_x23f)")
+    parser.add_argument("--p0", action="store_true", help="export: P0으로 범위가 바뀐 요청만(colab_upload/service_eval_x23p0)")
     parser.add_argument("--expansion-w", type=float, default=0.0, help="pool: LLM 쿼리 확장을 붙인 정책 목록으로(11-18)")
     parser.add_argument("--llm", default="Qwen2.5-14B-Instruct", help="pool: 확장 파일 results/service_pipeline/x8/expansions_<llm>.csv")
     parser.add_argument("--allow-partial", action="store_true", help="pool: 범위 밖 결과가 있는 요청을 빼고 라운드를 만든다")
@@ -423,7 +456,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     cfg = load_config(args.config)
     bench = load_config(args.benchmark_config)
-    {"export": lambda: export(cfg, bench, args.filtered_only), "runs": lambda: runs(cfg, bench), "pool": lambda: pool(args, cfg, bench)}[args.command]()
+    {"export": lambda: export(cfg, bench, args.filtered_only, args.p0), "runs": lambda: runs(cfg, bench), "pool": lambda: pool(args, cfg, bench)}[args.command]()
 
 
 if __name__ == "__main__":

@@ -59,7 +59,9 @@ def name_match(query_core: str, store_name: str, min_len: int = 3) -> bool:
     업종 쿼리에서는 상호에 업종명이 든 가게("태권도장" → ○○태권도장)에서만 켜진다."""
 
     q, n = normalize_name(query_core), normalize_name(store_name)
-    return len(q) >= min_len and (q in n or (len(n) >= min_len and n in q))
+    if len(q) < min_len:   # 짧은 상호('희랑')는 상호 전체가 같을 때만(부분 일치는 너무 흔하다) — 2026-11-05 P0
+        return len(q) >= 2 and q == n
+    return q in n or (len(n) >= min_len and n in q)
 
 
 def boost(run: pd.DataFrame, hits: pd.Series, beta: float, name: str) -> pd.DataFrame:
