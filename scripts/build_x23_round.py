@@ -305,7 +305,10 @@ def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, cat
         if exact_name:   # 상호 완전 일치는 맨 위(넓은 지역은 중심에서 멀 수 있어 넉넉히 찾고 아래 in_range가 범위로 자른다)
             from eval_service_pipeline import exact_name_sort
 
-            st = exact_name_sort(st, loc, parsed, geo, 60.0, "stage1")
+            from eval_service_pipeline import BRAND_MIN, BRAND_SCORE
+
+            # 점수 = 100 − 거리라 50km 넘으면 브랜드 기준(50) 아래로 떨어져 관련 확률 특성을 망친다(2026-11-09 점검) — 50km까지만
+            st = exact_name_sort(st, loc, parsed, geo, BRAND_SCORE - BRAND_MIN, "stage1")
         st = st[in_range(st, req, corpus)]                     # 브랜드 지점 찾기가 필터 밖을 더하지 않게
         return st.sort_values(["query_id", "rank"]).assign(rank=lambda d: d.groupby("query_id").cumcount() + 1)
 
@@ -391,9 +394,16 @@ def pool(args, cfg: dict, bench: dict) -> None:
     raw, stale, notes = clean_runs(raw, req, corpus, bdir)
     stale = stale | p0_pending(bdir)                      # P0 새 임베딩 run을 기다리는 요청은 판정하지 않는다
     raw = raw[~raw["query_id"].isin(stale)]
-    expansion = load_expansion(args.expansion_w, args.llm, corpus)
-    all_runs = pd.concat([r.assign(system=k) for k, r in policy_runs(raw, req, corpus, expansion=expansion).items()],
-                         ignore_index=True)
+    # 판정 후보는 채택한 정책 그대로의 목록에서(2026-11-09 점검: 예전엔 확장·상호 코사인·완전 일치를 빼고 모았다)
+    policy = load_config("configs/service/search_policy_v1.yaml")["ranking"]
+    ew = args.expansion_w if args.expansion_w is not None else float(policy.get("expansion_w", 0.0))
+    expansion = load_expansion(ew, args.llm, corpus)
+    scope = policy.get("real_cosine", "off")
+    from eval_service_pipeline import load_pair_cosine
+
+    all_runs = pd.concat([r.assign(system=k) for k, r in policy_runs(
+        raw, req, corpus, expansion=expansion, cosine=load_pair_cosine() if scope != "off" else None, cosine_scope=scope,
+        exact_name=bool(policy.get("exact_name_first", False))).items()], ignore_index=True)
     judged = previously_judged(bdir)
     to_base = dict(zip(req["query_id"], req["base_query_id"], strict=True))
     kind = dict(zip(req["query_id"], req["kind"], strict=True))
@@ -471,7 +481,7 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--filtered-only", action="store_true", help="export: 필터 요청만 다시(colab_upload/service_eval_x23f)")
     parser.add_argument("--p0", action="store_true", help="export: P0으로 범위가 바뀐 요청만(colab_upload/service_eval_x23p0)")
-    parser.add_argument("--expansion-w", type=float, default=0.0, help="pool: LLM 쿼리 확장을 붙인 정책 목록으로(11-18)")
+    parser.add_argument("--expansion-w", type=float, help="pool: LLM 쿼리 확장 가중치(기본: 정책 ranking.expansion_w, 0이면 끔)")
     parser.add_argument("--llm", default="Qwen2.5-14B-Instruct", help="pool: 확장 파일 results/service_pipeline/x8/expansions_<llm>.csv")
     parser.add_argument("--allow-partial", action="store_true", help="pool: 범위 밖 결과가 있는 요청을 빼고 라운드를 만든다")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")

@@ -283,6 +283,8 @@ def main() -> None:
         logger.info("지역·지도 모드 관련 확률: %s (τ = %.2f)", area_path, tau_area)
 
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")
+    if args.refit_oof and args.split == "test":
+        raise SystemExit("--refit-oof는 판정으로 식을 맞추므로 test에서 쓰면 안 된다(dev 전용)")
     if args.refit_oof:   # P2(d): 적용 분포로 다시 맞춘 확률(교차 예측)
         f10 = relevance_features(base[base["score"] < BRAND_MIN], raw, calibrator)
         f1 = relevance_features(base1[base1["score"] < BRAND_MIN], raw1, calibrator)

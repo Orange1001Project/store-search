@@ -209,7 +209,8 @@ def main() -> None:
                   0.5, "v1+name(qu+alias) b=0.5")
     from store_search_ai.data.service_pool import branch_suffixes
 
-    COS.update(base=dict(zip(instances["instance_id"], instances["query_id"], strict=True)), cos=load_pair_cosine())
+    if "logistic_cos" in args.kinds:   # 실험 특성(11-26)일 때만 — 기본 실행은 P2 코사인 파일 없이도 돈다
+        COS.update(base=dict(zip(instances["instance_id"], instances["query_id"], strict=True)), cos=load_pair_cosine())
     TEXT["profile"] = store_profile(geo)
     ix = instances.set_index("instance_id")
     TEXT["keywords"] = query_keywords_for(ix["query"], ix["region_text"], branch_suffixes(geo))
