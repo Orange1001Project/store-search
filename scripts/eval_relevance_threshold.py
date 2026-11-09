@@ -51,10 +51,13 @@ from store_search_ai.evaluation.threshold import (
     BINARY,
     FEATURE_SETS,
     add_features,
+    add_text_features,
     calibration_metrics,
     fit,
     instance_outcomes,
     predict,
+    query_keywords_for,
+    store_profile,
     summarize_outcomes,
 )
 from store_search_ai.pipeline.common import load_config
@@ -67,7 +70,7 @@ from store_search_ai.retrieval.fusion import boost
 
 logger = logging.getLogger(__name__)
 OUT = Path("results/service_pipeline/x1")
-KINDS = ("isotonic", "logistic", "logistic_bm25")
+KINDS = ("isotonic", "logistic", "logistic_bm25", "logistic_plus")
 GRID = np.round(np.arange(0.10, 0.951, 0.05), 2)
 FOLDS = 5
 SEED = 20261104
@@ -89,11 +92,16 @@ def parse_instances(instances: pd.DataFrame, corpus_path: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+TEXT: dict = {}   # main()이 채움: keywords(사례 → 쿼리 단어), profile(store_profile)
+
+
 def candidates(stage: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame, qrels: pd.DataFrame,
                parsed: pd.DataFrame, radius: float, bm25: pd.DataFrame) -> pd.DataFrame:
     r = attach_distance(stage.rename(columns={"query_id": "instance_id"}), instances, coords)
     r = r[r["dist_km"] <= radius][["instance_id", "doc_id", "score", "dist_km"]].merge(bm25, on=["instance_id", "doc_id"], how="left")
     r = add_features(r)
+    if TEXT:
+        r = add_text_features(r, TEXT["keywords"], TEXT["profile"])
     r = r.merge(instances[["instance_id", "query_id", "bundle"]], on="instance_id").merge(parsed[["instance_id", "group"]],
                                                                                           on="instance_id")
     return r.merge(qrels, on=["query_id", "doc_id"], how="left").assign(radius_km=radius)
@@ -186,6 +194,11 @@ def main() -> None:
     union = union_v1(v1, bm)
     stage = boost(union, alias_name_hits(union, dict(zip(parsed["instance_id"], parsed["name_key"], strict=True)), names, aliases),
                   0.5, "v1+name(qu+alias) b=0.5")
+    from store_search_ai.data.service_pool import branch_suffixes
+
+    TEXT["profile"] = store_profile(geo)
+    ix = instances.set_index("instance_id")
+    TEXT["keywords"] = query_keywords_for(ix["query"], ix["region_text"], branch_suffixes(geo))
 
     def stage_at(radius: float) -> pd.DataFrame:
         """그 반경 단계의 1단계 점수(확장을 켜면 반경 안 후보에 확장 점수를 더하고 확장 후보를 넣는다 — eval_x8·정책과 같은 방식)."""

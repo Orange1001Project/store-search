@@ -16,7 +16,50 @@ import numpy as np
 import pandas as pd
 
 BINARY = 2   # service_eval.BINARY_THRESHOLD — 2점 이상이 정답
-FEATURE_SETS = {"logistic": ["score", "gap", "log_rank"], "logistic_bm25": ["score", "gap", "log_rank", "bm25_rel"]}
+FEATURE_SETS = {"logistic": ["score", "gap", "log_rank"], "logistic_bm25": ["score", "gap", "log_rank", "bm25_rel"],
+                # P2(b), 2026-11-09: 가게 텍스트 특성 — 정성 점검의 함정('모종' → 모녀국수(품목 없음, 상호 글자만), '다이어트 음식' →
+                # 품목이 '음식'뿐인 가게)을 겨냥
+                "logistic_plus": ["score", "gap", "log_rank", "bm25_rel", "kw_item", "kw_name_only", "item_words", "item_freq"]}
+TEXT_FEATURES = ("kw_item", "kw_name_only", "item_words", "item_freq")
+
+
+def _norm(text: object) -> str:
+    return "".join(str(text or "").split()).casefold()
+
+
+def store_profile(corpus: pd.DataFrame) -> pd.DataFrame:
+    """가게별 텍스트 특성 재료(doc_id 색인): 정규화한 상호·품목, item_words = log(1 + 품목 단어 수),
+    item_freq = log(1 + 같은 품목 문구를 가진 가게 수) — '음식'·'한식'처럼 흔한 대분류일수록 크다."""
+
+    items = corpus["item_text"].fillna("").astype(str)
+    norm_item = items.map(_norm)
+    freq = norm_item.map(norm_item.value_counts())
+    return pd.DataFrame({"name": corpus["store_name"].map(_norm).to_numpy(), "item": norm_item.to_numpy(),
+                         "item_words": np.log1p(items.str.split(r"[\s,/·]+").map(lambda w: sum(1 for x in w if x))).to_numpy(),
+                         "item_freq": np.where(norm_item == "", 0.0, np.log1p(freq)).astype(float)},
+                        index=corpus["doc_id"].to_numpy())
+
+
+def add_text_features(cands: pd.DataFrame, keywords: dict, profile: pd.DataFrame) -> pd.DataFrame:
+    """kw_item = 쿼리 단어(지역·서술어 뺀 것) 중 하나가 품목에 있음, kw_name_only = 상호에만 있고 품목에는 없음(글자 겹침 함정),
+    item_words·item_freq = store_profile. cands 열: instance_id, doc_id."""
+
+    pr = profile.reindex(cands["doc_id"].to_numpy())
+    kws = [keywords.get(i, []) for i in cands["instance_id"]]
+    in_item = np.array([any(k in it for k in ks) for ks, it in zip(kws, pr["item"].fillna(""), strict=True)])
+    in_name = np.array([any(k in nm for k in ks) for ks, nm in zip(kws, pr["name"].fillna(""), strict=True)])
+    return cands.assign(kw_item=in_item.astype(float), kw_name_only=(in_name & ~in_item).astype(float),
+                        item_words=pr["item_words"].fillna(0.0).to_numpy(), item_freq=pr["item_freq"].fillna(0.0).to_numpy())
+
+
+def query_keywords_for(queries: pd.Series, region_texts: pd.Series, drop=frozenset()) -> dict:
+    """사례·요청 ID → 정규화한 쿼리 단어 목록(서술어·지역·지점 접미사 뺀 lexical_query 단어)."""
+
+    from store_search_ai.data.service_pool import lexical_query
+
+    return {i: [_norm(w) for w in lexical_query(q, r, drop).split() if len(w) >= 2]
+            for i, q, r in zip(queries.index, queries.to_numpy(), region_texts.reindex(queries.index).fillna("").to_numpy(),
+                               strict=True)}
 
 
 def add_features(cands: pd.DataFrame) -> pd.DataFrame:

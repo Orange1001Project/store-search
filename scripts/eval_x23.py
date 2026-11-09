@@ -43,7 +43,14 @@ from build_x23_round import (
 from eval_service_pipeline import BRAND_MIN, load_pair_cosine
 
 from store_search_ai.data.service_pool import filter_mask, haversine_km
-from store_search_ai.evaluation.threshold import BINARY, add_features
+from store_search_ai.evaluation.threshold import (
+    BINARY,
+    TEXT_FEATURES,
+    add_features,
+    add_text_features,
+    query_keywords_for,
+    store_profile,
+)
 from store_search_ai.pipeline.common import load_config
 
 logger = logging.getLogger(__name__)
@@ -70,6 +77,9 @@ def tier_order(shown: list, near: set, prob: dict, brand: set, strong: float) ->
     return b + first + [d for d in shown if d not in lead]
 
 
+TEXT_CACHE: dict = {}   # main()이 채움(P2(b)): keywords(요청 → 쿼리 단어), profile(store_profile)
+
+
 def relevance_probability(stage: pd.DataFrame, raw: pd.DataFrame, req: pd.DataFrame, calibrator: dict,
                           intents: dict[str, str]) -> pd.Series:
     """1단계 후보마다 P(관련) — X1 로지스틱. 특성은 요청 후보 기준(점수는 브랜드 지점을 뺀 1단계 점수)."""
@@ -78,6 +88,8 @@ def relevance_probability(stage: pd.DataFrame, raw: pd.DataFrame, req: pd.DataFr
                                                                                            "score": "bm25"})
     f = stage.rename(columns={"query_id": "instance_id"})[["instance_id", "doc_id", "score"]]
     f = add_features(f.merge(bm.drop_duplicates(["instance_id", "doc_id"]), on=["instance_id", "doc_id"], how="left"))
+    if set(calibrator["features"]) & set(TEXT_FEATURES):   # P2(b) 가게 텍스트 특성
+        f = add_text_features(f, TEXT_CACHE["keywords"], TEXT_CACHE["profile"])
     p = np.zeros(len(f))
     for g, coef in calibrator["groups"].items():
         m = f["instance_id"].map(lambda i: "name" if intents.get(i) in ("name", "brand") else "category").to_numpy() == g
@@ -168,6 +180,12 @@ def main() -> None:
     runs = policy_runs(raw, req, corpus, gamma, cats, expansion, cosine, args.cosine_scope, exact)
     logger.info("업종 가산점 γ = %.2f", gamma)
     intents = dict(zip(req["query_id"], req["intent"], strict=True))
+    if set(calibrator["features"]) & set(TEXT_FEATURES):
+        from store_search_ai.data.service_pool import branch_suffixes
+
+        TEXT_CACHE["profile"] = store_profile(corpus)
+        rq = req.set_index("query_id")
+        TEXT_CACHE["keywords"] = query_keywords_for(rq["query"], rq["region_text"], branch_suffixes(corpus))
     sim = runs["sim"]
     base = runs["sim_base"]
     p = relevance_probability(base[base["score"] < BRAND_MIN], raw, req, calibrator, intents)   # 10km 단계(업종 가산점 전 점수)

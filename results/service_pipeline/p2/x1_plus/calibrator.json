@@ -1,0 +1,50 @@
+{
+ "model": "logistic_plus",
+ "threshold_p": 0.35,
+ "features": [
+  "score",
+  "gap",
+  "log_rank",
+  "bm25_rel",
+  "kw_item",
+  "kw_name_only",
+  "item_words",
+  "item_freq"
+ ],
+ "score": "min-max(v1 코사인, 후보 = v1·문자 BM25 상위 합집합 안) + 0.5 × 상호 일치(쿼리 이해 키 + 브랜드 별칭) — fusion.boost",
+ "brand": "브랜드 쿼리의 브랜드 지점은 이 확률을 쓰지 않고 관련으로 센다(학습에서도 뺐다)",
+ "feature_scope": "반경 안 후보 기준(gap = 점수 − 반경 안 1위 점수, log_rank = log(반경 안 순위), bm25_rel = 문자 BM25 ÷ 반경 안 최댓값, BM25 상위 50 밖이면 0)",
+ "trained_on": "dev all 1km judged pairs",
+ "expansion_w": 0.3,
+ "full_cosine": false,
+ "groups": {
+  "name": {
+   "intercept": -3.2820723161260443,
+   "coef": {
+    "score": 1.395304483628303,
+    "gap": 1.5047446059973733,
+    "log_rank": -0.9567926159603968,
+    "bm25_rel": 1.2789464128239105,
+    "kw_item": 0.3667377300985513,
+    "kw_name_only": 1.8130941825383895,
+    "item_words": 0.4108619974482007,
+    "item_freq": 0.04154633817079707
+   },
+   "pairs": 1407
+  },
+  "category": {
+   "intercept": -4.326667632420005,
+   "coef": {
+    "score": 3.4399691827689542,
+    "gap": 0.6300551898905675,
+    "log_rank": 0.30548936627021483,
+    "bm25_rel": 0.0025278801231304582,
+    "kw_item": 1.692797281672996,
+    "kw_name_only": 2.475956968792553,
+    "item_words": 0.7931659132102643,
+    "item_freq": 0.026749637963842415
+   },
+   "pairs": 5128
+  }
+ }
+}
