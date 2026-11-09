@@ -80,9 +80,8 @@ def tier_order(shown: list, near: set, prob: dict, brand: set, strong: float) ->
 TEXT_CACHE: dict = {}   # main()이 채움(P2(b)): keywords(요청 → 쿼리 단어), profile(store_profile)
 
 
-def relevance_probability(stage: pd.DataFrame, raw: pd.DataFrame, req: pd.DataFrame, calibrator: dict,
-                          intents: dict[str, str]) -> pd.Series:
-    """1단계 후보마다 P(관련) — X1 로지스틱. 특성은 요청 후보 기준(점수는 브랜드 지점을 뺀 1단계 점수)."""
+def relevance_features(stage: pd.DataFrame, raw: pd.DataFrame, calibrator: dict) -> pd.DataFrame:
+    """1단계 후보마다 관련 확률 특성(요청 후보 기준, 점수는 브랜드 지점을 뺀 1단계 점수). 열 instance_id = 요청 ID."""
 
     bm = raw[raw["system"] == "char_bm25"][["query_id", "doc_id", "score"]].rename(columns={"query_id": "instance_id",
                                                                                            "score": "bm25"})
@@ -90,12 +89,77 @@ def relevance_probability(stage: pd.DataFrame, raw: pd.DataFrame, req: pd.DataFr
     f = add_features(f.merge(bm.drop_duplicates(["instance_id", "doc_id"]), on=["instance_id", "doc_id"], how="left"))
     if set(calibrator["features"]) & set(TEXT_FEATURES):   # P2(b) 가게 텍스트 특성
         f = add_text_features(f, TEXT_CACHE["keywords"], TEXT_CACHE["profile"])
+    return f
+
+
+def apply_calibrator(f: pd.DataFrame, calibrator: dict, intents: dict[str, str]) -> pd.Series:
     p = np.zeros(len(f))
     for g, coef in calibrator["groups"].items():
         m = f["instance_id"].map(lambda i: "name" if intents.get(i) in ("name", "brand") else "category").to_numpy() == g
         z = coef["intercept"] + sum(coef["coef"][k] * f.loc[m, k].to_numpy() for k in calibrator["features"])
         p[m] = 1 / (1 + np.exp(-z))
     return pd.Series(p, index=pd.MultiIndex.from_arrays([f["instance_id"], f["doc_id"]]))
+
+
+def relevance_probability(stage: pd.DataFrame, raw: pd.DataFrame, req: pd.DataFrame, calibrator: dict,
+                          intents: dict[str, str]) -> pd.Series:
+    """1단계 후보마다 P(관련) — X1 로지스틱."""
+
+    return apply_calibrator(relevance_features(stage, raw, calibrator), calibrator, intents)
+
+
+def refit_oof(frames: list[pd.DataFrame], req: pd.DataFrame, qrels: pd.DataFrame, calibrator: dict, intents: dict[str, str],
+              folds: int, out: Path | None) -> list[pd.Series]:
+    """P2(d), 2026-11-09: 관련 확률 식을 '적용하는 분포'(정책 요청의 1km 단계 + 10km·지역·지도 단계 후보)에서 다시 맞춘다. X1은
+    1km 후보로만 학습해 10km·지도 후보(후보 수·순위 분포가 다름)에 그대로 썼다. 같은 dev 요청으로 채점하므로 기준 쿼리
+    (base_query_id) 단위 folds겹 교차 예측(out-of-fold)으로 확률을 내고, 백엔드용 계수는 전체로 다시 맞춘다. 미판정 쌍은 뺀다."""
+
+    from store_search_ai.evaluation.threshold import calibration_metrics, fit_logistic
+
+    feats = calibrator["features"]
+    base_of = dict(zip(req["query_id"], req["base_query_id"], strict=True))
+    grade = {(q, d): g for q, d, g in zip(qrels["query_id"], qrels["doc_id"], qrels["relevance"], strict=True)}
+
+    def group(i: str) -> str:
+        return "name" if intents.get(i) in ("name", "brand") else "category"
+
+    lab = []
+    for k, f in enumerate(frames):
+        f = f.assign(frame=k, base=f["instance_id"].map(base_of), group=f["instance_id"].map(group))
+        f["rel"] = [grade.get((b, d), np.nan) for b, d in zip(f["base"], f["doc_id"], strict=True)]
+        lab.append(f)
+    allf = pd.concat(lab, ignore_index=True)
+    bases = np.array(sorted(allf["base"].dropna().unique()))
+    fold_of = dict(zip(bases, np.random.default_rng(0).permutation(len(bases)) % folds, strict=True))
+    allf["fold"] = allf["base"].map(fold_of)
+    judged = allf["rel"].notna().to_numpy()
+    y_all = (allf["rel"] >= BINARY).to_numpy(int)
+    X = allf[feats].to_numpy(float)
+    p = np.zeros(len(allf))
+    new = {**calibrator, "trained_on": "dev 정책 요청 후보(1km 단계 + 10km·지역·지도 단계) 판정 쌍 — P2(d)", "groups": {}}
+    for g in ("name", "category"):
+        gm = (allf["group"] == g).to_numpy()
+        for k in range(folds):
+            te = gm & (allf["fold"] == k).to_numpy()
+            tr = gm & judged & ~te
+            p[te] = fit_logistic(X[tr], y_all[tr]).predict_proba(X[te])[:, 1]
+        m = fit_logistic(X[gm & judged], y_all[gm & judged])
+        new["groups"][g] = {"intercept": float(m.intercept_[0]), "coef": dict(zip(feats, map(float, m.coef_[0]), strict=True)),
+                            "pairs": int((gm & judged).sum())}
+    if out is not None:
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "calibrator.json").write_text(json.dumps(new, ensure_ascii=False, indent=1), encoding="utf-8")
+    series = []
+    for k in range(len(frames)):
+        fk = allf["frame"].to_numpy() == k
+        idx = pd.MultiIndex.from_arrays([allf.loc[fk, "instance_id"], allf.loc[fk, "doc_id"]])
+        series.append(pd.Series(p[fk], index=idx))
+        m = fk & judged
+        old = apply_calibrator(frames[k], calibrator, intents)
+        old = old[~old.index.duplicated()].reindex(idx[judged[fk]]).to_numpy()
+        logger.info("단계 %d(판정 쌍 %d): 기존 %s\n          다시 맞춤(OOF) %s", k, int(m.sum()), calibration_metrics(old, y_all[m]),
+                    calibration_metrics(p[m], y_all[m]))
+    return series
 
 
 def within_km(raw: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, km: float) -> np.ndarray:
@@ -139,6 +203,11 @@ def main() -> None:
     parser.add_argument("--calibrator", help="관련 확률 계수 파일(기본: 정책 relevance.calibrator) — P2(c) 비교용")
     parser.add_argument("--full-cosine", action="store_true", help="P2(a): 임베딩 상위 50 밖 후보에 실제 v1 코사인(results/service_pipeline/p2)")
     parser.add_argument("--cosine-scope", choices=["all", "name"], default="all", help="--full-cosine 범위: 모든 후보 / 상호 일치 후보만")
+    parser.add_argument("--refit-oof", type=int, default=0,
+                        help="P2(d): 관련 확률 식을 정책 요청 후보(적용 분포)로 다시 맞춰 기준 쿼리 단위 k겹 교차 예측으로 채점")
+    parser.add_argument("--refit-scope", choices=["all", "area"], default="all",
+                        help="--refit-oof 확률을 쓸 곳: 모든 모드 / 지역·지도 모드만")
+    parser.add_argument("--area-calibrator", help="지역·지도 모드 관련 확률 계수 파일(기본: 정책 relevance.area_calibrator, 'none'이면 끔)")
     parser.add_argument("--dump", action="store_true", help="정책 구성의 노출 목록(상위 20)을 shown_<split><suffix>.csv로 — 정성 점검용")
     parser.add_argument("--suffix", default="", help="출력 파일 이름 뒤에 붙임")
     args = parser.parse_args()
@@ -195,8 +264,31 @@ def main() -> None:
     base1 = policy_runs(raw1, circle, corpus, expansion=expansion and {**expansion, "km": 1.0}, cosine=cosine,
                          cosine_scope=args.cosine_scope, exact_name=exact)["sim_base"]
     p1 = relevance_probability(base1[base1["score"] < BRAND_MIN], raw1, circle, calibrator, intents)
+    # 지역·지도 모드 관련 확률(P2(d), 2026-11-09): 적용 분포(정책 요청 후보)로 다시 맞춘 식과 그 임계값 — 목록 검색은 위 식 그대로
+    p_area, tau_area = None, None
+    area_path = args.area_calibrator or policy["relevance"].get("area_calibrator")
+    if area_path and area_path != "none" and not args.refit_oof:
+        area_cal = json.loads(Path(area_path).read_text(encoding="utf-8"))
+        p_area = relevance_probability(base[base["score"] < BRAND_MIN], raw, req, area_cal, intents)
+        tau_area = float(area_cal["threshold_p"])
+        logger.info("지역·지도 모드 관련 확률: %s (τ = %.2f)", area_path, tau_area)
 
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")
+    if args.refit_oof:   # P2(d): 적용 분포로 다시 맞춘 확률(교차 예측)
+        f10 = relevance_features(base[base["score"] < BRAND_MIN], raw, calibrator)
+        f1 = relevance_features(base1[base1["score"] < BRAND_MIN], raw1, calibrator)
+        # 10km 단계 확률은 원형 요청의 1km 밖 후보와 지역·지도 요청에서만 쓰인다 — 쓰이는 행만 학습·예측
+        loc = req.set_index("query_id")[["latitude", "longitude"]].reindex(f10["instance_id"]).to_numpy(float)
+        cc = corpus.set_index("doc_id")[["latitude", "longitude"]].reindex(f10["doc_id"]).to_numpy(float)
+        dkm = haversine_km(loc[:, 0], loc[:, 1], cc[:, 0], cc[:, 1])
+        circ = f10["instance_id"].isin(circle["query_id"]).to_numpy()
+        f10 = f10[~(circ & (dkm <= 1.0 + 1e-9))]
+        q10, q1 = refit_oof([f10, f1], req, qrels, calibrator, intents, args.refit_oof,
+                            Path("results/service_pipeline/p2/x1_policy") if args.split == "dev" else None)
+        if args.refit_scope == "all":
+            p, p1 = q10, q1
+        else:   # 지역·지도 모드만 다시 맞춘 확률(목록 검색은 기존 식)
+            p_area, tau_area = q10, tau
     judged_by_q = {q: dict(zip(g["doc_id"], g["relevance"], strict=True)) for q, g in qrels.groupby("query_id")}
     c = corpus.set_index("doc_id")
     rows, dump = [], []
@@ -224,9 +316,11 @@ def main() -> None:
         is_brand = (s["score"] >= BRAND_MIN).to_numpy()
         within1 = dist <= 1.0 + 1e-9
         circle_req = r.kind in ("expand", "region_point")
-        prob = np.array([1.0 if b else (p1.get((r.query_id, d), 0.0) if circle_req and w else p.get((r.query_id, d), 0.0))
+        area_req = r.kind in ("region_area", "map5") and p_area is not None
+        pk, t_req = (p_area, tau_area) if area_req else (p, tau)
+        prob = np.array([1.0 if b else (p1.get((r.query_id, d), 0.0) if circle_req and w else pk.get((r.query_id, d), 0.0))
                          for d, b, w in zip(docs, is_brand, within1, strict=True)])
-        rel_shown = prob >= tau
+        rel_shown = prob >= t_req
         brand_set = set(docs[is_brand])
         if brand_set:   # 브랜드 쿼리: 지점이 아닌 가게는 더 높은 확률만(BHC 쿼리에 BYC 같은 이름 닮은 가게를 막는다)
             rel_shown = rel_shown & (is_brand | (prob >= brand_others))
