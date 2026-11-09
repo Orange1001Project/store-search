@@ -123,7 +123,9 @@ def main() -> None:
     parser.add_argument("--category-gamma", type=float, help="업종 가산점 γ(기본: 정책 category.boost_gamma). dev 비교용")
     parser.add_argument("--expansion-w", type=float, help="LLM 쿼리 확장 가중치(기본: 정책 ranking.expansion_w). dev 비교용")
     parser.add_argument("--brand-others-min", type=float, help="브랜드 쿼리에서 지점 아닌 가게의 최소 관련 확률(기본: 정책). dev 비교용")
-    parser.add_argument("--full-cosine", action="store_true", help="P2(a): 모든 후보에 실제 v1 코사인(results/service_pipeline/p2)")
+    parser.add_argument("--calibrator", help="관련 확률 계수 파일(기본: 정책 relevance.calibrator) — P2(c) 비교용")
+    parser.add_argument("--full-cosine", action="store_true", help="P2(a): 임베딩 상위 50 밖 후보에 실제 v1 코사인(results/service_pipeline/p2)")
+    parser.add_argument("--cosine-scope", choices=["all", "name"], default="all", help="--full-cosine 범위: 모든 후보 / 상호 일치 후보만")
     parser.add_argument("--dump", action="store_true", help="정책 구성의 노출 목록(상위 20)을 shown_<split><suffix>.csv로 — 정성 점검용")
     parser.add_argument("--suffix", default="", help="출력 파일 이름 뒤에 붙임")
     args = parser.parse_args()
@@ -136,7 +138,9 @@ def main() -> None:
     # test는 정책 파일에 정한 구성 하나만 계산한다(X7 — test로 고르지 않는다, docs/EVALUATION_POLICY.md)
     n_grid, orders = (((int(policy["radius"]["expand_if_relevant_below"]),), (policy_order(policy),))
                       if args.split == "test" else (N_GRID, ORDERS))
-    calibrator = json.loads(Path(policy["relevance"]["calibrator"]).read_text(encoding="utf-8"))
+    calibrator = json.loads(Path(args.calibrator or policy["relevance"]["calibrator"]).read_text(encoding="utf-8"))
+    if args.calibrator:   # 비교용 계수 파일이면 그 파일의 임계값을 쓴다
+        tau = float(calibrator["threshold_p"])
 
     req = load_requests(cfg)
     req = req[req["split"] == args.split].reset_index(drop=True)
@@ -156,8 +160,10 @@ def main() -> None:
     cats = pd.read_parquet(policy["category"]["store_labels"]).set_index("doc_id")["category"] if gamma > 0 else None
     ew = args.expansion_w if args.expansion_w is not None else float(policy["ranking"].get("expansion_w", 0.0))
     expansion = load_expansion(ew, policy["ranking"].get("expansion_llm", "Qwen2.5-14B-Instruct"), corpus)
-    cosine = load_pair_cosine() if args.full_cosine else None
-    runs = policy_runs(raw, req, corpus, gamma, cats, expansion, cosine)
+    scope = args.cosine_scope if args.full_cosine else policy["ranking"].get("real_cosine", "off")   # 기본은 정책 값
+    cosine = load_pair_cosine() if scope != "off" else None
+    args.cosine_scope = scope
+    runs = policy_runs(raw, req, corpus, gamma, cats, expansion, cosine, args.cosine_scope)
     logger.info("업종 가산점 γ = %.2f", gamma)
     intents = dict(zip(req["query_id"], req["intent"], strict=True))
     sim = runs["sim"]
@@ -166,7 +172,8 @@ def main() -> None:
     # 1km 단계: 서비스처럼 1km 후보만으로 1단계를 다시 만들어(점수 정규화·쿼리 안 순위·BM25 비율이 1km 기준) 확률을 계산한다
     circle = req[req["kind"].isin(["expand", "region_point"])]
     raw1 = raw[raw["query_id"].isin(circle["query_id"]) & within_km(raw, circle, corpus, 1.0)]
-    base1 = policy_runs(raw1, circle, corpus, expansion=expansion and {**expansion, "km": 1.0}, cosine=cosine)["sim_base"]
+    base1 = policy_runs(raw1, circle, corpus, expansion=expansion and {**expansion, "km": 1.0}, cosine=cosine,
+                         cosine_scope=args.cosine_scope)["sim_base"]
     p1 = relevance_probability(base1[base1["score"] < BRAND_MIN], raw1, circle, calibrator, intents)
 
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")

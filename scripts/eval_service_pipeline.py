@@ -240,7 +240,23 @@ def load_pair_cosine(model: str = V1) -> dict:
     if not path.exists():
         raise SystemExit(f"{path}가 없습니다 — scripts/export_p2_cosine.py → colab/pair_cosine.ipynb")
     c = pd.read_csv(path, encoding="utf-8-sig", dtype={"query_id": str, "doc_id": str})
-    return dict(zip(zip(c["query_id"], c["doc_id"], strict=True), c["cosine"], strict=True))
+    # 내보내기는 다른 v1 run(같은 쿼리의 다른 위치 사례·요청)에 이미 점수가 있는 쌍을 뺐다 — 코사인은 쿼리 문장과 가맹점 문서로만
+    # 정해져 위치와 무관하므로 그 run들의 점수를 함께 쓴다(2026-11-09 수정: 빠뜨려서 '정선 새아네그릇' 등이 그대로 0점이었다)
+    bdir = Path(load_config("configs/query/service_queryset_v1.yaml")["judging"]["benchmark_dir"])
+    from build_service_pool import RUN_DIRS
+
+    inst = pd.read_csv(bdir / "instances.csv", encoding="utf-8-sig", keep_default_na=False)
+    req = pd.read_csv(bdir / "x23" / "requests.csv", encoding="utf-8-sig", keep_default_na=False)
+    base = {**dict(zip(inst["instance_id"], inst["query_id"], strict=True)),
+            **dict(zip(req["query_id"], req["base_query_id"], strict=True))}
+    frames = [c[["query_id", "doc_id", "cosine"]]]
+    for d in [*RUN_DIRS, "runs_x23", "runs_x23f", "runs_x23p0"]:
+        p = bdir / d / f"{model}.csv"
+        if p.exists():
+            r = pd.read_csv(p, encoding="utf-8-sig", usecols=["query_id", "doc_id", "score"])
+            frames.append(r.assign(query_id=r["query_id"].map(base)).rename(columns={"score": "cosine"}).dropna(subset=["query_id"]))
+    allc = pd.concat(frames, ignore_index=True).drop_duplicates(["query_id", "doc_id"])
+    return dict(zip(zip(allc["query_id"], allc["doc_id"], strict=True), allc["cosine"], strict=True))
 
 
 def augment_v1(v1: pd.DataFrame, extra: pd.DataFrame, base_of, cos: dict) -> pd.DataFrame:

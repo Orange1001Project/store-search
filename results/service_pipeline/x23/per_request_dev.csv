@@ -703,7 +703,7 @@ sq_B102~x10,expand,B,name,True,10,tier@0.6,True,1,False,0.0,1.0,0.0,1.0,1.0,,Fal
 sq_B102~x10,expand,B,name,True,10,tier@0.7,True,1,False,0.0,1.0,0.0,1.0,1.0,,False
 sq_B102~x10,expand,B,name,True,10,decay2,True,1,False,0.0,1.0,0.0,1.0,1.0,,False
 sq_B102~x10,expand,B,name,True,10,decay5,True,1,False,0.0,1.0,0.0,1.0,1.0,,False
-sq_B102~rr,region_area,B,name,True,0,sim,False,0,True,,0.0,1.0,0.0,,,True
+sq_B102~rr,region_area,B,name,True,0,sim,False,1,False,,0.9173194127129571,0.0,1.0,1.0,1.0,False
 sq_B107~x10,expand,B,name,True,1,sim,False,1,False,0.0,1.0,0.0,1.0,1.0,,False
 sq_B107~x10,expand,B,name,True,1,tier,False,1,False,0.0,1.0,0.0,1.0,1.0,,False
 sq_B107~x10,expand,B,name,True,1,tier@0.5,False,1,False,0.0,1.0,0.0,1.0,1.0,,False
@@ -990,7 +990,7 @@ sq_B127~x10,expand,B,name,True,10,tier@0.6,True,1,False,0.0,0.6639124204207466,0
 sq_B127~x10,expand,B,name,True,10,tier@0.7,True,1,False,0.0,0.6639124204207466,0.0,1.0,1.0,,False
 sq_B127~x10,expand,B,name,True,10,decay2,True,1,False,0.0,0.6639124204207466,0.0,1.0,1.0,,False
 sq_B127~x10,expand,B,name,True,10,decay5,True,1,False,0.0,0.6639124204207466,0.0,1.0,1.0,,False
-sq_B127~rr,region_area,B,name,True,0,sim,False,0,True,,0.0,1.0,0.0,,,True
+sq_B127~rr,region_area,B,name,True,0,sim,False,1,False,,0.6639124204207466,0.0,1.0,1.0,1.0,False
 sq_B129~x10,expand,B,name,True,1,sim,False,1,False,0.0,0.6639124204207466,0.0,1.0,1.0,,False
 sq_B129~x10,expand,B,name,True,1,tier,False,1,False,0.0,0.6639124204207466,0.0,1.0,1.0,,False
 sq_B129~x10,expand,B,name,True,1,tier@0.5,False,1,False,0.0,0.6639124204207466,0.0,1.0,1.0,,False

@@ -1,0 +1,38 @@
+{
+ "model": "logistic_bm25",
+ "threshold_p": 0.3,
+ "features": [
+  "score",
+  "gap",
+  "log_rank",
+  "bm25_rel"
+ ],
+ "score": "min-max(v1 코사인, 후보 = v1·문자 BM25 상위 합집합 안) + 0.5 × 상호 일치(쿼리 이해 키 + 브랜드 별칭) — fusion.boost",
+ "brand": "브랜드 쿼리의 브랜드 지점은 이 확률을 쓰지 않고 관련으로 센다(학습에서도 뺐다)",
+ "feature_scope": "반경 안 후보 기준(gap = 점수 − 반경 안 1위 점수, log_rank = log(반경 안 순위), bm25_rel = 문자 BM25 ÷ 반경 안 최댓값, BM25 상위 50 밖이면 0)",
+ "trained_on": "dev all 1km judged pairs",
+ "expansion_w": 0.3,
+ "full_cosine": false,
+ "groups": {
+  "name": {
+   "intercept": -3.2866239203840326,
+   "coef": {
+    "score": 2.1088878900304904,
+    "gap": 1.2917564004552646,
+    "log_rank": -0.9811716293109924,
+    "bm25_rel": 1.814730606173374
+   },
+   "pairs": 1407
+  },
+  "category": {
+   "intercept": -4.411087611368044,
+   "coef": {
+    "score": 4.324416656400732,
+    "gap": 0.12399967383446321,
+    "log_rank": 0.38473911438106684,
+    "bm25_rel": 1.1321844211286163
+   },
+   "pairs": 5128
+  }
+ }
+}

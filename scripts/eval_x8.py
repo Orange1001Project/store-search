@@ -116,7 +116,8 @@ def main() -> None:
     parser.add_argument("--set", choices=["main", "all"], default="main")
     parser.add_argument("--reranker", default="bge-reranker-v2-m3")
     parser.add_argument("--llm", default="Qwen2.5-14B-Instruct")
-    parser.add_argument("--full-cosine", action="store_true", help="P2(a): 모든 후보에 실제 v1 코사인(results/service_pipeline/p2)")
+    parser.add_argument("--full-cosine", action="store_true", help="P2(a): 임베딩 상위 50 밖 후보에 실제 v1 코사인(results/service_pipeline/p2)")
+    parser.add_argument("--cosine-scope", choices=["all", "name"], default="all", help="--full-cosine 범위: 모든 후보 / 상호 일치 후보만")
     parser.add_argument("--only", action="append", help="채점할 구성(test는 반드시 지정)")
     parser.add_argument("--pool-round", help="확장 구성(exp)들의 반경별 상위 10 중 미판정 쌍 → 판정 라운드(dev+test 모든 사례, 예: service_v12)")
     parser.add_argument("--dry-run", action="store_true", help="--pool-round: 판정 건수만")
@@ -161,6 +162,12 @@ def main() -> None:
     if args.full_cosine:   # P2(a): BM25·확장으로만 들어온 후보에도 실제 v1 코사인(서비스와 같게)
         extra = pd.concat([bm[["query_id", "doc_id"]], *[f[["query_id", "doc_id"]] for e in exp_by_radius.values()
                                                          for f in e.values()]], ignore_index=True)
+        if args.cosine_scope == "name":
+            extra = extra.drop_duplicates().reset_index(drop=True)
+            named = set(parsed.loc[parsed["intent"].isin(["name", "brand"]), "instance_id"])   # 상호·브랜드 쿼리만
+            extra = extra[extra["query_id"].isin(named).to_numpy()
+                          & alias_name_hits(extra, dict(zip(parsed["instance_id"], parsed["name_key"], strict=True)), names,
+                                            aliases).to_numpy()]
         v1 = augment_v1(v1, extra, instances.set_index("instance_id")["query_id"], load_pair_cosine())
     union = union_v1(v1, bm)
     stage = boost(union, alias_name_hits(union, dict(zip(parsed["instance_id"], parsed["name_key"], strict=True)), names, aliases),
@@ -222,7 +229,7 @@ def main() -> None:
     comp = pd.DataFrame(comp)
 
     X8_DIR.mkdir(parents=True, exist_ok=True)
-    tag = f"{args.split}{'_all' if args.set == 'all' else ''}{'_fc' if args.full_cosine else ''}"
+    tag = f"{args.split}{'_all' if args.set == 'all' else ''}{('_fc' + ('n' if args.cosine_scope == 'name' else '')) if args.full_cosine else ''}"
     summary.to_csv(X8_DIR / f"x8_{tag}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     comp.to_csv(X8_DIR / f"x8_{tag}_paired.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     pd.set_option("display.width", 220)

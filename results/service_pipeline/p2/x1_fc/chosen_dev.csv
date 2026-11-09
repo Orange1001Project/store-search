@@ -1,0 +1,5 @@
+﻿radius_km,model,threshold,set,shown_ge_1,shown_ge_3,shown_ge_5,instances,answerable,hidden_rate,miss_rate,false_show_rate,precision_judged,precision_pessimistic,judged_share_of_shown,mean_shown,shown_ge_10
+1,logistic_bm25,0.35,all,0.8906,0.3887,0.2377,265,210,0.0381,0.1333,0.6182,0.6235,0.5274,0.8458,3.79,0.0604
+1,logistic_bm25,0.35,main,0.9722,0.3611,0.2407,108,108,0.0278,0.0556,,0.7649,0.6706,0.8768,3.91,0.0741
+2,logistic_bm25,0.35,all,0.9774,0.5547,0.4038,265,230,0.0087,0.1043,0.8857,0.6077,0.4884,0.8037,6.85,0.2038
+2,logistic_bm25,0.35,main,0.9907,0.5,0.3889,108,108,0.0093,0.0463,,0.767,0.6575,0.8571,6.03,0.1759

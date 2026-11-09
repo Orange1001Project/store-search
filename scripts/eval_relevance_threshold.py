@@ -32,10 +32,13 @@ from eval_service_pipeline import (
     BRAND_MIN,
     V1,
     alias_name_hits,
+    augment_v1,
     brand_distance_sort,
+    load_pair_cosine,
     load_runs,
     parsed_queries,
     union_v1,
+    within_radius,
 )
 
 from store_search_ai.evaluation.service_eval import (
@@ -117,6 +120,11 @@ def oof_predictions(cands: pd.DataFrame, kind: str) -> np.ndarray:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--set", choices=["main", "all"], default="all", help="all: dev 모든 사례(기본), main: 주 평가셋 dev만")
+    parser.add_argument("--expansion-w", type=float, default=0.0,
+                        help="P2(c): 1단계에 LLM 쿼리 확장 점수(w × 확장 BM25 ÷ 최댓값, 업종 의도)를 넣고 학습 — 서비스 점수와 같게")
+    parser.add_argument("--llm", default="Qwen2.5-14B-Instruct")
+    parser.add_argument("--full-cosine", action="store_true", help="P2(a): 모든 후보에 실제 v1 코사인")
+    parser.add_argument("--out", default=str(OUT), help="출력 폴더(기본 results/service_pipeline/x1) — 비교용은 다른 폴더로")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     args = parser.parse_args()
@@ -146,20 +154,57 @@ def main() -> None:
     aliases = BrandAliases.load()
     v1 = runs[V1][runs[V1]["query_id"].isin(instances["instance_id"])]
     bm = runs["char_bm25"][runs["char_bm25"]["query_id"].isin(instances["instance_id"])]
+    geo = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "store_name", "item_text", "latitude", "longitude", "geo_status"])
+    geo = geo[geo["geo_status"] == "VALID"].reset_index(drop=True)
+    radii = cfg["judging"]["report_radii_km"]
+    exp_by_radius: dict = {}
+    if args.expansion_w > 0:   # 서비스 점수 = 1단계 + w × 확장(업종 의도 사례, 반경마다 그 안 가맹점으로 확장 BM25)
+        from store_search_ai.data.service_pool import haversine_km
+        from store_search_ai.retrieval.expansion import (
+            SparseBM25,
+            expansion_frame,
+            load_expansions,
+        )
+        from store_search_ai.retrieval.lexical import build_pool_document_texts
+
+        texts = load_expansions(Path("results/service_pipeline/x8") / f"expansions_{args.llm}.csv")
+        sbm = SparseBM25(build_pool_document_texts(geo))
+        lat, lon, ids = geo["latitude"].to_numpy(float), geo["longitude"].to_numpy(float), geo["doc_id"].to_numpy()
+        cat = instances[instances["instance_id"].isin(parsed.loc[parsed["intent"] == "category", "instance_id"])]
+        for radius in radii:
+            frames = []
+            for r in cat.itertuples():
+                rows = np.flatnonzero(haversine_km(float(r.latitude), float(r.longitude), lat, lon) <= radius)
+                f = expansion_frame(r.instance_id, texts.get(r.query_id, ""), sbm, rows, ids)
+                if f is not None:
+                    frames.append(f)
+            exp_by_radius[radius] = pd.concat(frames, ignore_index=True) if frames else None
+    if args.full_cosine:
+        extra = pd.concat([bm[["query_id", "doc_id"]], *[e[["query_id", "doc_id"]] for e in exp_by_radius.values()
+                                                         if e is not None]], ignore_index=True)
+        v1 = augment_v1(v1, extra, instances.set_index("instance_id")["query_id"], load_pair_cosine())
     union = union_v1(v1, bm)
     stage = boost(union, alias_name_hits(union, dict(zip(parsed["instance_id"], parsed["name_key"], strict=True)), names, aliases),
                   0.5, "v1+name(qu+alias) b=0.5")
-    geo = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "store_name", "latitude", "longitude", "geo_status"])
-    geo = geo[geo["geo_status"] == "VALID"].reset_index(drop=True)
+
+    def stage_at(radius: float) -> pd.DataFrame:
+        """그 반경 단계의 1단계 점수(확장을 켜면 반경 안 후보에 확장 점수를 더하고 확장 후보를 넣는다 — eval_x8·정책과 같은 방식)."""
+
+        if args.expansion_w <= 0:
+            return stage
+        from store_search_ai.retrieval.expansion import add_expansion
+
+        return add_expansion(within_radius(stage, instances, coords, radius), exp_by_radius[radius], args.expansion_w, "s", BRAND_MIN)
     branded = brand_distance_sort(stage, instances, parsed, geo, aliases, 2.0, "b")
     brand_pairs = set(zip(branded.loc[branded["score"] >= BRAND_MIN, "query_id"], branded.loc[branded["score"] >= BRAND_MIN, "doc_id"],
                           strict=True))
     iq = instance_qrels(instances, qrels, coords)
-    OUT.mkdir(parents=True, exist_ok=True)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
 
     calib, curve, per_rows = [], [], []
     for radius in cfg["judging"]["report_radii_km"]:
-        allc = candidates(stage, instances, coords, qrels, parsed, radius, bm25)
+        allc = candidates(stage_at(radius), instances, coords, qrels, parsed, radius, bm25)
         is_brand = np.array([(i, d) in brand_pairs for i, d in zip(allc["instance_id"], allc["doc_id"], strict=True)])
         brand_rows = allc[is_brand].assign(p=1.0)
         cands = allc[~is_brand].reset_index(drop=True)
@@ -180,8 +225,8 @@ def main() -> None:
             per_rows.append(c.assign(model=kind))
     calib = pd.DataFrame(calib)
     curve = pd.DataFrame(curve)
-    calib.to_csv(OUT / "calibration_dev.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
-    curve.to_csv(OUT / "curve_dev.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    calib.to_csv(out / "calibration_dev.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    curve.to_csv(out / "curve_dev.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
 
     # 모델: 1km 전체 log-loss가 낮은 쪽. 임계값: 1km·dev 전체에서 헛된 "없음" ≤ 5%인 것 중 노출 정밀도가 가장 높은 p
     c1 = calib[(calib["radius_km"] == 1) & (calib["group"] == "전체")].set_index("model")
@@ -190,7 +235,7 @@ def main() -> None:
     ok = cur[cur["hidden_rate"] <= TARGET_HIDDEN]
     t_star = float(ok.loc[ok["precision_judged"].idxmax(), "threshold"]) if len(ok) else float(cur["threshold"].min())
     chosen = curve[(curve["model"] == best) & (curve["threshold"] == t_star)]
-    chosen.to_csv(OUT / "chosen_dev.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    chosen.to_csv(out / "chosen_dev.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
 
     # 사례별 결과(고른 모델·임계값, 1km)
     per = pd.concat(per_rows)
@@ -198,17 +243,18 @@ def main() -> None:
     ans1 = set(iq[(iq["dist_km"] <= 1) & (iq["relevance"] >= BINARY)]["instance_id"])
     pi = instance_outcomes(per, ans1, t_star).merge(instances[["instance_id", "query", "bundle", "split"]], on="instance_id")
     pi = pi.merge(parsed[["instance_id", "group"]], on="instance_id").assign(main=lambda d: d["instance_id"].isin(main_ids))
-    pi.to_csv(OUT / "per_instance_dev.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    pi.to_csv(out / "per_instance_dev.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
 
     # dev 전체로 다시 학습 → 백엔드로 넘길 계수(1km 후보 기준 특성)
-    cands1 = candidates(stage, instances, coords, qrels, parsed, 1, bm25)
+    cands1 = candidates(stage_at(1), instances, coords, qrels, parsed, 1, bm25)
     cands1 = cands1[[(i, d) not in brand_pairs for i, d in zip(cands1["instance_id"], cands1["doc_id"], strict=True)]]
     calibrator = {"model": best, "threshold_p": t_star, "features": FEATURE_SETS.get(best, ["score"]),
                   "score": "min-max(v1 코사인, 후보 = v1·문자 BM25 상위 합집합 안) + 0.5 × 상호 일치(쿼리 이해 키 + 브랜드 별칭) — fusion.boost",
                   "brand": "브랜드 쿼리의 브랜드 지점은 이 확률을 쓰지 않고 관련으로 센다(학습에서도 뺐다)",
                   "feature_scope": "반경 안 후보 기준(gap = 점수 − 반경 안 1위 점수, log_rank = log(반경 안 순위), "
                                    "bm25_rel = 문자 BM25 ÷ 반경 안 최댓값, BM25 상위 50 밖이면 0)",
-                  "trained_on": f"dev {args.set} 1km judged pairs", "groups": {}}
+                  "trained_on": f"dev {args.set} 1km judged pairs", "expansion_w": args.expansion_w,
+                  "full_cosine": args.full_cosine, "groups": {}}
     for g in ["name", "category"]:
         tr = cands1[(cands1["group"] == g) & cands1["relevance"].notna()]
         m = fit(best, tr)
@@ -218,7 +264,7 @@ def main() -> None:
         else:
             calibrator["groups"][g] = {"x": list(map(float, m.X_thresholds_)), "y": list(map(float, m.y_thresholds_)),
                                        "pairs": len(tr)}
-    (OUT / "calibrator.json").write_text(json.dumps(calibrator, ensure_ascii=False, indent=1), encoding="utf-8")
+    (out / "calibrator.json").write_text(json.dumps(calibrator, ensure_ascii=False, indent=1), encoding="utf-8")
 
     pd.set_option("display.width", 250)
     logger.info("보정(1km·2km, 쿼리 5겹 교차검증):\n%s", calib.to_string(index=False))
