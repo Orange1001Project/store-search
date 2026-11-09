@@ -177,6 +177,39 @@ def brand_distance_sort(run: pd.DataFrame, instances: pd.DataFrame, parsed: pd.D
     return _rerank(out[["query_id", "doc_id", "score"]], name)
 
 
+def exact_name_sort(run: pd.DataFrame, instances: pd.DataFrame, parsed: pd.DataFrame, corpus: pd.DataFrame, max_km: float,
+                    name: str) -> pd.DataFrame:
+    """상호 완전 일치(2026-11-09): 상호 쿼리(intent=name)에서 지명을 뺀 키(name_key)가 가게 상호와 정규화해서 똑같으면 브랜드 지점처럼
+    '관련'으로 보고 가까운 순으로 맨 위에 둔다(점수 = BRAND_SCORE − 거리). 이름을 그대로 친 쿼리는 그 가게를 찾는 것(navigational,
+    Broder 2002) — 두 글자 상호('희랑')는 임베딩 점수가 후보 중 최저일 만큼 약해 상위에 없을 수 있어 이름으로 찾는다. 다른 쿼리는 그대로."""
+
+    names = parsed[parsed["intent"] == "name"].set_index("instance_id")["name_key"]
+    if names.empty:
+        return run.assign(system=name)
+    inst = instances.set_index("instance_id")
+    norm = corpus["store_name"].map(normalize_name).to_numpy()
+    pos: dict[str, list[int]] = {}
+    for j, n in enumerate(norm):
+        pos.setdefault(n, []).append(j)
+    lat, lon = corpus["latitude"].to_numpy(float), corpus["longitude"].to_numpy(float)
+    extra = []
+    for i, key in names.items():
+        hit = np.array(pos.get(normalize_name(key), []), dtype=int)
+        if not len(hit) or i not in inst.index:
+            continue
+        d = haversine_km(float(inst.at[i, "latitude"]), float(inst.at[i, "longitude"]), lat[hit], lon[hit])
+        keep = d <= max_km
+        extra.append(pd.DataFrame({"query_id": i, "doc_id": corpus["doc_id"].to_numpy()[hit[keep]], "dist": d[keep]}))
+    if not extra:
+        return run.assign(system=name)
+    extra = pd.concat(extra, ignore_index=True)
+    out = run[["query_id", "doc_id", "score"]].merge(extra, on=["query_id", "doc_id"], how="outer")
+    out["score"] = out["score"].fillna(out.groupby("query_id")["score"].transform("min")).fillna(0.0)
+    top = out["dist"].notna()
+    out.loc[top, "score"] = BRAND_SCORE - out.loc[top, "dist"]
+    return _rerank(out[["query_id", "doc_id", "score"]], name)
+
+
 def nearest_brand_top1(run: pd.DataFrame, iq: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame, ids: set,
                        radius_km: float) -> pd.Series:
     """브랜드 사례: 1위가 반경 안 판정된 정답 지점 중 가장 가까운 곳인가(정답이 있는 사례만)."""

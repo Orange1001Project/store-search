@@ -240,7 +240,7 @@ def clean_runs(raw: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, bdir:
 
 def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, category_gamma: float = 0.0,
                 categories: pd.Series | None = None, expansion: dict | None = None,
-                cosine: dict | None = None, cosine_scope: str = "all") -> dict[str, pd.DataFrame]:
+                cosine: dict | None = None, cosine_scope: str = "all", exact_name: bool = False) -> dict[str, pd.DataFrame]:
     """평가할 정책 변형의 순위: 1단계(11-8 채택 — v1+문자 BM25 합집합, 상호 일치·별칭 가산점, 브랜드 거리순)의 유사도순,
     반경 요청은 거리 감쇠(h = 2·5km)도. query_id = 요청 ID.
     category_gamma > 0이면 업종 쿼리에 업종 가산점(γ × 1단계 상위 10개 업종 분포에서 그 가게 업종의 비중, 11-15)을 더한 순서를 'sim'으로,
@@ -298,6 +298,10 @@ def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, cat
 
     def finish(st: pd.DataFrame) -> pd.DataFrame:
         st = brand_distance_sort(st, loc, parsed, geo, aliases, MAX_KM, "stage1")
+        if exact_name:   # 상호 완전 일치는 맨 위(넓은 지역은 중심에서 멀 수 있어 넉넉히 찾고 아래 in_range가 범위로 자른다)
+            from eval_service_pipeline import exact_name_sort
+
+            st = exact_name_sort(st, loc, parsed, geo, 60.0, "stage1")
         st = st[in_range(st, req, corpus)]                     # 브랜드 지점 찾기가 필터 밖을 더하지 않게
         return st.sort_values(["query_id", "rank"]).assign(rank=lambda d: d.groupby("query_id").cumcount() + 1)
 

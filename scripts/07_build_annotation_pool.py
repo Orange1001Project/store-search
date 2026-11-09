@@ -27,7 +27,11 @@ from store_search_ai.data.annotation_pool import (
     merge_pool_history,
     precompute_match_index,
 )
-from store_search_ai.pipeline.common import load_active_queries, load_all_queries, load_config
+from store_search_ai.pipeline.common import (
+    load_active_queries,
+    load_all_queries,
+    load_config,
+)
 
 
 def main() -> None:

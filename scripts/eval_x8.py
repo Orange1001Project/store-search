@@ -37,6 +37,7 @@ from eval_service_pipeline import (
     alias_name_hits,
     augment_v1,
     brand_distance_sort,
+    exact_name_sort,
     load_pair_cosine,
     load_runs,
     parsed_queries,
@@ -118,6 +119,7 @@ def main() -> None:
     parser.add_argument("--llm", default="Qwen2.5-14B-Instruct")
     parser.add_argument("--full-cosine", action="store_true", help="P2(a): 임베딩 상위 50 밖 후보에 실제 v1 코사인(results/service_pipeline/p2)")
     parser.add_argument("--cosine-scope", choices=["all", "name"], default="all", help="--full-cosine 범위: 모든 후보 / 상호 일치 후보만")
+    parser.add_argument("--exact-name", action="store_true", help="상호 완전 일치 맨 위")
     parser.add_argument("--only", action="append", help="채점할 구성(test는 반드시 지정)")
     parser.add_argument("--pool-round", help="확장 구성(exp)들의 반경별 상위 10 중 미판정 쌍 → 판정 라운드(dev+test 모든 사례, 예: service_v12)")
     parser.add_argument("--dry-run", action="store_true", help="--pool-round: 판정 건수만")
@@ -173,6 +175,8 @@ def main() -> None:
     stage = boost(union, alias_name_hits(union, dict(zip(parsed["instance_id"], parsed["name_key"], strict=True)), names, aliases),
                   0.5, BASE)
     stage = brand_distance_sort(stage, instances, parsed, corpus, aliases, max(radii), BASE)
+    if args.exact_name:
+        stage = exact_name_sort(stage, instances, parsed, corpus, max(radii), BASE)
     logger.info("사례 %d개(업종 의도 %d개)", len(instances), len(category))
 
     base = instances.set_index("instance_id")["query_id"]
@@ -229,7 +233,7 @@ def main() -> None:
     comp = pd.DataFrame(comp)
 
     X8_DIR.mkdir(parents=True, exist_ok=True)
-    tag = f"{args.split}{'_all' if args.set == 'all' else ''}{('_fc' + ('n' if args.cosine_scope == 'name' else '')) if args.full_cosine else ''}"
+    tag = f"{args.split}{'_all' if args.set == 'all' else ''}{('_fc' + ('n' if args.cosine_scope == 'name' else '')) if args.full_cosine else ''}{'_ex' if args.exact_name else ''}"
     summary.to_csv(X8_DIR / f"x8_{tag}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     comp.to_csv(X8_DIR / f"x8_{tag}_paired.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     pd.set_option("display.width", 220)

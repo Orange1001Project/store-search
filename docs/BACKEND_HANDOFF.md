@@ -20,6 +20,7 @@
 | 정렬 규칙(P0) | `configs/service/search_policy_v1.yaml` `ranking.tier_min_p`·`brand_others_min_p`, `scripts/eval_x23.py tier_order` | 확장 목록 = 브랜드 지점(거리순) → 1km 안 P ≥ 0.5 → 나머지(1km 약한 가게 + 10km) 유사도순. 브랜드 쿼리의 지점 아닌 가게는 P ≥ 0.7만 |
 | 지점 접미사(P0) | `src/store_search_ai/data/service_pool.py branch_suffixes·lexical_query` | 상호 끝 '…점'(3~5글자)이 3곳 이상이고 '점'을 뗀 말이 품목 20곳 미만인 접미사는 BM25 쿼리에서 뺀다. 가맹점 갱신 때 다시 계산 |
 | 쿼리 이해 규칙(P0) | `src/store_search_ai/query/understanding.py` | 같은 이름이면 읍면보다 시군, 가맹점에서만 나온 지명은 후보가 모두 5곳 미만이면 무시, 넓은 행정동은 가게 중앙값 중심, 3글자 미만 상호는 완전 일치 |
+| 상호 검색 경로(P2(a)·11-22) | 정책 `ranking.real_cosine: name`·`exact_name_first: true`, `eval_service_pipeline.exact_name_sort` | 상호·브랜드 쿼리는 이름으로 찾은 가게(상호 일치)에도 실제 v1 코사인을 붙여 후보에 넣는다. 지명 뺀 말이 상호와 완전히 같으면 관련·맨 위(거리순). 업종 쿼리에는 쓰지 않는다 |
 | 가게 업종(임시 v0) | `data/category/store_category_v0.parquet`, `configs/category/taxonomy_v0.yaml` | 공식 업종 17개 이름으로 붙인 가게 업종 — 화면 업종 칩 필터용(순위에는 안 씀). 공식 업종 데이터가 오면 교체 |
 | 로그 설계 | `docs/SEARCH_LOGGING.md` | 이벤트·필드·지표 추천안 |
 

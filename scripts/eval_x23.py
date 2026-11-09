@@ -123,6 +123,7 @@ def main() -> None:
     parser.add_argument("--category-gamma", type=float, help="업종 가산점 γ(기본: 정책 category.boost_gamma). dev 비교용")
     parser.add_argument("--expansion-w", type=float, help="LLM 쿼리 확장 가중치(기본: 정책 ranking.expansion_w). dev 비교용")
     parser.add_argument("--brand-others-min", type=float, help="브랜드 쿼리에서 지점 아닌 가게의 최소 관련 확률(기본: 정책). dev 비교용")
+    parser.add_argument("--exact-name", type=int, choices=[0, 1], help="상호 완전 일치 맨 위(기본: 정책 ranking.exact_name_first)")
     parser.add_argument("--calibrator", help="관련 확률 계수 파일(기본: 정책 relevance.calibrator) — P2(c) 비교용")
     parser.add_argument("--full-cosine", action="store_true", help="P2(a): 임베딩 상위 50 밖 후보에 실제 v1 코사인(results/service_pipeline/p2)")
     parser.add_argument("--cosine-scope", choices=["all", "name"], default="all", help="--full-cosine 범위: 모든 후보 / 상호 일치 후보만")
@@ -163,7 +164,8 @@ def main() -> None:
     scope = args.cosine_scope if args.full_cosine else policy["ranking"].get("real_cosine", "off")   # 기본은 정책 값
     cosine = load_pair_cosine() if scope != "off" else None
     args.cosine_scope = scope
-    runs = policy_runs(raw, req, corpus, gamma, cats, expansion, cosine, args.cosine_scope)
+    exact = args.exact_name if args.exact_name is not None else bool(policy["ranking"].get("exact_name_first", False))
+    runs = policy_runs(raw, req, corpus, gamma, cats, expansion, cosine, args.cosine_scope, exact)
     logger.info("업종 가산점 γ = %.2f", gamma)
     intents = dict(zip(req["query_id"], req["intent"], strict=True))
     sim = runs["sim"]
@@ -173,7 +175,7 @@ def main() -> None:
     circle = req[req["kind"].isin(["expand", "region_point"])]
     raw1 = raw[raw["query_id"].isin(circle["query_id"]) & within_km(raw, circle, corpus, 1.0)]
     base1 = policy_runs(raw1, circle, corpus, expansion=expansion and {**expansion, "km": 1.0}, cosine=cosine,
-                         cosine_scope=args.cosine_scope)["sim_base"]
+                         cosine_scope=args.cosine_scope, exact_name=exact)["sim_base"]
     p1 = relevance_probability(base1[base1["score"] < BRAND_MIN], raw1, circle, calibrator, intents)
 
     qrels = pd.read_csv(bdir / "qrels.csv", encoding="utf-8-sig")
