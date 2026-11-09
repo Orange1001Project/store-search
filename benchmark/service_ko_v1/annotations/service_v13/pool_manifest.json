@@ -1,0 +1,66 @@
+{
+  "round": "service_v13",
+  "set": "x23",
+  "created_at": "2026-11-05T04:56:12.484634+00:00",
+  "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
+  "requests": {
+    "expand": 428,
+    "map5": 188,
+    "region_point": 96,
+    "region_area": 44
+  },
+  "excluded_requests": [],
+  "changed_requests_rows_dropped": 17,
+  "changed_requests": [
+    "sq_B197~rr",
+    "sq_B199~rr",
+    "sq_D002~rr",
+    "sq_D051~rr"
+  ],
+  "dense_missing_requests": [
+    "sq_B197~rr",
+    "sq_B199~rr",
+    "sq_D002~rr"
+  ],
+  "pool": "정책 변형(1단계 유사도순, 반경 요청은 거리 감쇠 h=2·5km) 상위 depth",
+  "expansion": {
+    "w": 0.3,
+    "llm": "Qwen2.5-14B-Instruct"
+  },
+  "max_km": 10.0,
+  "radii_km": [
+    1.0,
+    10.0
+  ],
+  "map_half_km": 2.5,
+  "depth": 10,
+  "queries": 161,
+  "pairs": 404,
+  "pairs_by_kind": {
+    "expand": 286,
+    "region_point": 85,
+    "region_area": 14,
+    "map5": 87
+  },
+  "double_annotation_queries": 32,
+  "double_annotation_pairs": 72,
+  "annotators": {
+    "A": {
+      "writer_id": null,
+      "queries": 96,
+      "pairs": 238
+    },
+    "B": {
+      "writer_id": null,
+      "queries": 97,
+      "pairs": 238
+    }
+  },
+  "runs_sha256": {
+    "runs_x23/bge_m3_ft_mj_20261014_0743.csv": "8ec1c6ea10b694751d1aa239762b38453c2a13cd0ee78e022a1c34dc35d0802b",
+    "runs_x23/char_bm25.csv": "f80ef93d039d358d7b4f0b8c62ddf0244e74ebfc57b5043a58039e3978eadc04",
+    "runs_x23f/bge_m3_ft_mj_20261014_0743.csv": "91d713c846a7cb78a7c8582ebf5d01db3657764148e35aebd5cde789b0d1e3e8"
+  },
+  "requests_sha256": "b519e01c5d2692817018a95686182cb04d2244480b4d71ebfd851071ea2bad46",
+  "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md"
+}

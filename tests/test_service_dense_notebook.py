@@ -68,3 +68,26 @@ def test_every_code_cell_compiles():
     for i, c in enumerate(cells):
         if c["cell_type"] == "code":
             compile("".join(c["source"]), f"<notebook cell {i}>", "exec")
+
+
+def test_notebook_filters_match_local_rules():
+    """요청별 필터(code_prefix·bbox, X2+X3): 노트북과 로컬 candidates_filtered가 같은 후보에서 같은 상위 결과를 낸다."""
+
+    from store_search_ai.data.service_pool import candidates_filtered
+
+    rng = np.random.default_rng(1)
+    n = 200
+    docs = pd.DataFrame({"doc_id": [f"d{i}" for i in range(n)], "latitude": 37.5 + rng.normal(0, 0.03, n),
+                         "longitude": 127.0 + rng.normal(0, 0.03, n),
+                         "legal_dong_code": rng.choice(["1114010100", "1117010100", "2611010100"], n)})
+    queries = pd.DataFrame({"query_id": ["r", "a", "b"], "latitude": [37.5, 37.5, 37.5], "longitude": [127.0, 127.0, 127.0],
+                            "code_prefix": ["", "11140|26110", ""], "bbox": ["", "", "37.49,126.99,37.51,127.01"]})
+    doc_emb = rng.normal(size=(n, 8)).astype("float32")
+    q_emb = rng.normal(size=(3, 8)).astype("float32")
+
+    got = _cell_namespace()["radius_runs"](docs, queries, doc_emb, q_emb, 1.0, 10, "m")
+    cands = candidates_filtered(queries, docs, 1.0)
+    want = pd.concat([top_k_run(qid, cands[qid], doc_emb[cands[qid]] @ q_emb[i], docs["doc_id"].to_numpy(), 10, "m")
+                      for i, qid in enumerate(queries["query_id"])], ignore_index=True)
+    pd.testing.assert_frame_equal(got.reset_index(drop=True), want.reset_index(drop=True), check_dtype=False)
+    assert set(docs.set_index("doc_id").loc[got[got["query_id"] == "a"]["doc_id"], "legal_dong_code"].str[:5]) <= {"11140", "26110"}

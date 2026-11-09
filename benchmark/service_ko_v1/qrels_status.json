@@ -42,6 +42,72 @@
       "quadratic_weighted_kappa": 0.5839
     }
   },
+  "service_v11": {
+    "annotators": [
+      "A",
+      "B"
+    ],
+    "pairs": 3537,
+    "qrels_rows": 3522,
+    "needs_adjudication": 58,
+    "adjudication_pending": 0,
+    "excluded_from_gold": 15,
+    "reasons": {
+      "아무도 점수를 주지 않음(판단 보류)": 42,
+      "이진 판정이 다름": 16
+    },
+    "agreement": {
+      "pairs_scored_by_both": 658,
+      "exact_agreement": 0.921,
+      "binary_agreement": 0.9757,
+      "binary_kappa": 0.9499,
+      "quadratic_weighted_kappa": 0.9612
+    }
+  },
+  "service_v12": {
+    "annotators": [
+      "A",
+      "B"
+    ],
+    "pairs": 661,
+    "qrels_rows": 659,
+    "needs_adjudication": 13,
+    "adjudication_pending": 0,
+    "excluded_from_gold": 2,
+    "reasons": {
+      "이진 판정이 다름": 10,
+      "아무도 점수를 주지 않음(판단 보류)": 3
+    },
+    "agreement": {
+      "pairs_scored_by_both": 130,
+      "exact_agreement": 0.7077,
+      "binary_agreement": 0.9231,
+      "binary_kappa": 0.7781,
+      "quadratic_weighted_kappa": 0.802
+    }
+  },
+  "service_v13": {
+    "annotators": [
+      "A",
+      "B"
+    ],
+    "pairs": 404,
+    "qrels_rows": 399,
+    "needs_adjudication": 5,
+    "adjudication_pending": 5,
+    "excluded_from_gold": 0,
+    "reasons": {
+      "아무도 점수를 주지 않음(판단 보류)": 4,
+      "이진 판정이 다름": 1
+    },
+    "agreement": {
+      "pairs_scored_by_both": 72,
+      "exact_agreement": 0.9028,
+      "binary_agreement": 0.9861,
+      "binary_kappa": 0.9706,
+      "quadratic_weighted_kappa": 0.9641
+    }
+  },
   "service_v2": {
     "annotators": [
       "A",

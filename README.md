@@ -47,12 +47,15 @@ configs/
   benchmark/judging_candidates.yaml  일괄 판정 후보 등록부 (docs/EVALUATION_POLICY.md 3절)
   evaluation/default.yaml        공식 metric 목록 (문서화용 — 13_evaluate_run.py는 metric을 자체 상수로 갖고 있음)
   models/*.yaml                  비교 대상 임베딩 모델 설정 (zero-shot 비교/파인튜닝 후보)
+  service/search_policy_v1.yaml  검색 정책 값(반경·지역·지도 모드·정렬·임계값) — 백엔드로 넘기는 단일 출처(docs/BACKEND_HANDOFF.md)
 src/store_search_ai/
   common/io.py                   yaml/엑셀 로딩 유틸
   data/                          전처리·registry·corpus·search_text·지역 판별 핵심 로직
   pipeline/common.py             scripts/*.py 공통 보일러플레이트 (yaml 로드, TREC 저장 등)
   models/                        임베딩 인코더 (BEIR 스타일, docs/MODELING.md 참고)
   retrieval/exact_search.py      exact cosine 검색 (ANN 이전 단계 모델 비교용)
+  query/understanding.py         쿼리 이해(지역·상호·업종 분리, 같은 이름 지명 선택, 상호 우선) — docs/SERVICE_PIPELINE_PLAN.md 6·11절
+  data/gazetteer.py              공공데이터 지명 사전(법정동·행정동 경계·역·시장) 만들기
   evaluation/                    공식 evaluator(13번 본체) + 모델 평가·리더보드 헬퍼
   training/                      fine-tuning 로컬 참조 구현(Colab은 colab/train_eval.ipynb)
   common/hf_compat.py            transformers / sentence-transformers 버전 차이 흡수
@@ -67,12 +70,14 @@ scripts/import_colab_results.py      Colab 실험 결과(Drive runs/)를 저장�
 scripts/rescore_evaluations.py       qrels가 바뀐 뒤 기존 평가를 같은 run으로 다시 채점
 scripts/eval_retrieval_stack.py     하이브리드(BM25 RRF)·reranker 구성 비교(+ Colab GPU 채점용 colab/rerank_scores.ipynb)
 scripts/collect_judging_candidates.py  등록된 판정 후보 일괄 판정 시트 생성 (docs/EVALUATION_POLICY.md — 평가·판정 공식 규칙)
+scripts/build_gazetteer.py           공공데이터(저장소 밖) → data/geo/gazetteer_v1.parquet 지명 사전
 data/
   raw/stores_20260907.xlsx       원본 전국 데이터 (수정 금지)
   query/queryset_final.xlsx      팀이 작성한 최종 query family/질의 원본 (수정 금지, import_queryset_xlsx.py가 읽음)
   interim/ processed/ registry/  전처리 중간/최종 산출물 (registry 제외 전부 재생성 가능)
   corpus/store_corpus_v002.parquet   검색 대상 corpus (T1/T2/T3 템플릿 포함)
   finetune/train_pairs.jsonl     fine-tuning 학습쌍 (prepare_finetune_dataset.py 산출물, 재생성 가능)
+  geo/gazetteer_v1.parquet       공공데이터 지명 사전(build_gazetteer.py 산출물, .meta.json에 원본 해시)
 benchmark/storesearch_ko_v1/
   queries.csv(status active/inactive), query_manifest.json, annotation_guideline.md, qrels*.csv/.trec, benchmark_manifest.json
   annotations/{full_annotation_v1, supplement_v1, supplement_v2, final_v1_val}/   사람 판정 시트·완료본·조정 결과(본 라운드 + 보충·일괄 판정 라운드)
@@ -91,6 +96,9 @@ docs/
   EVALUATION_POLICY.md           평가·판정 공식 규칙(판정 없이 탐색 → 후보 등록 → 일괄 판정 1회 → test 1회)
   EMBEDDING_V1_PLAN.md           임베딩 v1 확정 계획, 실제형 평가셋 계획, main 대비 변경점(회의용 요약)
   SERVICE_READINESS.md           서비스 적용 판단 로드맵(실제형 평가셋, side-by-side, 온라인 검증, 외부 API 비교)
+  SERVICE_PIPELINE_PLAN.md       서비스셋 기준 검색 파이프라인 실험 계획·기록(현재 계획 = 11절)
+  SEARCH_LOGGING.md              검색 로그 설계 추천안(백엔드 구현용)
+  BACKEND_HANDOFF.md             자바 백엔드로 넘기는 산출물과 백엔드에서 정할 것
 ```
 
 ## 빠른 시작

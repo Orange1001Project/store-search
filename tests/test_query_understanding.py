@@ -35,7 +35,7 @@ def test_place_keys_admin_local_and_market():
 
 
 def test_region_and_name_split():
-    qu = QueryUnderstanding(_corpus())
+    qu = QueryUnderstanding(_corpus(), min_corpus_place_docs=1)
     p = qu.parse("안산 고잔 숯토리", 37.31, 126.83)
     assert p.region_text == "안산 고잔" and p.core == "숯토리" and p.intent == "name"
     p = qu.parse("순천 웃장 손두부", 34.95, 127.49)
@@ -43,14 +43,14 @@ def test_region_and_name_split():
 
 
 def test_product_word_is_not_a_place_and_generic_rest():
-    qu = QueryUnderstanding(_corpus())
+    qu = QueryUnderstanding(_corpus(), min_corpus_place_docs=1)
     assert qu.parse("우산 파는 곳").region is None               # 상품어 + 일반어만 남음
     assert qu.parse("우산 양산").region is None                  # '우산'은 취급품목에 20곳 이상
     assert qu.parse("우산동 마트").region_text == "우산동"        # 끝말을 붙이면 지명
 
 
 def test_ambiguous_place_near_user_else_largest():
-    qu = QueryUnderstanding(_corpus())
+    qu = QueryUnderstanding(_corpus(), min_corpus_place_docs=1)
     near_wonju = qu.parse("신림 옷가게", 37.23, 128.08)
     assert set(qu.corpus.loc[near_wonju.region.doc_idx, "store_name"]) == {"원주가게"}
     far = qu.parse("신림 옷가게", 35.18, 129.07)                 # 부산 사용자 → 가게가 많은 서울 신림
@@ -62,19 +62,19 @@ def test_metropolitan_city_is_not_split_by_gu():
             for i, (gu, code) in enumerate([("중구", "3014010100"), ("서구", "3017010100"), ("유성구", "3020010100")])]
     rows.append(("대전동가게", "한식", "경상북도 영천시 대전동 1", "", "경상북도", "4723010100", 35.97, 128.94))
     qu = QueryUnderstanding(pd.DataFrame(rows, columns=["store_name", "item_text", "address", "market_name", "source_region",
-                                                        "legal_dong_code", "latitude", "longitude"]))
+                                                        "legal_dong_code", "latitude", "longitude"]), min_corpus_place_docs=1)
     p = qu.parse("대전 신라혼수방", 37.57, 126.98)                 # 서울 사용자
     assert len(p.region.doc_idx) == 3                              # 대전광역시 전체(구 3개)
 
 
 def test_brand_and_category_intent():
-    qu = QueryUnderstanding(_corpus())
+    qu = QueryUnderstanding(_corpus(), min_corpus_place_docs=1)
     assert qu.parse("GS25").intent == "brand"
     assert qu.parse("의류").intent == "category"
 
 
 def test_region_modifier_keeps_region_and_half_coordinates_do_not_crash():
-    qu = QueryUnderstanding(_corpus())
+    qu = QueryUnderstanding(_corpus(), min_corpus_place_docs=1)
     p = qu.parse("안산 맛집")
     assert p.region_text == "안산" and p.core == "맛집"
     assert qu.parse("우산 파는 곳").region is None                # 서술·장소어만 남으면 여전히 지역이 아님
@@ -88,7 +88,7 @@ def test_spaced_store_name_keeps_region_but_matches_whole_name():
             *[(f"수원가게{i}", "한식", "경기도 수원시 팔달구 정조로 3 (남창동)", "", "경기도", "4111514100", 37.28, 127.01)
               for i in range(3)]]
     qu = QueryUnderstanding(pd.DataFrame(rows, columns=["store_name", "item_text", "address", "market_name", "source_region",
-                                                        "legal_dong_code", "latitude", "longitude"]))
+                                                        "legal_dong_code", "latitude", "longitude"]), min_corpus_place_docs=1)
     p = qu.parse("남양 수산", 37.2, 126.8)
     assert p.region_text == "남양" and p.name_key == "남양 수산"      # 지역은 두고 상호 일치는 쿼리 전체로
     p = qu.parse("수원 갈비", 37.28, 127.01)

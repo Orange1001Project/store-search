@@ -1,0 +1,662 @@
+﻿query_id,doc_id,pool_sources,instance_ids
+sq_A001,fd3f6d0b-c55e-4f55-aea4-6890c5d9f687,exp+0.3 cat,sq_A001
+sq_A002,13bd7013-6d53-4e58-addd-78aff0aa3957,exp+0.3 cat,sq_A002@a
+sq_A002,19ebef2a-2017-4fab-8334-bffa1c5b3d74,exp+0.2 cat|exp+0.3 cat,sq_A002@a
+sq_A002,995e26fe-3acd-4bdb-a233-80ae5d27194e,exp+0.3 cat,sq_A002@a
+sq_A005,1999cdfe-7056-4e62-9be2-4b9579437344,exp+0.3 cat,sq_A005@a
+sq_A006,697c0aa8-1772-4dab-8874-669c72713f97,exp+0.3 cat,sq_A006
+sq_A007,e02b7852-3164-415a-92d2-972d04ce7bdb,exp+0.2 cat|exp+0.3 cat,sq_A007
+sq_A008,3d7d2f71-1d1c-4030-808f-04161bbc99e6,exp+0.3 cat,sq_A008@a
+sq_A008,7828548d-7119-40b5-9d39-80c6b87e84a0,exp+0.3 cat,sq_A008@a
+sq_A009,0842198b-706d-40cb-ae83-723f833b2bce,exp+0.2 cat|exp+0.3 cat,sq_A009
+sq_A009,7cae9cae-1108-46f9-9ba8-6f8c1c0e8e05,exp+0.3 cat,sq_A009
+sq_A009,b6b05a7c-1e5a-4982-8428-56ebbbf9f50f,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A009
+sq_A009,baf5d650-0336-488c-8a78-98818f8f7861,exp+0.3 cat,sq_A009
+sq_A010,81405e05-e042-4583-9b22-17b3c1403c7e,exp+0.3 cat,sq_A010
+sq_A010,a194f8d0-e5e8-417a-b3c7-eb01a7ea87d8,exp+0.3 cat,sq_A010
+sq_A011,3ea6ad78-8865-44d7-b74b-529bddb07bf6,exp+0.3 cat,sq_A011
+sq_A011,7e3648b7-482f-4337-a829-d3db145d9067,exp+0.2 cat|exp+0.3 cat,sq_A011
+sq_A011,887119f0-f6ac-4ff9-98e1-fba86f3a3050,exp+0.2 cat|exp+0.3 cat,sq_A011
+sq_A011,af7bb95f-10e1-41df-9929-d8a120ace4ed,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A011
+sq_A011,f71e28f2-a5a3-45ce-9d11-cf3387f57179,exp+0.3 cat,sq_A011
+sq_A012,2031cb51-b92f-4ceb-8f5c-396fcd073582,exp+0.3 cat,sq_A012
+sq_A012,ab030b3e-7e9b-4fde-b8b2-586a83a8cb1b,exp+0.1 cat,sq_A012
+sq_A012,ee22aaf4-b274-4d24-9b29-1f3bd8b1a8c1,exp+0.2 cat|exp+0.3 cat,sq_A012
+sq_A013,88cc3138-11d6-40b6-8ecc-3b49ca18d961,exp+0.3 cat,sq_A013
+sq_A014,9174b88f-20ae-4123-8011-9892937d31cd,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A014@a
+sq_A015,051ed78c-bc98-4a85-bcc5-58a0f8a91e80,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A015@a
+sq_A015,1fab821b-aacf-429e-9e9e-534d6cca0506,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A015@a
+sq_A015,576d4331-20a6-4aa2-96f7-29a0f3345ec8,exp+0.2 cat|exp+0.3 cat,sq_A015@a
+sq_A015,6d60618c-a3c7-44ab-9872-11fc597d2788,exp+0.2 cat|exp+0.3 cat,sq_A015@a
+sq_A015,832bbcac-76c2-4531-8288-228fdbcca771,exp+0.3 cat,sq_A015@a
+sq_A016,237d1706-33e6-43bf-bcad-e7f2ffba56ac,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A016
+sq_A016,49571adc-43a6-4fca-aa3c-fdeb5807ed74,exp+0.2 cat|exp+0.3 cat,sq_A016
+sq_A016,6c022385-904f-43ba-a525-808562a47335,exp+0.2 cat|exp+0.3 cat,sq_A016
+sq_A016,8fba4fd5-6f4c-4d42-84e0-627ccb099a55,exp+0.2 cat|exp+0.3 cat,sq_A016
+sq_A018,986f6f6c-f18c-4e0a-a1c2-8e908939ae56,exp+0.2 cat|exp+0.3 cat,sq_A018@a
+sq_A018,cad80c0d-faf4-4225-b290-9b865eaa77dc,exp+0.2 cat|exp+0.3 cat,sq_A018@a
+sq_A020,0184d57c-b046-41ed-b40b-54148376f271,exp+0.2 cat|exp+0.3 cat,sq_A020
+sq_A020,1eb9f294-7299-49c7-8ba9-b05e254d82dc,exp+0.2 cat|exp+0.3 cat,sq_A020
+sq_A020,2463cf8a-98c7-4351-a3d9-b858ff48b359,exp+0.2 cat|exp+0.3 cat,sq_A020@a
+sq_A020,3adbefec-0d50-419a-9fa4-3ea9cd13a77d,exp+0.2 cat|exp+0.3 cat,sq_A020@a
+sq_A020,5d52f56e-7b30-4999-b25a-26e94822dcff,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A020@a
+sq_A020,6d9eed77-2154-4e4a-9fab-cc2f941a2bf8,exp+0.2 cat|exp+0.3 cat,sq_A020@a
+sq_A020,838e978c-5784-45cb-b73d-e44f9c773758,exp+0.2 cat|exp+0.3 cat,sq_A020@a
+sq_A020,bd9162c7-b9a8-4a4c-bffe-a466aad169dc,exp+0.3 cat,sq_A020@a
+sq_A020,cb3f2582-14c2-49c5-a7ad-79da052bb1ca,exp+0.2 cat|exp+0.3 cat,sq_A020@a
+sq_A021,13a81e09-51d0-4f3e-a5dc-cc9b13402c8a,exp+0.2 cat|exp+0.3 cat,sq_A021@a
+sq_A023,0f617855-b88f-4fce-9b3f-86c7fd5bcca5,exp+0.3 cat,sq_A023@a
+sq_A023,730c6fb0-ba56-40cd-9846-a9febd6402fc,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A023
+sq_A023,9c007940-e4ae-461c-b7ae-7b497d1ed9ce,exp+0.3 cat,sq_A023@a
+sq_A023,c2f57c35-7829-4df8-97a5-8473d06eee93,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A023
+sq_A025,36099e32-1aff-46ae-9e23-4c45439b9959,exp+0.3 cat,sq_A025@a
+sq_A026,36099e32-1aff-46ae-9e23-4c45439b9959,exp+0.3 cat,sq_A026@a
+sq_A027,5285ee23-3731-43ce-abf1-05115d8d33d9,exp+0.2 cat|exp+0.3 cat,sq_A027
+sq_A027,dd4b2558-3e84-4338-9791-40ad053f9c86,exp+0.2 cat|exp+0.3 cat,sq_A027
+sq_A029,f0fc7fa7-940d-4614-80d2-b66cfcce54e7,exp+0.2 cat|exp+0.3 cat,sq_A029@a
+sq_A030,45d4d00b-aa66-4f35-a783-3c5410859fa4,exp+0.3 cat,sq_A030@a
+sq_A031,46624c05-f8b2-4251-a38e-e92f760d9463,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A031
+sq_A031,fb321c42-78a9-48d0-bcf4-c0b205e76ad2,exp+0.2 cat|exp+0.3 cat,sq_A031
+sq_A032,a922d298-eb51-44ea-9d12-9cfce3274104,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A032
+sq_A032,d37f6309-a793-436e-a55b-ca4be9e5b137,exp+0.1 cat|exp+0.3 cat,sq_A032
+sq_A034,ee9991ee-37f3-44da-a908-836555baf7dc,exp+0.2 cat|exp+0.3 cat,sq_A034
+sq_A035,acc3edb2-bc33-42fa-a2b5-e516a7f5e353,exp+0.3 cat,sq_A035
+sq_A035,f89dcf84-3d44-4f3e-a7a4-efbf22fd8afd,exp+0.2 cat|exp+0.3 cat,sq_A035
+sq_A036,9f058c47-8b68-42b6-9203-f1b2bc40c450,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A036@a
+sq_A036,fca635b9-c2d3-4b4b-807e-250478e09805,exp+0.3 cat,sq_A036@a
+sq_A037,163de97f-2ed6-420f-85ee-0d5de8c9f27d,exp+0.3 cat,sq_A037
+sq_A037,183fb65b-90ed-4d90-a9ab-c3e1ab58af26,exp+0.3 cat,sq_A037
+sq_A037,355f9d6e-97a6-4e53-9608-7ac6d2473324,exp+0.3 cat,sq_A037
+sq_A038,7c63bccb-d761-4c17-bcd8-aca00f468178,exp+0.3 cat,sq_A038
+sq_A046,79ca4792-fb8e-4e38-8222-9e086307ba7c,exp+0.3 cat,sq_A046
+sq_A047,157113dd-f0b5-4b14-8caf-0c6e6ba65857,exp+0.3 cat,sq_A047
+sq_A047,9692d964-aa6b-489a-842b-f8d25e43d44b,exp+0.3 cat,sq_A047
+sq_A047,b427e087-cee1-4ae3-a4de-fd5e3b8ba245,exp+0.2 cat|exp+0.3 cat,sq_A047
+sq_A047,e22212b7-b950-48c8-8f10-d92ae5929949,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A047
+sq_A052,e87a278a-a98d-4df6-827e-9552ed20328d,exp+0.2 cat|exp+0.3 cat,sq_A052@a
+sq_A053,e69cfd2c-eb86-4b79-a2ec-b7f8ec44693d,exp+0.3 cat,sq_A053
+sq_A055,ae7d03d7-acdd-4639-a019-1d3f5a9250be,exp+0.2 cat|exp+0.3 cat,sq_A055
+sq_A055,b3484d81-2b3a-4457-adad-43335a1c11ee,exp+0.2 cat|exp+0.3 cat,sq_A055@a
+sq_A056,889857e8-164e-41c9-bb30-ce91fc10774a,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A056
+sq_A057,2d637932-059a-484f-bbc7-a4dbca02fad4,exp+0.3 cat,sq_A057
+sq_A058,264f217f-573e-40bc-a0ab-d8b12ce662a6,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A058@a
+sq_A058,a1d652f8-e470-4df9-9b55-c2a9587b2784,exp+0.3 cat,sq_A058
+sq_A060,30a2f8bd-d827-4994-a164-ab97f23b34d0,exp+0.3 cat,sq_A060
+sq_A064,77c374a5-230f-4979-8f69-488b97823c6e,exp+0.2 cat|exp+0.3 cat,sq_A064
+sq_A067,62215ae7-8251-4937-b19b-8ca2d359ddff,exp+0.3 cat,sq_A067@a
+sq_A067,ffa65854-ee0e-4e8d-a29a-738bd64dc75a,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A067@a
+sq_A071,1f2a24e1-5755-4e1f-8b22-9e41f82b97d5,exp+0.3 cat,sq_A071
+sq_A071,570bce30-c543-497b-bbd3-f23a2512c5c2,exp+0.3 cat,sq_A071@a
+sq_A071,9a941c10-a390-460f-a4f3-6ab682b66368,exp+0.2 cat|exp+0.3 cat,sq_A071
+sq_A071,ca8003a7-ff18-47a5-887c-b45d14b04625,exp+0.3 cat,sq_A071@a
+sq_A075,d15dfe7e-ab99-4d6b-ae57-e83fcd176b64,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A075@a
+sq_A076,7ad629f7-615b-4fcd-8e1e-a64f31a5bffd,exp+0.3 cat,sq_A076@a
+sq_A077,0d727330-873d-4ff3-9402-d3d0377ebe09,exp+0.3 cat,sq_A077
+sq_A077,e7a41c13-291e-4801-b218-7cdd3a783457,exp+0.2 cat|exp+0.3 cat,sq_A077
+sq_A077,ffd8172a-c6f2-4f6c-b434-4fa06013206f,exp+0.3 cat,sq_A077@a
+sq_A078,ad140c2f-41a0-4ecc-93ea-40c929fc173e,exp+0.2 cat|exp+0.3 cat,sq_A078
+sq_A078,c218326a-1331-482c-9a1d-2818c782a92e,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A078
+sq_A078,d4033d48-56bc-47a7-9f5c-669d0fcf47e3,exp+0.3 cat,sq_A078
+sq_A080,d3ebffc1-8fa0-403f-a82f-e8b95fcfd8b9,exp+0.3 cat,sq_A080
+sq_A082,30ac402b-9253-46aa-a122-6f502f115a9f,exp+0.2 cat|exp+0.3 cat,sq_A082
+sq_A083,425ff1ff-425d-4bd2-8209-abc6768b36d8,exp+0.3 cat,sq_A083@a
+sq_A083,c903e028-a03b-430b-bd77-e557c5ee25f6,exp+0.3 cat,sq_A083@a
+sq_A083,e2f31906-3963-44e5-8f93-d5affbbdc700,exp+0.2 cat|exp+0.3 cat,sq_A083@a
+sq_A083,f7d28cd1-14ae-46cd-889a-65e90faea6cd,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A083@a
+sq_A084,0a0d6fa5-1b57-4148-a0d2-a16183ba53c1,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A084
+sq_A084,384df4c9-2070-47eb-ad93-9027e8a71816,exp+0.2 cat|exp+0.3 cat,sq_A084
+sq_A084,7fcaf461-f466-4bfb-9c01-58c4b841f190,exp+0.3 cat,sq_A084@a
+sq_A084,ff57d79d-d4eb-4dd8-9af1-0f7d1863f914,exp+0.3 cat,sq_A084@a
+sq_A086,53825940-4e2a-40a8-b325-ed5ca51821a8,exp+0.2 cat|exp+0.3 cat,sq_A086
+sq_A086,a8e1f529-f742-4eb4-8d73-a3c38eb77d72,exp+0.3 cat,sq_A086
+sq_A088,7add9375-3300-401e-9a74-50207eac94e6,exp+0.2 cat,sq_A088@a
+sq_A088,acad10f1-fe38-4b69-ac39-349f8adb536a,exp+0.3 cat,sq_A088@a
+sq_A089,a51bdf62-14f1-4003-890b-c4df13432c5b,exp+0.3 cat,sq_A089
+sq_A089,f5b16612-f564-47c3-8d55-302f4f2acf1e,exp+0.2 cat|exp+0.3 cat,sq_A089
+sq_A090,6d05a0ba-aa3e-4112-ba5c-d354cdf9a598,exp+0.2 cat,sq_A090
+sq_A090,b19a3129-e5e9-4a8d-bf4f-36f7b511288d,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A090
+sq_A090,dc98800e-b883-4623-b4ab-431b4fc7b9cf,exp+0.3 cat,sq_A090
+sq_A092,5a265ef5-2d98-4493-ae4a-705e627eb775,exp+0.3 cat,sq_A092
+sq_A092,c0d0d1da-b940-4da1-8b13-2798e066f63c,exp+0.2 cat|exp+0.3 cat,sq_A092
+sq_A092,cc4c9266-3497-49a8-b910-43266f03c312,exp+0.3 cat,sq_A092
+sq_A095,09c24eae-cc15-471d-8ad4-eec21e0efca7,exp+0.3 cat,sq_A095@a
+sq_A095,2c61231b-3414-49e6-9049-ed68a266037c,exp+0.2 cat|exp+0.3 cat,sq_A095
+sq_A095,e2018916-2f93-48d4-92c9-3242c621dbf7,exp+0.3 cat,sq_A095
+sq_A096,17badfdc-a36e-4a86-86bd-159c089b4761,exp+0.3 cat,sq_A096
+sq_A097,aac73d18-1686-42dc-b338-e862faec3363,exp+0.3 cat,sq_A097@a
+sq_A098,a8f8e00b-26e1-4494-820c-17525c0b9d8a,exp+0.3 cat,sq_A098
+sq_A098,f938e396-de27-4fce-b9aa-3f54350a3ae9,exp+0.3 cat,sq_A098
+sq_A101,ba0c47d4-e2c5-4416-907a-8b817f9c284c,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A101
+sq_A103,7c8ad891-8904-4db9-98fd-89ce48465773,exp+0.2 cat|exp+0.3 cat,sq_A103@a
+sq_A103,99329d77-c895-4912-9873-b6d495b53eba,exp+0.2 cat|exp+0.3 cat,sq_A103
+sq_A107,208b904a-d9c7-45d1-9bec-f5335aac7868,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A107
+sq_A107,d5887535-6449-48f5-885f-fe0f6f070c80,exp+0.3 cat,sq_A107
+sq_A108,6a3ee25e-0d3d-469a-96b6-e48f1b2e6768,exp+0.3 cat,sq_A108
+sq_A109,9447bd6e-ca04-4b89-8792-32a9a0285733,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A109
+sq_A110,b6468b67-ae6b-4261-97ab-c6fbcf9b4b95,exp+0.3 cat,sq_A110@a
+sq_A110,c90b9c3d-a4f6-4135-8450-d03020096f3e,exp+0.3 cat,sq_A110
+sq_A110,f3c2d3c8-d60e-45b8-8712-e45c5c699309,exp+0.3 cat,sq_A110@a
+sq_A111,334d0afa-cadf-493e-a132-c08a981c7279,exp+0.2 cat|exp+0.3 cat,sq_A111
+sq_A111,36e305cf-7dac-4f4f-9be4-1c9707b7efff,exp+0.3 cat,sq_A111@a
+sq_A111,44cd80b2-6863-41bf-a834-e16e31fc5620,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A111@a
+sq_A111,59e5dbe6-78bf-4ae5-b36d-e5ee4f9842ea,exp+0.3 cat,sq_A111@a
+sq_A111,5acd45ce-d47c-46cf-9978-63d4491b4267,exp+0.2 cat|exp+0.3 cat,sq_A111@a
+sq_A111,ea0c4bbe-28bb-4a23-994d-c3dd65784ec2,exp+0.3 cat,sq_A111@a
+sq_A113,22fb791b-5524-4cb4-9bc5-623f0d801f92,exp+0.2 cat|exp+0.3 cat,sq_A113@a
+sq_A113,3b038cca-e966-4bc8-a0a1-2570b34dfeff,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A113
+sq_A113,46a54dc4-5322-4fb8-b132-e1bfbf7a3b63,exp+0.2 cat|exp+0.3 cat,sq_A113@a
+sq_A113,4e635a2f-dc34-45d7-b18c-5bb9015437c2,exp+0.3 cat,sq_A113@a
+sq_A113,58da5bf1-394e-47ba-abf5-94805807e50f,exp+0.2 cat|exp+0.3 cat,sq_A113@a
+sq_A113,693150b5-5b64-469f-a9bb-7079308af165,exp+0.2 cat|exp+0.3 cat,sq_A113@a
+sq_A113,74f5466e-e45f-4f41-8dcf-7572600bd262,exp+0.2 cat|exp+0.3 cat,sq_A113@a
+sq_A114,47b1d414-e3a4-41b1-b053-29776e9c5bd6,exp+0.2 cat|exp+0.3 cat,sq_A114
+sq_A114,66329f2c-7d9f-4740-9734-1133ee568e00,exp+0.3 cat,sq_A114
+sq_A114,fba2ab01-dac6-455b-bbbb-7f6970d48c76,exp+0.3 cat,sq_A114
+sq_A115,d26eef37-765f-492a-be6b-30e56e3cf763,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A115
+sq_A116,1be16ab3-e50e-420a-91a9-1dc5b28c6ade,exp+0.3 cat,sq_A116
+sq_A116,3cef572e-9586-46c2-ac56-e20ebbcf61c1,exp+0.3 cat,sq_A116
+sq_A116,846731f7-bffb-433e-ac1f-6bd08ddfecdc,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A116
+sq_A116,9621e2b6-a52d-4b0b-9120-5c2ee6e9bd03,exp+0.2 cat|exp+0.3 cat,sq_A116
+sq_A116,f7b9b823-fc98-4d3f-b323-39657a2cf820,exp+0.3 cat,sq_A116
+sq_A119,abecd1f8-3974-47c7-a5a8-3de3df8d8737,exp+0.3 cat,sq_A119
+sq_A119,ea065845-1084-424f-9420-eb0d6e5ae867,exp+0.3 cat,sq_A119
+sq_A119,fc48419b-1294-46b4-ba91-11027ce454d5,exp+0.2 cat|exp+0.3 cat,sq_A119
+sq_A120,fc5d5824-7b6f-48f3-a3e0-62370cfc4f75,exp+0.3 cat,sq_A120@a
+sq_A121,03072550-5461-4208-a833-753143b49989,exp+0.3 cat,sq_A121@a
+sq_A121,eac6af96-4503-4f3f-a08b-eb57e90ad41d,exp+0.3 cat,sq_A121@a
+sq_A121,f4bd919f-9aef-4e24-8b27-0b6dc4815d24,exp+0.3 cat,sq_A121
+sq_A122,6b30f8b9-fcfa-4a89-921a-89f4374dff22,exp+0.3 cat,sq_A122@a
+sq_A122,d860d15d-eedb-4223-a495-5c96c4b52fe9,exp+0.2 cat|exp+0.3 cat,sq_A122@a
+sq_A124,067e6889-38c3-429d-80eb-2590b527092f,exp+0.2 cat|exp+0.3 cat,sq_A124
+sq_A124,4409c4c9-d0d2-4125-a1a5-266e872f0720,exp+0.3 cat,sq_A124
+sq_A124,45a619e9-9594-4f24-9341-fe245f40396c,exp+0.2 cat|exp+0.3 cat,sq_A124
+sq_A124,613a5afc-411d-4881-8785-2a10b348c903,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A124
+sq_A124,762f74d8-bd8c-46be-8318-b098709c494d,exp+0.3 cat,sq_A124
+sq_A124,80551029-1e8e-4087-95b8-5982b06b93ee,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A124
+sq_A124,8cae042f-260f-420d-aeeb-e13a7594edd7,exp+0.2 cat|exp+0.3 cat,sq_A124
+sq_A124,95bc646a-df4d-41b8-b4e4-02a95e258209,exp+0.2 cat|exp+0.3 cat,sq_A124
+sq_A124,aa270d86-6f19-4594-8c84-b20243378032,exp+0.2 cat|exp+0.3 cat,sq_A124
+sq_A126,704b95d1-e2c9-4ce2-883e-46b9be1a0663,exp+0.2 cat|exp+0.3 cat,sq_A126
+sq_A126,ef7c5a05-205e-46b1-9ff9-5039526a3038,exp+0.2 cat|exp+0.3 cat,sq_A126@a
+sq_A127,36e344c1-bf14-4b69-babd-2d7a42012d21,exp+0.3 cat,sq_A127
+sq_A128,d5da2d2b-192f-4f55-a6b8-a6936e6ed6ed,exp+0.3 cat,sq_A128
+sq_A130,9cb55919-50bf-4022-9743-be4d3edf4c78,exp+0.3 cat,sq_A130
+sq_A132,bb0afd92-3f94-424a-b1b6-50d1a389a03a,exp+0.3 cat,sq_A132
+sq_A134,7a0a329e-803b-4b3c-b4b0-9b03ba7262f8,exp+0.2 cat|exp+0.3 cat,sq_A134
+sq_A134,83f1af19-37f7-4eaa-82c8-7bf82a043bc5,exp+0.3 cat,sq_A134
+sq_A136,5b2fac8a-07df-4f7e-9bcc-d5ae308bdd83,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A136@a
+sq_A136,76b336b1-8e6c-4d4d-805f-132bc68122ee,exp+0.3 cat,sq_A136@a
+sq_A137,1b415fbe-893b-48fe-9058-90eb849ece88,exp+0.3 cat,sq_A137@a
+sq_A138,23e6ec87-538c-454e-a8be-4e68cb8d5962,exp+0.3 cat,sq_A138
+sq_A138,9db71030-516e-4874-b16b-07f12c180caa,exp+0.3 cat,sq_A138
+sq_A140,5bc7ccbc-522c-463f-ac14-653f44cc876f,exp+0.3 cat,sq_A140@a
+sq_A140,7af90c06-f0da-4b3f-906b-5820d1569e1b,exp+0.2 cat|exp+0.3 cat,sq_A140@a
+sq_A140,a203df4b-b0ed-4b10-9cbb-61b0319d7c3b,exp+0.3 cat,sq_A140
+sq_A140,ed47c321-e73d-49fa-a60a-c2a01930832a,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A140@a
+sq_A141,0111fa6f-0f91-48bb-9356-5181f08565cb,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A141
+sq_A141,47adea45-738e-4767-87f8-9ae5d47f5c15,exp+0.3 cat,sq_A141
+sq_A141,7a6892db-c3f0-4b13-b5e8-8c295087f109,exp+0.3 cat,sq_A141
+sq_A141,d3425a8e-f3b6-4162-8626-5e2f62b904e4,exp+0.3 cat,sq_A141
+sq_A141,d683ecb8-1931-48e3-9dff-5be73e9585e1,exp+0.3 cat,sq_A141
+sq_A142,014931f7-6b34-46d5-9a7c-c9110c79a186,exp+0.3 cat,sq_A142@a
+sq_A142,71382c24-54f6-4edc-a325-eefff3c1b51e,exp+0.2 cat|exp+0.3 cat,sq_A142@a
+sq_A143,f83e2559-fba8-436d-b0c1-b266ae80bfa3,exp+0.3 cat,sq_A143
+sq_A145,0ef5838b-fec7-4f89-bfeb-6d5d63bc492d,exp+0.3 cat,sq_A145@a
+sq_A145,12f9ef23-8235-4dfd-8bdf-0b3790b5c5cf,exp+0.3 cat,sq_A145@a
+sq_A145,1ceffc36-9a5b-4ad7-b16d-2835c96a630b,exp+0.3 cat,sq_A145@a
+sq_A145,36a3ab85-5a11-4eaf-8018-a815e919e77e,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A145@a
+sq_A145,44179d39-2dc1-4157-9d34-55867961c96b,exp+0.2 cat|exp+0.3 cat,sq_A145@a
+sq_A145,4ca889e3-9eb2-46d3-99ff-a60d80900fb5,exp+0.3 cat,sq_A145@a
+sq_A145,96da373d-6895-45de-96b4-c62e7be9274f,exp+0.3 cat,sq_A145@a
+sq_A145,b1c2cd3e-9891-4abc-a4cc-db46932a1180,exp+0.2 cat|exp+0.3 cat,sq_A145@a
+sq_A145,bb34489f-9572-4a66-9311-890881088d02,exp+0.2 cat|exp+0.3 cat,sq_A145@a
+sq_A145,f0b1c73f-ce58-4cfa-8a49-36288226c8f2,exp+0.2 cat|exp+0.3 cat,sq_A145@a
+sq_A147,54986f42-98e3-4aa8-917f-7d47f924e4f0,exp+0.2 cat|exp+0.3 cat,sq_A147@a
+sq_A147,c383f765-4167-498c-9933-a4166b86cef4,exp+0.3 cat,sq_A147@a
+sq_A148,0889d165-33d6-4e66-b7f9-487bcbf333d0,exp+0.3 cat,sq_A148@a
+sq_A148,1270f4e4-8e46-447b-bbaf-a1a067d8d5b6,exp+0.3 cat,sq_A148@a
+sq_A148,22a939a5-dd57-476c-acd5-4c40c7b522a6,exp+0.2 cat|exp+0.3 cat,sq_A148@a
+sq_A148,4218d2cb-398e-4971-96c1-d20fcc643545,exp+0.2 cat|exp+0.3 cat,sq_A148@a
+sq_A148,5913c02c-6803-405c-b5c0-a825cae0d2b7,exp+0.3 cat,sq_A148@a
+sq_A148,5d93ec28-c297-4dcd-b62e-a338e91ddb10,exp+0.2 cat|exp+0.3 cat,sq_A148@a
+sq_A148,5ed17e15-701d-4757-a148-4d7cf6e7b74c,exp+0.2 cat|exp+0.3 cat,sq_A148@a
+sq_A148,79614ac9-5fdf-4a2d-b8a9-f74a4c1dd2bb,exp+0.3 cat,sq_A148@a
+sq_A148,7b6bd7ea-8721-49b6-aeba-ef597b91a72b,exp+0.2 cat|exp+0.3 cat,sq_A148@a
+sq_A148,b4118fd3-11fa-4a21-b339-51729288bddb,exp+0.2 cat|exp+0.3 cat,sq_A148@a
+sq_A148,f50d6cc5-9a53-42f0-b9e0-dafeb34fbe46,exp+0.3 cat,sq_A148@a
+sq_A149,f3215bcc-1572-4df7-a753-18030d7f22f9,exp+0.3 cat,sq_A149
+sq_A150,5bfe94c0-0bc3-46f5-9e71-45ed99e93fc0,exp+0.3 cat,sq_A150
+sq_A150,65059126-7bc6-4c18-9c00-3c0a9b1b1cce,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A150
+sq_A150,655879ee-4472-462a-aed1-4dbe17736341,exp+0.2 cat|exp+0.3 cat,sq_A150
+sq_A150,83d87db8-b3ad-4c38-b0ed-c6645c898704,exp+0.3 cat,sq_A150
+sq_A150,872d9cb8-2a31-4c75-9c17-0fa517207674,exp+0.3 cat,sq_A150
+sq_A150,b7dc71c2-cdbb-44d2-ba56-9e9ee7c613ee,exp+0.3 cat,sq_A150
+sq_A153,00327108-d379-4652-b8ef-fcab6406035a,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A153
+sq_A153,19795259-ed1a-4cd2-9cce-41b8fddfdb75,exp+0.2 cat|exp+0.3 cat,sq_A153
+sq_A153,36c065f7-0a1d-4369-beea-4181ea93bf00,exp+0.3 cat,sq_A153
+sq_A153,745d32d2-0671-4b3b-bce9-ac4e54f65e9a,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A153
+sq_A153,89e8eb7a-8bd5-4609-a184-2ce57a78fd24,exp+0.2 cat|exp+0.3 cat,sq_A153
+sq_A154,1061c7ba-d6b3-4aa6-8078-65adca44083c,exp+0.2 cat|exp+0.3 cat,sq_A154@a
+sq_A154,6debdfa0-7af0-47c6-b007-cf25b89e95a0,exp+0.2 cat|exp+0.3 cat,sq_A154@a
+sq_A154,cf138276-0da3-4bc0-a489-912627a2b5c6,exp+0.2 cat|exp+0.3 cat,sq_A154
+sq_A155,51ecef77-c5ec-41a0-b007-50911b5092b7,exp+0.3 cat,sq_A155
+sq_A155,62701c6e-c213-4e09-9453-0bafa4484703,exp+0.3 cat,sq_A155
+sq_A158,85969453-dace-4520-b807-b423961a3d9e,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A158
+sq_A158,ca61c6c2-7089-4621-b209-d0e00a96d4f6,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A158
+sq_A159,f95e0d48-ec9d-4ec2-a1c6-07aa1e18cfdb,exp+0.2 cat|exp+0.3 cat,sq_A159@a
+sq_A162,1e5c9269-3d94-442a-85d6-85cef7c9a372,exp+0.2 cat|exp+0.3 cat,sq_A162
+sq_A162,33d8b999-91ab-46fd-a4f0-2fc968710b44,exp+0.1 cat|exp+0.2 cat,sq_A162@a
+sq_A162,56015dd5-24d7-45e2-802c-44665a4f6794,exp+0.3 cat,sq_A162
+sq_A162,cca70271-2f59-4c70-bc5b-f2b3f26caeb7,exp+0.3 cat,sq_A162
+sq_A163,055a3cb6-abd7-439a-affd-efc00572e3da,exp+0.3 cat,sq_A163@a
+sq_A163,720e0c4c-c432-4d2c-a7ff-17894f2dddbe,exp+0.3 cat,sq_A163@a
+sq_A164,42791e04-fb93-4228-a544-4f1e04966823,exp+0.3 cat,sq_A164@a
+sq_A164,5b7731b3-ac9b-4738-8f3a-19bfb901c2f4,exp+0.3 cat,sq_A164@a
+sq_A164,8806bed2-5a61-486d-b31e-fbf48bb84d52,exp+0.2 cat|exp+0.3 cat,sq_A164@a
+sq_A164,e6e231fc-c0b1-47b8-8888-bf0411e52080,exp+0.1 cat|exp+0.2 cat,sq_A164@a
+sq_A165,1af72bb8-cb92-4ce8-85a5-0aed1e9a3f93,exp+0.2 cat|exp+0.3 cat,sq_A165@a
+sq_A166,19a4cf47-e071-4057-a6d1-8c5f41513676,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A166@a
+sq_A166,872243e9-89bf-4ebe-a137-aaa7aae129d0,exp+0.2 cat|exp+0.3 cat,sq_A166
+sq_A166,8d93fcbf-77e8-440b-a329-892a10811f33,exp+0.2 cat|exp+0.3 cat,sq_A166@a
+sq_A166,948b0854-1fdf-4f21-8c91-67e92e1cae53,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A166@a
+sq_A166,dd41720d-53bf-4cbd-8a04-c6d1e30761ab,exp+0.3 cat,sq_A166@a
+sq_A166,df96d8bd-423f-4005-a657-e46ff6dd9844,exp+0.3 cat,sq_A166@a
+sq_A166,e72212bd-5828-4fb7-9da3-6f214679f470,exp+0.3 cat,sq_A166@a
+sq_A166,fda5c267-ca26-4e72-8cfe-8007809d3305,exp+0.2 cat|exp+0.3 cat,sq_A166
+sq_A167,00ca89c2-42a8-432d-ba4b-5abd23c18ab0,exp+0.3 cat,sq_A167
+sq_A167,2a5d6f03-f22e-47e5-bd72-468b9d2af6a7,exp+0.3 cat,sq_A167
+sq_A167,73ff61a1-f1b2-4b90-b20f-d3e4eb7d6892,exp+0.3 cat,sq_A167@a
+sq_A167,e8fb79ec-3c1e-4816-aa99-95191ad312fe,exp+0.2 cat|exp+0.3 cat,sq_A167
+sq_A167,f29daeeb-ed1e-491d-ba16-c01cf9f9dc4a,exp+0.3 cat,sq_A167@a
+sq_A169,3e5d2482-2edc-4881-9815-2effaaeb444a,exp+0.2 cat|exp+0.3 cat,sq_A169@a
+sq_A170,4583007c-851a-4bd2-8439-7e1d4dbe5a17,exp+0.2 cat,sq_A170@a
+sq_A170,98f2575e-2bf4-4936-9718-c79728f88b26,exp+0.3 cat,sq_A170@a
+sq_A171,eabf2f67-f9f7-4a70-b6db-9f2bbf62c45d,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A171@a
+sq_A172,b9402dd4-fb27-4306-9909-71a4c4fa43ee,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A172@a
+sq_A173,02fbf905-b6d0-4a2a-bb0a-fb1a5c1f4313,exp+0.2 cat|exp+0.3 cat,sq_A173@a
+sq_A173,f58c7473-fcdd-4194-806d-18914ee3dccd,exp+0.2 cat|exp+0.3 cat,sq_A173
+sq_A177,a92a7fd1-1278-4e26-8a05-da89dd19a57c,exp+0.3 cat,sq_A177
+sq_A178,1530a4ee-3c74-4fe7-9f14-8d6bb5631533,exp+0.3 cat,sq_A178@a
+sq_A178,5eecd91f-b8ec-4cbe-8bd4-ffa085295354,exp+0.2 cat|exp+0.3 cat,sq_A178
+sq_A178,81405e05-e042-4583-9b22-17b3c1403c7e,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A178
+sq_A178,dc9d7358-61bc-475c-81de-b6e38d5c67ce,exp+0.3 cat,sq_A178
+sq_A180,350b4fbe-389b-4061-9444-61c8e2c89035,exp+0.3 cat,sq_A180
+sq_A180,47b279e9-8901-45b7-95d9-ceca774eb6b0,exp+0.2 cat|exp+0.3 cat,sq_A180@a
+sq_A180,641a2f78-5f8c-40a8-a301-d8c3cbf50aba,exp+0.3 cat,sq_A180@a
+sq_A180,792a33e9-3a12-45f5-9bb0-5a48ed34359c,exp+0.2 cat|exp+0.3 cat,sq_A180@a
+sq_A180,82483294-97d0-4bf1-aa9e-1d6b28f5fd9c,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A180@a
+sq_A180,8a28263e-3ac3-4358-b82c-ffa703144a3e,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A180@a
+sq_A180,a96ae6d1-314b-4cdb-a83a-6644f1a7468a,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A180@a
+sq_A180,baad92fb-2e91-416d-8fdc-a805a935de3c,exp+0.3 cat,sq_A180@a
+sq_A180,c610141e-0ad5-4b26-8b79-323a056ea8dd,exp+0.2 cat|exp+0.3 cat,sq_A180@a
+sq_A180,d27cf787-aa61-4d48-a1c8-f62f1b18af09,exp+0.2 cat|exp+0.3 cat,sq_A180@a
+sq_A180,fc7636b4-dfa3-4210-abb8-4e88385a573e,exp+0.3 cat,sq_A180@a
+sq_A181,0a61d19f-8580-4f77-bc97-c774655e0a63,exp+0.2 cat|exp+0.3 cat,sq_A181@a
+sq_A181,bc83ce30-a0db-4055-ba74-3ee75661507d,exp+0.2 cat|exp+0.3 cat,sq_A181@a
+sq_A181,bcec9214-b336-4592-8fe4-2e3b2dd6b400,exp+0.2 cat|exp+0.3 cat,sq_A181@a
+sq_A181,c2d9a6d5-b6a3-4ba2-a380-04dd150317ea,exp+0.2 cat|exp+0.3 cat,sq_A181
+sq_A181,fc27f49d-0c9d-4436-9712-0ce90c45c075,exp+0.2 cat|exp+0.3 cat,sq_A181@a
+sq_A182,2934c2de-ea6d-4571-9283-bbb3899dae53,exp+0.3 cat,sq_A182
+sq_A182,65c096b7-8f67-40ae-b7d8-9ad089daed71,exp+0.2 cat|exp+0.3 cat,sq_A182
+sq_A182,8b6b767f-cacb-4f8b-860f-508901d7b2ed,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A182
+sq_A183,99c3354a-7c3e-42a7-95dc-9c95df0d02df,exp+0.2 cat|exp+0.3 cat,sq_A183
+sq_A184,ec4be73b-f0a8-4e49-ad5a-98c68140fa10,exp+0.2 cat|exp+0.3 cat,sq_A184
+sq_A185,25e0e8b0-a861-4ec6-8a72-0095d322a77e,exp+0.2 cat|exp+0.3 cat,sq_A185
+sq_A187,091ad543-d4a4-47f8-bda8-340eb15f2699,exp+0.3 cat,sq_A187
+sq_A187,8cf20eca-40c2-49f3-96d5-fe15f4da8540,exp+0.2 cat|exp+0.3 cat,sq_A187
+sq_A188,c8fcb2ea-8750-48e0-823a-5c40f8f0eb05,exp+0.3 cat,sq_A188
+sq_A188,d8a4e1fe-fe21-42ec-8986-cab3fbe71256,exp+0.3 cat,sq_A188
+sq_A188,ec20f52e-3137-4b5c-9f16-08e9c485b3dd,exp+0.1 cat|exp+0.2 cat,sq_A188@a
+sq_A189,37ecb6a7-4873-482e-a755-682ea7bc1e29,exp+0.3 cat,sq_A189@a
+sq_A189,7b6a6f1e-f77d-48f3-8cfe-8fe8a2ac0969,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A189@a
+sq_A189,851bd32d-aa81-4082-96ba-f24d4675616e,exp+0.3 cat,sq_A189@a
+sq_A190,15fb2277-b836-4bf4-8212-f1eaf82261c0,exp+0.3 cat,sq_A190
+sq_A190,34f7fb4b-4e63-4006-b392-a9341790bf72,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A190
+sq_A191,09815d92-d0f0-4c87-b4fa-1194f86c53c0,exp+0.1 cat,sq_A191
+sq_A191,91bd6330-7d0a-4835-b5b3-fb5acfeed87e,exp+0.2 cat|exp+0.3 cat,sq_A191
+sq_A191,9bf0d5c8-5c12-480a-9026-e92d082e66bc,exp+0.2 cat|exp+0.3 cat,sq_A191
+sq_A193,0f0d19c5-6b6e-46ff-b5a5-4060516d699c,exp+0.2 cat|exp+0.3 cat,sq_A193@a
+sq_A193,32e70657-024f-4fd6-8dc6-2fb37fe0be49,exp+0.1 cat,sq_A193@a
+sq_A193,456d192a-ac40-4834-9df4-7ee5a1598a51,exp+0.2 cat|exp+0.3 cat,sq_A193@a
+sq_A193,5745c601-706f-41ff-83c8-d50bff533416,exp+0.3 cat,sq_A193@a
+sq_A193,6c1036a1-9184-4ed8-a599-81e0c104477d,exp+0.2 cat,sq_A193@a
+sq_A193,81304d9a-b42a-4b84-9f55-15f496e14d0d,exp+0.1 cat|exp+0.2 cat,sq_A193@a
+sq_A193,bd90c06d-f6e4-478d-84ff-6d24e70ad8c0,exp+0.1 cat,sq_A193@a
+sq_A193,e427fc6c-b130-48be-b8f9-f3119265be80,exp+0.1 cat,sq_A193@a
+sq_A193,e51b5b46-f2c1-4556-ba1a-569b872c1cb1,exp+0.3 cat,sq_A193@a
+sq_A195,0db2b1e3-084b-44c2-baae-44da952b225f,exp+0.2 cat|exp+0.3 cat,sq_A195@a
+sq_A196,86e43002-e959-4bc4-8668-92ca1b560197,exp+0.3 cat,sq_A196
+sq_A197,02ec6d17-6f3d-444e-840a-99fa29e4f5b9,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A197@a
+sq_A197,1728732d-5eb3-440c-9a30-5d86a3c8374c,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A197@a
+sq_A197,b38a09a9-780d-4374-a2fa-3c275283fed1,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A197
+sq_A198,39e4f90a-ef76-4bbe-b385-c7d0a48be2ff,exp+0.2 cat|exp+0.3 cat,sq_A198@a
+sq_A198,8eda9d10-6811-4b32-b530-06879b367385,exp+0.2 cat|exp+0.3 cat,sq_A198@a
+sq_A198,9715ae79-84d2-44ae-b066-5b6c8a54fc95,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A198@a
+sq_A199,7fae594f-cd04-49a2-8657-419ab3ab6374,exp+0.3 cat,sq_A199@a
+sq_A199,8550c043-55f8-4413-980f-25be84da8f68,exp+0.3 cat,sq_A199
+sq_A199,9484c51b-6572-46d0-968f-be949fd3437d,exp+0.3 cat,sq_A199
+sq_A200,879c9911-38cb-42aa-8384-74b9f90f73f7,exp+0.2 cat|exp+0.3 cat,sq_A200
+sq_A200,a278880f-c9b9-4c12-95de-15243ec450bd,exp+0.3 cat,sq_A200@a
+sq_A201,123c7919-eb0b-4a1d-978b-1a28526c521d,exp+0.3 cat,sq_A201
+sq_A201,1da87759-4822-4d54-a762-f5c20198f7b0,exp+0.2 cat|exp+0.3 cat,sq_A201
+sq_A201,34a92850-910a-49db-84a0-d8f7f1ec4d8a,exp+0.2 cat|exp+0.3 cat,sq_A201
+sq_A201,8319bcfa-1c9d-49dd-9ead-faccfb3ff4d0,exp+0.3 cat,sq_A201@a
+sq_A201,b29d695e-80e9-4685-86fe-8daab644e240,exp+0.3 cat,sq_A201
+sq_A201,bb9fe310-f2d1-4aef-9419-dc3959ba3328,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A201
+sq_A201,c9c71ba7-502c-46fd-9c65-d4fba365771b,exp+0.3 cat,sq_A201@a
+sq_A201,dc0d07f8-d9ba-4c0c-baad-a86b9d744976,exp+0.3 cat,sq_A201
+sq_A202,41741a48-0349-4800-80af-08a08eac9d8d,exp+0.2 cat|exp+0.3 cat,sq_A202@a
+sq_A202,52ef0afd-901c-41d0-bd03-31f97783af72,exp+0.2 cat|exp+0.3 cat,sq_A202@a
+sq_A202,b971d3ac-3871-4e18-a69b-125af4f817f9,exp+0.2 cat|exp+0.3 cat,sq_A202@a
+sq_A202,d861c739-2f35-4e26-9ac8-1d7694fca460,exp+0.3 cat,sq_A202@a
+sq_A202,e6b549b3-6b52-4adc-919b-c35b70122bb5,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A202@a
+sq_A203,010a9f78-4627-4763-b307-ca8c539511fc,exp+0.3 cat,sq_A203@a
+sq_A203,28bbe5f1-6fb3-4338-bd19-6bc862b38872,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A203
+sq_A203,35af9c1b-dba2-4f0c-92ff-12398d2e0510,exp+0.2 cat|exp+0.3 cat,sq_A203@a
+sq_A203,6149a6b0-f0bb-4a7e-93e9-492a5e0f59f6,exp+0.2 cat|exp+0.3 cat,sq_A203
+sq_A203,76f6b88a-6b40-4134-8c3b-f94d036ba8cc,exp+0.2 cat|exp+0.3 cat,sq_A203
+sq_A203,a3cb286e-9267-4c37-8ae6-59d277c2765c,exp+0.3 cat,sq_A203
+sq_A204,7d69a8fb-1fa9-4d65-ae6c-973bd5c079e2,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A204
+sq_A207,22dcac52-2b6d-4f93-9567-28cf8422b9c0,exp+0.3 cat,sq_A207@a
+sq_A207,e6a600f3-b0b7-4e10-80dc-fe0f5ccb6ae9,exp+0.2 cat|exp+0.3 cat,sq_A207
+sq_A208,14ca3bcf-9f36-4b3e-b1a6-b3d938c93669,exp+0.2 cat|exp+0.3 cat,sq_A208@a
+sq_A208,56de580a-b2ed-4e8f-89b7-6a852bb64f23,exp+0.3 cat,sq_A208@a
+sq_A208,7e79c0b4-09fd-4fbe-be7b-70c2df2a247f,exp+0.2 cat|exp+0.3 cat,sq_A208@a
+sq_A208,bc680681-8ba0-4d87-9077-4ec1442802e6,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A208
+sq_A210,031b00ba-77ed-489e-95ae-1683aaf5c324,exp+0.2 cat|exp+0.3 cat,sq_A210
+sq_A210,4d644514-3a51-4273-846c-2aed00629e27,exp+0.3 cat,sq_A210
+sq_A210,637be741-6789-4274-a89e-873cf68f5044,exp+0.3 cat,sq_A210@a
+sq_A210,acf7e309-98a2-4bee-b601-ba81fe8ac324,exp+0.3 cat,sq_A210@a
+sq_A210,c8b9e13f-1e23-43e1-a3c2-9d25eef2205a,exp+0.2 cat|exp+0.3 cat,sq_A210
+sq_A211,7a473012-042c-4974-b797-4ec401469c6e,exp+0.2 cat|exp+0.3 cat,sq_A211@a
+sq_A212,4f89f7e9-4ba8-4b95-af65-b3ba8d6c9a15,exp+0.2 cat,sq_A212
+sq_A212,ed309b3c-b086-4f36-a515-3a52e600a535,exp+0.3 cat,sq_A212@a
+sq_A213,2b6a0c92-6d40-4c52-bbc3-c058bf047e97,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A213@a
+sq_A213,6a898403-ebf4-41bb-b69f-85c18b469842,exp+0.3 cat,sq_A213@a
+sq_A213,84798449-88e8-4922-8f65-907c17c213c3,exp+0.2 cat|exp+0.3 cat,sq_A213@a
+sq_A213,8743b89d-adcb-4a34-992c-ec6e89281fee,exp+0.3 cat,sq_A213@a
+sq_A213,96337d5b-f1cd-4f0a-8a7e-2a56b0f4795a,exp+0.3 cat,sq_A213
+sq_A213,c42ef30d-fc2f-4728-ba56-e835ecf1b194,exp+0.3 cat,sq_A213@a
+sq_A213,ed57cd0c-e840-4dc6-8997-3626328849ac,exp+0.2 cat|exp+0.3 cat,sq_A213@a
+sq_A213,edece10b-4595-4561-9f95-0bd1a82152c8,exp+0.3 cat,sq_A213@a
+sq_A214,d98d4486-5821-4926-aa2c-9e201df4b4f5,exp+0.3 cat,sq_A214@a
+sq_A215,6bf34547-7852-41e7-8209-ffa42bb49076,exp+0.3 cat,sq_A215
+sq_A215,9a2a2d2e-4987-445d-acbe-2e0201911c30,exp+0.3 cat,sq_A215
+sq_A215,b463982d-3c1f-4543-bd64-7ca94257102c,exp+0.3 cat,sq_A215
+sq_A215,c938e0fe-125c-4df7-9ab6-3cafc3bb2fec,exp+0.2 cat,sq_A215
+sq_A215,f959d6b5-c2e5-45db-8956-bab881224fd4,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A215
+sq_A216,0f955f08-c10e-4266-ad34-76723e701f9e,exp+0.2 cat|exp+0.3 cat,sq_A216
+sq_A216,27f69d78-4bbb-4cb4-984a-00d1196db140,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_A216
+sq_A216,b6cf7fec-6400-4517-a09f-30f79d2956ab,exp+0.2 cat|exp+0.3 cat,sq_A216
+sq_A218,0fc9297b-411b-4665-9dd5-93e433c38618,exp+0.2 cat|exp+0.3 cat,sq_A218
+sq_A218,35c3e80c-0017-439d-b679-e1c01de600be,exp+0.2 cat|exp+0.3 cat,sq_A218
+sq_A218,5518479c-f119-4750-a6ef-06158d318cf9,exp+0.3 cat,sq_A218
+sq_A218,76ff7363-814b-4726-b13b-35431eb05c83,exp+0.3 cat,sq_A218
+sq_A218,c761046f-a58a-4e27-b8fc-d4c51385f590,exp+0.3 cat,sq_A218@a
+sq_A218,f1aaf6e9-59f7-4513-8258-27ea1ea5e0b7,exp+0.2 cat|exp+0.3 cat,sq_A218@a
+sq_A219,87a0c6b7-96da-4ce9-b7f6-8227d17df15b,exp+0.2 cat|exp+0.3 cat,sq_A219
+sq_A219,a97cf4d8-e2a1-43f7-84e5-001e1cbbe8ec,exp+0.3 cat,sq_A219
+sq_A220,7c7f35e0-2590-4bb8-b9e2-6888691b13de,exp+0.3 cat,sq_A220
+sq_A220,a8bc5e7d-df21-4830-bf08-d78332f8c12c,exp+0.3 cat,sq_A220
+sq_A220,be77265f-9d92-47c6-8e22-175f70bbda55,exp+0.3 cat,sq_A220
+sq_A223,a7a77ede-d5a4-4e12-a57b-88274a4ff613,exp+0.3 cat,sq_A223
+sq_A223,b7fb5107-c30d-4821-a6e5-f691dff5347a,exp+0.3 cat,sq_A223
+sq_A224,fab3185f-ad1d-47a0-ad69-4ac4b43aaab5,exp+0.2 cat|exp+0.3 cat,sq_A224
+sq_A226,0e49f882-d54f-4b05-8ea5-a2165b2647a7,exp+0.2 cat|exp+0.3 cat,sq_A226@a
+sq_B017,787d131e-5249-4a65-83d5-dc5d4969ebe2,exp+0.3 cat,sq_B017
+sq_B017,ef97b881-55ea-458c-873f-23829be32bc3,exp+0.2 cat|exp+0.3 cat,sq_B017@a
+sq_B050,c8f98089-8438-45a8-8047-3b1045b65576,exp+0.2 cat|exp+0.3 cat,sq_B050
+sq_B075,a427a4fe-e98f-441a-bdf0-37ee143a0d6d,exp+0.3 cat,sq_B075
+sq_B076,6f96d1f6-967c-4510-8c38-1fe814dd5eb4,exp+0.3 cat,sq_B076
+sq_B076,82b56a62-ec50-41f9-94ff-4d2a70ae7a79,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_B076
+sq_B081,58fc1666-e274-45f3-8bfc-d74ab3ebd43a,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_B081
+sq_B098,65626e06-2241-4b9d-b71e-802c6412d709,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_B098
+sq_B101,aac73d18-1686-42dc-b338-e862faec3363,exp+0.3 cat,sq_B101
+sq_B153,17ee677e-d39f-46d9-afd6-971ee24fe99c,exp+0.2 cat|exp+0.3 cat,sq_B153
+sq_B153,78e701b0-cc49-4a41-b990-fdedcc87465f,exp+0.3 cat,sq_B153
+sq_B158,68db0e7f-3ce3-4094-ba96-9faaecf7996d,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_B158
+sq_B158,944b8937-9d80-49e6-ba0c-af1476994647,exp+0.2 cat|exp+0.3 cat,sq_B158
+sq_B158,fe52a83d-bed1-4fcc-b2e4-de376137c808,exp+0.3 cat,sq_B158
+sq_B164,13030744-456f-4231-8d52-152d00b2be26,exp+0.3 cat,sq_B164
+sq_B165,063041a2-faf3-4a5b-8541-eaaa734c228c,exp+0.3 cat,sq_B165
+sq_B167,01a0efe3-6970-4157-9177-c25358a4f8a6,exp+0.3 cat,sq_B167
+sq_B173,22557b9e-bc11-4e0b-b5d0-76aebc4da1aa,exp+0.2 cat|exp+0.3 cat,sq_B173
+sq_B188,67186895-1889-489b-a5f2-f51a4a92c158,exp+0.3 cat,sq_B188
+sq_B196,084ab288-28e4-497b-b66a-337970bf37b5,exp+0.2 cat|exp+0.3 cat,sq_B196
+sq_B196,34c2b7cb-8e97-4b0e-bdf8-66dace1fdd34,exp+0.3 cat,sq_B196
+sq_B196,73a311d6-86eb-49f0-a547-b7b70f49fe29,exp+0.3 cat,sq_B196
+sq_B196,f67625e2-253f-4397-8f58-05f483559696,exp+0.2 cat|exp+0.3 cat,sq_B196
+sq_B199,2bb57097-3b5f-41b8-b156-c36edd126da0,exp+0.3 cat,sq_B199
+sq_B199,75704ec2-dcc0-4ae0-9438-3cb8b15e588e,exp+0.3 cat,sq_B199
+sq_B199,c21d1aeb-92a5-435d-aa94-e9e705c17460,exp+0.3 cat,sq_B199
+sq_B202,3c1cc141-d669-4c09-940d-b65c04864c1d,exp+0.3 cat,sq_B202
+sq_B202,7b7551e7-fdea-461c-9995-28e11a2469a3,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_B202
+sq_B202,c90232e8-f774-4e02-9774-49e355f9b159,exp+0.3 cat,sq_B202
+sq_B203,173d9938-8ffe-403f-a635-742073f116b2,exp+0.2 cat|exp+0.3 cat,sq_B203
+sq_B203,6899ee83-0ea1-4ad0-8526-349d955ea7e6,exp+0.3 cat,sq_B203
+sq_B203,81d7c51e-8f75-4361-bcef-cd17504c7a7e,exp+0.2 cat|exp+0.3 cat,sq_B203
+sq_B203,c92e11c8-dc4c-48f1-bfef-3d92e4259514,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_B203
+sq_B204,d738cdd0-212a-4da7-8771-13bd61905d09,exp+0.2 cat|exp+0.3 cat,sq_B204
+sq_B209,69dadbe4-abea-4f8f-90c3-29c3dcfb4eb0,exp+0.2 cat|exp+0.3 cat,sq_B209
+sq_B209,bf0b8872-2cbb-440e-af87-2e628855bad6,exp+0.3 cat,sq_B209
+sq_B209,d177d028-e8b4-4611-9a57-2c95ef5198c8,exp+0.2 cat|exp+0.3 cat,sq_B209
+sq_B209,d6f983e4-a7e4-4ba4-ae68-325b5a340a35,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_B209
+sq_B213,0bae8e51-80cb-4dff-9608-7f5abe63a2d6,exp+0.3 cat,sq_B213
+sq_C001,17ac8710-2e02-4a8a-ad25-820fa4a3fdd3,exp+0.3 cat,sq_C001
+sq_C001,db5b47c0-f4e7-413c-ad81-b39c9059dddf,exp+0.2 cat|exp+0.3 cat,sq_C001
+sq_C003,4b221620-47c2-48e7-b731-8c28537a58d9,exp+0.2 cat|exp+0.3 cat,sq_C003
+sq_C004,099a1431-aabe-437e-83af-2faea468c0f4,exp+0.3 cat,sq_C004
+sq_C004,2dfa493a-9491-4eaa-94c9-27fa9dcbb6ef,exp+0.3 cat,sq_C004
+sq_C004,8c4d9b33-c25d-41da-9b8d-53cf50bf1812,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C004
+sq_C005,23135de3-c9b5-426e-b072-35b184e0f916,exp+0.2 cat,sq_C005
+sq_C005,e704ed8e-d539-4cf4-b671-26eb9dca5914,exp+0.1 cat|exp+0.2 cat,sq_C005@a
+sq_C006,53701c62-ef58-4b07-a2f5-14b471f56016,exp+0.3 cat,sq_C006
+sq_C006,6b87303c-9c26-4cd2-88cd-54d8d11c48d7,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C006
+sq_C006,b66aedff-5308-498c-8527-03265a87ca62,exp+0.3 cat,sq_C006@a
+sq_C008,725f3a86-f0a5-4d95-88c8-a85cb3f85beb,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C008
+sq_C009,17f52c47-3bd2-48bb-81d4-c5fa4c3c3c33,exp+0.3 cat,sq_C009
+sq_C009,68afe947-237c-491e-af97-909276c31e9b,exp+0.2 cat,sq_C009
+sq_C009,ed296f88-4ef6-4b07-9cef-9e7959a7da12,exp+0.3 cat,sq_C009
+sq_C010,9db067fc-2ce1-40ca-873e-280db5801f8f,exp+0.3 cat,sq_C010
+sq_C011,1e27280f-ecef-4dd9-a6c3-29d21b3596cc,exp+0.2 cat|exp+0.3 cat,sq_C011@a
+sq_C011,2ef0b2ac-1b41-4488-bd08-8cedfe6e8bdf,exp+0.2 cat|exp+0.3 cat,sq_C011@a
+sq_C011,7fb44058-d968-4c8c-9abb-95a36792e456,exp+0.3 cat,sq_C011@a
+sq_C011,fe4e2cef-7eeb-4897-b876-02c1e457e36b,exp+0.2 cat|exp+0.3 cat,sq_C011@a
+sq_C013,c4d2b826-44e0-47a2-a6f7-cc74b8f0711f,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C013
+sq_C017,ff1f312a-b2f9-4671-bc96-71cc6a1dc1e2,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C017@a
+sq_C022,09e3a824-23c2-4ac1-9710-9e5e2fc11a73,exp+0.3 cat,sq_C022
+sq_C022,192c25c0-a316-40a5-9fbf-b54db54e27e7,exp+0.3 cat,sq_C022
+sq_C023,9c86dda4-8ded-4e49-bc7f-16240ab43a3f,exp+0.2 cat|exp+0.3 cat,sq_C023
+sq_C024,10354a54-94b5-4c6a-87f4-880014a00fa6,exp+0.2 cat|exp+0.3 cat,sq_C024
+sq_C026,03615b22-6a4d-4c47-9756-80c3a2f3477f,exp+0.2 cat|exp+0.3 cat,sq_C026
+sq_C026,d74be20a-772a-485c-b201-068b4b167983,exp+0.3 cat,sq_C026@a
+sq_C027,c863d30a-e32a-4f76-8489-f038312d0efb,exp+0.2 cat|exp+0.3 cat,sq_C027
+sq_C028,2f02806d-baa0-44f2-b410-7bfb0bdfdbfc,exp+0.3 cat,sq_C028@a
+sq_C028,6eeb0eb3-9e5b-477c-b21b-24356ed901af,exp+0.2 cat|exp+0.3 cat,sq_C028@a
+sq_C028,9a0d1549-47e8-4c17-ac44-881fad1fd0eb,exp+0.2 cat|exp+0.3 cat,sq_C028@a
+sq_C028,f77844e7-5456-480a-bdd5-4c3e194dc084,exp+0.3 cat,sq_C028@a
+sq_C030,6168d2ad-2fd2-4797-b2c2-5c84ff4f5f1a,exp+0.2 cat|exp+0.3 cat,sq_C030
+sq_C035,3596f512-f485-41a5-aec8-cd58b8c1d379,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C035
+sq_C043,30b56996-0997-4ffd-a84f-4f98756dcb6a,exp+0.3 cat,sq_C043
+sq_C043,b33a2c4d-eaf8-417b-a323-c2a75d86cd0f,exp+0.3 cat,sq_C043
+sq_C043,d5e4794d-b9cf-4e38-95f7-500d2a6a1c58,exp+0.2 cat|exp+0.3 cat,sq_C043
+sq_C046,14593f25-20ff-445b-b371-b87c2ad6cfa9,exp+0.2 cat|exp+0.3 cat,sq_C046@a
+sq_C046,d65a3183-86ed-49eb-a69b-2755046e96e8,exp+0.2 cat|exp+0.3 cat,sq_C046@a
+sq_C047,da1730a6-15f1-4826-8715-b9dcb7b3457d,exp+0.2 cat|exp+0.3 cat,sq_C047@a
+sq_C048,969d305f-1868-4c17-a90b-98f4a436648b,exp+0.2 cat|exp+0.3 cat,sq_C048@a
+sq_C048,97f71fae-d2c7-483e-932e-dac6a15c9b44,exp+0.3 cat,sq_C048@a
+sq_C048,aa774278-1a65-43f2-9e51-a326088a7150,exp+0.2 cat|exp+0.3 cat,sq_C048@a
+sq_C050,61893e53-a0e7-4998-a8d6-6c92602f475e,exp+0.3 cat,sq_C050@a
+sq_C050,95a027e0-f9d2-4784-8901-e53db183bb91,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C050
+sq_C051,e883e04c-7476-4bcc-a277-2fab83cd9b57,exp+0.2 cat|exp+0.3 cat,sq_C051
+sq_C052,d7252fa2-05c4-41e5-8b15-3b9e1e40c798,exp+0.3 cat,sq_C052
+sq_C053,00e34fb5-e7d3-43aa-b574-400ee31abae5,exp+0.3 cat,sq_C053
+sq_C055,6705226a-1197-420d-8f4a-e8d026bbcd7e,exp+0.2 cat|exp+0.3 cat,sq_C055@a
+sq_C056,13e04e22-7170-46c6-95c7-e075fdbeede9,exp+0.2 cat|exp+0.3 cat,sq_C056
+sq_C056,561fe6bf-9bd0-42de-a0bf-11d88eaefafd,exp+0.3 cat,sq_C056
+sq_C057,91b97d42-395d-4632-87b7-264158babf91,exp+0.3 cat,sq_C057
+sq_C061,98cda0e7-8b1b-4cde-986b-ee5871dea61b,exp+0.3 cat,sq_C061
+sq_C063,366fb769-24e1-46d0-a336-72017d4125d7,exp+0.3 cat,sq_C063@a
+sq_C065,2208fcc2-ad75-476d-9d6d-c5b31519d72d,exp+0.2 cat|exp+0.3 cat,sq_C065@a
+sq_C065,98a2ec8a-ff4b-4fd3-9c30-fdebd6e05214,exp+0.2 cat|exp+0.3 cat,sq_C065@a
+sq_C065,cb9df475-1c18-484d-8cd3-4f07e161ecc9,exp+0.2 cat|exp+0.3 cat,sq_C065@a
+sq_C065,e0e25552-9a45-4f53-b6d1-4025f12c3e4d,exp+0.2 cat|exp+0.3 cat,sq_C065@a
+sq_C065,e3758938-6bb1-4b34-841a-976a5307978e,exp+0.2 cat|exp+0.3 cat,sq_C065@a
+sq_C067,5e571d9e-c0a5-49bd-9003-2a0b98f51efb,exp+0.3 cat,sq_C067
+sq_C069,12989ab0-f1b4-4697-9608-ca0d0114f73b,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C069
+sq_C070,941fc485-097b-4acd-8b9a-229182e7d5e4,exp+0.3 cat,sq_C070@a
+sq_C070,b5bb0793-8caa-4853-b661-478d3380a15d,exp+0.3 cat,sq_C070
+sq_C072,47a56457-a595-4cb3-8f92-71b8cc837eb4,exp+0.2 cat|exp+0.3 cat,sq_C072@a
+sq_C073,8cafbab6-bf50-40f9-9d20-687717b08355,exp+0.3 cat,sq_C073
+sq_C074,41587f0c-b759-45d4-b110-a2a926056620,exp+0.2 cat|exp+0.3 cat,sq_C074
+sq_C075,3302ddeb-8963-4724-800d-adf459e10ab3,exp+0.2 cat|exp+0.3 cat,sq_C075
+sq_C078,82a80209-74b0-42f6-9a2e-4fcda932f077,exp+0.2 cat|exp+0.3 cat,sq_C078
+sq_C079,4b7dc57a-e29d-4afd-9a5f-bfccb97ddad1,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C079@a
+sq_C079,a2560cad-454c-4436-9790-c68c5ea00576,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C079
+sq_C080,a10248da-0860-40ea-8c20-4068de9fd7af,exp+0.2 cat|exp+0.3 cat,sq_C080
+sq_C081,6560d359-28c5-4259-8804-508b6e284f3d,exp+0.2 cat|exp+0.3 cat,sq_C081
+sq_C081,bef42b6f-95a9-4f88-b99c-89dcd6a866cf,exp+0.3 cat,sq_C081
+sq_C081,f26f98d1-62bd-4127-bd7a-57990322eb3b,exp+0.3 cat,sq_C081
+sq_C083,e64d37d7-284d-4e72-bea4-ff021848c8cd,exp+0.3 cat,sq_C083
+sq_C087,1130c450-eba4-4812-a134-d6caaabdec2b,exp+0.3 cat,sq_C087
+sq_C087,3d4ee4cd-b7e0-4649-a4c9-2a3063a34bed,exp+0.2 cat|exp+0.3 cat,sq_C087
+sq_C091,2219b2f2-ed33-4d26-ac5f-ed19c9fd4af2,exp+0.3 cat,sq_C091
+sq_C091,96cf4a92-0df0-4ed9-8dde-8baef8d487d3,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C091
+sq_C093,84137b1d-2f22-40cd-af54-faacce982bb4,exp+0.2 cat|exp+0.3 cat,sq_C093
+sq_C095,a1444ac1-9274-4a11-a401-32a8c5a3713b,exp+0.3 cat,sq_C095
+sq_C096,4c28a9ee-f16f-4dce-924d-83237b9b310b,exp+0.2 cat|exp+0.3 cat,sq_C096@a
+sq_C096,814d97e9-0644-4674-ac84-aae88fc4f171,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C096@a
+sq_C096,b7f78c4e-c6f3-46c3-ab2c-7f94d5963f92,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C096@a
+sq_C098,060ca668-6ba8-4dbc-af43-1b0f2b64cda6,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C098
+sq_C098,4afdf332-8a97-445a-96c3-6a1e14ac7b8b,exp+0.2 cat|exp+0.3 cat,sq_C098
+sq_C100,18352cf3-69c4-4d34-b75f-757e580d7567,exp+0.3 cat,sq_C100
+sq_C102,189d93cb-0a5f-4d45-a8ad-3195aaa65025,exp+0.3 cat,sq_C102
+sq_C108,e86ab6c2-32ba-41cc-add6-0e2afda2614c,exp+0.3 cat,sq_C108
+sq_C112,86aa8384-215e-4167-9fc9-dd44cbbd5f4a,exp+0.3 cat,sq_C112
+sq_C112,b42e60ac-e848-4ff8-812e-6033944371f0,exp+0.2 cat,sq_C112
+sq_C112,c2dada2b-b962-4e17-b1c0-5030034eb761,exp+0.3 cat,sq_C112
+sq_C113,ac18ca20-d610-4a3b-9858-3da5a5773948,exp+0.2 cat|exp+0.3 cat,sq_C113
+sq_C114,4190e02a-133a-4b75-81a0-e121dc4ba28b,exp+0.3 cat,sq_C114
+sq_C116,36fcea93-58d4-4ff1-884e-2d964343cfab,exp+0.2 cat|exp+0.3 cat,sq_C116
+sq_C117,a49f335a-89dc-44f5-8738-eca443ae8436,exp+0.3 cat,sq_C117
+sq_C118,3e3dcc0a-acc2-4131-9e3d-3f264e15de95,exp+0.2 cat|exp+0.3 cat,sq_C118@a
+sq_C118,d9139ce2-3bad-4c55-84b1-1e03f724696d,exp+0.3 cat,sq_C118@a
+sq_C119,386440d5-0e2d-412b-b8f4-3bba380115ef,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C119
+sq_C119,77e4f47f-6c4a-4ab2-a615-5947c568a365,exp+0.1 cat|exp+0.3 cat,sq_C119
+sq_C119,ad090ddf-ac1c-4512-a958-78f438d854d8,exp+0.3 cat,sq_C119
+sq_C120,3b1ca348-b7a7-4779-a8de-896b0197a649,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C120
+sq_C120,470be42d-eeb2-4d6c-9314-c84f10af2261,exp+0.2 cat|exp+0.3 cat,sq_C120
+sq_C120,fdc1395f-2bd5-4f4e-9c7c-152036fda78d,exp+0.2 cat|exp+0.3 cat,sq_C120
+sq_C121,aa67b7a8-f60a-48f6-9dd9-5f9656f30e46,exp+0.2 cat|exp+0.3 cat,sq_C121
+sq_C121,f8cc6c24-3f27-4f7d-af23-47801fcb3d7e,exp+0.3 cat,sq_C121@a
+sq_C123,32a34358-ac1f-4072-82b8-397f8d8f53d3,exp+0.3 cat,sq_C123
+sq_C123,a7697009-fd36-4e9d-9a3b-b4fc889dcfd5,exp+0.3 cat,sq_C123
+sq_C123,ae416dfb-6f89-4a67-8bc5-ff3281da5865,exp+0.2 cat|exp+0.3 cat,sq_C123
+sq_C123,f2a08bd6-6d79-420f-acb2-94a57a80017d,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C123
+sq_C128,18a7a938-fd65-4b9c-a806-584194d50e3d,exp+0.2 cat|exp+0.3 cat,sq_C128
+sq_C128,596aa172-a541-4068-ac57-84b0d1a73a46,exp+0.2 cat|exp+0.3 cat,sq_C128
+sq_C128,7bb7269b-9c3c-48fa-b946-2c3d6e496af1,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C128
+sq_C130,173a6aea-9445-42b2-92f1-13d761bce5a6,exp+0.3 cat,sq_C130@a
+sq_C130,694ddd4f-e80f-4c6b-95db-9db496ed777b,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C130
+sq_C131,da1730a6-15f1-4826-8715-b9dcb7b3457d,exp+0.3 cat,sq_C131
+sq_C137,1183897c-300a-4ba1-a415-2dcbec07848d,exp+0.2 cat|exp+0.3 cat,sq_C137
+sq_C137,64a467c3-496a-4765-84a8-0ae64f42eabb,exp+0.3 cat,sq_C137
+sq_C137,b63d8781-cfd1-4a10-925f-30d522a37e06,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C137
+sq_C143,46033975-073a-4f80-bf50-d7e253a9f9e4,exp+0.3 cat,sq_C143
+sq_C143,c2010612-5179-4659-926b-f9ba143ea86b,exp+0.2 cat|exp+0.3 cat,sq_C143
+sq_C145,00b35d47-3ee0-4ce4-9415-a745b8ced8e0,exp+0.2 cat|exp+0.3 cat,sq_C145
+sq_C145,6b109db5-9c52-4e1c-b9d4-22a63ca9e4b1,exp+0.2 cat|exp+0.3 cat,sq_C145
+sq_C145,8dd88293-8daa-4d41-ae40-8e50421d42df,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C145
+sq_C145,bbe36417-856c-43bc-8f33-c836ec934374,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C145
+sq_C151,1ab30cc7-60f0-4174-b87a-4499c76bfacc,exp+0.2 cat|exp+0.3 cat,sq_C151@a
+sq_C151,2df81e23-5508-4352-a39a-9f69d716cb60,exp+0.3 cat,sq_C151
+sq_C151,47a15aee-05ec-4f13-be1c-575ac1fda42a,exp+0.2 cat|exp+0.3 cat,sq_C151
+sq_C151,679ffc0e-36c1-49e8-b79c-1397a7e95e74,exp+0.2 cat|exp+0.3 cat,sq_C151@a
+sq_C151,d054e61c-2723-4600-96a1-7533eff31c81,exp+0.1 cat|exp+0.2 cat,sq_C151@a
+sq_C152,b8f80ded-5f2f-4dd3-9387-561b6ae9826a,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C152
+sq_C153,3af66a5e-6493-469f-9240-43c4bad15585,exp+0.3 cat,sq_C153@a
+sq_C153,99981fef-285b-492a-95a8-ee2f4520fb91,exp+0.2 cat|exp+0.3 cat,sq_C153@a
+sq_C154,b6a27704-6ef4-45d5-a0d6-1fe7bf1cbc0f,exp+0.2 cat|exp+0.3 cat,sq_C154
+sq_C155,035254ff-7f87-4af6-8d00-1addb73fd770,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C155
+sq_C155,0889e627-cde9-432b-9f62-e1982b78c89f,exp+0.2 cat|exp+0.3 cat,sq_C155
+sq_C155,0afd7055-8c73-4104-8790-70550bdb04a3,exp+0.3 cat,sq_C155@a
+sq_C155,30b221d4-a25c-473a-b86f-31345b335336,exp+0.2 cat|exp+0.3 cat,sq_C155@a
+sq_C155,59f10403-bfb8-4174-af6f-a6c08dcc5e71,exp+0.3 cat,sq_C155@a
+sq_C155,74cf13eb-9d86-4684-af74-d588d8c83ca1,exp+0.3 cat,sq_C155
+sq_C155,7afdabda-4d6c-4e36-a171-9a1f8d6ef02d,exp+0.3 cat,sq_C155@a
+sq_C155,b9e5d89c-f000-4f24-862a-e18bb037e267,exp+0.2 cat|exp+0.3 cat,sq_C155
+sq_C155,e86b3e30-74ef-41f3-b57f-b0d2f57999d0,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C155
+sq_C155,f0993d17-44d8-47c2-a8eb-4f8fb545e68c,exp+0.2 cat|exp+0.3 cat,sq_C155@a
+sq_C155,f82d0921-31dc-48f3-ac57-a2b7aa732fdd,exp+0.3 cat,sq_C155
+sq_C155,fe1bcbcb-ab11-4e7a-a7b8-0701af5e96da,exp+0.2 cat|exp+0.3 cat,sq_C155
+sq_C156,4e7987ab-2aad-476e-9b48-9998d78f3534,exp+0.3 cat,sq_C156
+sq_C156,c3bcd6e7-a6d0-4cc8-a99e-8dfd2b68b922,exp+0.3 cat,sq_C156
+sq_C158,07ffcc51-9fde-4d9d-b6a8-394355b61a45,exp+0.3 cat,sq_C158
+sq_C160,21f02314-ee26-4c44-b63a-49119fe241a3,exp+0.2 cat|exp+0.3 cat,sq_C160
+sq_C162,014e0403-940b-49b1-a7bc-f51be56c02a5,exp+0.3 cat,sq_C162
+sq_C163,b35d7d65-e2f6-4ddf-9da8-9e6c787301b9,exp+0.2 cat|exp+0.3 cat,sq_C163
+sq_C164,91d85bed-858a-4941-9306-be03c355c04b,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C164@a
+sq_C165,ac789125-7308-47cd-9070-b1cba248c312,exp+0.2 cat|exp+0.3 cat,sq_C165
+sq_C165,c458f504-9cb9-4011-b339-0a9bfdafc99b,exp+0.3 cat,sq_C165
+sq_C167,ec26ad62-eaaa-4a96-91cb-d46f779e10a9,exp+0.3 cat,sq_C167@a
+sq_C167,f2b6bc50-5ec8-4d34-a009-686f711e7a85,exp+0.3 cat,sq_C167
+sq_C168,9a0b529e-59ac-46dc-aa6a-b1b2d7790bf6,exp+0.2 cat|exp+0.3 cat,sq_C168
+sq_C170,36936dda-ae0f-47b6-967c-b26c9b8723a9,exp+0.3 cat,sq_C170
+sq_C170,47db6f6d-dddf-4478-b679-f977b223ebc7,exp+0.2 cat|exp+0.3 cat,sq_C170
+sq_C170,7ec7f3df-f5de-4a42-ac25-5ac6ce03cdc8,exp+0.3 cat,sq_C170
+sq_C170,a26fde75-f82a-4105-924a-3b3da3777b61,exp+0.3 cat,sq_C170
+sq_C170,b858791d-35f0-4aca-a4c6-c0172844addf,exp+0.2 cat|exp+0.3 cat,sq_C170
+sq_C171,070f2150-4b0c-4540-a080-075d5cdaf2f2,exp+0.3 cat,sq_C171
+sq_C171,45c77783-fe91-4c06-813d-d9485203e491,exp+0.3 cat,sq_C171
+sq_C171,742f3c89-9693-4419-85cb-a38f9bb18fc2,exp+0.2 cat|exp+0.3 cat,sq_C171
+sq_C171,88d01138-3e2c-4faa-9118-7db7cf98fd37,exp+0.3 cat,sq_C171
+sq_C171,9d3b02fe-a7f7-4000-91dc-c3e170035431,exp+0.3 cat,sq_C171
+sq_C171,da8a8819-1bdc-44ba-894d-933f3ef6c8bf,exp+0.3 cat,sq_C171
+sq_C171,dc5a32c5-6885-4784-81e9-9e2e9ef54edd,exp+0.3 cat,sq_C171
+sq_C174,fc8d7e34-d57d-4db2-95ed-64f27a0e0ce1,exp+0.2 cat|exp+0.3 cat,sq_C174
+sq_C177,65f94fa9-0b8c-447a-82eb-62959772fd67,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C177@a
+sq_C177,88c2c4f2-5a06-4d1d-b337-211074e2fadd,exp+0.3 cat,sq_C177
+sq_C177,93503574-0ba5-4187-907b-072a0dc098db,exp+0.3 cat,sq_C177
+sq_C177,dc5be218-7d7f-4956-8f23-b31024a0a8ec,exp+0.3 cat,sq_C177@a
+sq_C177,e20a6526-9b6a-4bd9-8c59-e8d25a184481,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C177
+sq_C179,0feea5c5-e5b8-4eb5-b98a-6c063797e5d0,exp+0.2 cat|exp+0.3 cat,sq_C179
+sq_C179,e40b11e4-23a5-4281-8abb-2c993a2e50d2,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C179
+sq_C180,11d88ac2-aac8-427f-ac0d-b6776219c0eb,exp+0.3 cat,sq_C180
+sq_C180,1bc0b5f7-1137-407d-8ccd-6d4bf30f539f,exp+0.2 cat|exp+0.3 cat,sq_C180
+sq_C180,370ff47d-3989-41e1-9b30-a8fa716de586,exp+0.3 cat,sq_C180
+sq_C180,94f574fb-bf23-45de-b213-9393da4b8009,exp+0.2 cat|exp+0.3 cat,sq_C180
+sq_C180,a4b7a6b1-4802-4cf7-911f-72afcf1dce0f,exp+0.2 cat|exp+0.3 cat,sq_C180
+sq_C180,a6e56234-ac65-4263-bc03-d14f40afea1f,exp+0.2 cat|exp+0.3 cat,sq_C180
+sq_C181,04159442-9324-4267-ba59-fd81991c7d81,exp+0.3 cat,sq_C181
+sq_C181,06167c9e-4dd3-41d5-8700-4f6d0d31ce70,exp+0.3 cat,sq_C181
+sq_C181,376730e3-b726-4a70-a786-e0d72a09a228,exp+0.3 cat,sq_C181
+sq_C181,56fa5ff1-100d-4df6-9592-a0fa4b26bb5f,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_C181
+sq_C181,6252ab9f-c6d8-45a6-9f87-31fd2aabb178,exp+0.3 cat,sq_C181
+sq_C181,e5c014f2-444f-44ff-9def-c640b5f9f443,exp+0.2 cat|exp+0.3 cat,sq_C181
+sq_D003,a24639ee-a726-4d40-ba11-4a0cdbcda3eb,exp+0.2 cat|exp+0.3 cat,sq_D003
+sq_D003,abecd1f8-3974-47c7-a5a8-3de3df8d8737,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_D003
+sq_D006,109429b0-ca1b-4f38-89ea-ee206b1aebfe,exp+0.2 cat|exp+0.3 cat,sq_D006
+sq_D008,360920d5-9c2c-4302-9e72-1942e4363b72,exp+0.3 cat,sq_D008
+sq_D008,c5d07181-ca49-403e-b954-54009a005309,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_D008
+sq_D010,46d37c5c-c9b0-4468-b602-b433cfd4a540,exp+0.2 cat|exp+0.3 cat,sq_D010
+sq_D010,b09d43d1-e859-4c2e-a51a-a17c2a012d80,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_D010
+sq_D010,c7fe639b-14e6-4118-859b-187e85928544,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_D010
+sq_D015,ffb8882d-d23a-42b9-b935-2e23d3680885,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_D015
+sq_D016,70f1f7cc-479c-412c-9109-e779077f2bf3,exp+0.3 cat,sq_D016
+sq_D016,7d7df496-b0bb-4b3b-8747-efafe6a788f8,exp+0.2 cat|exp+0.3 cat,sq_D016
+sq_D016,872d537d-2a23-4a24-9812-7bc98596f19b,exp+0.2 cat|exp+0.3 cat,sq_D016
+sq_D016,96835bba-01e3-416c-98f2-aeda8a4fa050,exp+0.3 cat,sq_D016
+sq_D016,bafd18a4-8ff1-425c-a723-2aa72b737688,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_D016
+sq_D016,ca6889d4-d56d-404d-8e21-21253c2b2280,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_D016
+sq_D017,cdaff5b1-7751-49c0-817d-bcead1f3e4d8,exp+0.1 cat|exp+0.2 cat|exp+0.3 cat,sq_D017
+sq_D025,27244c8f-2486-4415-9f02-5ba13e158ef4,exp+0.3 cat,sq_D025
+sq_D033,83fe505f-8716-4361-b965-4dd41cec6c86,exp+0.3 cat,sq_D033
+sq_D036,354b7ea1-48a2-4051-8e4f-31da26b61e47,exp+0.3 cat,sq_D036
+sq_D045,5a9e4d2b-5a7a-42bd-b22a-86d6a0e571ca,exp+0.3 cat,sq_D045
+sq_D047,18e53c76-a7f0-44d8-aec2-1bc9ec6af12d,exp+0.3 cat,sq_D047
+sq_D047,59d64082-b4eb-4037-a90d-e501fe27272b,exp+0.3 cat,sq_D047
+sq_D047,84d24d00-8ea1-4900-aa6d-b08f4f9a69d0,exp+0.3 cat,sq_D047
+sq_D047,adfd6ef6-0987-4da4-b1b9-f9db3a2e122d,exp+0.2 cat|exp+0.3 cat,sq_D047
+sq_E004,18f7b1f0-6829-44b1-83fa-9a1eb2c9e1d3,exp+0.2 cat|exp+0.3 cat,sq_E004
+sq_E007,6552f678-fa46-4d0f-aecf-928c244e7e42,exp+0.3 cat,sq_E007
+sq_E017,26c0094c-9797-4042-8d09-4a338ab9a458,exp+0.3 cat,sq_E017

@@ -70,7 +70,9 @@ def main() -> None:
 
     runs: dict[str, list[pd.DataFrame]] = {}
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from build_service_pool import RUN_DIRS   # 사례 묶음마다 run 폴더(SETS) — 백업 폴더 등은 읽지 않는다
+    from build_service_pool import (
+        RUN_DIRS,  # 사례 묶음마다 run 폴더(SETS) — 백업 폴더 등은 읽지 않는다
+    )
 
     for run_dir in RUN_DIRS:
         for path in sorted((bdir / run_dir).glob("*.csv")):

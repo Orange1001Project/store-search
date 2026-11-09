@@ -1,0 +1,66 @@
+brand,variant,kind,stores_with_variant,note
+GS25,gs25,latin,547,
+GS25,지에스25,hangul,613,
+GS더프레시,gs더프레시,latin,2,
+GS더프레시,gsthefresh,latin,4,
+GS더프레시,지에스더프레시,hangul,21,
+CU,cu,latin,207,2글자 — 상호 앞부분 일치로만 센다
+CU,씨유,hangul,768,2글자 — 상호 앞부분 일치로만 센다
+BBQ,bbq,latin,31,
+BBQ,비비큐,hangul,136,
+BHC,bhc,latin,66,BYC(의류)와 다른 브랜드
+BHC,비에이치씨,hangul,110,
+이마트24,이마트24,hangul,234,
+이마트24,emart24,latin,4,
+이마트24,이마트24r,hangul,31,이마트24 R(리저브) — 같은 브랜드 매장 형태
+세븐일레븐,세븐일레븐,hangul,436,
+세븐일레븐,세븐일레본,spelling,10,오기
+세븐일레븐,7eleven,latin,0,코퍼스에 없음 — 쿼리용
+메가MGC커피,메가커피,hangul,59,
+메가MGC커피,메가엠지씨커피,hangul,259,
+메가MGC커피,메가mgc커피,latin,44,
+써브웨이,써브웨이,hangul,41,
+써브웨이,서브웨이,spelling,1,
+써브웨이,subway,latin,3,
+벌크커피,벌크커피,hangul,85,
+벌크커피,bulkcoffee,latin,3,
+MLB,mlb,latin,15,
+MLB,엠엘비,hangul,15,
+스타벅스,스타벅스,hangul,4,
+스타벅스,starbucks,latin,0,코퍼스에 없음 — 쿼리용
+파리바게뜨,파리바게뜨,hangul,336,
+파리바게뜨,파리바게트,spelling,114,오기(지점 이름에 흔함)
+배스킨라빈스,배스킨라빈스,hangul,170,
+배스킨라빈스,베스킨라빈스,spelling,55,
+뚜레쥬르,뚜레쥬르,hangul,147,
+뚜레쥬르,뚜레주르,spelling,6,
+땅스부대찌개,땅스부대찌개,hangul,169,
+땅스부대찌개,땅스부대찌게,spelling,4,
+본죽&비빔밥,본죽&비빔밥,hangul,80,
+본죽&비빔밥,본죽비빔밥,hangul,14,
+본죽&비빔밥,본죽앤비빔밥,hangul,46,
+본죽&비빔밥,본죽엔비빔밥,spelling,4,
+명랑핫도그,명랑핫도그,hangul,38,
+명랑핫도그,명량핫도그,spelling,3,
+맥시칸치킨,맥시칸치킨,hangul,35,
+맥시칸치킨,멕시칸치킨,spelling,14,
+마레몬떼,마레몬떼,hangul,24,
+마레몬떼,마레몬테,spelling,3,
+안경매니져,안경매니져,hangul,32,
+안경매니져,안경매니저,spelling,14,
+돈까스짱,돈까스짱,hangul,22,
+돈까스짱,돈가스짱,spelling,3,
+금산수삼센터,금산수삼센터,hangul,88,
+금산수삼센터,금산수삼센타,spelling,55,
+메가MGC커피,megacoffee,latin,5,영문 상호(2026-11-05 정성 점검)
+파리바게뜨,parisbaguette,latin,1,영문 상호(2026-11-05 정성 점검)
+자담치킨,자담치킨,hangul,,2026-11-05 정성 점검 — 영문 지점 'JADAM CHICKEN'
+자담치킨,jadamchicken,latin,1,
+컴포즈커피,컴포즈커피,hangul,,2026-11-05 정성 점검
+컴포즈커피,composecoffee,latin,1,
+공차,공차,hangul,,2026-11-05 정성 점검
+공차,gongcha,latin,1,
+투썸플레이스,투썸플레이스,hangul,,2026-11-05 정성 점검
+투썸플레이스,atwosomeplace,latin,1,
+굽네치킨,굽네치킨,hangul,,2026-11-05 정성 점검
+굽네치킨,goobne,latin,1,

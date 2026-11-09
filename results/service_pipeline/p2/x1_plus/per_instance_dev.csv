@@ -1,0 +1,266 @@
+﻿instance_id,answerable,n_shown,n_shown_relevant,n_shown_judged,expected_relevant,hidden,miss,false_show,query,bundle,split,group,main
+sq_A001,True,1,1,1,12.003923836188598,False,False,False,샐러드 가게,A,dev,category,False
+sq_A002,False,1,0,1,22.782643282140704,False,False,True,포케,A,dev,category,False
+sq_A002@a,True,1,1,1,6.129617458513421,False,False,False,포케,A,dev,category,False
+sq_A003,False,4,0,4,9.286362160586567,False,False,True,다이어트 음식,A,dev,category,False
+sq_A003@a,True,14,2,14,15.189290820583619,False,False,False,다이어트 음식,A,dev,category,True
+sq_A004,True,4,0,4,9.110912179042465,False,True,False,건강한 음식,A,dev,category,False
+sq_A004@a,True,4,0,4,8.535161385783008,False,True,False,건강한 음식,A,dev,category,False
+sq_A005,False,0,0,0,12.242709687000154,False,False,False,샐러드 파는 곳,A,dev,category,False
+sq_A005@a,True,1,1,1,9.710830784227898,False,False,False,샐러드 파는 곳,A,dev,category,True
+sq_A015,False,6,0,6,14.951822361801074,False,False,True,네컷,A,dev,category,False
+sq_A015@a,False,0,0,0,29.445766143018382,False,False,False,네컷,A,dev,category,False
+sq_A016,False,0,0,0,9.442866156829837,False,False,False,무인 사진관,A,dev,category,False
+sq_A016@a,True,1,1,1,8.75020995052677,False,False,False,무인 사진관,A,dev,category,False
+sq_A017,False,1,0,1,8.706205575570188,False,False,True,스냅 사진,A,dev,category,False
+sq_A017@a,True,2,2,2,5.6463442140547455,False,False,False,스냅 사진,A,dev,category,False
+sq_A018,False,0,0,0,10.13378562111951,False,False,False,프로필 사진,A,dev,category,False
+sq_A018@a,True,2,2,2,7.141426436524439,False,False,False,프로필 사진,A,dev,category,True
+sq_A019,True,5,5,5,7.974763036441502,False,False,False,단체 사진,A,dev,category,False
+sq_A020,False,0,0,0,10.155569706276399,False,False,False,곱창 파는 곳,A,dev,category,False
+sq_A020@a,True,1,1,1,14.461517072695695,False,False,False,곱창 파는 곳,A,dev,category,True
+sq_A021,False,17,0,14,18.02615963274878,False,False,True,고기 내장,A,dev,category,False
+sq_A021@a,True,2,0,2,8.500049039603192,False,True,False,고기 내장,A,dev,category,False
+sq_A022,False,1,0,1,5.136938924258338,False,False,True,곱창 구이,A,dev,category,False
+sq_A022@a,True,2,1,2,6.758475978253744,False,False,False,곱창 구이,A,dev,category,True
+sq_A023,False,0,0,0,6.6435845182441895,False,False,False,곱창 잘하는 집,A,dev,category,False
+sq_A023@a,True,4,4,4,7.908282359087073,False,False,False,곱창 잘하는 집,A,dev,category,True
+sq_A024,True,0,0,0,0.3842977260487662,True,True,False,야채곱창,A,dev,name,False
+sq_A034,False,2,0,2,15.676116529159685,False,False,True,농자재 파는 곳,A,dev,category,False
+sq_A034@a,True,8,8,8,10.787983501833436,False,False,False,농자재 파는 곳,A,dev,category,True
+sq_A035,False,0,0,0,6.6979482837901,False,False,False,농사 기구 파는 곳,A,dev,category,False
+sq_A035@a,True,3,2,3,2.6754584657992897,False,False,False,농사 기구 파는 곳,A,dev,category,False
+sq_A036,False,3,0,3,15.401627061905621,False,False,True,농사 준비,A,dev,category,False
+sq_A036@a,True,1,1,1,5.43417604816616,False,False,False,농사 준비,A,dev,category,True
+sq_A037,False,1,0,1,18.778273947717,False,False,True,농사에 필요한 기구,A,dev,category,False
+sq_A037@a,True,5,4,5,8.16153582567723,False,False,False,농사에 필요한 기구,A,dev,category,False
+sq_A038,True,1,0,1,6.2866014627185836,False,True,False,농자재 가게,A,dev,category,False
+sq_A038@a,True,1,1,1,4.444640459122544,False,False,False,농자재 가게,A,dev,category,True
+sq_A084,False,1,0,1,7.43842730099137,False,False,True,커튼 가게,A,dev,category,False
+sq_A084@a,True,3,3,3,13.62134805100292,False,False,False,커튼 가게,A,dev,category,True
+sq_A085,False,0,0,0,0.33385078912682475,False,False,False,창문 가리개,A,dev,name,False
+sq_A085@a,True,1,1,1,0.595580924550177,False,False,False,창문 가리개,A,dev,name,False
+sq_A086,True,5,5,5,20.06386255258036,False,False,False,거실 커튼,A,dev,category,False
+sq_A087,True,9,9,9,16.881072419145752,False,False,False,햇빛 가릴 커튼,A,dev,category,True
+sq_A088,True,2,2,2,11.50343170297227,False,False,False,커튼 맞춤 제작,A,dev,category,True
+sq_A088@a,True,2,2,2,9.69461512646228,False,False,False,커튼 맞춤 제작,A,dev,category,False
+sq_A094,True,1,1,1,4.191249576609304,False,False,False,태권도장,A,dev,category,False
+sq_A095,False,0,0,0,11.019349416565591,False,False,False,무술 학원,A,dev,category,False
+sq_A095@a,True,2,1,2,6.077541730983482,False,False,False,무술 학원,A,dev,category,False
+sq_A096,True,13,3,13,25.195289106973437,False,False,False,아이 운동,A,dev,category,True
+sq_A097,False,1,0,1,4.337417405286879,False,False,True,무술 배우는 곳,A,dev,category,False
+sq_A097@a,True,1,1,1,3.669113673978111,False,False,False,무술 배우는 곳,A,dev,category,False
+sq_A098,False,0,0,0,27.407778217661825,False,False,False,태권도 배우는 곳,A,dev,category,False
+sq_A098@a,True,6,6,6,15.28222231876337,False,False,False,태권도 배우는 곳,A,dev,category,False
+sq_A109,False,0,0,0,2.6209667832640213,False,False,False,마라탕집,A,dev,category,False
+sq_A109@a,True,6,6,6,7.3127711982193855,False,False,False,마라탕집,A,dev,category,True
+sq_A110,False,0,0,0,10.937403672974515,False,False,False,마라샹궈,A,dev,category,False
+sq_A110@a,True,1,1,1,6.89637265586308,False,False,False,마라샹궈,A,dev,category,False
+sq_A111,True,1,0,1,16.735882498338306,False,True,False,매운 탕요리,A,dev,category,False
+sq_A111@a,True,0,0,0,20.99038642802292,True,True,False,매운 탕요리,A,dev,category,False
+sq_A112,False,1,0,1,6.734707736286638,False,False,True,마라탕 맛있는 곳,A,dev,category,False
+sq_A112@a,True,1,1,1,5.823220061130546,False,False,False,마라탕 맛있는 곳,A,dev,category,True
+sq_A113,True,1,0,1,13.495202040713384,False,True,False,훠궈,A,dev,category,False
+sq_A113@a,True,1,1,1,19.06407025473192,False,False,False,훠궈,A,dev,category,False
+sq_A114,False,0,0,0,18.834522705335463,False,False,False,청각 보조기,A,dev,category,False
+sq_A114@a,True,1,1,1,6.039134796440709,False,False,False,청각 보조기,A,dev,category,True
+sq_A115,True,1,1,1,5.506900360112288,False,False,False,귀 안 들릴 때,A,dev,category,False
+sq_A116,False,0,0,0,18.764191330412213,False,False,False,보청기 배터리,A,dev,category,False
+sq_A116@a,True,1,1,1,6.868580502378631,False,False,False,보청기 배터리,A,dev,category,False
+sq_A117,True,2,2,2,6.799178745360569,False,False,False,보청기 맞추는 곳,A,dev,category,True
+sq_A118,False,2,0,2,8.825880948027544,False,False,True,난청 센터,A,dev,category,False
+sq_A118@a,True,5,5,5,12.06539624017145,False,False,False,난청 센터,A,dev,category,False
+sq_A157,True,3,3,3,9.973173382469955,False,False,False,공예,A,dev,category,True
+sq_A157@a,True,11,11,11,11.82358610719346,False,False,False,공예,A,dev,category,False
+sq_A158,False,0,0,0,6.157735031594972,False,False,False,가죽 공방,A,dev,category,False
+sq_A158@a,True,1,1,1,4.163115984257786,False,False,False,가죽 공방,A,dev,category,True
+sq_A159,True,3,3,3,11.320710342708896,False,False,False,과일,A,dev,category,False
+sq_A159@a,True,8,8,8,11.5914022404028,False,False,False,과일,A,dev,category,False
+sq_A160,True,11,9,10,20.68901219066406,False,False,False,과일 사는 곳,A,dev,category,True
+sq_A160@a,True,8,8,8,17.189133688882475,False,False,False,과일 사는 곳,A,dev,category,False
+sq_A163,True,4,4,4,19.80881966786445,False,False,False,꽃,A,dev,category,True
+sq_A163@a,True,1,1,1,4.572655617969446,False,False,False,꽃,A,dev,category,False
+sq_A164,True,2,2,2,21.797464656567946,False,False,False,꽃 사는 데,A,dev,category,False
+sq_A164@a,True,6,6,6,21.45477142501352,False,False,False,꽃 사는 데,A,dev,category,False
+sq_A168,True,11,11,11,24.03869796523074,False,False,False,문구,A,dev,category,True
+sq_A169,True,2,0,2,4.280073286167097,False,True,False,학용품 파는 곳,A,dev,category,True
+sq_A169@a,True,2,0,2,8.551566808956238,False,True,False,학용품 파는 곳,A,dev,category,False
+sq_A173,True,1,1,1,6.7690332520107,False,False,False,서점,A,dev,category,True
+sq_A173@a,True,3,3,3,6.699163003306537,False,False,False,서점,A,dev,category,False
+sq_A174,True,1,1,1,14.851854196468828,False,False,False,책 파는 곳,A,dev,category,True
+sq_A177,True,2,2,2,13.316604031251499,False,False,False,수산물,A,dev,category,True
+sq_A177@a,True,17,15,15,20.464490285061277,False,False,False,수산물,A,dev,category,False
+sq_A178,False,0,0,0,4.87658110288984,False,False,False,해산물 파는 곳,A,dev,category,False
+sq_A178@a,True,6,6,6,11.404141885029588,False,False,False,해산물 파는 곳,A,dev,category,True
+sq_A180,True,3,3,3,21.523964337886284,False,False,False,식자재,A,dev,category,True
+sq_A180@a,True,1,1,1,6.118187974913809,False,False,False,식자재,A,dev,category,False
+sq_A181,True,1,0,1,6.394558533259444,False,True,False,쌀 파는 곳,A,dev,category,True
+sq_A181@a,True,3,3,3,12.245545755525203,False,False,False,쌀 파는 곳,A,dev,category,False
+sq_A184,True,45,23,23,42.85963879148133,False,False,False,안경,A,dev,category,False
+sq_A185,True,1,1,1,4.868588280912702,False,False,False,눈 검사하고 안경 맞추기,A,dev,category,False
+sq_A185@a,True,1,1,1,4.713876146636103,False,False,False,눈 검사하고 안경 맞추기,A,dev,category,False
+sq_A186,True,5,5,5,21.000437735604606,False,False,False,애견용품,A,dev,category,True
+sq_A187,False,3,0,3,16.494797130298366,False,False,True,반려동물 용품 파는 곳,A,dev,category,False
+sq_A187@a,True,13,2,12,21.278811092703315,False,False,False,반려동물 용품 파는 곳,A,dev,category,True
+sq_A188,True,5,5,5,7.040554775898584,False,False,False,야채,A,dev,category,False
+sq_A188@a,True,4,4,4,6.811212080819766,False,False,False,야채,A,dev,category,False
+sq_A189,True,6,2,6,14.697950325184802,False,False,False,김장 재료 사는 곳,A,dev,category,False
+sq_A189@a,True,1,0,1,6.4202632892859,False,True,False,김장 재료 사는 곳,A,dev,category,False
+sq_A191,True,1,1,1,4.69303350033177,False,False,False,운동,A,dev,category,False
+sq_A191@a,True,2,0,2,8.473949021416392,False,True,False,운동,A,dev,category,False
+sq_A192,False,3,0,3,6.7465309822688955,False,False,True,운동용품 파는 곳,A,dev,category,False
+sq_A192@a,False,2,0,2,4.742398014563002,False,False,True,운동용품 파는 곳,A,dev,category,False
+sq_A193,True,6,4,6,10.010571252045908,False,False,False,원단,A,dev,category,True
+sq_A193@a,True,4,4,4,14.429228248384408,False,False,False,원단,A,dev,category,False
+sq_A194,False,1,0,1,10.537259142942483,False,False,True,주단,A,dev,category,False
+sq_A194@a,True,35,24,24,31.152780135507584,False,False,False,주단,A,dev,category,True
+sq_A200,True,2,2,2,8.37361791821823,False,False,False,자동차,A,dev,category,True
+sq_A200@a,True,1,1,1,4.666126547011881,False,False,False,자동차,A,dev,category,False
+sq_A201,True,0,0,0,29.44958741721898,True,True,False,타이어,A,dev,category,False
+sq_A201@a,True,7,7,7,14.29497423505331,False,False,False,타이어,A,dev,category,True
+sq_A202,True,1,1,1,4.416083753629995,False,False,False,족발,A,dev,category,False
+sq_A202@a,True,1,1,1,8.50613682881607,False,False,False,족발,A,dev,category,False
+sq_A203,False,0,0,0,7.914381558211409,False,False,False,보쌈,A,dev,category,False
+sq_A203@a,True,1,1,1,7.7049856483764785,False,False,False,보쌈,A,dev,category,False
+sq_A218,True,2,2,2,5.700898447995954,False,False,False,편의점,A,dev,category,False
+sq_A218@a,True,1,1,1,5.5612807150549,False,False,False,편의점,A,dev,category,False
+sq_A219,False,0,0,0,6.3492855371169,False,False,False,편의점 갈 데,A,dev,category,False
+sq_A219@a,True,8,8,8,19.79322525571652,False,False,False,편의점 갈 데,A,dev,category,True
+sq_B004,True,1,1,1,1.058267560407783,False,False,False,파리바게트,B,dev,name,True
+sq_B005,False,1,0,1,1.176515228427406,False,False,True,컴포즈커피,B,dev,name,False
+sq_B005@a,True,2,2,2,2.154680911590475,False,False,False,컴포즈커피,B,dev,name,True
+sq_B015,False,0,0,0,0.5727807360405277,False,False,False,텐퍼센트커피,B,dev,name,False
+sq_B015@a,True,1,1,1,1.1859857846348594,False,False,False,텐퍼센트커피,B,dev,name,True
+sq_B019,False,0,0,0,0.4863518164241885,False,False,False,뚜레쥬르,B,dev,name,False
+sq_B019@a,True,3,3,3,3.0387396348783478,False,False,False,뚜레쥬르,B,dev,name,True
+sq_B021,False,1,0,1,0.7435832783475381,False,False,True,맘스터치,B,dev,name,False
+sq_B021@a,True,1,1,1,1.0683742837145889,False,False,False,맘스터치,B,dev,name,True
+sq_B028,False,1,0,1,1.142570860060579,False,False,True,비비큐,B,dev,name,False
+sq_B028@a,True,1,1,1,1.055863861289849,False,False,False,비비큐,B,dev,name,True
+sq_B029,True,1,1,1,1.2610568881018023,False,False,False,자담치킨,B,dev,name,True
+sq_B029@a,True,1,1,1,1.1276153373517097,False,False,False,자담치킨,B,dev,name,False
+sq_B035,False,1,0,1,0.7121593030799255,False,False,True,BHC,B,dev,name,False
+sq_B035@a,True,1,1,1,1.0568080577711414,False,False,False,BHC,B,dev,name,True
+sq_B043,False,0,0,0,0.5155982812318769,False,False,False,가마치통닭,B,dev,name,False
+sq_B043@a,True,1,1,1,1.0666189092339526,False,False,False,가마치통닭,B,dev,name,True
+sq_B044,False,1,0,1,1.4097459524720959,False,False,True,벌크커피,B,dev,name,False
+sq_B044@a,True,3,3,3,3.12498219840964,False,False,False,벌크커피,B,dev,name,True
+sq_B046,True,1,1,1,1.134829657396175,False,False,False,희랑 원주,B,dev,name,True
+sq_B047,True,1,1,1,0.9041860163840408,False,False,False,문주짓수,B,dev,name,True
+sq_B048,True,1,1,1,1.5169339403545736,False,False,False,안산 고잔 숯토리,B,dev,name,True
+sq_B051,True,1,1,1,1.0834524241293437,False,False,False,고성 성나루횟집,B,dev,name,True
+sq_B056,True,1,1,1,1.0603988203305783,False,False,False,남부민 김천수산,B,dev,name,True
+sq_B057,True,1,1,1,1.035145888205969,False,False,False,순천 웃장 손두부,B,dev,name,True
+sq_B066,True,1,1,1,0.8602612693148889,False,False,False,구리시장 승환상회,B,dev,name,True
+sq_B068,True,1,1,1,1.0734997031267224,False,False,False,신림 봉추찜닭,B,dev,name,True
+sq_B071,True,3,2,3,2.496020677256389,False,False,False,동대문종합시장 CU,B,dev,name,True
+sq_B077,True,1,1,1,1.1252561782446835,False,False,False,알찬김밥,B,dev,name,True
+sq_B078,True,1,1,1,0.9858185183492446,False,False,False,불광동 죽마을,B,dev,name,True
+sq_B080,True,1,1,1,0.9146505364499926,False,False,False,장미미소약국,B,dev,name,True
+sq_B081,True,4,1,4,12.068278560152152,False,False,False,QED 골프 선운점,B,dev,category,True
+sq_B093,True,1,1,1,1.187238811543225,False,False,False,묵동 대박축산,B,dev,name,True
+sq_B096,True,2,2,2,1.4868418920807187,False,False,False,태후사랑 첨단3호,B,dev,name,True
+sq_B102,True,1,1,1,0.9510336176598738,False,False,False,정선 새아네그릇,B,dev,name,True
+sq_B107,True,1,1,1,0.9366896106851844,False,False,False,원주 누나네낙지,B,dev,name,True
+sq_B113,True,1,1,1,0.9769770980147511,False,False,False,삼거리 황소곱창,B,dev,name,True
+sq_B115,True,1,1,1,0.6452677110623071,False,False,False,대전 아카데미 과학모형,B,dev,name,True
+sq_B118,True,1,1,1,1.040128270224023,False,False,False,동래 우진식육점,B,dev,name,True
+sq_B122,True,1,1,1,1.1939415224117629,False,False,False,통영 승리상회,B,dev,name,True
+sq_B124,True,1,1,1,1.076276225069115,False,False,False,평택 사계절식당,B,dev,name,True
+sq_B125,True,1,1,1,1.0253682554459358,False,False,False,부평시장 다모아베이커리,B,dev,name,True
+sq_B126,True,1,1,1,1.0070822245290714,False,False,False,성남 오늘도회땡겨,B,dev,name,True
+sq_B127,True,1,1,1,0.9898532059409193,False,False,False,문경 라망화장품,B,dev,name,True
+sq_B129,True,1,1,1,1.0619574859671363,False,False,False,옥련시장 봉이네축산,B,dev,name,True
+sq_B133,True,1,1,1,1.102397555918076,False,False,False,충주 회풍루,B,dev,name,True
+sq_B143,True,1,1,1,1.1669910038369213,False,False,False,범계 88포장마차,B,dev,name,True
+sq_B154,True,1,1,1,0.983396844750387,False,False,False,선미양장,B,dev,name,True
+sq_B158,True,4,1,4,25.395806895616552,False,False,False,더 베이비,B,dev,category,True
+sq_B163,True,3,1,3,7.4004115193402304,False,False,False,남해안 건어,B,dev,category,True
+sq_B165,True,10,1,10,13.476509098631174,False,False,False,성광 축산,B,dev,category,True
+sq_B171,True,1,1,1,0.907271467155182,False,False,False,공백,B,dev,name,True
+sq_B174,True,1,1,1,0.9570967260404691,False,False,False,화곡 화서가,B,dev,name,True
+sq_B177,True,1,1,1,0.9579721783990537,False,False,False,양동 유동상회,B,dev,name,True
+sq_B180,True,1,1,1,3.4855459876350996,False,False,False,현대자동차 보성점,B,dev,category,True
+sq_B183,True,2,1,2,1.8502206151041036,False,False,False,비헤어,B,dev,name,True
+sq_B186,True,0,0,0,0.23850953364416708,True,True,False,와이투케이,B,dev,name,True
+sq_B191,True,41,1,27,41.14861737204115,False,False,False,대림 침구,B,dev,category,True
+sq_B203,True,7,1,7,11.713895569243808,False,False,False,밝은 경희 한의,B,dev,category,True
+sq_B204,True,1,1,1,9.391365504162,False,False,False,오케이 정형외과,B,dev,category,True
+sq_B205,True,6,1,6,7.436852465417949,False,False,False,아이콘 안경,B,dev,category,True
+sq_B208,True,2,1,2,2.437093911873122,False,False,False,신내챙이 농약,B,dev,category,True
+sq_B213,True,6,1,6,14.850662046501382,False,False,False,선경사 한복,B,dev,category,True
+sq_C008,True,1,0,1,26.06728128967146,False,True,False,보양식 재료 파는 곳,C,dev,category,True
+sq_C008@a,True,2,0,2,13.604041852233646,False,True,False,보양식 재료 파는 곳,C,dev,category,False
+sq_C013,True,1,1,1,7.993232669308199,False,False,False,부모님 선물,C,dev,category,False
+sq_C014,False,1,0,1,11.01380841706154,False,False,True,농장 준비,C,dev,category,False
+sq_C014@a,True,2,2,2,1.912612755742094,False,False,False,농장 준비,C,dev,category,False
+sq_C016,True,1,1,1,4.673171700646418,False,False,False,자전거 수리점,A,dev,category,False
+sq_C021,True,3,3,3,9.25452913585287,False,False,False,이유식 재료 파는 곳,C,dev,category,False
+sq_C023,True,5,3,5,15.808966598417085,False,False,False,생선 가게,A,dev,category,False
+sq_C025,True,0,0,0,0.03107275472253226,True,True,False,집들이 선물,C,dev,category,True
+sq_C030,False,0,0,0,5.987248757701247,False,False,False,안경 맞추는 곳,A,dev,category,False
+sq_C030@a,True,5,5,5,9.942863308055475,False,False,False,안경 맞추는 곳,A,dev,category,False
+sq_C033,True,1,1,1,10.931384125147773,False,False,False,감기 걸리면 가는 병원,C,dev,category,True
+sq_C036,True,6,3,6,8.748158519509895,False,False,False,신경 관련 병원,A,dev,category,False
+sq_C038,True,1,1,1,3.988028995149688,False,False,False,피아노 학원,A,dev,category,False
+sq_C039,True,11,1,11,28.70303532248299,False,False,False,차례상 재료 파는 곳,C,dev,category,True
+sq_C052,True,0,0,0,15.400026759001555,True,True,False,보양식 재료 살 곳,C,dev,category,False
+sq_C057,True,4,2,4,13.950221432370604,False,False,False,어른 선물 살 곳,C,dev,category,False
+sq_C058,True,7,0,7,11.302017754957632,False,True,False,텃밭 농기구,A,dev,category,False
+sq_C058@a,True,1,1,1,7.157672411954955,False,False,False,텃밭 농기구,A,dev,category,False
+sq_C060,True,1,1,1,13.503243956504047,False,False,False,자전거 바람 넣는 곳,A,dev,category,False
+sq_C065,False,0,0,0,0.06045404824698729,False,False,False,이유식 재료 살 곳,C,dev,category,False
+sq_C065@a,False,1,0,1,7.8761916391302425,False,False,True,이유식 재료 살 곳,C,dev,category,False
+sq_C067,True,1,1,1,14.291890716118004,False,False,False,제사용 생선 파는 곳,C,dev,category,False
+sq_C069,True,2,2,2,16.65969828750519,False,False,False,집들이 선물 살 곳,C,dev,category,False
+sq_C074,True,4,3,4,8.69676317661073,False,False,False,눈 검사할 곳,A,dev,category,False
+sq_C077,True,6,0,6,11.203707733163183,False,True,False,목감기 진료,C,dev,category,False
+sq_C080,True,0,0,0,10.830960937273176,True,True,False,난청 진료,C,dev,category,False
+sq_C082,True,1,1,1,7.007035087203117,False,False,False,피아노 레슨,A,dev,category,False
+sq_C083,True,8,1,7,14.511868462303745,False,False,False,차례 음식 재료,C,dev,category,False
+sq_C096,True,1,0,1,26.24161406110752,False,True,False,보양식 재료,C,dev,category,False
+sq_C096@a,True,1,0,1,5.678949041396621,False,True,False,보양식 재료,C,dev,category,False
+sq_C101,True,2,1,2,7.752694455887964,False,False,False,과일 선물세트,A,dev,category,False
+sq_C102,False,0,0,0,12.139387156086352,False,False,False,모종 파는 곳,A,dev,category,False
+sq_C102@a,True,1,1,1,5.1105755974780465,False,False,False,모종 파는 곳,A,dev,category,True
+sq_C108,True,4,0,4,31.387400250864747,False,True,False,이유식 재료,C,dev,category,False
+sq_C110,True,10,10,10,15.790175586523137,False,False,False,제수용 생선,C,dev,category,False
+sq_C112,True,1,0,1,14.79186298862282,False,True,False,집들이 와인 선물,C,dev,category,False
+sq_C112@a,True,3,1,3,9.219498228336345,False,False,False,집들이 와인 선물,C,dev,category,False
+sq_C117,True,4,4,4,7.6874928381800265,False,False,False,돋보기 안경,A,dev,category,False
+sq_C120,True,1,1,1,6.982685204672545,False,False,False,동네 약국,A,dev,category,False
+sq_C123,True,1,1,1,16.863098708561203,False,False,False,보청기 상담,A,dev,category,False
+sq_C124,True,3,2,3,7.45357858832826,False,False,False,차례상 떡 과일,C,dev,category,False
+sq_C132,True,7,5,7,11.464720646385967,False,False,False,도시락 음식,C,dev,category,True
+sq_C133,True,0,0,0,6.481927439862629,True,True,False,예쁜 그릇,A,dev,category,False
+sq_C141,True,16,1,14,12.766853408532127,False,False,False,운동복 매장,A,dev,category,False
+sq_C143,True,1,1,1,14.210368354490404,False,False,False,비상등 매장,A,dev,category,True
+sq_C145,True,2,2,2,16.385438670539646,False,False,False,우산,A,dev,category,False
+sq_C151,True,0,0,0,8.094221442475,True,True,False,손전등,A,dev,category,False
+sq_C151@a,True,2,0,2,17.09799820980273,False,True,False,손전등,A,dev,category,False
+sq_C156,False,1,0,1,9.194573020933376,False,False,True,학생 체육복,A,dev,category,False
+sq_C156@a,True,1,1,1,9.307408440189093,False,False,False,학생 체육복,A,dev,category,False
+sq_C158,True,2,2,2,5.020385758359701,False,False,False,과일 바구니,A,dev,category,False
+sq_C166,True,12,12,12,25.096326545922707,False,False,False,김밥,A,dev,category,False
+sq_C172,True,6,6,6,24.86501743179921,False,False,False,우산 파는 곳,A,dev,category,False
+sq_C174,True,7,7,7,20.47810161672863,False,False,False,아동 체육복,A,dev,category,False
+sq_C180,True,0,0,0,28.539300960300494,True,True,False,소풍 도시락,C,dev,category,False
+sq_D001,True,5,5,5,7.666809425418424,False,False,False,보문산 카페,D,dev,category,True
+sq_D002,True,4,4,4,7.145948754091085,False,False,False,화성 분식,D,dev,category,True
+sq_D003,True,1,1,1,24.22222450049926,False,False,False,을지로 옷가게,D,dev,category,False
+sq_D004,True,60,24,24,49.63087571519435,False,False,False,평화시장 패션,D,dev,category,True
+sq_D021,True,3,3,3,7.56470162400985,False,False,False,표선사거리 치킨,D,dev,category,True
+sq_D022,True,6,6,6,25.84725448315143,False,False,False,명동 귀금속,D,dev,category,True
+sq_D024,True,6,6,6,10.652703050621522,False,False,False,암사종합시장 수산물,D,dev,category,True
+sq_D025,True,8,7,8,24.12262160516562,False,False,False,용봉우치로 세차,D,dev,category,False
+sq_D028,True,42,25,25,38.13125611967495,False,False,False,금산인삼약령시장 약초,D,dev,category,True
+sq_D040,True,9,9,9,10.81289776225985,False,False,False,일곡동 세탁소,D,dev,category,True
+sq_D042,True,14,14,14,18.092982315133092,False,False,False,달서로 식당,D,dev,category,True
+sq_D044,True,5,5,5,10.343617739521616,False,False,False,진잠 칼국수,D,dev,category,True
+sq_D051,True,19,18,18,14.810994036847319,False,False,False,봉담 아울렛 옷가게,D,dev,category,True
+sq_E002,False,1,0,1,13.623900893653083,False,False,True,워터파크,E,dev,category,False
+sq_E008,False,1,0,1,15.612415638096966,False,False,True,쿠팡,E,dev,category,False
+sq_E013,False,1,0,1,14.295515014486526,False,False,True,온누리 잔액조회,E,dev,category,False
+sq_E017,False,0,0,0,6.459048004550011,False,False,False,온누리 환불 방법,E,dev,category,False
+sq_E021,False,0,0,0,0.7067787828358545,False,False,False,신세계,E,dev,name,False
+sq_E023,False,3,0,3,7.075591492484755,False,False,True,5성급 호텔,E,dev,category,False

@@ -47,6 +47,35 @@ def candidates_within(queries: pd.DataFrame, corpus: pd.DataFrame, radius_km: fl
     return out
 
 
+def filter_mask(code_prefix: str, bbox: str, codes: np.ndarray, lats: np.ndarray, lons: np.ndarray) -> np.ndarray | None:
+    """요청별 후보 필터(X2+X3, 2026-11-04). code_prefix: 법정동 코드 앞자리('|'로 여러 개 — 넓은 지역), bbox: 'south,west,north,east'
+    (지도 화면 범위). 둘 다 비면 None — 반경 규칙을 쓴다. colab/service_dense_runs.ipynb의 `# @cell runs`와 같은 규칙."""
+
+    if isinstance(code_prefix, str) and code_prefix:
+        return np.char.startswith(codes.astype(str)[:, None], np.array(code_prefix.split("|"))).any(axis=1)
+    if isinstance(bbox, str) and bbox:
+        s, w, n, e = (float(x) for x in bbox.split(","))
+        return (lats >= s) & (lats <= n) & (lons >= w) & (lons <= e)
+    return None
+
+
+def candidates_filtered(queries: pd.DataFrame, corpus: pd.DataFrame, radius_km: float) -> dict[str, np.ndarray]:
+    """candidates_within에 요청별 필터(code_prefix·bbox 열, 있으면)를 더한 것. 필터가 있는 요청은 반경 대신 필터 안 가맹점."""
+
+    out = candidates_within(queries, corpus, radius_km)
+    if not {"code_prefix", "bbox"} & set(queries.columns):
+        return out
+    codes = corpus["legal_dong_code"].astype(str).to_numpy()
+    lats = corpus["latitude"].to_numpy(dtype=float)
+    lons = corpus["longitude"].to_numpy(dtype=float)
+    for qid, cp, bb in zip(queries["query_id"], queries.get("code_prefix", pd.Series("", index=queries.index)).fillna(""),
+                           queries.get("bbox", pd.Series("", index=queries.index)).fillna(""), strict=True):
+        m = filter_mask(cp, bb, codes, lats, lons)
+        if m is not None:
+            out[qid] = np.flatnonzero(m)
+    return out
+
+
 def distances_km(queries: pd.DataFrame, corpus: pd.DataFrame, cands: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     lats = corpus["latitude"].to_numpy(dtype=float)
     lons = corpus["longitude"].to_numpy(dtype=float)
@@ -88,13 +117,44 @@ def query_keywords(query: str) -> list[str]:
     return [t for t in TOKEN_RE.findall(query) if len(t) >= 2 and t not in KEYWORD_STOPWORDS]
 
 
-def lexical_query(query: str, region_text: str = "") -> str:
+def lexical_query(query: str, region_text: str = "", drop: set[str] | frozenset[str] = frozenset()) -> str:
     """pool용 BM25 쿼리: 서술어·장소어('파는', '곳')와 지역 표현을 뺀 단어. 후보는 이미 반경 안이라 지역 단어는
-    지점명이 같은 아무 가게나 끌어온다('뚝섬 식당' → '○○ 뚝섬유원지역점'). 남는 단어가 없으면 원래 쿼리."""
+    지점명이 같은 아무 가게나 끌어온다('뚝섬 식당' → '○○ 뚝섬유원지역점'). `drop`(지점 접미사 '선운점' 등, branch_suffixes)도
+    같은 이유로 뺀다 — 'QED 골프 선운점'이 타이어프로 선운점·벌크커피 선운점을 끌어왔다(2026-11-05 P0). 남는 단어가 없으면 원래 쿼리."""
 
     region = set(TOKEN_RE.findall(region_text or ""))
     words = [w for w in query_keywords(query) if w not in region]
-    return " ".join(words) or query
+    kept = [w for w in words if w not in drop]
+    return " ".join(kept or words) or query
+
+
+def dense_query(query: str, region_text: str = "") -> str:
+    """임베딩 쿼리: 쿼리 이해가 찾은 지역 표현(region_text)의 단어를 뺀 나머지(띄어 쓴 단어 단위, 서술어는 그대로 — 임베딩은 문장을
+    본다). 지역 범위는 반경·필터로 이미 정해지므로 지명을 임베딩에 넣으면 상호에 그 지명이 든 가게('세종 모두의 미술학원' →
+    세종종합공구, '고암 디저트' → 투다리 고암점)를 끌어온다(2026-11-09 test 정성 점검). 남는 말이 없으면 원래 쿼리."""
+
+    region = set(TOKEN_RE.findall(region_text or ""))
+    if not region:
+        return query
+    kept = [w for w in query.split() if w not in region]
+    return " ".join(kept) or query
+
+
+def branch_suffixes(corpus: pd.DataFrame, min_stores: int = 3, max_item_hits: int = 20) -> frozenset[str]:
+    """지점 접미사('선운점', '보성점', '중앙점'): 상호 끝 3~5글자가 '…점'인 가게가 min_stores곳 이상이고, '점'을 뗀 말이 취급품목에
+    거의 안 나오는 것. 업종어('정육점', '편의점', '문구점', '안경점' — 품목에 '정육'·'편의'·'문구'·'안경'이 흔함)는 빠진다."""
+
+    counts: dict[str, int] = {}
+    for n in corpus["store_name"].fillna("").map(lambda x: re.sub(r"[\s)\]]+$", "", x)):
+        if n.endswith("점") and len(n) >= 4:
+            for k in (3, 4, 5):
+                if len(n) > k:
+                    counts[n[-k:]] = counts.get(n[-k:], 0) + 1
+    sub: dict[str, int] = {}                      # 품목에 든 2~4글자 부분 문자열 → 가게 수
+    for it in corpus["item_text"].fillna("").str.replace(" ", "", regex=False):
+        for g in {it[i:i + k] for k in (2, 3, 4) for i in range(len(it) - k + 1)}:
+            sub[g] = sub.get(g, 0) + 1
+    return frozenset(t for t, c in counts.items() if c >= min_stores and sub.get(t[:-1], 0) < max_item_hits)
 
 
 def keyword_run(qid: str, query: str, cand_idx: np.ndarray, texts: np.ndarray, doc_ids: np.ndarray, depth: int,
