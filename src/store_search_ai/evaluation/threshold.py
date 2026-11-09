@@ -20,7 +20,21 @@ FEATURE_SETS = {"logistic": ["score", "gap", "log_rank"], "logistic_bm25": ["sco
                 # P2(b), 2026-11-09: 가게 텍스트 특성 — 정성 점검의 함정('모종' → 모녀국수(품목 없음, 상호 글자만), '다이어트 음식' →
                 # 품목이 '음식'뿐인 가게)을 겨냥
                 "logistic_plus": ["score", "gap", "log_rank", "bm25_rel", "kw_item", "kw_name_only", "item_words", "item_freq"]}
+FEATURE_SETS["logistic_cos"] = ["score", "gap", "log_rank", "bm25_rel", "cos"]
+# 2026-11-09 test 정성 점검: score는 쿼리 안 min-max라 임베딩 1위가 늘 1 → 업종 묶음에서 1위가 늘 P ≈ 0.505(맞는 가게가 없어도
+# '관련'). 정규화 전 코사인(절대 크기)을 더해 '1위지만 실제로는 먼 가게'를 구분한다.
 TEXT_FEATURES = ("kw_item", "kw_name_only", "item_words", "item_freq")
+
+
+def add_cosine(cands: pd.DataFrame, base_of: dict, cos: dict) -> pd.DataFrame:
+    """cos = 쿼리 문장과 가게의 v1 코사인(정규화 전). cos: (기준 쿼리 ID, doc_id) → 코사인(v1 run 점수 + P2(a) 쌍 코사인).
+    없는 쌍은 그 사례에서 아는 코사인의 최솟값(임베딩 상위 50 밖이면 50위보다 낮다 — 위쪽 추정)으로 채운다.
+    서비스(백엔드)는 모든 후보의 실제 코사인을 계산하므로 채움이 필요 없다."""
+
+    v = np.array([cos.get((base_of.get(i), d), np.nan) for i, d in zip(cands["instance_id"], cands["doc_id"], strict=True)])
+    c = cands.assign(cos=v)
+    c["cos"] = c["cos"].fillna(c.groupby("instance_id")["cos"].transform("min")).fillna(0.0)
+    return c
 
 
 def _norm(text: object) -> str:

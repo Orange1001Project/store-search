@@ -194,6 +194,10 @@ def load_runs_x23(bdir: Path, req: pd.DataFrame) -> pd.DataFrame:
         ids = p0_requests(bdir) & set(redo["query_id"])
         drop = runs["query_id"].isin(ids) & runs["system"].isin(set(redo["system"]))
         runs = pd.concat([runs[~drop], redo[redo["query_id"].isin(ids)]], ignore_index=True)
+    from eval_service_pipeline import DENSE_QUERY, V1, overlay_dense
+
+    if DENSE_QUERY["mode"] == "no_region":   # 지역 단어 뺀 임베딩 쿼리(export_noregion.py → runs_x23nr)
+        runs = overlay_dense(runs, bdir / "runs_x23nr" / f"{V1}.csv", system_col=True)
     return runs
 
 

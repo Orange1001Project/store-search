@@ -37,6 +37,7 @@ from eval_service_pipeline import (
     load_pair_cosine,
     load_runs,
     parsed_queries,
+    set_dense_query,
     union_v1,
     within_radius,
 )
@@ -50,6 +51,7 @@ from store_search_ai.evaluation.service_eval import (
 from store_search_ai.evaluation.threshold import (
     BINARY,
     FEATURE_SETS,
+    add_cosine,
     add_features,
     add_text_features,
     calibration_metrics,
@@ -70,7 +72,10 @@ from store_search_ai.retrieval.fusion import boost
 
 logger = logging.getLogger(__name__)
 OUT = Path("results/service_pipeline/x1")
-KINDS = ("isotonic", "logistic", "logistic_bm25", "logistic_plus")
+KINDS = ("isotonic", "logistic", "logistic_bm25")
+# 실험용(채택 안 함 — 기본 비교에 넣으면 log-loss로 자동 선택돼 정책 계수가 바뀐다): --kinds로 켠다
+# logistic_plus = P2(b) 가게 텍스트(11-23), logistic_cos = 정규화 전 코사인(11-26)
+EXTRA_KINDS = ("logistic_plus", "logistic_cos")
 GRID = np.round(np.arange(0.10, 0.951, 0.05), 2)
 FOLDS = 5
 SEED = 20261104
@@ -93,6 +98,7 @@ def parse_instances(instances: pd.DataFrame, corpus_path: str) -> pd.DataFrame:
 
 
 TEXT: dict = {}   # main()이 채움: keywords(사례 → 쿼리 단어), profile(store_profile)
+COS: dict = {}    # main()이 채움: base(사례 → 쿼리 ID), cos((쿼리 ID, doc_id) → v1 코사인)
 
 
 def candidates(stage: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame, qrels: pd.DataFrame,
@@ -102,6 +108,8 @@ def candidates(stage: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFram
     r = add_features(r)
     if TEXT:
         r = add_text_features(r, TEXT["keywords"], TEXT["profile"])
+    if COS:
+        r = add_cosine(r, COS["base"], COS["cos"])
     r = r.merge(instances[["instance_id", "query_id", "bundle"]], on="instance_id").merge(parsed[["instance_id", "group"]],
                                                                                           on="instance_id")
     return r.merge(qrels, on=["query_id", "doc_id"], how="left").assign(radius_km=radius)
@@ -133,6 +141,10 @@ def main() -> None:
     parser.add_argument("--llm", default="Qwen2.5-14B-Instruct")
     parser.add_argument("--full-cosine", action="store_true", help="P2(a): 모든 후보에 실제 v1 코사인")
     parser.add_argument("--out", default=str(OUT), help="출력 폴더(기본 results/service_pipeline/x1) — 비교용은 다른 폴더로")
+    parser.add_argument("--kinds", nargs="+", choices=[*KINDS, *EXTRA_KINDS], default=list(KINDS),
+                        help="비교할 보정 모델(기본: 채택 후보 3개)")
+    parser.add_argument("--dense-query", choices=["full", "no_region"], default="full",
+                        help="임베딩 쿼리 문장: 쿼리 전체 / 지역 단어 뺀 문장(export_noregion.py의 Colab 결과)")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     args = parser.parse_args()
@@ -151,6 +163,7 @@ def main() -> None:
     coords = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "latitude", "longitude", "geo_status"])
     coords = coords[coords["geo_status"] == "VALID"]
     names = pd.read_parquet(bench["corpus_path"], columns=["doc_id", "store_name"]).set_index("doc_id")["store_name"]
+    set_dense_query(args.dense_query, bdir)
     runs = load_runs(bdir)
     bm25 = (runs["char_bm25"].rename(columns={"query_id": "instance_id", "score": "bm25"})[["instance_id", "doc_id", "bm25"]]
             .drop_duplicates(["instance_id", "doc_id"]))
@@ -196,6 +209,7 @@ def main() -> None:
                   0.5, "v1+name(qu+alias) b=0.5")
     from store_search_ai.data.service_pool import branch_suffixes
 
+    COS.update(base=dict(zip(instances["instance_id"], instances["query_id"], strict=True)), cos=load_pair_cosine())
     TEXT["profile"] = store_profile(geo)
     ix = instances.set_index("instance_id")
     TEXT["keywords"] = query_keywords_for(ix["query"], ix["region_text"], branch_suffixes(geo))
@@ -224,7 +238,7 @@ def main() -> None:
         answerable = set(iq[(iq["dist_km"] <= radius) & (iq["relevance"] >= BINARY)]["instance_id"])
         judged = cands["relevance"].notna().to_numpy()
         y = (cands["relevance"] >= BINARY).to_numpy(int)
-        for kind in KINDS:
+        for kind in args.kinds:
             p = oof_predictions(cands, kind)
             for g in ["전체", "name", "category"]:
                 m = judged & (True if g == "전체" else (cands["group"] == g).to_numpy())

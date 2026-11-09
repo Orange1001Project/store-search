@@ -40,12 +40,13 @@ from build_x23_round import (
     p0_pending,
     policy_runs,
 )
-from eval_service_pipeline import BRAND_MIN, load_pair_cosine
+from eval_service_pipeline import BRAND_MIN, load_pair_cosine, set_dense_query
 
 from store_search_ai.data.service_pool import filter_mask, haversine_km
 from store_search_ai.evaluation.threshold import (
     BINARY,
     TEXT_FEATURES,
+    add_cosine,
     add_features,
     add_text_features,
     query_keywords_for,
@@ -77,6 +78,7 @@ def tier_order(shown: list, near: set, prob: dict, brand: set, strong: float) ->
     return b + first + [d for d in shown if d not in lead]
 
 
+COS_CACHE: dict = {}    # main()이 채움: base(요청 → 기준 쿼리 ID), cos(load_pair_cosine)
 TEXT_CACHE: dict = {}   # main()이 채움(P2(b)): keywords(요청 → 쿼리 단어), profile(store_profile)
 
 
@@ -89,6 +91,8 @@ def relevance_features(stage: pd.DataFrame, raw: pd.DataFrame, calibrator: dict)
     f = add_features(f.merge(bm.drop_duplicates(["instance_id", "doc_id"]), on=["instance_id", "doc_id"], how="left"))
     if set(calibrator["features"]) & set(TEXT_FEATURES):   # P2(b) 가게 텍스트 특성
         f = add_text_features(f, TEXT_CACHE["keywords"], TEXT_CACHE["profile"])
+    if "cos" in calibrator["features"]:   # 정규화 전 코사인(2026-11-09)
+        f = add_cosine(f, COS_CACHE["base"], COS_CACHE["cos"])
     return f
 
 
@@ -193,6 +197,7 @@ def score_list(docs: list[str], judged: dict[str, int], pool_rel: list[int]) -> 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--split", choices=["dev", "test"], default="dev")
+    parser.add_argument("--dense-query", choices=["full", "no_region"], help="임베딩 쿼리 문장(기본: 정책 ranking.dense_query)")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument("--policy", default="configs/service/search_policy_v1.yaml")
@@ -227,6 +232,8 @@ def main() -> None:
     req = load_requests(cfg)
     req = req[req["split"] == args.split].reset_index(drop=True)
     corpus = load_corpus(bench)
+    dq = args.dense_query or policy["ranking"].get("dense_query", "full")
+    set_dense_query(dq, bdir)
     raw = load_runs_x23(bdir, req)
     raw = raw[raw["query_id"].isin(req["query_id"])]
     if DENSE not in set(raw["system"]):
@@ -249,6 +256,8 @@ def main() -> None:
     runs = policy_runs(raw, req, corpus, gamma, cats, expansion, cosine, args.cosine_scope, exact)
     logger.info("업종 가산점 γ = %.2f", gamma)
     intents = dict(zip(req["query_id"], req["intent"], strict=True))
+    if "cos" in calibrator["features"]:
+        COS_CACHE.update(base=dict(zip(req["query_id"], req["base_query_id"], strict=True)), cos=cosine or load_pair_cosine())
     if set(calibrator["features"]) & set(TEXT_FEATURES):
         from store_search_ai.data.service_pool import branch_suffixes
 

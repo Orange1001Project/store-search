@@ -128,6 +128,18 @@ def lexical_query(query: str, region_text: str = "", drop: set[str] | frozenset[
     return " ".join(kept or words) or query
 
 
+def dense_query(query: str, region_text: str = "") -> str:
+    """임베딩 쿼리: 쿼리 이해가 찾은 지역 표현(region_text)의 단어를 뺀 나머지(띄어 쓴 단어 단위, 서술어는 그대로 — 임베딩은 문장을
+    본다). 지역 범위는 반경·필터로 이미 정해지므로 지명을 임베딩에 넣으면 상호에 그 지명이 든 가게('세종 모두의 미술학원' →
+    세종종합공구, '고암 디저트' → 투다리 고암점)를 끌어온다(2026-11-09 test 정성 점검). 남는 말이 없으면 원래 쿼리."""
+
+    region = set(TOKEN_RE.findall(region_text or ""))
+    if not region:
+        return query
+    kept = [w for w in query.split() if w not in region]
+    return " ".join(kept) or query
+
+
 def branch_suffixes(corpus: pd.DataFrame, min_stores: int = 3, max_item_hits: int = 20) -> frozenset[str]:
     """지점 접미사('선운점', '보성점', '중앙점'): 상호 끝 3~5글자가 '…점'인 가게가 min_stores곳 이상이고, '점'을 뗀 말이 취급품목에
     거의 안 나오는 것. 업종어('정육점', '편의점', '문구점', '안경점' — 품목에 '정육'·'편의'·'문구'·'안경'이 흔함)는 빠진다."""

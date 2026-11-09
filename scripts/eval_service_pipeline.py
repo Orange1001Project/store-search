@@ -69,6 +69,39 @@ BRAND_MIN = 50.0
 DOC_TEXT_COLUMN = "search_text_t1_minimal"   # 모델 평가·판정 pool과 같은 문서 텍스트(가맹점명 + 취급품목)
 
 
+# 임베딩 쿼리 문장(2026-11-09, test 정성 점검 1번): full = 쿼리 전체(기존), no_region = 쿼리 이해의 지역 단어를 뺀 문장
+# (service_pool.dense_query). no_region이면 문장이 바뀐 사례·요청의 v1 run·코사인을 Colab 결과(scripts/export_noregion.py)로 바꾼다.
+DENSE_QUERY = {"mode": "full"}
+NR_KEY: dict[str, str] = {}   # 사례·요청 ID → 'nr:' + 새 문장(문장이 바뀐 것만) — 코사인 사전의 키
+
+
+def set_dense_query(mode: str, bdir: Path) -> None:
+    from store_search_ai.data.service_pool import dense_query
+
+    DENSE_QUERY["mode"] = mode
+    NR_KEY.clear()
+    if mode != "no_region":
+        return
+    for path, idc in [(bdir / "instances.csv", "instance_id"), (bdir / "x23" / "requests.csv", "query_id")]:
+        t = pd.read_csv(path, encoding="utf-8-sig", keep_default_na=False)
+        for i, q, r in zip(t[idc], t["query"], t["region_text"], strict=True):
+            nq = dense_query(q, r)
+            if nq != q:
+                NR_KEY[i] = "nr:" + nq
+    logger.info("임베딩 쿼리 = 지역 단어 뺀 문장: 바뀐 사례·요청 %d개", len(NR_KEY))
+
+
+def overlay_dense(runs: pd.DataFrame, path: Path, system_col: bool = False) -> pd.DataFrame:
+    """no_region일 때 문장이 바뀐 사례·요청의 임베딩 행을 새 run(path)으로 바꾼다."""
+
+    if not path.exists():
+        raise SystemExit(f"{path}가 없습니다 — scripts/export_noregion.py → colab/service_dense_runs.ipynb")
+    redo = pd.read_csv(path, encoding="utf-8-sig")
+    ids = set(redo["query_id"]) & set(NR_KEY)
+    drop = runs["query_id"].isin(ids) & (runs["system"].isin(set(redo["system"])) if system_col else True)
+    return pd.concat([runs[~drop], redo[redo["query_id"].isin(ids)]], ignore_index=True)
+
+
 def load_runs(bdir: Path) -> dict[str, pd.DataFrame]:
     runs: dict[str, list[pd.DataFrame]] = {}
     from build_service_pool import (
@@ -78,7 +111,10 @@ def load_runs(bdir: Path) -> dict[str, pd.DataFrame]:
     for d in RUN_DIRS:
         for path in sorted((bdir / d).glob("*.csv")):
             runs.setdefault(path.stem, []).append(pd.read_csv(path, encoding="utf-8-sig"))
-    return {k: pd.concat(v, ignore_index=True) for k, v in runs.items()}
+    out = {k: pd.concat(v, ignore_index=True) for k, v in runs.items()}
+    if DENSE_QUERY["mode"] == "no_region":
+        out[V1] = overlay_dense(out[V1], bdir / "runs_nr" / f"{V1}.csv")
+    return out
 
 
 def hybrid_variants(runs: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
@@ -288,7 +324,15 @@ def load_pair_cosine(model: str = V1) -> dict:
         if p.exists():
             r = pd.read_csv(p, encoding="utf-8-sig", usecols=["query_id", "doc_id", "score"])
             frames.append(r.assign(query_id=r["query_id"].map(base)).rename(columns={"score": "cosine"}).dropna(subset=["query_id"]))
-    allc = pd.concat(frames, ignore_index=True).drop_duplicates(["query_id", "doc_id"])
+    if DENSE_QUERY["mode"] == "no_region":   # 새 문장의 코사인(키 'nr:' + 문장): 쌍 코사인 + 새 run 점수
+        nr = P2_DIR / f"pair_cosine_{model}_nr.csv"
+        if not nr.exists():
+            raise SystemExit(f"{nr}가 없습니다 — scripts/export_noregion.py → colab/pair_cosine.ipynb")
+        frames.append(pd.read_csv(nr, encoding="utf-8-sig", dtype={"query_id": str, "doc_id": str})[["query_id", "doc_id", "cosine"]])
+        for d in ("runs_nr", "runs_x23nr"):
+            r = pd.read_csv(bdir / d / f"{model}.csv", encoding="utf-8-sig", usecols=["query_id", "doc_id", "score"])
+            frames.append(r.assign(query_id=r["query_id"].map(NR_KEY)).rename(columns={"score": "cosine"}).dropna(subset=["query_id"]))
+    allc = pd.concat(frames, ignore_index=True).drop_duplicates(["query_id", "doc_id"], keep="last")
     return dict(zip(zip(allc["query_id"], allc["doc_id"], strict=True), allc["cosine"], strict=True))
 
 
@@ -299,7 +343,8 @@ def augment_v1(v1: pd.DataFrame, extra: pd.DataFrame, base_of, cos: dict) -> pd.
     have = set(zip(v1["query_id"], v1["doc_id"], strict=True))
     e = extra[["query_id", "doc_id"]].drop_duplicates()
     e = e[[(q, d) not in have for q, d in zip(e["query_id"], e["doc_id"], strict=True)]]
-    e = e.assign(score=[cos.get((base_of.get(q, q), d), np.nan) for q, d in zip(e["query_id"], e["doc_id"], strict=True)])
+    e = e.assign(score=[cos.get((NR_KEY.get(q) or base_of.get(q, q), d), np.nan)
+                        for q, d in zip(e["query_id"], e["doc_id"], strict=True)])
     if e["score"].isna().any():
         logger.warning("코사인 없는 후보 쌍 %d개는 v1에 더하지 않음(BM25 최솟값 처리 그대로)", int(e["score"].isna().sum()))
     out = pd.concat([v1[["query_id", "doc_id", "score"]], e.dropna(subset=["score"])], ignore_index=True)

@@ -41,6 +41,7 @@ from eval_service_pipeline import (
     load_pair_cosine,
     load_runs,
     parsed_queries,
+    set_dense_query,
     summarize,
     union_v1,
     within_radius,
@@ -124,6 +125,8 @@ def main() -> None:
     parser.add_argument("--pool-round", help="확장 구성(exp)들의 반경별 상위 10 중 미판정 쌍 → 판정 라운드(dev+test 모든 사례, 예: service_v12)")
     parser.add_argument("--dry-run", action="store_true", help="--pool-round: 판정 건수만")
     parser.add_argument("--pool-w", type=float, nargs="+", default=list(EXP_W), help="--pool-round: 판정할 확장 가중치")
+    parser.add_argument("--dense-query", choices=["full", "no_region"], default="full",
+                        help="임베딩 쿼리 문장: 쿼리 전체 / 지역 단어 뺀 문장(export_noregion.py의 Colab 결과)")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     args = parser.parse_args()
@@ -149,6 +152,7 @@ def main() -> None:
     names = corpus.set_index("doc_id")["store_name"]
     radii = cfg["judging"]["report_radii_km"]
 
+    set_dense_query(args.dense_query, bdir)
     runs = load_runs(bdir)
     ids = set(instances["instance_id"])
     parsed = parsed_queries(instances, bench["corpus_path"])
