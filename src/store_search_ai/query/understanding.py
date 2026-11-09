@@ -2,7 +2,7 @@
 
 - 지역: 코퍼스 주소·시장명으로 만든 지명 사전 + 공공데이터 지명 사전(data/gazetteer.py — 가맹점이 없는 명동·역·시장도). 시도·시군구·
   읍면·동·도로명·시장명·역과 그 줄임말("성남시"→"성남", "불광동"→"불광", "구리전통시장"→"구리"). 줄임말은 상품어와 겹치면 쓰지 않는다
-  ("우산"은 우산동이 아니라 상품). 같은 이름이 여러 곳이면(고성군 2곳, 중앙동 수십 곳) 시군구별 후보 중 사용자 30km 안이고 가맹점이
+  ("우산"은 우산동이 아니라 상품). 같은 이름이 여러 곳이면(고성군 2곳, 중앙동 수십 곳) 시군구별 후보 중 검색 중심 30km 안이고 가맹점이
   있는 가장 가까운 곳(지도 검색의 근접 우선), 없으면 공공데이터 근거가 많은 곳(인지도 대리값)을 고르고 나머지는 선택지로 둔다.
   결과(Region)는 검색 범위 — 넓은 지역(시도·시군구·읍면)은 법정동 코드 앞자리, 좁은 지역(동·역·시장)은 중심에서 반경.
 - 상호·브랜드: 지역을 뺀 나머지가 가게 이름과 서로 포함되면(3글자 이상) 상호 쿼리로 본다. 업종어가 들어 있거나("곱창 구이")
@@ -41,9 +41,9 @@ QUERY_SUFFIXES = ("역", "시장", "사거리", "삼거리", "오거리", "동",
 GENERIC = {"가게", "곳", "데", "집", "파는", "사는", "하는", "먹을", "먹는", "배우는", "동네", "근처", "주변", "맛집", "온누리"}
 # 지역을 꾸미는 일반어('강남 맛집', '망원 근처') — 남는 말이 이것뿐이어도 앞 토큰은 지역으로 둔다
 REGION_MODIFIERS = {"동네", "근처", "주변", "맛집", "온누리"}
-NEAR_KM = 30.0   # 같은 지명이 여러 곳일 때 이 거리 안에 있으면 사용자 근처를 고른다(생활권)
+NEAR_KM = 30.0   # 같은 지명이 여러 곳일 때 이 거리 안에 있으면 검색 중심 근처를 고른다(생활권)
 NAME_FIRST_KM = 10.0   # 최대 검색 반경(회의 결정). 이 안에 쿼리 전체와 이름이 맞는 가게가 있으면 상호 검색을 먼저
-POINT_KM = 1.0   # 좁은 지역(동·역·시장)의 첫 반경 — 사용자 위치와 같은 규칙(1km → 10km)
+POINT_KM = 1.0   # 좁은 지역(동·역·시장)의 첫 반경 — 검색 중심(지도 위치)과 같은 규칙(1km → 10km)
 # 지명 사전(공공데이터) 종류별로 중심 좌표를 믿는 순서. 동 중심을 시군구 중심으로 대신한 것(center_source=sigungu)은 맨 뒤
 CENTER_PRIORITY = ("station", "market", "hdong", "dong", "sido", "city", "sigungu", "eupmyeon")
 AREA_KINDS = ("sido", "city", "sigungu", "eupmyeon")
@@ -163,8 +163,8 @@ class ParsedQuery:
     intent: str                       # name | brand | category
     name_doc_idx: np.ndarray = field(default_factory=lambda: np.array([], dtype=int))
     name_key: str = ""                # 상호 일치에 쓸 말. 보통 core, 띄어 쓴 상호('남양 수산')면 쿼리 전체
-    # 쿼리 전체가 사용자 NAME_FIRST_KM 안 가게 이름에 들어 있음('신촌 설렁탕' → 근처 '신촌설렁탕'). 검색은 지역 필터 대신
-    # 사용자 위치에서 상호 검색을 먼저 하고, 파싱한 지역은 다른 해석(선택지)으로 둔다.
+    # 쿼리 전체가 검색 중심 NAME_FIRST_KM 안 가게 이름에 들어 있음('신촌 설렁탕' → 근처 '신촌설렁탕'). 검색은 지역 필터 대신
+    # 검색 중심에서 상호 검색을 먼저 하고, 파싱한 지역은 다른 해석(선택지)으로 둔다.
     name_first: bool = False
 
     @property
@@ -307,7 +307,7 @@ class QueryUnderstanding:
         if any(c.scope == "area" and c.kinds - {"corpus"} for c in out):
             out = [c for c in out if not (c.scope == "area" and c.kinds == {"corpus"})]
         # 후보가 전부 가맹점 주소·시장 이름에서만 나왔고 근거 가게도 적으면 지명이 아니다('겨울 패딩'의 겨울 = 주소 1곳). 다른 근거가
-        # 있는 이름이면 작은 후보도 남긴다 — 버리면 사용자 근처의 작은 '현대'를 놓치고 먼 현대시장으로 넘어간다(2026-11-05 P0)
+        # 있는 이름이면 작은 후보도 남긴다 — 버리면 검색 중심 근처의 작은 '현대'를 놓치고 먼 현대시장으로 넘어간다(2026-11-05 P0)
         if out and all(c.kinds == {"corpus"} and len(c.docs) < self.min_corpus_place_docs for c in out):
             return []
         return out
@@ -335,7 +335,9 @@ class QueryUnderstanding:
 
         return cls._contains(a, b) or cls._contains(b, a)
 
-    def parse(self, query: str, user_lat: float | None = None, user_lon: float | None = None) -> ParsedQuery:
+    def parse(self, query: str, center_lat: float | None = None, center_lon: float | None = None) -> ParsedQuery:
+        # center = 검색 중심(정책 location.priority로 정한 지도 포커스 — 10-30 회의). GPS 좌표를 따로 넣지 않는다.
+        # 같은 지명 여러 곳(NEAR_KM), 상호 우선(NAME_FIRST_KM), 브랜드 거리순, 상호 완전 일치 50km 모두 이 점 기준(PR #9 리뷰 1번)
         tokens = query.split()
         found = {i: v for i, t in enumerate(tokens) if (v := self._place(t))}
         # 지역은 쿼리 앞이나 뒤에 붙는다 — 가운데 토큰만 지명이면 상호의 일부일 가능성이 커서 앞·뒤에서 이어진 것만 쓴다
@@ -347,13 +349,13 @@ class QueryUnderstanding:
         # '우산 파는 곳' — 남는 게 서술·장소어뿐이면 그 토큰이 찾는 대상. '강남 맛집'·'망원 근처'는 지역을 남긴다
         if rest and all(t in GENERIC - REGION_MODIFIERS for t in rest):
             region_pos = []
-        region = (self._resolve([tokens[i] for i in region_pos], [found[i] for i in region_pos], user_lat, user_lon)
+        region = (self._resolve([tokens[i] for i in region_pos], [found[i] for i in region_pos], center_lat, center_lon)
                   if region_pos else None)
         core = " ".join(t for i, t in enumerate(tokens) if i not in set(region_pos))
         intent, name_idx = self._intent(core)
         # '남양 수산', '영암 한우' — 띄어 쓴 상호의 앞부분이 지명과 같은 경우. 지역은 그대로 두고(수원 갈비·강남 치과의 지역을
         # 지우지 않게), 상호 일치는 쿼리 전체로 본다: 지명 끝말(동·역·시장…)이 없고 붙여 쓴 쿼리가 실제 상호에 들어 있을 때.
-        # 그 가게가 사용자 NAME_FIRST_KM 안에 있으면 상호 검색을 먼저 한다(name_first, 지도 검색의 상호 우선 관례).
+        # 그 가게가 검색 중심 NAME_FIRST_KM 안에 있으면 상호 검색을 먼저 한다(name_first, 지도 검색의 상호 우선 관례).
         name_key = core
         name_first = False
         if region_pos and not any(tokens[i].endswith(PLACE_ENDINGS) for i in region_pos):
@@ -362,8 +364,8 @@ class QueryUnderstanding:
                 hit = np.flatnonzero(self._names_s.str.contains(whole, regex=False).to_numpy())
                 if len(hit):
                     name_key = query
-                    if user_lat is not None and user_lon is not None:
-                        d = np.hypot(self.lat[hit] - user_lat, (self.lon[hit] - user_lon) * 0.8) * 111
+                    if center_lat is not None and center_lon is not None:
+                        d = np.hypot(self.lat[hit] - center_lat, (self.lon[hit] - center_lon) * 0.8) * 111
                         name_first = bool((d <= NAME_FIRST_KM).any())
         return ParsedQuery(query, region, core, intent, name_idx, name_key, name_first)
 
@@ -383,20 +385,20 @@ class QueryUnderstanding:
             prev = cands
         return pos
 
-    def _resolve(self, tokens: list[str], cand_lists: list[list[Candidate]], user_lat, user_lon) -> Region:
+    def _resolve(self, tokens: list[str], cand_lists: list[list[Candidate]], center_lat, center_lon) -> Region:
         # 가장 좁은 토큰(시도 단위가 아닌 것, 여럿이면 뒤쪽)의 후보 중 다른 토큰과 같은 곳인 것
         main = min(range(len(tokens)), key=lambda i: (all(len(c.unit) == 2 for c in cand_lists[i]), -i))
         cands = [c for c in cand_lists[main]
                  if all(any(self._compatible(c, o) for o in cand_lists[j]) for j in range(len(tokens)) if j != main)]
         cands = cands or cand_lists[main]
-        has_user = user_lat is not None and user_lon is not None
+        has_center = center_lat is not None and center_lon is not None
 
         def dist(c: Candidate) -> float:
             if c.kinds == frozenset({"dong"}) and c.center_is_proxy:
                 return np.inf                                       # 좌표 근거가 없는 법정동(가게·행정동 없음) — 거리를 잴 수 없다
-            d = float(np.hypot(c.lat - user_lat, (c.lon - user_lon) * 0.8) * 111)
-            if c.scope == "area" and len(c.docs):                   # 사용자가 그 지역 안(2km 안에 그 지역 가게)이면 0
-                inside = np.hypot(self.lat[c.docs] - user_lat, (self.lon[c.docs] - user_lon) * 0.8) * 111
+            d = float(np.hypot(c.lat - center_lat, (c.lon - center_lon) * 0.8) * 111)
+            if c.scope == "area" and len(c.docs):                   # 검색 중심이 그 지역 안(2km 안에 그 지역 가게)이면 0
+                inside = np.hypot(self.lat[c.docs] - center_lat, (self.lon[c.docs] - center_lon) * 0.8) * 111
                 d = 0.0 if float(np.nanmin(inside)) <= 2.0 else d
             return d
 
@@ -420,7 +422,7 @@ class QueryUnderstanding:
 
         chosen = cands[0]
         if len(cands) > 1:
-            near = [c for c in cands if dist(c) <= NEAR_KM and searchable(c)] if has_user else []
+            near = [c for c in cands if dist(c) <= NEAR_KM and searchable(c)] if has_center else []
             chosen = min(near, key=dist) if near else max(cands, key=prominence)
         docs = chosen.docs
         for j, cl in enumerate(cand_lists):                         # '안산 고잔': 두 토큰 모두에 걸린 가게

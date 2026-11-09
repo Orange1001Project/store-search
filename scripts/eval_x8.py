@@ -127,6 +127,7 @@ def main() -> None:
     parser.add_argument("--pool-w", type=float, nargs="+", default=list(EXP_W), help="--pool-round: 판정할 확장 가중치")
     parser.add_argument("--dense-query", choices=["full", "no_region"], default="full",
                         help="임베딩 쿼리 문장: 쿼리 전체 / 지역 단어 뺀 문장(export_noregion.py의 Colab 결과)")
+    parser.add_argument("--dump-per", help="사례별 지표를 x8_<tag>_per<값>.csv로(예: _idfnat) — 다른 실행과 짝 비교용")
     parser.add_argument("--config", default="configs/query/service_queryset_v1.yaml")
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     args = parser.parse_args()
@@ -240,6 +241,8 @@ def main() -> None:
     tag = f"{args.split}{'_all' if args.set == 'all' else ''}{('_fc' + ('n' if args.cosine_scope == 'name' else '')) if args.full_cosine else ''}{'_ex' if args.exact_name else ''}"
     summary.to_csv(X8_DIR / f"x8_{tag}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     comp.to_csv(X8_DIR / f"x8_{tag}_paired.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
+    if args.dump_per:   # 사례별 지표(다른 실행과 짝 비교용)
+        per.to_csv(X8_DIR / f"x8_{tag}_per{args.dump_per}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     pd.set_option("display.width", 220)
     view = summary[summary["bundle"].isin(["전체", "업종 의도"])][
         ["config", "radius_km", "bundle", "instances", "nDCG@10", "nDCG@10_condensed", "Judged@10", "bad@3", "top1_ok"]]

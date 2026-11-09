@@ -7,6 +7,13 @@
 
 location:                     # [확정]
   # 검색 중심을 정하는 순서(앞이 우선). 쿼리 지명은 query/understanding.py가 파싱한다.
+  # 모든 거리 규칙(반경, near_km, name_first_km, 브랜드 거리순, 상호 완전 일치 50km)의 기준점은 여기서 정한 '검색 중심'(지도 포커스)이다.
+  # GPS는 다른 값이 없을 때 검색 중심을 정하는 데만 쓰고, 거리 계산에 따로 넣지 않는다(10-30 회의, PR #9 리뷰 1번).
+  #   query_region  쿼리 안 지명(understanding.py — 넓은 지역은 법정동 코드 필터, 좁은 지역은 그 중심)
+  #   ui_region     사용자가 화면에서 직접 고른 지역(지역 선택 메뉴, 다른 해석 선택지 region_choice — Region.alternatives)
+  #   map_viewport  지도를 끌어 옮긴 현재 화면의 중심(지도 모드에서는 화면 사각형 자체가 범위 — map_mode.area)
+  #   gps           단말 위치(권한 허용 시)
+  #   default       아래 기본 위치(권한 거부 등)
   priority: [query_region, ui_region, map_viewport, gps, default]
   default:
     name: 소상공인시장진흥공단 본부
@@ -16,16 +23,17 @@ location:                     # [확정]
     lon: 127.3192
 
 radius:
-  first_km: 1                 # [확정] 사용자 위치·좁은 지역(동·역·시장)의 첫 반경 = understanding.POINT_KM
+  first_km: 1                 # [확정] 검색 중심·좁은 지역(동·역·시장)의 첫 반경 = understanding.POINT_KM
   max_km: 10                  # [확정] 한 번에 넓힌다(1 → 10, 중간 단계 없음)
   expand_if_relevant_below: 10   # [X2 확정 2026-11-04, dev·조정 후] 회의안. '관련 있음'은 relevance.threshold_p 이상. 96% 확장되지만 N=10이 N=3보다 nDCG +0.073(유의)
-  no_expand_if_exact_name_within_first: true   # [실험 X2] 상호명 쿼리는 첫 반경 안에서 상호가 맞으면 넓히지 않는다(미구현)
+  # (삭제 2026-11-09, PR #9 리뷰 5번) no_expand_if_exact_name_within_first — 읽는 코드·실험이 없었다. 상호 쿼리도 같은 규칙으로 넓힌다:
+  # 상호가 맞는 가게는 맨 위(exact_name_first·브랜드 거리순), 나머지는 brand_others_min_p로 거른다. 최종 test는 이 동작으로 쟀다
 
 region:                       # [확정] 규칙, 수치는 X3에서 확인
   area_kinds: [sido, city, sigungu, eupmyeon]   # 법정동 코드 앞자리로 거른다(Google Places locationRestriction에 해당)
   point_kinds: [dong, hdong, station, market]   # 중심에서 first_km → max_km
-  near_km: 30                 # 같은 이름이 여러 곳일 때 이 안에 있고 가맹점이 있으면 가까운 곳 = understanding.NEAR_KM
-  name_first_km: 10           # 쿼리 전체가 이 안 가게 이름이면 상호 검색 먼저 = understanding.NAME_FIRST_KM
+  near_km: 30                 # 같은 이름이 여러 곳일 때 검색 중심에서 이 안에 있고 가맹점이 있으면 가까운 곳 = understanding.NEAR_KM
+  name_first_km: 10           # 쿼리 전체가 검색 중심에서 이 안 가게 이름이면 상호 검색 먼저 = understanding.NAME_FIRST_KM
   gazetteer: data/geo/gazetteer_v1.parquet
 
 map_mode:                     # [확정] 지표에 영향이 있는 부분만. 화면(핀 묶음·버튼·상한·문구)은 [백엔드]
@@ -51,6 +59,8 @@ ranking:
                               # 검색 중심에서 50km 안만(점수 = 100 − 거리가 브랜드 기준 50 아래로 내려가지 않게). 이 가게들은 브랜드 지점처럼
                               # 관련 확률 계산(특성의 1위 점수·순위)에서 빠진다
   brand_sort: distance        # [확정·X5] 브랜드 쿼리(쿼리 이해 intent=brand)는 반경 안 지점을 이름으로 찾아 가까운 순으로 맨 위
+  # 동점 규칙 없음: 10-30 회의의 '점수 차 0.01 이내면 가까운 순'은 평가에 넣지 않았다(체인 지점은 위 브랜드 거리순이 처리).
+  # 평가하지 않은 규칙이라 백엔드도 넣지 않는다 — 같은 점수면 1단계 순서(PR #9 리뷰 7번)
   brand_aliases: configs/service/brand_alias_v1.csv   # [X5] 같은 브랜드의 다른 표기(GS25·지에스25) — 상호 일치·지점 찾기에 씀
   expansion_w: 0.3            # [X8 확정 2026-11-05] 업종 의도 쿼리에 LLM 쿼리 확장(찾는 가게 종류·품목) 문자 BM25 ÷ 최댓값 × w를 더함
                               # (retrieval/expansion.py). dev로 고르고 test 1회: 1km nDCG@10 0.817 → 0.836(+0.019, CI +0.013~+0.026), top1 0.875 → 0.900.
