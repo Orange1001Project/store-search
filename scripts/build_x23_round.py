@@ -239,7 +239,8 @@ def clean_runs(raw: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, bdir:
 
 
 def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, category_gamma: float = 0.0,
-                categories: pd.Series | None = None, expansion: dict | None = None) -> dict[str, pd.DataFrame]:
+                categories: pd.Series | None = None, expansion: dict | None = None,
+                cosine: dict | None = None) -> dict[str, pd.DataFrame]:
     """평가할 정책 변형의 순위: 1단계(11-8 채택 — v1+문자 BM25 합집합, 상호 일치·별칭 가산점, 브랜드 거리순)의 유사도순,
     반경 요청은 거리 감쇠(h = 2·5km)도. query_id = 요청 ID.
     category_gamma > 0이면 업종 쿼리에 업종 가산점(γ × 1단계 상위 10개 업종 분포에서 그 가게 업종의 비중, 11-15)을 더한 순서를 'sim'으로,
@@ -262,13 +263,9 @@ def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, cat
     aliases = BrandAliases.load()
     names = corpus.set_index("doc_id")["store_name"]
     v1, bm25 = runs[runs["system"] == DENSE], runs[runs["system"] == "char_bm25"]
-    union = union_v1(v1, bm25)
-    cores = dict(zip(parsed["instance_id"], parsed["name_key"], strict=True))
-    stage = boost(union, alias_name_hits(union, cores, names, aliases), 0.5, "stage1")
+    frames: list[pd.DataFrame] = []
     if expansion is not None and expansion["w"] > 0:
-        from eval_service_pipeline import BRAND_MIN
-
-        from store_search_ai.retrieval.expansion import add_expansion, expansion_frame
+        from store_search_ai.retrieval.expansion import expansion_frame
 
         cat_req = req[req["query_id"].isin(set(parsed.loc[parsed["intent"] == "category", "instance_id"]))]
         cands = candidates_filtered(cat_req, corpus, expansion.get("km", MAX_KM))
@@ -276,7 +273,20 @@ def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, cat
         frames = [expansion_frame(r.query_id, expansion["texts"].get(r.base_query_id, ""), expansion["bm25"], cands[r.query_id],
                                   doc_ids) for r in cat_req.itertuples()]
         frames = [f for f in frames if f is not None]
-        stage = add_expansion(stage, pd.concat(frames, ignore_index=True) if frames else None, expansion["w"], "stage1", BRAND_MIN)
+    if cosine is not None:   # P2(a): BM25·확장으로만 들어온 후보에도 실제 v1 코사인(서비스와 같게)
+        from eval_service_pipeline import augment_v1
+
+        extra = pd.concat([bm25[["query_id", "doc_id"]], *[f[["query_id", "doc_id"]] for f in frames]], ignore_index=True)
+        v1 = augment_v1(v1, extra, dict(zip(req["query_id"], req["base_query_id"], strict=True)), cosine)
+    union = union_v1(v1, bm25)
+    cores = dict(zip(parsed["instance_id"], parsed["name_key"], strict=True))
+    stage = boost(union, alias_name_hits(union, cores, names, aliases), 0.5, "stage1")
+    if frames:
+        from eval_service_pipeline import BRAND_MIN
+
+        from store_search_ai.retrieval.expansion import add_expansion
+
+        stage = add_expansion(stage, pd.concat(frames, ignore_index=True), expansion["w"], "stage1", BRAND_MIN)
     geo = corpus[["doc_id", "store_name", "latitude", "longitude"]]
     loc = req[["query_id", "latitude", "longitude"]].rename(columns={"query_id": "instance_id"})   # 요청 ID = 사례 자리
 

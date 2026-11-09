@@ -35,7 +35,9 @@ from eval_service_pipeline import (
     V1,
     _agg,
     alias_name_hits,
+    augment_v1,
     brand_distance_sort,
+    load_pair_cosine,
     load_runs,
     parsed_queries,
     summarize,
@@ -114,6 +116,7 @@ def main() -> None:
     parser.add_argument("--set", choices=["main", "all"], default="main")
     parser.add_argument("--reranker", default="bge-reranker-v2-m3")
     parser.add_argument("--llm", default="Qwen2.5-14B-Instruct")
+    parser.add_argument("--full-cosine", action="store_true", help="P2(a): 모든 후보에 실제 v1 코사인(results/service_pipeline/p2)")
     parser.add_argument("--only", action="append", help="채점할 구성(test는 반드시 지정)")
     parser.add_argument("--pool-round", help="확장 구성(exp)들의 반경별 상위 10 중 미판정 쌍 → 판정 라운드(dev+test 모든 사례, 예: service_v12)")
     parser.add_argument("--dry-run", action="store_true", help="--pool-round: 판정 건수만")
@@ -149,26 +152,31 @@ def main() -> None:
     aliases = BrandAliases.load()
     v1 = runs[V1][runs[V1]["query_id"].isin(ids)]
     bm = runs["char_bm25"][runs["char_bm25"]["query_id"].isin(ids)]
+    category = set(parsed.loc[parsed["intent"] == "category", "instance_id"])
+    expansions = load_expansions(X8_DIR / f"expansions_{args.llm}.csv")
+    logger.info("문자 BM25 색인(가맹점 %d곳)", len(corpus))
+    bm25 = SparseBM25(build_pool_document_texts(corpus))
+    lat, lon, doc_ids = corpus["latitude"].to_numpy(float), corpus["longitude"].to_numpy(float), corpus["doc_id"].to_numpy()
+    exp_by_radius = {r: expansion_scores(instances, category, expansions, bm25, lat, lon, doc_ids, r) for r in radii}
+    if args.full_cosine:   # P2(a): BM25·확장으로만 들어온 후보에도 실제 v1 코사인(서비스와 같게)
+        extra = pd.concat([bm[["query_id", "doc_id"]], *[f[["query_id", "doc_id"]] for e in exp_by_radius.values()
+                                                         for f in e.values()]], ignore_index=True)
+        v1 = augment_v1(v1, extra, instances.set_index("instance_id")["query_id"], load_pair_cosine())
     union = union_v1(v1, bm)
     stage = boost(union, alias_name_hits(union, dict(zip(parsed["instance_id"], parsed["name_key"], strict=True)), names, aliases),
                   0.5, BASE)
     stage = brand_distance_sort(stage, instances, parsed, corpus, aliases, max(radii), BASE)
-    category = set(parsed.loc[parsed["intent"] == "category", "instance_id"])
     logger.info("사례 %d개(업종 의도 %d개)", len(instances), len(category))
 
     base = instances.set_index("instance_id")["query_id"]
     sc = load_rerank(args.reranker)
     rr = dict(zip(zip(sc["query_id"], sc["doc_id"], strict=True), sc["score"], strict=True))
-    expansions = load_expansions(X8_DIR / f"expansions_{args.llm}.csv")
-    logger.info("문자 BM25 색인(가맹점 %d곳)", len(corpus))
-    bm25 = SparseBM25(build_pool_document_texts(corpus))
-    lat, lon, doc_ids = corpus["latitude"].to_numpy(float), corpus["longitude"].to_numpy(float), corpus["doc_id"].to_numpy()
 
     if args.pool_round:   # 판정은 위치와 무관한 (쿼리, 가맹점) 단위 — dev·test 모든 사례를 한 라운드로(test 채점도 공정하게)
         tops = []
         for radius in radii:
             stage_r = within_radius(stage, instances, coords, radius)
-            exp = expansion_scores(instances, category, expansions, bm25, lat, lon, doc_ids, radius)
+            exp = exp_by_radius[radius]
             for w in args.pool_w:
                 name = f"exp+{w} cat"
                 tops.append(within_radius(expansion_add(stage_r, exp, w, name), instances, coords, radius,
@@ -182,7 +190,7 @@ def main() -> None:
     per = []
     for radius in radii:
         stage_r = within_radius(stage, instances, coords, radius)
-        exp = expansion_scores(instances, category, expansions, bm25, lat, lon, doc_ids, radius)
+        exp = exp_by_radius[radius]
         variants = {BASE: stage_r}
         for a in RR_A if not args.only or any(o.startswith("rr") for o in args.only) else ():
             variants[f"rr+{a} all"] = rerank_add(stage_r, rr, base, ids, a, f"rr+{a} all")
@@ -214,7 +222,7 @@ def main() -> None:
     comp = pd.DataFrame(comp)
 
     X8_DIR.mkdir(parents=True, exist_ok=True)
-    tag = f"{args.split}{'_all' if args.set == 'all' else ''}"
+    tag = f"{args.split}{'_all' if args.set == 'all' else ''}{'_fc' if args.full_cosine else ''}"
     summary.to_csv(X8_DIR / f"x8_{tag}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     comp.to_csv(X8_DIR / f"x8_{tag}_paired.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     pd.set_option("display.width", 220)

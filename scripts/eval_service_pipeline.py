@@ -230,6 +230,33 @@ def union_v1(v1: pd.DataFrame, bm25: pd.DataFrame) -> pd.DataFrame:
     return convex([v1, bm25], [1.0, 1e-6], name="union_v1")
 
 
+P2_DIR = Path("results/service_pipeline/p2")
+
+
+def load_pair_cosine(model: str = V1) -> dict:
+    """P2(a): 임베딩 상위 50 밖 후보의 실제 v1 코사인(colab/pair_cosine.ipynb) — (기준 쿼리 ID, doc_id) → cosine."""
+
+    path = P2_DIR / f"pair_cosine_{model}.csv"
+    if not path.exists():
+        raise SystemExit(f"{path}가 없습니다 — scripts/export_p2_cosine.py → colab/pair_cosine.ipynb")
+    c = pd.read_csv(path, encoding="utf-8-sig", dtype={"query_id": str, "doc_id": str})
+    return dict(zip(zip(c["query_id"], c["doc_id"], strict=True), c["cosine"], strict=True))
+
+
+def augment_v1(v1: pd.DataFrame, extra: pd.DataFrame, base_of, cos: dict) -> pd.DataFrame:
+    """v1 run(query_id = 사례·요청 ID)에 extra(query_id, doc_id — BM25·확장 후보)의 실제 코사인 행을 더한다(서비스처럼 모든 후보에
+    v1 점수). 이미 있는 쌍은 그대로, 순위는 점수순으로 다시. 코사인이 없는 쌍은 빼고 개수를 알린다(P2(a), 11-21)."""
+
+    have = set(zip(v1["query_id"], v1["doc_id"], strict=True))
+    e = extra[["query_id", "doc_id"]].drop_duplicates()
+    e = e[[(q, d) not in have for q, d in zip(e["query_id"], e["doc_id"], strict=True)]]
+    e = e.assign(score=[cos.get((base_of.get(q, q), d), np.nan) for q, d in zip(e["query_id"], e["doc_id"], strict=True)])
+    if e["score"].isna().any():
+        logger.warning("코사인 없는 후보 쌍 %d개는 v1에 더하지 않음(BM25 최솟값 처리 그대로)", int(e["score"].isna().sum()))
+    out = pd.concat([v1[["query_id", "doc_id", "score"]], e.dropna(subset=["score"])], ignore_index=True)
+    return _rerank(out, str(v1["system"].iat[0]) if "system" in v1 and len(v1) else "v1")
+
+
 def within_radius(run: pd.DataFrame, instances: pd.DataFrame, coords: pd.DataFrame, radius_km: float,
                   depth: int | None = None) -> pd.DataFrame:
     """반경 안 결과만 남기고 순위를 다시 매긴다(서비스는 반경 안에서 상위 k개를 재정렬하므로 반경마다 후보가 다르다)."""
