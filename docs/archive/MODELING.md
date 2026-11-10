@@ -10,7 +10,7 @@
 ```
 
 **zero-shot과 fine-tuned을 구분하지 않는 이유**: `configs/models/*.yaml`의 `model_id`가 HF Hub ID(zero-shot)든
-로컬 경로(fine-tuned, `docs/TRAINING.md` 참고)든 `SentenceTransformerEncoder`는 완전히 동일하게
+로컬 경로(fine-tuned, `docs/archive/TRAINING.md` 참고)든 `SentenceTransformerEncoder`는 완전히 동일하게
 로드합니다. 그래서 이 평가 스크립트들의 이름에는 "zero_shot"을 쓰지 않습니다 — zero-shot 비교
 단계에서 쓰던 이름이지만 지금은 fine-tuned 모델도 같은 경로로 평가되기 때문입니다.
 
@@ -39,7 +39,7 @@ nDCG/Recall/Precision/MRR을 여러 곳에서 각자 재구현하면 언젠가 �
 | `scripts/14_run_model_eval.py` | (로컬 GPU가 있을 때) 위 셋을 엮어서 corpus 인코딩 → query 인코딩 → 검색 → run.csv → `13_evaluate_run.py` 호출까지 한 번에 |
 | `scripts/15_score_model_runs.py` | `results/model_eval/` 밑의 여러 run(Colab/로컬, zero-shot/fine-tuned 어느 쪽에서 왔든)을 한 번에 채점해 리더보드 생성 |
 | `colab/train_eval.ipynb` | Colab(GPU)에서 학습 + 인코딩·검색(run.csv) + 공식과 같은 채점까지 한 파일로 (`colab/README.md` 참고) |
-| `scripts/eval_retrieval_stack.py` | (임베딩 리더보드가 아니라 검색 파이프라인 단계) 임베딩 run 위에 BM25 하이브리드·reranker를 얹은 구성 비교 (`docs/PIPELINE.md` 10절) |
+| `scripts/eval_retrieval_stack.py` | (임베딩 리더보드가 아니라 검색 파이프라인 단계) 임베딩 run 위에 BM25 하이브리드·reranker를 얹은 구성 비교 (`docs/archive/PIPELINE.md` 10절) |
 | `store_search_ai.evaluation.evaluator` | `13_evaluate_run.py`의 채점 로직 본체(qrels/run 로딩, `ir_measures` 위임 계산, bootstrap CI, paired comparison). `13_evaluate_run.py`는 이 모듈을 호출하는 얇은 CLI일 뿐이고, 14/15번은 여전히 `13_evaluate_run.py`를 **서브프로세스로** 호출한다(이 모듈을 직접 import하지 않음) — "모든 모델의 run은 동일 evaluator를 거친다"는 원칙을 CLI 계약으로 강제하기 위함 |
 
 ## 실행 예시
@@ -70,7 +70,7 @@ python scripts/15_score_model_runs.py --split val
 ```
 
 로 `results/model_eval/` 밑의 모든 run을 한 번에 채점해서 `leaderboard_val.csv`(nDCG@10 기준 정렬)를
-만듭니다. val 기준으로 가장 좋은 후보를 골라 파인튜닝을 시작하면 됩니다(`docs/TRAINING.md`).
+만듭니다. val 기준으로 가장 좋은 후보를 골라 파인튜닝을 시작하면 됩니다(`docs/archive/TRAINING.md`).
 Fine-tuned 모델의 run도 같은 폴더/스키마로 만들어지므로, 파인튜닝 후에는 zero-shot 결과와
 fine-tuned 결과가 같은 리더보드에 나란히 비교됩니다.
 

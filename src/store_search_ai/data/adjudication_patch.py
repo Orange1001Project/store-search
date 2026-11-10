@@ -1,7 +1,7 @@
 """3rd adjudicator가 채운 "불일치 건 최종 판정"을 전체 val/test 파일에 병합하는 로직.
 
 scripts/10_apply_adjudication_patch.py의 CLI 배관(인자 파싱, 파일 저장, 콘솔 출력)을 제외한
-핵심 로직 전체 (docs/PIPELINE_CODE_REFERENCE.md `10_apply_adjudication_patch.py` 절 참고).
+핵심 로직 전체 (docs/archive/PIPELINE_CODE_REFERENCE.md `10_apply_adjudication_patch.py` 절 참고).
 judgment_id로 patch를 full에 병합하되, patch에 있는 judgment_id 중 full에 없는 게 있으면
 에러(오타/잘못된 파일 방지). "제외되지 않았는데 final_relevance가 여전히 비어있는 행"이
 0이어야 다음 단계(11_build_qrels.py)가 성공한다.

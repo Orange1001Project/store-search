@@ -1,4 +1,4 @@
-"""X2·X3 채점(docs/SERVICE_PIPELINE_PLAN.md 11-4, 11-9) — 반경 확장·지역 필터·지도 화면을 정책대로 흉내 내고 판정으로 잰다.
+"""X2·X3 채점(docs/archive/SERVICE_PIPELINE_PLAN.md 11-4, 11-9) — 반경 확장·지역 필터·지도 화면을 정책대로 흉내 내고 판정으로 잰다.
 
 판정 라운드 service_v11(+ 필터 요청 service_v12)이 qrels에 들어간 뒤 돌린다. 판정 전 qrels로 돌리면 10km·지역 결과 대부분이 미판정이라
 숫자는 뜻이 없다(Judged@10을 같이 낸다).
@@ -222,7 +222,7 @@ def main() -> None:
     tau = float(policy["relevance"]["threshold_p"])
     brand_others = (args.brand_others_min if args.brand_others_min is not None
                     else float(policy["ranking"].get("brand_others_min_p", tau)))
-    # test는 정책 파일에 정한 구성 하나만 계산한다(X7 — test로 고르지 않는다, docs/EVALUATION_POLICY.md)
+    # test는 정책 파일에 정한 구성 하나만 계산한다(X7 — test로 고르지 않는다, docs/archive/EVALUATION_POLICY.md)
     n_grid, orders = (((int(policy["radius"]["expand_if_relevant_below"]),), (policy_order(policy),))
                       if args.split == "test" else (N_GRID, ORDERS))
     calibrator = json.loads(Path(args.calibrator or policy["relevance"]["calibrator"]).read_text(encoding="utf-8"))

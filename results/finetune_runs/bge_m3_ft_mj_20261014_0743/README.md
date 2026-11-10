@@ -1,6 +1,6 @@
 # bge_m3_ft_mj_20261014_0743 — bge-m3 full fine-tuning, 노트북 기본값 (임베딩 v1 선택)
 
-**임베딩 v1 선택 모델**(2026-10-16, val 동률 → 출처·보안 기준으로 선택 — `docs/EMBEDDING_V1_PLAN.md` 1-1절). 모델은 `models/bge_m3_ft_mj_20261014_0743/`(git 제외),
+**임베딩 v1 선택 모델**(2026-10-16, val 동률 → 출처·보안 기준으로 선택 — `docs/archive/EMBEDDING_V1_PLAN.md` 1-1절). 모델은 `models/bge_m3_ft_mj_20261014_0743/`(git 제외),
 기록은 이 폴더(`model_manifest.json`, `eval_config.yaml`, `notebook_code.py`, 학습 노트북 `train_eval_bge.ipynb`).
 
 | 항목 | 값 |

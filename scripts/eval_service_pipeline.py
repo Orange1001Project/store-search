@@ -1,4 +1,4 @@
-"""서비스셋으로 검색 파이프라인 구성을 비교한다(docs/SERVICE_PIPELINE_PLAN.md). 기본은 dev만 채점한다 — test는 단계가 끝날 때
+"""서비스셋으로 검색 파이프라인 구성을 비교한다(docs/archive/SERVICE_PIPELINE_PLAN.md). 기본은 dev만 채점한다 — test는 단계가 끝날 때
 `--split test`로 고른 구성 하나만(`--only`).
 
 실험(--exp)
@@ -495,7 +495,7 @@ def write_pool_round(cfg: dict, bench: dict, tops: list[pd.DataFrame], instances
         "annotators": {name: {"writer_id": jcfg["annotators"][name], "queries": len(qids),
                               "pairs": int(sheet["query_id"].isin(qids).sum())} for name, qids in assignment.items()},
         "instances_sha256": sha256_file(bdir / "instances.csv"),
-        "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
+        "guideline": "docs/archive/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
     }
     (round_dir / "pool_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("저장: %s (전체 %d쌍, 이중 판정 %d쌍)", round_dir, len(sheet), manifest["double_annotation_pairs"])
@@ -531,7 +531,7 @@ def main() -> None:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     if args.split == "test" and not args.only:
-        raise SystemExit("test는 고른 구성만 채점합니다 — --only로 지정하세요(docs/SERVICE_PIPELINE_PLAN.md 3절).")
+        raise SystemExit("test는 고른 구성만 채점합니다 — --only로 지정하세요(docs/archive/SERVICE_PIPELINE_PLAN.md 3절).")
     if (args.export_pairs or args.pool_round) and args.exp != "rerank":
         raise SystemExit("--export-pairs·--pool-round는 --exp rerank에서만 씁니다")
 

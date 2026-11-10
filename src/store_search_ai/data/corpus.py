@@ -2,7 +2,7 @@
 
 scripts/04_build_corpus.py의 CLI 배관(인자 파싱, 파일 저장, 콘솔 출력)을 제외한 핵심 로직
 전체 — store_id 유일성 검사, corpus 스키마 선택, doc_id/버전 컬럼 부착, template별
-content_hash 계산, manifest 조립까지 (docs/PIPELINE_CODE_REFERENCE.md `04_build_corpus.py`
+content_hash 계산, manifest 조립까지 (docs/archive/PIPELINE_CODE_REFERENCE.md `04_build_corpus.py`
 절 참고).
 """
 

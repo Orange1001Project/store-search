@@ -12,7 +12,7 @@ C → A 재분류는 평가용 묶음 칸(`eval_set.bundle_overrides`)으로 코
 
 ### 문제
 
-C는 상황 카드에서 출발한 쿼리이고, 작성 안내는 업종 이름이 떠오르면 그대로 써도 된다고 했다(`docs/QUERY_WRITING_GUIDE.md`).
+C는 상황 카드에서 출발한 쿼리이고, 작성 안내는 업종 이름이 떠오르면 그대로 써도 된다고 했다(`docs/archive/QUERY_WRITING_GUIDE.md`).
 그래서 C 181개 중 절반 넘게 "쌀", "치과", "동네 미용실"처럼 업종·품목 이름을 그대로 쓴 쿼리다. 이 쿼리들은 점수가 A와 같고,
 상황형 C와는 크게 다르다. 섞여 있으면 C 점수가 "추론이 필요한 검색"을 재지 못한다.
 
@@ -88,7 +88,7 @@ C는 상황 카드에서 출발한 쿼리이고, 작성 안내는 업종 이름�
   (15%면 test 약 280, 20%면 약 210).
 - **A head/tail**: 옮긴 쿼리는 tail로 들어가 A 구성이 바뀐다.
 - **결과 다시 만들기**: 합의 뒤 `build_service_eval_set.py` → `score_service_eval.py` → `eval_service_pipeline.py` 순서. 바꾸기 전 결과는 따로 보관한다(4절).
-- **문서**: `docs/SERVICE_QUERYSET.md`(묶음 정의), `docs/QUERY_WRITING_GUIDE.md`(분류는 작성 뒤에 한다는 점).
+- **문서**: `docs/archive/SERVICE_QUERYSET.md`(묶음 정의), `docs/archive/QUERY_WRITING_GUIDE.md`(분류는 작성 뒤에 한다는 점).
 
 ## 2. 묶음별 개수와 보충할 양
 
@@ -166,7 +166,7 @@ B는 표본 가게·체인에서 거꾸로 쓴 쿼리라 어느 가게를 찾는
 ## 4. 보고와 test 수정 원칙
 
 - 전체 점수와 묶음별 점수(A head / A tail / B / C / D)를 항상 같이 적는다. 주 평가셋 비율(설정값 B50/A35/D10/C5)은 우리 서비스
-  검색 로그 없이 정한 가정이라고 적는다. 근거로 든 Broder(2002)·Silverstein(1999)는 일반 웹 검색 로그 연구라(`docs/SERVICE_PIPELINE_PLAN.md`
+  검색 로그 없이 정한 가정이라고 적는다. 근거로 든 Broder(2002)·Silverstein(1999)는 일반 웹 검색 로그 연구라(`docs/archive/SERVICE_PIPELINE_PLAN.md`
   7절), 묶음별 숫자 자체는 팀이 그 경향을 보고 정한 값이다. 근거 페이지(노션 "평가·학습 쿼리 구성 기준 검토")와 숫자를 정한 과정을 함께 확인한다.
 - test는 stage 1에서 이미 채점했다. 쿼리를 옮기거나 빼는 것은 점수가 아니라 이 문서의 규칙으로만 하고, 쿼리마다 이유를 남긴다.
   고치기 전 결과는 따로 보관한다. 문자열이 바뀌는 쿼리는 새 query_id로 다시 판정한다.
@@ -217,7 +217,7 @@ bootstrap: Arctic 대비 +0.084 [0.028, 0.139], kse16 대비 +0.079 [0.027, 0.13
 - `rerank_*`: reranker 점수(`results/service_pipeline/rerank/`, 2026-10-23 Colab)에 그 뒤 추가된 쿼리(extra_b 64, extra_a 78)가
   없어 다시 돌릴 수 없다(점수 없는 쌍 794개). 이번 변경과 무관하게 10/26 이후로 이미 예전 셋 기준이다. 다시 하려면 `--export-pairs` → Colab.
 - `main_set_baselines.csv`: 만드는 스크립트가 없어 그대로 둔다.
-- `hybrid*_dev.csv`, `hybrid2_test.csv`는 새 셋 기준으로 덮어썼다. `docs/SERVICE_PIPELINE_PLAN.md` 5절의 수치는 10/23 셋
+- `hybrid*_dev.csv`, `hybrid2_test.csv`는 새 셋 기준으로 덮어썼다. `docs/archive/SERVICE_PIPELINE_PLAN.md` 5절의 수치는 10/23 셋
   (test 1km 390 사례, 예전 판정) 기준이라 지금 파일과 맞지 않는다 — 그 수치는 git `c132edd`의 파일과 맞는다.
 
 ## 5. 정할 것

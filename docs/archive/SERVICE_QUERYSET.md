@@ -1,7 +1,7 @@
 # 서비스형 쿼리셋 v1 (2026-10-19)
 
 기존 벤치마크(업종 의도 72개, 548개 쿼리)는 업종명을 보고 쓴 쿼리라 실제 사용자 쿼리의 큰 부분을 재지 못한다
-(`docs/SERVICE_READINESS.md` 1절). 그래서 쿼리 종류를 넓힌 별도 셋을 만든다. 기존 벤치마크의 train/val/test는 그대로 둔다.
+(`docs/archive/SERVICE_READINESS.md` 1절). 그래서 쿼리 종류를 넓힌 별도 셋을 만든다. 기존 벤치마크의 train/val/test는 그대로 둔다.
 
 ## 1. 무엇을 몇 개 (1차 500개, 2026-10-19 결정)
 
@@ -22,7 +22,7 @@
 - D·E는 test가 각각 약 38개, 15개라 묶음 결론을 낼 수 없다. 이 두 묶음은 큰 실패가 있는지 확인하는 용도로만 쓴다.
 - **2026-10-26 변경 — 주 평가셋**: 위 개수는 작성·판정 목표이고, 채점은 쿼리 수를 가정 쿼리 비율 B 50 / A 35 / D 10 / C 5에 맞춘
   주 평가셋(`benchmark/service_ko_v1/eval_set.csv`, `scripts/build_service_eval_set.py`)으로 한다. C는 15개 안팎만 남고, 모자란 B는
-  개별 가맹점 쿼리를 약 55개 더 쓴다(`make_writer_sheets.py --extra-b`). 자세한 내용은 docs/SERVICE_PIPELINE_PLAN.md 7절.
+  개별 가맹점 쿼리를 약 55개 더 쓴다(`make_writer_sheets.py --extra-b`). 자세한 내용은 docs/archive/SERVICE_PIPELINE_PLAN.md 7절.
 - **2026-10-29 변경 — 평가용 묶음**: C 중 업종·품목 이름을 그대로 쓴 쿼리 109개는 주 평가셋·채점에서 A로 센다(4절 "평가용 묶음").
   쿼리 표의 묶음·query_id·판정은 그대로다. 전체 쿼리 구성비는 A 33% → 49%, C 26% → 10%로 바뀌고, 주 평가셋 비율(설정값)은 그대로다.
 - 2차로, 검색 로그를 확보하면 로그에서 빈도 구간별로 층화 추출해 500개를 더한다. 이때 위의 묶음 비율 자체를 로그 분포에 맞게 고친다.
@@ -38,7 +38,7 @@
 
 ## 3. 작성 원칙
 
-사람이 직접 쓰는 절차와 작성자 안내문은 `docs/QUERY_WRITING_GUIDE.md`에 있다.
+사람이 직접 쓰는 절차와 작성자 안내문은 `docs/archive/QUERY_WRITING_GUIDE.md`에 있다.
 
 1. **각자 따로 쓴다.** 5명 이상, 팀 밖 사람을 포함한다. 서로의 쿼리를 보지 않는다.
 2. **C는 카드만 보고 쓴다.** 업종 목록이나 코퍼스를 보면 그 단어를 베낀다. 기존 셋이 T1·T2에 쏠린 원인이 이것이다.
@@ -112,7 +112,7 @@ python scripts/import_service_queries.py             # → data/query/service_qu
 
 ### 판정 pool 만들기 (반경 안)
 
-판정 기준은 `docs/SERVICE_ANNOTATION_GUIDELINE.md`에 있다. 판정은 반경 2km 안 가맹점으로 하고, 채점은 1km(현재 서비스)와 2km로 한다.
+판정 기준은 `docs/archive/SERVICE_ANNOTATION_GUIDELINE.md`에 있다. 판정은 반경 2km 안 가맹점으로 하고, 채점은 1km(현재 서비스)와 2km로 한다.
 
 ```bash
 python scripts/build_service_pool.py export          # 반경 안 가맹점(약 15만 개)·쿼리 → colab_upload/service_eval/ (Colab 입력)
@@ -155,7 +155,7 @@ python scripts/build_service_pool.py pool --round service_v1 --depth 10
   A와 같고(nDCG@10 0.838, A 0.821) 상황형 C(0.582, 실패율 38%)와 달라서, 섞이면 C 점수가 상황 검색을 재지 못한다.
 - **기준**: "이 쿼리를 보고 가게 종류를 하나로 바로 말할 수 있나" — 판정된 정답 가게가 한 종류로 모이면 A, 여러 종류로 퍼지면 C.
   수리·수선은 대상이 가게 데이터에 업종처럼 적혀 있으면 A(옷 수선, 휴대폰 수리), 없으면 C(운동화 수선). 분류는 작성 뒤에 한다 — 작성자는
-  지금처럼 카드만 보고 쓴다. 규칙·근거는 `docs/SERVICE_QUERYSET_REVIEW.md` 1절.
+  지금처럼 카드만 보고 쓴다. 규칙·근거는 `docs/archive/SERVICE_QUERYSET_REVIEW.md` 1절.
   이번 109개 분류 때는 test를 포함한 판정을 보고 확인했다. 규칙은 대부분 쿼리 글자만으로 정해지고, 애매했던 13개는 모두 주 평가셋
   밖이라 영향은 작다.
 - **방법**: 목록 `data/query/service_eval_bundle_v1.csv`(설정 `eval_set.bundle_overrides`) → `service_eval.apply_eval_bundle`이

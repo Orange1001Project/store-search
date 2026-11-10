@@ -1,4 +1,4 @@
-"""서비스셋 판정 pool을 만든다 — 쿼리 가정위치 반경 안 가맹점만 후보로(docs/SERVICE_ANNOTATION_GUIDELINE.md 4절).
+"""서비스셋 판정 pool을 만든다 — 쿼리 가정위치 반경 안 가맹점만 후보로(docs/archive/SERVICE_ANNOTATION_GUIDELINE.md 4절).
 
 단계(설정 `judging` 블록, configs/query/service_queryset_v1.yaml)
   1) export  임베딩 run은 Colab에서 만든다(2026-10-20 결정). 반경 안 가맹점·쿼리를 colab_upload/service_eval/로 내보낸다
@@ -312,7 +312,7 @@ def pool(args, cfg: dict, bench: dict) -> None:
         "runs_sha256": {f"{p.parent.name}/{p.name}": sha256_file(p) for p in run_files},   # 묶음마다 같은 파일 이름
         "queries_sha256": hashlib.sha256((bdir / "queries.csv").read_bytes()).hexdigest(),
         "instances_sha256": sha256_file(bdir / "instances.csv") if (bdir / "instances.csv").exists() else None,
-        "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
+        "guideline": "docs/archive/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
     }
     (round_dir / "pool_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("저장: %s (전체 %d쌍, 이중 판정 %d쌍)", round_dir, len(sheet), manifest["double_annotation_pairs"])

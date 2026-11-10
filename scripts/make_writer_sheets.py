@@ -1,4 +1,4 @@
-"""서비스셋 쿼리 직접 작성용 작성자별 xlsx를 만든다. 절차는 docs/QUERY_WRITING_GUIDE.md 1부.
+"""서비스셋 쿼리 직접 작성용 작성자별 xlsx를 만든다. 절차는 docs/archive/QUERY_WRITING_GUIDE.md 1부.
 
 출력(`writers.output_dir`, 기본 data/query/writers/):
   --layout single(기본)  서비스셋_직접작성_v1.xlsx 한 파일 — 시트: 안내_1부(C·E), 안내_2부(A·D), 배정표, 작성자정보, 합계,

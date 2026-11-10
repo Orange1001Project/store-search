@@ -1,7 +1,7 @@
 # 평가·판정 운영 원칙 (공식, 2026-10-15 채택)
 
 모델·검색 구성을 비교할 때 **언제 판정하고, 무엇으로 고르고, 어떻게 보고하는지** 정한 문서다. 판정 절차 자체(가이드라인, A/B 이중 판정,
-조정)는 `benchmark/storesearch_ko_v1/annotation_guideline.md`와 `docs/PIPELINE.md` 4~6절을 따른다.
+조정)는 `benchmark/storesearch_ko_v1/annotation_guideline.md`와 `docs/archive/PIPELINE.md` 4~6절을 따른다.
 
 ## 1. 원칙 — 시스템이 낸 결과를 사람이 판정해서 지표를 만든다
 
@@ -44,7 +44,7 @@ val 실패 쿼리를 보고 그 쿼리에 맞춘 데이터·규칙을 만들지 
    - 임베딩 모델: 노트북 15번(`runs/pooling_runs/<이름>.csv`, val+test 상위 100)
    - (검색 파이프라인 단계에서 하이브리드·reranker 구성을 판정할 때) `python scripts/eval_retrieval_stack.py --split test --dense-dir <pooling_runs>
      --dense <이름> ...`, reranker 점수는 `--export-pairs` → `colab/rerank_scores.ipynb`. 임베딩 v1 판정 라운드에는 넣지 않는다
-     (`docs/EMBEDDING_V1_PLAN.md` 0절)
+     (`docs/archive/EMBEDDING_V1_PLAN.md` 0절)
 2. `configs/benchmark/judging_candidates.yaml`에 등록(name, note, val, test).
 3. `python scripts/collect_judging_candidates.py` — 후보 검증 + depth별 판정 건수 표(아무것도 쓰지 않음).
 4. depth를 정해(기본 10) `python scripts/collect_judging_candidates.py --make --reason "..."` → `annotations/<round>/` A·B 시트.

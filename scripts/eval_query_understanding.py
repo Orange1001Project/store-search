@@ -1,4 +1,4 @@
-"""쿼리 이해 평가(docs/SERVICE_PIPELINE_PLAN.md 6절) — 서비스셋 쿼리마다 지역·의도를 파싱하고 정답과 비교한다.
+"""쿼리 이해 평가(docs/archive/SERVICE_PIPELINE_PLAN.md 6절) — 서비스셋 쿼리마다 지역·의도를 파싱하고 정답과 비교한다.
 
 정답
   - 지역 문자열: 쿼리의 region_text(D는 작성자가 적음, B는 대상 가게 주소로 자동 추출 — 빠진 것이 있어 참고용).

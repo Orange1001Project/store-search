@@ -1,6 +1,6 @@
 # StoreSearch-KO v1 — 파이프라인 코드 상세 레퍼런스
 
-`docs/PIPELINE.md`이 "몇 번을 언제, 어떤 인자로, 사람이 언제 개입해서 돌리는가"를 다룬다면,
+`docs/archive/PIPELINE.md`이 "몇 번을 언제, 어떤 인자로, 사람이 언제 개입해서 돌리는가"를 다룬다면,
 이 문서는 **그 안에서 코드가 실제로 무엇을 읽고 어떤 원리로 무엇을 계산해서 어디에 쓰는지**를
 스크립트 단위로 뜯어봅니다. 회의에서 "이 단계가 왜 이렇게 동작하나요", "이 파일은 어디서
 나온 거예요" 같은 질문에 코드 근거를 대면서 답할 수 있도록 만든 문서입니다.
@@ -9,7 +9,7 @@
 `import_queryset_xlsx.py`(05번 이전), `split_completed_annotations.py`(08번과 09번 사이),
 `prepare_finetune_dataset.py`(15번 이후, fine-tuning 준비 단계). 그 뒤에 qrels 확정 이후 도구를 모았습니다:
 `16_supplemental_round.py`(보충 판정), `pack_for_colab.py`·`import_colab_results.py`(Colab 연동), `rescore_evaluations.py`(재채점),
-`collect_judging_candidates.py`(일괄 판정), `eval_retrieval_stack.py`(검색 구성 탐색). 노트북 셀 설명은 `docs/TRAIN_EVAL_NOTEBOOK.md`. 각 절은 다음 다섯 항목으로
+`collect_judging_candidates.py`(일괄 판정), `eval_retrieval_stack.py`(검색 구성 탐색). 노트북 셀 설명은 `docs/archive/TRAIN_EVAL_NOTEBOOK.md`. 각 절은 다음 다섯 항목으로
 구성됩니다: **한 줄 요약 / 입력 파일 / 핵심 로직 / 출력 파일 / 사용하는 src/ 코드**.
 
 모든 경로·설정값은 현재 저장소의 `configs/data/default.yaml`(`dataset_version: stores_v003`),
@@ -201,7 +201,7 @@ registry에 추가한다 — 그래서 데이터가 늘어나도 기존 매장�
 `reclassify_queries`에 추가해야 함). **이 목록은 더 이상 스크립트 안에 하드코딩돼 있지 않다** —
 데이터셋이 바뀌어 새 query_set 버전을 만들 때는 이 yaml을 복사해 `_v005.yaml` 등으로 새로
 만들고 `configs/benchmark/storesearch_ko_v1.yaml`의 `query_set.corrections_path`를 올리면 된다
-(자세한 이유는 docs/EXTENDING_DATA.md 참고).
+(자세한 이유는 docs/archive/EXTENDING_DATA.md 참고).
 
 **family당 variant 최소 개수 제한이 없다**(팀 결정 — xlsx의 548개 질의를 전부 살림). split은
 두 단계로 정한다: (1) 기존 yaml에 같은 한글 family 이름이 이미 있으면 그 split을 그대로
@@ -236,7 +236,7 @@ relevance 판정에는 영향 없음). `intent_definition`은 "{대분류} 중 '
 **입력 파일**
 - `--config`(기본 `configs/benchmark/storesearch_ko_v1.yaml`)
 - `--families`(기본 `configs/benchmark/query_families_v1.yaml`) — **직접 편집하는 파일이 아니라
-  `import_queryset_xlsx.py`의 생성물**(`docs/EXTENDING_DATA.md` 참고)
+  `import_queryset_xlsx.py`의 생성물**(`docs/archive/EXTENDING_DATA.md` 참고)
 
 **핵심 로직**
 family마다: family 이름 중복 금지, `split`은 train/val/test 중 하나만, **최소 1개 이상의 query
@@ -682,7 +682,7 @@ fine-tuned 모델(로컬 경로)을 완전히 같은 코드로 처리한다 — 
 **입력 파일**
 - `--config`(기본 `configs/benchmark/storesearch_ko_v1.yaml`)
 - `--model-config`: `configs/models/*.yaml` 하나(`model_id`가 HF Hub id면 zero-shot, 로컬
-  디렉터리 경로면 fine-tuned 체크포인트 — `docs/TRAINING.md` 참고). `--dummy`를 주면 모델 설정
+  디렉터리 경로면 fine-tuned 체크포인트 — `docs/archive/TRAINING.md` 참고). `--dummy`를 주면 모델 설정
   없이 `RandomEncoder`로 배관만 검증
 - corpus, active queries 중 `--split`(기본 val) 필터링분
 
@@ -768,7 +768,7 @@ relevance)는 학습쌍을 만들 수 없으므로 제외하고 개수를 로그
 
 출력 스키마는 `{"query_id","query","positives":[...],"negatives":[...]}`이다. (query, positive)
 행으로 펼치고 query당 positive 수를 자르는 건 학습 쪽(`store_search_ai.training.finetune.
-expand_training_rows`, `docs/TRAINING.md` 1절)이 한다.
+expand_training_rows`, `docs/archive/TRAINING.md` 1절)이 한다.
 
 **출력 파일**
 - `--output`(기본 `data/finetune/train_pairs.jsonl`) — qrels_train + corpus + queries.csv로부터
@@ -840,14 +840,14 @@ qrels에 없는 쿼리가 있으면 멈추므로) `build_evaluation_report`로 �
 
 ---
 
-## `collect_judging_candidates.py` *(일괄 판정, `docs/EVALUATION_POLICY.md` 3절)*
+## `collect_judging_candidates.py` *(일괄 판정, `docs/archive/EVALUATION_POLICY.md` 3절)*
 
 **한 줄 요약**: `configs/benchmark/judging_candidates.yaml`에 등록된 후보(name, note, val·test run 경로)를 모아 검증하고,
 `16_supplemental_round.py make-runs`로 **한 번에** 판정 시트를 만든다.
 
 **핵심 로직**: 후보 이름 형식·중복 검사, split마다 active 쿼리 전부가 상위 depth개 이상 있는지 확인, val+test를 한 파일로 합쳐 시스템 이름을
 후보 name으로 바꿔 `results/judging_candidates/<round>/<name>.csv`에 쓴다(판정 비용 표용으로 상위 30개까지). 기본은 `--dry-run`(건수 표만),
-`--make`로 시트 생성. 이미 pool에 있는 쌍은 다시 판정하지 않는다. 임베딩 v1 라운드 후보는 임베딩 모델 run만(`docs/EMBEDDING_V1_PLAN.md`).
+`--make`로 시트 생성. 이미 pool에 있는 쌍은 다시 판정하지 않는다. 임베딩 v1 라운드 후보는 임베딩 모델 run만(`docs/archive/EMBEDDING_V1_PLAN.md`).
 
 ---
 
@@ -891,7 +891,7 @@ qrels에 없는 쿼리가 있으면 멈추므로) `build_evaluation_report`로 �
 
 **Q4. T1/T2/T3 템플릿이 뭐고 왜 T1이 공식인가요?**
 → 02/04번 절. 코퍼스에는 세 검색 텍스트 표현(T1=가맹점명+취급품목, T2=+시장명, T3=+시장유형)이
-전부 저장되지만, `docs/PIPELINE.md`가 T1을 공식 document representation으로 못 박았다. 실제
+전부 저장되지만, `docs/archive/PIPELINE.md`가 T1을 공식 document representation으로 못 박았다. 실제
 zero-shot 리더보드에서도(`14_run_model_eval.py`로 여러 모델 비교) T1이 T2보다 항상 nDCG@10이
 높게 나와 실증적으로도 뒷받침된다.
 
@@ -923,10 +923,10 @@ zero-shot 리더보드에서도(`14_run_model_eval.py`로 여러 모델 비교) 
 `store_search_ai.training.st_finetune.run_finetune()`)이 모델 폴더에 `model_manifest.json`(base 모델, 학습 데이터 sha256,
 하이퍼파라미터, 코드 사본, 서빙이 따라야 할 값)을 남기고, 평가할 때마다(Colab은 노트북 `evaluate()`, 로컬은
 `14_run_model_eval.py`) 그 안의 `evaluations` 리스트에 val/test 점수가 자동으로 쌓인다. 어떤 체크포인트를 배포할지 고를 때 이 파일 하나만 보면
-된다(`docs/TRAINING.md` 5절, 팀 규칙은 `docs/TRAINING_TEAM.md`).
+된다(`docs/archive/TRAINING.md` 5절, 팀 규칙은 `docs/archive/TRAINING_TEAM.md`).
 
 **Q9. 쿼리 원본은 어디서 오고, fine-tuning 데이터는 어떻게 만드나요?**
 → `import_queryset_xlsx.py` 절 + `prepare_finetune_dataset.py` 절. 둘 다 번호 실행 순서에
 속하지 않는 번호 없는 유틸리티지만 실제 워크플로우에서는 필수다: 전자는 `queryset_final.xlsx`
 (팀이 편집)를 `query_families_v1.yaml`(05번이 읽는 파일)로 바꾸고, 후자는 09/11번이 만든
-train qrels를 Colab 학습(`docs/TRAINING.md`)이 바로 쓸 수 있는 jsonl로 바꾼다.
+train qrels를 Colab 학습(`docs/archive/TRAINING.md`)이 바로 쓸 수 있는 jsonl로 바꾼다.

@@ -1,7 +1,7 @@
 """`results/model_eval/` 밑에 쌓인 여러 모델×템플릿 run을 모아 리더보드로 합치는 로직.
 
 scripts/15_score_model_runs.py의 CLI 배관(인자 파싱, 서브프로세스 호출, 콘솔 출력)을 제외한
-핵심 로직 — run 파일 탐색과 리더보드 정렬 (docs/PIPELINE_CODE_REFERENCE.md
+핵심 로직 — run 파일 탐색과 리더보드 정렬 (docs/archive/PIPELINE_CODE_REFERENCE.md
 `15_score_model_runs.py` 절 참고).
 """
 

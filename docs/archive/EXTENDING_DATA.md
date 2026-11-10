@@ -74,7 +74,7 @@ python scripts/12_validate_benchmark.py --stage pilot
 
 `import_queryset_xlsx.py`가 하는 일(스크립트 상단 docstring에 상세 설명):
 - family당 최소 variant 개수 제한 없음(팀 결정 — 548개 질의 전부 유지). 평가·학습에서만 빼려면 xlsx를 고치지 말고
-  `configs/benchmark/inactive_queries_v1.yaml`에 추가(현재 오타 변형 49개 비활성, `docs/PIPELINE.md` 2절)
+  `configs/benchmark/inactive_queries_v1.yaml`에 추가(현재 오타 변형 49개 비활성, `docs/archive/PIPELINE.md` 2절)
 - 기존 yaml에 이미 있는 family 이름은 **split을 그대로 물려받음**(재실행해도 train/val/test가 안 흔들림).
   완전히 새로운 family만 대분류별 균형 + 무작위로 새 split을 배정
 - `intent_definition`은 "{대분류} 중 '{family}'을(를) 판매·제공하는 매장" 형태로 초안만 자동 생성 —
@@ -109,7 +109,7 @@ yaml이 생성하는 각 family의 구조는 다음과 같습니다(참고용 �
 ```
 
 **주의**: `positive_terms`/`boundary_terms`는 pooling 후보 발굴(targeted term-match 채널, 경계 사례
-채널)에만 쓰입니다. train/val/test 모두 relevance는 **사람이 직접 판정**합니다(`docs/PIPELINE.md`
+채널)에만 쓰입니다. train/val/test 모두 relevance는 **사람이 직접 판정**합니다(`docs/archive/PIPELINE.md`
 4~5절) — 이 두 필드는 relevance 값 자체에는 영향을 주지 않지만, 후보 pool의 구성(무엇이 애노테이터
 앞에 보이는지)에는 영향을 주므로 너무 느슨하거나 너무 좁은 term을 넣으면 pool 품질이 떨어집니다.
 
@@ -123,6 +123,6 @@ yaml이 생성하는 각 family의 구조는 다음과 같습니다(참고용 �
 5. `query_id`는 `q_{family}_{순번:02d}` 형식으로 `05_init_benchmark.py`가 자동 생성
 
 **주의**: query family를 추가/변경하면 pooling(06~07)부터 다시 실행해야 하고, 새로 추가되거나 바뀐
-query는 train/val/test 가릴 것 없이 애노테이션이 전혀 안 되어 있는 상태이므로 `docs/PIPELINE.md` 4~5절
+query는 train/val/test 가릴 것 없이 애노테이션이 전혀 안 되어 있는 상태이므로 `docs/archive/PIPELINE.md` 4~5절
 (본 애노테이션 → adjudication)을 사람이 다시 거쳐야 qrels에 반영됩니다. 변경 전 family의 기존 완료
 라벨은 그대로 재사용되고, 새/변경 query만 다시 라벨링하면 됩니다.

@@ -6,7 +6,7 @@
 ## 핵심 원칙
 
 1. Raw 파일(`data/raw/*.xlsx`)은 수정하지 않습니다. 새 데이터로 교체할 때는 새 파일명으로 추가하고
-   기존 파일은 그대로 둡니다(`docs/EXTENDING_DATA.md` 참고).
+   기존 파일은 그대로 둡니다(`docs/archive/EXTENDING_DATA.md` 참고).
 2. 사업자번호/가맹점번호/법정동코드는 문자열로 취급합니다.
 3. 가맹점번호는 결측·전화번호 형태가 섞여 있어 PK로 사용하지 않습니다.
 4. 매장 PK(`store_id`)는 `data/registry/store_registry.parquet`에서 append-only로 발급되는 UUID이며,
@@ -42,9 +42,9 @@ configs/
   data/default.yaml              raw xlsx 스키마·컬럼 매핑·지역(시도) 별칭 테이블·검증 규칙
   benchmark/storesearch_ko_v1.yaml   벤치마크 경로/버전/파라미터(pooling, annotation, validation, evaluation)
   benchmark/query_families_v1.yaml   query family 정의 (생성물 — data/query/queryset_final.xlsx에서
-                                  import_queryset_xlsx.py로 생성, 직접 편집 금지. docs/EXTENDING_DATA.md 참고)
+                                  import_queryset_xlsx.py로 생성, 직접 편집 금지. docs/archive/EXTENDING_DATA.md 참고)
   benchmark/inactive_queries_v1.yaml 비활성 쿼리 목록(오타 변형 49개, 2026-10-14) — 05번이 status=inactive로 표시
-  benchmark/judging_candidates.yaml  일괄 판정 후보 등록부 (docs/EVALUATION_POLICY.md 3절)
+  benchmark/judging_candidates.yaml  일괄 판정 후보 등록부 (docs/archive/EVALUATION_POLICY.md 3절)
   evaluation/default.yaml        공식 metric 목록 (문서화용 — 13_evaluate_run.py는 metric을 자체 상수로 갖고 있음)
   models/*.yaml                  비교 대상 임베딩 모델 설정 (zero-shot 비교/파인튜닝 후보)
   service/search_policy_v1.yaml  검색 정책 값(반경·지역·지도 모드·정렬·임계값) — 백엔드로 넘기는 단일 출처(docs/BACKEND_HANDOFF.md)
@@ -52,24 +52,24 @@ src/store_search_ai/
   common/io.py                   yaml/엑셀 로딩 유틸
   data/                          전처리·registry·corpus·search_text·지역 판별 핵심 로직
   pipeline/common.py             scripts/*.py 공통 보일러플레이트 (yaml 로드, TREC 저장 등)
-  models/                        임베딩 인코더 (BEIR 스타일, docs/MODELING.md 참고)
+  models/                        임베딩 인코더 (BEIR 스타일, docs/archive/MODELING.md 참고)
   retrieval/exact_search.py      exact cosine 검색 (ANN 이전 단계 모델 비교용)
-  query/understanding.py         쿼리 이해(지역·상호·업종 분리, 같은 이름 지명 선택, 상호 우선) — docs/SERVICE_PIPELINE_PLAN.md 6·11절
+  query/understanding.py         쿼리 이해(지역·상호·업종 분리, 같은 이름 지명 선택, 상호 우선) — docs/archive/SERVICE_PIPELINE_PLAN.md 6·11절
   data/gazetteer.py              공공데이터 지명 사전(법정동·행정동 경계·역·시장) 만들기
   evaluation/                    공식 evaluator(13번 본체) + 모델 평가·리더보드 헬퍼
   training/                      fine-tuning 로컬 참조 구현(Colab은 colab/train_eval.ipynb)
   common/hf_compat.py            transformers / sentence-transformers 버전 차이 흡수
 results/                         실험 결과 — experiments.csv(기록표), model_eval/(평가 run), finetune_runs/(학습 기록),
                                   stack_eval/(하이브리드·reranker 탐색), pooling_runs/(git 제외) — results/README.md
-scripts/01_*.py ~ scripts/16_*.py   파이프라인 본체 (16 = 보충 pooling, docs/PIPELINE.md 참고)
+scripts/01_*.py ~ scripts/16_*.py   파이프라인 본체 (16 = 보충 pooling, docs/archive/PIPELINE.md 참고)
 scripts/import_queryset_xlsx.py    data/query/queryset_final.xlsx → query_families_v1.yaml 변환기(번호 없음, 05 이전에 1회성 실행)
-scripts/split_completed_annotations.py  애노테이션 완료본을 split별로 나누기(번호 없음, docs/PIPELINE.md 4절)
-scripts/prepare_finetune_dataset.py  train qrels+corpus → fine-tuning용 jsonl (번호 없음, docs/TRAINING.md 참고)
-scripts/pack_for_colab.py            Colab(Drive)에 올릴 data/ 폴더 생성 + 데이터 버전 기록 (docs/TRAINING_TEAM.md 참고)
+scripts/split_completed_annotations.py  애노테이션 완료본을 split별로 나누기(번호 없음, docs/archive/PIPELINE.md 4절)
+scripts/prepare_finetune_dataset.py  train qrels+corpus → fine-tuning용 jsonl (번호 없음, docs/archive/TRAINING.md 참고)
+scripts/pack_for_colab.py            Colab(Drive)에 올릴 data/ 폴더 생성 + 데이터 버전 기록 (docs/archive/TRAINING_TEAM.md 참고)
 scripts/import_colab_results.py      Colab 실험 결과(Drive runs/)를 저장소로 가져오기 + 로컬 재채점 검증(--verify) + 실험 기록표(results/experiments.csv)
 scripts/rescore_evaluations.py       qrels가 바뀐 뒤 기존 평가를 같은 run으로 다시 채점
 scripts/eval_retrieval_stack.py     하이브리드(BM25 RRF)·reranker 구성 비교(+ Colab GPU 채점용 colab/rerank_scores.ipynb)
-scripts/collect_judging_candidates.py  등록된 판정 후보 일괄 판정 시트 생성 (docs/EVALUATION_POLICY.md — 평가·판정 공식 규칙)
+scripts/collect_judging_candidates.py  등록된 판정 후보 일괄 판정 시트 생성 (docs/archive/EVALUATION_POLICY.md — 평가·판정 공식 규칙)
 scripts/build_gazetteer.py           공공데이터(저장소 밖) → data/geo/gazetteer_v1.parquet 지명 사전
 data/
   raw/stores_20260907.xlsx       원본 전국 데이터 (수정 금지)
@@ -86,7 +86,12 @@ models/                         fine-tuned 모델 가중치 (.gitignore 처리 �
 tests/                          단위 테스트 (pytest)
 colab/                          Colab(GPU) 노트북 — train_eval.ipynb(학습·평가), rerank_scores.ipynb(reranker 채점) (colab/README.md 참고)
 docs/
-  PIPELINE.md                    01~16단계 실행 순서·인자·사람 개입 지점 + Colab 학습 순서 (필독)
+  SERVICE_POLICY.md              서비스 기획·정책(백엔드 개발 기준 문서 — 여기서 시작)
+  BACKEND_HANDOFF.md             자바 백엔드로 넘기는 산출물, 옮길 때 지킬 동작, 최종 성능, 알려진 한계
+  SEARCH_LOGGING.md              검색 로그 설계 추천안(백엔드 구현용)
+  DB_DESIGN_PROMPT.md            DB 테이블 설계 요청문(2026-11-10 팀 결정 포함 — 정책 기준은 SERVICE_POLICY.md)
+docs/archive/                    오프라인 실험·학습 단계 문서(참고용, 더 갱신하지 않음)
+  PIPELINE.md                    01~16단계 실행 순서·인자·사람 개입 지점 + Colab 학습 순서
   PIPELINE_CODE_REFERENCE.md     스크립트별 코드 상세(무엇을 읽고 계산해서 어디에 쓰는지)
   EXTENDING_DATA.md               raw 데이터 확장 / query family 재정의 방법
   MODELING.md                    임베딩 모델 zero-shot 비교 구조 (BEIR 스타일)
@@ -96,9 +101,8 @@ docs/
   EVALUATION_POLICY.md           평가·판정 공식 규칙(판정 없이 탐색 → 후보 등록 → 일괄 판정 1회 → test 1회)
   EMBEDDING_V1_PLAN.md           임베딩 v1 확정 계획, 실제형 평가셋 계획, main 대비 변경점(회의용 요약)
   SERVICE_READINESS.md           서비스 적용 판단 로드맵(실제형 평가셋, side-by-side, 온라인 검증, 외부 API 비교)
-  SERVICE_PIPELINE_PLAN.md       서비스셋 기준 검색 파이프라인 실험 계획·기록(현재 계획 = 11절)
-  SEARCH_LOGGING.md              검색 로그 설계 추천안(백엔드 구현용)
-  BACKEND_HANDOFF.md             자바 백엔드로 넘기는 산출물과 백엔드에서 정할 것
+  SERVICE_PIPELINE_PLAN.md       서비스셋 기준 검색 파이프라인 실험 계획·기록(근거 = 11절)
+  (그 밖) SERVICE_QUERYSET·SERVICE_QUERYSET_REVIEW·QUERY_WRITING_GUIDE·SERVICE_ANNOTATION_GUIDELINE·SERVICE_EVAL_METHOD  서비스셋 작성·판정·평가
 ```
 
 ## 빠른 시작
@@ -120,7 +124,7 @@ python scripts/04_build_corpus.py
 
 ## 전체 파이프라인 실행 순서
 
-자세한 입출력·플래그는 `docs/PIPELINE.md`를 보세요. 요약:
+자세한 입출력·플래그는 `docs/archive/PIPELINE.md`를 보세요. 요약:
 
 | 단계 | 스크립트 | 사람 개입 | 설명 |
 |---|---|---|---|
@@ -154,8 +158,8 @@ family 목록이 낡아서 삭제했습니다 — 필요하면 git 이력에서 
 ## Query family 추가/재정의
 
 `configs/benchmark/query_families_v1.yaml`은 직접 편집하지 않습니다. `data/query/queryset_final.xlsx`를 고친 뒤
-`scripts/import_queryset_xlsx.py`로 다시 생성합니다(현재 72개 family, `docs/EXTENDING_DATA.md`). 쿼리를 평가·학습에서만 빼려면
-`configs/benchmark/inactive_queries_v1.yaml`에 추가합니다(판정 기록 보존, `docs/PIPELINE.md` 2절).
+`scripts/import_queryset_xlsx.py`로 다시 생성합니다(현재 72개 family, `docs/archive/EXTENDING_DATA.md`). 쿼리를 평가·학습에서만 빼려면
+`configs/benchmark/inactive_queries_v1.yaml`에 추가합니다(판정 기록 보존, `docs/archive/PIPELINE.md` 2절).
 
 ## Train/Val/Test 분할 방식
 

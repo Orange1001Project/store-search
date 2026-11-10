@@ -41,7 +41,7 @@ pytestmark = pytest.mark.skipif(
     not POOL_PATH.exists(),
     reason=(
         "candidate_pool_internal.csv 없음 (재생성 가능한 중간 산출물 - "
-        "docs/PIPELINE.md 1~3절로 재생성 후 다시 실행)"
+        "docs/archive/PIPELINE.md 1~3절로 재생성 후 다시 실행)"
     ),
 )
 

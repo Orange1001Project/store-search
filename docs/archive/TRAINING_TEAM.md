@@ -1,7 +1,7 @@
 # 팀 학습 가이드 — Colab 노트북 하나로 학습·평가, 결과는 서비스로 이어지게
 
 Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실험하되, 나중에 **가장 좋았던 모델 폴더 하나와 기록만 보고
-검색 서비스·벡터DB에 바로 연결**할 수 있게 하기 위한 절차와 최소 규칙입니다. 설계 배경은 `docs/TRAINING.md`.
+검색 서비스·벡터DB에 바로 연결**할 수 있게 하기 위한 절차와 최소 규칙입니다. 설계 배경은 `docs/archive/TRAINING.md`.
 
 > **요약**
 > - Colab에서 여는 파일은 **`colab/train_eval.ipynb` 하나**입니다. 학습·평가 코드가 전부 그 안에 있어서 **기법(학습 데이터 만드는 방식,
@@ -44,7 +44,7 @@ Arctic(Snowflake)·BGE-M3·Qwen3를 각자 코드와 설정을 바꿔 가며 실
 
 ## 2. 노트북 구조 — 어디를 고치나
 
-위에서부터 순서대로 실행합니다. 셀 하나하나의 코드 설명은 **`docs/TRAIN_EVAL_NOTEBOOK.md`**.
+위에서부터 순서대로 실행합니다. 셀 하나하나의 코드 설명은 **`docs/archive/TRAIN_EVAL_NOTEBOOK.md`**.
 
 | 셀 | 하는 일 | 고치나? |
 |---|---|---|
@@ -234,15 +234,15 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 - **오타 쿼리는 2026-10-14부터 벤치마크에서 비활성**입니다(val 136 → 124개). 오타는 나중에 철자 교정 단계에서 다룹니다 — 그 전 점수(val 136개 기준)와
   직접 비교하지 마세요. 오타 증강(`typo_variants_per_query`)은 효과가 없어(Δ +0.001, p=0.70) 기본값 0으로 둡니다.
   예전 학습 데이터(오타 학습 쿼리 22개 포함, sha `067e4aa4`)로 학습한 run도 평가·비교할 수 있지만(학습은 train 업종만 써서 누설 없음),
-  최종 후보는 가능하면 현재 데이터(sha `ec3a9b61`)로 다시 학습해 데이터 차이를 없앱니다(`docs/EMBEDDING_V1_PLAN.md` 3-2).
+  최종 후보는 가능하면 현재 데이터(sha `ec3a9b61`)로 다시 학습해 데이터 차이를 없앱니다(`docs/archive/EMBEDDING_V1_PLAN.md` 3-2).
 - 서비스 지표의 **nDCG@10(판정만)**은 판정 없는 문서를 빼고 매긴 값입니다. 새 계열 모델처럼 Judged@10이 0.95 미만이면 이 값으로 고르고,
-  사람 판정은 후보가 모였을 때 한 번에 합니다(`docs/EVALUATION_POLICY.md`). 괜찮은 run은 `configs/benchmark/judging_candidates.yaml`에 등록하세요.
+  사람 판정은 후보가 모였을 때 한 번에 합니다(`docs/archive/EVALUATION_POLICY.md`). 괜찮은 run은 `configs/benchmark/judging_candidates.yaml`에 등록하세요.
 - **Judged@10**(상위 10개 중 정답 판정이 있는 비율)을 같이 봅니다. 판정이 없는 문서는 오답으로 계산되므로 0.9보다 낮으면 점수가 실제보다
   낮게 나온 것입니다. val/test 정답은 키워드 검색 3종 + 임베딩 모델 6종(Qwen3 0.6B·BGE-M3·Arctic-KO 계열과 학습 모델)의 상위 결과로
   판정했습니다(supplement_v2). 이 계열을 학습한 모델은 보통 0.9 이상이고, 다른 계열 모델은 낮을 수 있습니다 — 그때는 데이터 담당에게
-  보충 판정을 요청합니다(`docs/PIPELINE.md` 6-2).
+  보충 판정을 요청합니다(`docs/archive/PIPELINE.md` 6-2).
 - **같은 학습 데이터 해시 + 같은 precision(T4=fp16, L4/A100=bf16) + 같은 `eval_dtype` + 같은 `libs`**끼리만 비교합니다.
-  리더보드 `eval_dtype`이 비어 있는 결과는 평가 정밀도를 고정하기 전(2026-10-07 이전) 것이라 다시 평가합니다. 정밀도 설명은 `docs/TRAINING.md` 6절. Colab이 기본 라이브러리를 올렸으면
+  리더보드 `eval_dtype`이 비어 있는 결과는 평가 정밀도를 고정하기 전(2026-10-07 이전) 것이라 다시 평가합니다. 정밀도 설명은 `docs/archive/TRAINING.md` 6절. Colab이 기본 라이브러리를 올렸으면
   기준 zero-shot 모델도 그 버전으로 다시 평가해서 비교합니다(그 모델의 `runs/model_eval/<이름>/` 폴더를 지우고 9번 실행).
 
 ## 9. 실험이 끝나면 — VS Code로 가져와 저장
@@ -289,13 +289,13 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 | **Qwen3-4B** (`qwen3_4b`, `_store`) | – | T4는 빠듯함 → 가능하면 **L4/A100**(bf16, batch 키움). 0.6B에서 효과 있던 설정을 옮겨서 |
 
 (숫자는 `final_v1_val` 판정 후 qrels·val 124개·전체 코퍼스·fp16 평가 기준, `results/model_comparison/final_v1_val/`. zero-shot bge·Arctic은 depth 20 pooling run으로 계산.
-**임베딩 v1은 bge-m3 mj로 정해졌습니다(2026-10-16, `docs/EMBEDDING_V1_PLAN.md` 8절)** — 이 표의 "먼저 해 볼 것"은 v2(실제형 평가셋 이후) 때 참고하고, 지금 val에 맞춘 튜닝은 하지 않습니다.)
+**임베딩 v1은 bge-m3 mj로 정해졌습니다(2026-10-16, `docs/archive/EMBEDDING_V1_PLAN.md` 8절)** — 이 표의 "먼저 해 볼 것"은 v2(실제형 평가셋 이후) 때 참고하고, 지금 val에 맞춘 튜닝은 하지 않습니다.)
 
 **모든 모델 공통 — 효과가 클 것으로 보는 순서**
 1. **hard negative**: 학습된 모델이 상위에 올리는 오답을 다시 negative로 쓰기(정답인데 판정이 없는 문서가 섞일 수 있어 GIST와 함께).
 2. **하이퍼파라미터**: epoch(1~3), lr, batch(L4/A100에서 64), negative 수.
 3. (임베딩 학습이 아님) **검색 시스템**: 키워드 검색(BM25)과 섞는 hybrid, 상위 결과를 다시 정렬하는 reranker는 **검색 파이프라인 단계**에서
-   데이터 담당이 구성·평가합니다(`docs/EMBEDDING_V1_PLAN.md`). 임베딩 run 비교·후보 선정에는 넣지 않습니다.
+   데이터 담당이 구성·평가합니다(`docs/archive/EMBEDDING_V1_PLAN.md`). 임베딩 run 비교·후보 선정에는 넣지 않습니다.
 
 **데이터 쪽 보강(데이터 담당과 상의)**
 - **평가 정답 보강(모델 결과로 추가 pooling)**: 2026-10에 임베딩 모델 6종의 val/test 상위 20개를 추가 판정했습니다(supplement_v2,
@@ -334,7 +334,7 @@ KEEP 기준: **모델별 baseline run / 서비스 후보 / 발표·비교에 계
 
 ## 부록. 데이터 담당 — 학습 데이터·정답 배포
 
-1. train 애노테이션 반영(`docs/PIPELINE.md` 4절) → `python scripts/prepare_finetune_dataset.py`
+1. train 애노테이션 반영(`docs/archive/PIPELINE.md` 4절) → `python scripts/prepare_finetune_dataset.py`
 2. `data/finetune/train_pairs.jsonl`과 `train_pairs.meta.json`을 **같이** 커밋·push
 3. 정답(qrels)이 바뀌면 `11_build_qrels.py` → `12_validate_benchmark.py --stage final` → 커밋·push
 4. `python scripts/pack_for_colab.py`로 `data/`를 만들어 팀 공유 위치에 올리고 공지(커밋 번호, `train_pairs_sha256` 앞 8자리)

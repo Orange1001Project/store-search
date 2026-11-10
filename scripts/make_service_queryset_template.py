@@ -2,7 +2,7 @@
 
 파이프라인 번호가 없는 이유: import_queryset_xlsx.py처럼 사람이 쿼리를 쓰기 전에 한 번 돌리는 저작 도구다.
 표 내용은 src/store_search_ai/data/service_queryset.py, 설정(상황 카드·별칭·목표 개수·seed)은
-configs/query/service_queryset_v1.yaml, 계획은 docs/SERVICE_QUERYSET.md.
+configs/query/service_queryset_v1.yaml, 계획은 docs/archive/SERVICE_QUERYSET.md.
 
 출력 파일은 작성자가 채우는 원본이 되므로 이미 있으면 덮어쓰지 않는다(--force로만).
 

@@ -64,7 +64,7 @@
 
 ## 4. 판정 절차
 
-- 판정 대상(pool): 쿼리 가정위치에서 반경 2km 안의 가맹점 가운데 다음을 합친 것이다(`scripts/build_service_pool.py`, 자세한 방법은 `docs/SERVICE_EVAL_METHOD.md`).
+- 판정 대상(pool): 쿼리 가정위치에서 반경 2km 안의 가맹점 가운데 다음을 합친 것이다(`scripts/build_service_pool.py`, 자세한 방법은 `docs/archive/SERVICE_EVAL_METHOD.md`).
   시스템 상위 k개는 1km 안 순위와 2km 안 순위 각각에서 뽑는다. 앵커 사례(정답 없는 쿼리에 앵커 근처 위치를 더한 것)는 앵커 가게도 넣는다.
   - 각 시스템의 상위 k개: v1 bge-m3 mj, bge-m3 zero-shot, char BM25
   - 쿼리 단어가 상호·취급품목에 들어간 가맹점(키워드 후보)

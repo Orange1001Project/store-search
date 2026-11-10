@@ -1,17 +1,17 @@
 # 임베딩 모델 Fine-tuning (Colab)
 
-`docs/MODELING.md`의 zero-shot 비교가 끝난 뒤, 실제로 모델을 우리 데이터에 맞게
+`docs/archive/MODELING.md`의 zero-shot 비교가 끝난 뒤, 실제로 모델을 우리 데이터에 맞게
 학습시키는 단계입니다. 평가 코드는 새로 만들지 않습니다 — fine-tuning으로 나온 모델도
 `configs/models/*.yaml`에 등록해서 기존 `14_run_model_eval.py`/`15_score_model_runs.py`로
-그대로 채점합니다("run을 채점하는 evaluator는 하나만 둔다", `docs/MODELING.md` 참고).
+그대로 채점합니다("run을 채점하는 evaluator는 하나만 둔다", `docs/archive/MODELING.md` 참고).
 
-> **학습만 맡은 팀원은 `docs/TRAINING_TEAM.md`부터 보세요** — 배포된 학습 데이터로 Colab 학습 → 평가 →
+> **학습만 맡은 팀원은 `docs/archive/TRAINING_TEAM.md`부터 보세요** — 배포된 학습 데이터로 Colab 학습 → 평가 →
 > 실험 기록(`results/experiments.csv`)까지의 절차와 팀 규칙만 모아 둔 문서입니다. 이 문서는 그 배경(설계 이유·설정 의미)입니다.
 
 ## 사전 조건
 
 train qrels(`benchmark/storesearch_ko_v1/qrels_train.csv`, 없으면
-`qrels/full_annotation_v1/qrels_train_provisional.csv`)가 있어야 합니다. `docs/PIPELINE.md` 4절
+`qrels/full_annotation_v1/qrels_train_provisional.csv`)가 있어야 합니다. `docs/archive/PIPELINE.md` 4절
 (`08_make_full_annotation_sheets.py` → 사람이 train 시트 채움 → `09_prepare_full_annotations.py`)
 까지 끝나면 준비됩니다 — val/test의 adjudication을 기다릴 필요는 없습니다(train은 애노테이터
 1명의 단일 라벨링이라 더 빨리 끝납니다).
@@ -69,10 +69,10 @@ python scripts/prepare_finetune_dataset.py
 로컬에서 `python scripts/pack_for_colab.py`로 `colab_upload/data/`(학습 데이터·corpus·queries·val/test qrels +
 `data_version.json`: git 브랜치·커밋, 파일별 sha256, 평가 설정)를 만들어 Drive `내 드라이브/store-search-ai/data`로 **한 번** 올리고
 (데이터가 바뀔 때만 다시), Colab에서 `colab/train_eval.ipynb`를 열어 설정 셀의 **`OWNER`를 본인 이름(영문 소문자)으로 바꿔서**
-실행합니다. 처음엔 `SMOKE=True`로 전체 흐름을 확인합니다(절차는 `docs/TRAINING_TEAM.md`). `HP`의 나머지 값은 팀 공통 기본값입니다 —
+실행합니다. 처음엔 `SMOKE=True`로 전체 흐름을 확인합니다(절차는 `docs/archive/TRAINING_TEAM.md`). `HP`의 나머지 값은 팀 공통 기본값입니다 —
 바꾼 값은 전부 manifest에 자동으로 남지만, 결과를 서로 비교하려면 합의 없이 바꾸지 마세요.
 
-**작업 방식(요약)** — 자세한 절차는 `docs/TRAINING_TEAM.md` 1~4절, 셀별 코드 설명은 `docs/TRAIN_EVAL_NOTEBOOK.md`.
+**작업 방식(요약)** — 자세한 절차는 `docs/archive/TRAINING_TEAM.md` 1~4절, 셀별 코드 설명은 `docs/archive/TRAIN_EVAL_NOTEBOOK.md`.
 
 | 단계 | 어디서 | 무엇을 |
 |---|---|---|
@@ -121,7 +121,7 @@ optimizer/scheduler 상태)를 저장합니다. 매 epoch마다 쌓지 않는 �
   처음과 똑같이** 둔 채 다시 실행하면 checkpoint-N부터 이어서 학습합니다. 설정이나 `train_pairs.jsonl`이
   처음과 다르면(`.ckpt/run_config.json`과 비교) 이어 붙이지 않고 거부합니다 — 다른 설정의 학습이 섞인
   모델이 나오면 manifest를 믿을 수 없게 되기 때문입니다(`note`, `keep_last_runs`, `save_mid_checkpoint`, `resume_tag`,
-  `mini_batch_size`만 달라도 됨 — OOM이 나서 mini_batch를 줄여 이어 하는 것은 허용). 끊긴 시점별 절차는 `docs/TRAINING_TEAM.md` 4절.
+  `mini_batch_size`만 달라도 됨 — OOM이 나서 mini_batch를 줄여 이어 하는 것은 허용). 끊긴 시점별 절차는 `docs/archive/TRAINING_TEAM.md` 4절.
 - **절반 지점 전에 끊기면** 체크포인트가 없으니 처음부터 다시 돌립니다(`.ckpt` 폴더는 지워도 됨).
 - **최종 모델 저장이 성공하면 `.ckpt` 폴더는 자동으로 지웁니다.** 끝나지 않은 run의 `.ckpt`는 자동 정리
   대상이 아니라서, 이어서 학습할 게 아니면 Drive에서 직접 지우세요.
@@ -167,7 +167,7 @@ python scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai
 ```
 → `results/model_eval/`(run CSV), `artifacts/evaluation/storesearch_ko_v1/`(평가 json), `results/experiments.csv`(실험 기록표, 평가마다 한 줄),
 `results/finetune_runs/<TAG>/`(모든 학습 run의 manifest·eval_config·notebook_code), KEEP한 run의 `models/<TAG>/` + `configs/models/<TAG>.yaml`로
-정리하고, `--verify`가 로컬에서 다시 채점해 Colab 점수와 같은지 확인합니다. 절차는 `docs/TRAINING_TEAM.md` 9절.
+정리하고, `--verify`가 로컬에서 다시 채점해 Colab 점수와 같은지 확인합니다. 절차는 `docs/archive/TRAINING_TEAM.md` 9절.
 
 로컬 GPU로 평가하는 기존 방법(`14_run_model_eval.py --model-config configs/models/<TAG>.yaml` → `15_score_model_runs.py`)도
 그대로 쓸 수 있습니다(같은 evaluator).

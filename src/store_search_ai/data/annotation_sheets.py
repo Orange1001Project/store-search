@@ -3,7 +3,7 @@
 scripts/08_make_full_annotation_sheets.py의 CLI 배관(인자 파싱, 콘솔 출력)을 제외한 핵심
 로직 전체 — pool/queries 정합성 검사, query 메타데이터 부착, judgment_id 부여, annotator
 A(train+val+test)/B(val+test) 시트 조립, split 통계, manifest 생성까지
-(docs/PIPELINE_CODE_REFERENCE.md `08_make_full_annotation_sheets.py` 절 참고).
+(docs/archive/PIPELINE_CODE_REFERENCE.md `08_make_full_annotation_sheets.py` 절 참고).
 """
 
 from __future__ import annotations

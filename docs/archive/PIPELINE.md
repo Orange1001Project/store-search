@@ -75,7 +75,7 @@ python scripts/05_init_benchmark.py
 `configs/benchmark/query_families_v1.yaml`을 읽어 `benchmark/storesearch_ko_v1/queries.csv` +
 `annotation_guideline.md`를 생성합니다. **이 yaml은 직접 편집하는 파일이 아니라
 `scripts/import_queryset_xlsx.py`가 `data/query/queryset_final.xlsx`로부터 생성하는 산출물입니다**
-(자세한 방법은 `docs/EXTENDING_DATA.md` 참고, 질의 원본은 문서 하단 "Query family 원본" 참고).
+(자세한 방법은 `docs/archive/EXTENDING_DATA.md` 참고, 질의 원본은 문서 하단 "Query family 원본" 참고).
 
 **비활성 쿼리**: `query_set.inactive_queries_path`(`configs/benchmark/inactive_queries_v1.yaml`)에 적힌 쿼리는 `queries.csv`에
 `status=inactive`로 남고, qrels(11번은 그 판정을 뺌)·평가·학습 데이터에서 빠집니다. 판정 기록(`annotations/`)은 그대로라 목록에서
@@ -95,7 +95,7 @@ python scripts/07_build_annotation_pool.py --round lexical_v1
 - 06: TF-IDF(char/word) + BM25 세 시스템으로 top-40 lexical run을 생성 (`benchmark/storesearch_ko_v1/runs/pooling/`).
   세 시스템 모두 토큰화는 **문자 n-gram**으로 통일되어 있다(word/bm25도 이름과 달리 단어 정규식이
   아니라 char n-gram) — 띄어쓰기 없는 한국어 복합어(예: "가구추천")를 단어 경계 토큰화로는 부분
-  일치시킬 수 없는 문제 때문 (`docs/PIPELINE_CODE_REFERENCE.md` `06_generate_lexical_runs.py` 절 참고)
+  일치시킬 수 없는 문제 때문 (`docs/archive/PIPELINE_CODE_REFERENCE.md` `06_generate_lexical_runs.py` 절 참고)
 - 07: 위 run들을 합쳐 애노테이션 대상 후보 pool을 만듭니다 (`candidate_pool_internal.csv`).
   **이 스크립트는 `--round` 인자로 여러 번 누적 호출 가능**합니다 (예: 나중에 dense retrieval 결과로 pool을
   확장하고 싶다면 `--round dense_round1`로 다시 실행).
@@ -111,7 +111,7 @@ python scripts/08_make_full_annotation_sheets.py
 `annotations/{round}/`, `qrels/{round}/` 디렉터리를 참조하므로 명시적으로 넘길 필요는 거의
 없지만, **이전 애노테이션 라운드를 보존한 채 완전히 새 라운드를 시작하려면** 08번부터
 `--round full_annotation_v2`처럼 새 이름을 주고 09~11번에도 동일한 이름을 넘기면 된다(자세한
-경로 계산은 `docs/PIPELINE_CODE_REFERENCE.md` 08~11절, `store_search_ai.pipeline.common.
+경로 계산은 `docs/archive/PIPELINE_CODE_REFERENCE.md` 08~11절, `store_search_ai.pipeline.common.
 get_annotation_round_dirs` 참고).
 
 - train: 애노테이터 A만 단일 라벨링 — training signal이므로 모델 성능을 "보고"하는 데는 쓰지
@@ -250,8 +250,8 @@ python scripts/14_run_model_eval.py --model-config configs/models/bge_m3.yaml --
 python scripts/15_score_model_runs.py --split val
 ```
 
-`docs/MODELING.md` 참고. Fine-tuning 이후에도 이 두 스크립트를 그대로 써서 fine-tuned 모델을
-평가합니다(`docs/TRAINING.md` 참고) — 그래서 이름에 "zero_shot"을 넣지 않았습니다.
+`docs/archive/MODELING.md` 참고. Fine-tuning 이후에도 이 두 스크립트를 그대로 써서 fine-tuned 모델을
+평가합니다(`docs/archive/TRAINING.md` 참고) — 그래서 이름에 "zero_shot"을 넣지 않았습니다.
 
 ## 8. 임베딩 모델 학습·평가 — Colab (`colab/train_eval.ipynb`)
 
@@ -266,21 +266,21 @@ python scripts/pack_for_colab.py
 1. `colab_upload/data/`를 Drive `내 드라이브/store-search-ai/data/`로 업로드(처음 한 번, 데이터가 바뀔 때만).
 2. Colab **파일 > 노트북 업로드** → `colab/train_eval.ipynb` → GPU 런타임 → 설정 셀에 `OWNER` → `SMOKE=True`로 모두 실행해 `통과` 확인.
 3. `SMOKE=False` → `1. 설정` → `3. 데이터` → `8. 학습` → `9. 평가` → `10. 리더보드`. 고칠 때는 Colab에서 바로(세션 유지) 또는
-   VS Code에서 고쳐 다시 업로드(새 세션) — `docs/TRAINING_TEAM.md` 3·4절.
+   VS Code에서 고쳐 다시 업로드(새 세션) — `docs/archive/TRAINING_TEAM.md` 3·4절.
 4. 실험이 끝나면 Drive `store-search-ai`를 내려받아 로컬에서:
    ```bash
    python scripts/import_colab_results.py --drive-dir <내려받은 폴더> --verify
    ```
    → `results/model_eval/`, `artifacts/evaluation/`(공식 evaluator로 재채점 확인), `results/experiments.csv`(실험 기록표),
-   `results/finetune_runs/<TAG>/`(학습 run 기록), KEEP한 모델은 `models/` + `configs/models/`. (`docs/TRAINING_TEAM.md` 7~9절)
+   `results/finetune_runs/<TAG>/`(학습 run 기록), KEEP한 모델은 `models/` + `configs/models/`. (`docs/archive/TRAINING_TEAM.md` 7~9절)
    예전 qrels로 채점된 Drive 평가는 가져오지 않고(지표가 다르면 건너뜀), 비활성 쿼리 행은 run 파일에서 뺍니다.
 5. **qrels가 바뀌었을 때**(보충 판정, 쿼리 비활성화): 로컬 `python scripts/rescore_evaluations.py` → `pack_for_colab.py`로 `data/` 교체 →
    노트북 **16번**(Drive 평가 다시 채점). 노트북 3번 셀은 `data_version.json`의 파일별 sha256과 Drive 파일이 다르면 멈춥니다.
 6. **판정용 val/test run**: 노트북 **15번**(`runs/pooling_runs/<이름>.csv`, 채점 없음) — 보충 pooling(6-2)과 일괄 판정 후보(9절)에 씁니다.
 
-규칙·기록: `docs/TRAINING_TEAM.md`, 학습 설계: `docs/TRAINING.md`, 노트북 셀별 코드 설명: `docs/TRAIN_EVAL_NOTEBOOK.md`.
+규칙·기록: `docs/archive/TRAINING_TEAM.md`, 학습 설계: `docs/archive/TRAINING.md`, 노트북 셀별 코드 설명: `docs/archive/TRAIN_EVAL_NOTEBOOK.md`.
 
-## 9. 일괄 판정 — 후보를 모아 한 번에 (`docs/EVALUATION_POLICY.md` 3절)
+## 9. 일괄 판정 — 후보를 모아 한 번에 (`docs/archive/EVALUATION_POLICY.md` 3절)
 
 탐색 중에는 판정하지 않고, 결정을 내릴 때 등록된 후보 전부를 한 라운드에서 판정합니다. 임베딩 v1 라운드의 후보는 **임베딩 모델 run만**입니다.
 
@@ -303,7 +303,7 @@ python scripts/collect_judging_candidates.py --make --reason "..."  # → annota
 ## 10. 검색 파이프라인 구성 탐색 — 하이브리드·reranker (판정 후보 아님)
 
 임베딩 위에 얹는 검색 구성(BM25 하이브리드 RRF, cross-encoder reranker)을 학습 없이 val에서 비교합니다. **임베딩 v1 선택과 분리**된
-파이프라인 설계용 사전 탐색이며, 본 평가는 실제형 평가셋에서 합니다(`docs/EMBEDDING_V1_PLAN.md` 2·7절).
+파이프라인 설계용 사전 탐색이며, 본 평가는 실제형 평가셋에서 합니다(`docs/archive/EMBEDDING_V1_PLAN.md` 2·7절).
 
 ```bash
 python scripts/eval_retrieval_stack.py --dense bge_m3_ft_mj_20261014_0743 --rerankers

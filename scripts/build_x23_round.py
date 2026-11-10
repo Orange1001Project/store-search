@@ -1,4 +1,4 @@
-"""X2+X3 판정 라운드 — 10km 확장·지역 필터·지도 화면 범위(docs/SERVICE_PIPELINE_PLAN.md 11-4, 11-9).
+"""X2+X3 판정 라운드 — 10km 확장·지역 필터·지도 화면 범위(docs/archive/SERVICE_PIPELINE_PLAN.md 11-4, 11-9).
 
 지금 판정은 사례 위치 2km 안뿐이라 10km 확장 결과, 원격 사용자의 지역 검색 결과, 지도 화면(5km) 결과는 대부분 판정되지 않았다.
 주 평가셋 사례(dev+test)마다 '요청'을 만들어 그 요청의 후보 범위에서 1단계 시스템(v1 임베딩 + 문자 BM25) 상위를 뽑고, 새 쌍만 판정한다.
@@ -467,7 +467,7 @@ def pool(args, cfg: dict, bench: dict) -> None:
                               "pairs": int(sheet["query_id"].isin(qids).sum())} for name, qids in assignment.items()},
         "runs_sha256": {f"{p.parent.name}/{p.name}": sha256_file(p) for p in files},
         "requests_sha256": sha256_file(bdir / "x23" / "requests.csv"),
-        "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md",
+        "guideline": "docs/archive/SERVICE_ANNOTATION_GUIDELINE.md",
     }
     (round_dir / "pool_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("저장: %s (전체 %d쌍, 이중 판정 %d쌍)", round_dir, len(sheet), manifest["double_annotation_pairs"])

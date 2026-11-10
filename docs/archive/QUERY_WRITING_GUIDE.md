@@ -1,6 +1,6 @@
 # 서비스셋 쿼리 직접 작성 가이드 (2026-10-19)
 
-서비스형 쿼리셋 v1(`docs/SERVICE_QUERYSET.md`)의 **test에 들어갈 쿼리를 사람이 직접 쓰는 절차**다.
+서비스형 쿼리셋 v1(`docs/archive/SERVICE_QUERYSET.md`)의 **test에 들어갈 쿼리를 사람이 직접 쓰는 절차**다.
 1부는 진행자용, 2부는 작성자에게 그대로 나눠 주는 안내문이다.
 
 ## 왜 다시 쓰나
@@ -82,7 +82,7 @@
 
 **C의 업종·품목명형은 묶음 정정하지 않는다**(2026-10-29). 작성자가 카드를 보고 "쌀", "치과"처럼 업종·품목 이름을 쓴 것은 맞는 답이라
 그대로 둔다. 가져온 뒤 평가용 묶음 목록(`data/query/service_eval_bundle_v1.csv`)에 올려 채점에서만 A로 센다. 기준은 "가게 종류를 하나로
-바로 말할 수 있나"(`docs/SERVICE_QUERYSET.md` 4절 "평가용 묶음"). 이 분류는 작성 뒤에 진행자가 한다 — 작성자 안내문(2부)은 바꾸지 않는다.
+바로 말할 수 있나"(`docs/archive/SERVICE_QUERYSET.md` 4절 "평가용 묶음"). 이 분류는 작성 뒤에 진행자가 한다 — 작성자 안내문(2부)은 바꾸지 않는다.
 
 **B 150개 보완**
 - 질의에 지역이 들어 있으면("묵동 대박축산") 그 부분을 `지역표현`에 그대로 옮겨 적는다.
@@ -94,7 +94,7 @@
 ## 5단계 — 넘기기
 
 - 회수한 작성자 파일(한 파일 배치)을 `data/query/writers_completed/`에 둔다. 팀 작성본(`data/query/service_queryset_v1_team_completed.xlsx`)에서는 사람이 쓴 B만 가져온다.
-- `python scripts/import_service_queries.py`로 가져온다. 중복 합치기, 제외, dev/test, 가정위치 규칙은 `docs/SERVICE_QUERYSET.md` 4절에 있다.
+- `python scripts/import_service_queries.py`로 가져온다. 중복 합치기, 제외, dev/test, 가정위치 규칙은 `docs/archive/SERVICE_QUERYSET.md` 4절에 있다.
   dev/test는 작성자가 아니라 근거(업종·카드·가맹점·시장) 단위로 나눈다 — 같은 카드의 쿼리가 dev와 test에 갈라지지 않게.
 
 ---

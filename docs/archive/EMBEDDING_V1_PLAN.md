@@ -1,7 +1,7 @@
 # 임베딩 v1 확정 계획 — 후보 수집 → 일괄 판정 → 선택 → 검색 파이프라인 (2026-10-15 작성, 2026-10-16 v1 선택: bge-m3 mj)
 
-회의·인수인계용 요약 문서. 규칙의 근거는 `docs/EVALUATION_POLICY.md`(평가·판정 공식 규칙), 서비스 적용 전체 그림은
-`docs/SERVICE_READINESS.md`.
+회의·인수인계용 요약 문서. 규칙의 근거는 `docs/archive/EVALUATION_POLICY.md`(평가·판정 공식 규칙), 서비스 적용 전체 그림은
+`docs/archive/SERVICE_READINESS.md`.
 
 ## 0. 한 장 요약
 
@@ -51,7 +51,7 @@ nDCG@10(판정만)은 bge 0.937, Arctic 0.957(학습 후보: kse16 0.954, mj 0.9
 - **MRR@100**: 첫 정답이 몇 위인가. 대부분 1위라 0.94~0.97로 거의 포화 — 모델 차이가 잘 안 보인다.
 - **Recall@50/100, Bpref**: 정답 중 상위 50·100개 안에 든 비율. 정답이 100개보다 많은 쿼리가 65%라 Recall@100은 구조적으로
   최대 약 0.85(평균)까지만 가능하고, 실제 코퍼스의 정답(예: 치킨집 3,000여 개)은 더 많아 **낮게 나오는 게 정상**이다. 절대값보다 모델 간 차이로 본다.
-- 모델 선택은 nDCG@10과 기준 대비 Δ·p(Δ ≥ 0.03, p < 0.05)로 한다(`docs/EVALUATION_POLICY.md` 4절).
+- 모델 선택은 nDCG@10과 기준 대비 Δ·p(Δ ≥ 0.03, p < 0.05)로 한다(`docs/archive/EVALUATION_POLICY.md` 4절).
 
 - kse14 = `qwen3_embedding_0_6b_ft_kse14_20261014_0440`: LoRA rank 16, GIST loss, lr 1e-4, batch 32, **2 epoch**, 학습 쿼리 215개(6,650행),
   T4 fp16, 오타 증강 끔, hard negative 3. 모델은 `models/`(git 제외), 기록은 `results/finetune_runs/`.
@@ -107,7 +107,7 @@ bge-m3 mj의 run 폴더(manifest·가중치)는 2026-10-16에 받아 `models/`·
 **왜**: 1-1은 기존 벤치마크(업종 의도 쿼리, 위치 없음)라, 서비스형 쿼리(상호명·드문 업종·지역)와 반경 1km 조건에서도 선택이 유지되는지 확인했다.
 
 **방법**
-- 서비스 평가셋 주 평가셋(`benchmark/service_ko_v1/eval_set.csv`, test 320 / dev 108 사례, 구성은 `docs/SERVICE_QUERYSET.md`)에 세 후보를 Colab으로 돌렸다(run 이름 `kse16`, `arcticLee`).
+- 서비스 평가셋 주 평가셋(`benchmark/service_ko_v1/eval_set.csv`, test 320 / dev 108 사례, 구성은 `docs/archive/SERVICE_QUERYSET.md`)에 세 후보를 Colab으로 돌렸다(run 이름 `kse16`, `arcticLee`).
   같이 다시 돌린 bge 두 개는 기존 run과 바이트 단위로 같았다.
 - **query 지시문은 1-1과 같은 조건**이다: kse16(Qwen3)만 `prompt_name="query"`, bge·Arctic은 없음(`colab/service_dense_runs.ipynb`의 MODELS).
   처음 돌린 kse16 run은 노트북이 지시문을 넘기지 않아 무효였고(A nDCG 0.639로 비정상), 노트북을 고쳐 다시 돌렸다(상위 10개 겹침 33~41%).

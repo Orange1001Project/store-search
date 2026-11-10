@@ -1,4 +1,4 @@
-"""X4 업종 신호 확인(docs/SERVICE_PIPELINE_PLAN.md 11-14) — 임시 업종 v0(data/category/store_category_v0.parquet)이 성능을 올리는지 dev에서 본다.
+"""X4 업종 신호 확인(docs/archive/SERVICE_PIPELINE_PLAN.md 11-14) — 임시 업종 v0(data/category/store_category_v0.parquet)이 성능을 올리는지 dev에서 본다.
 
 쿼리 업종은 학습 없이 1단계 상위 결과의 업종 분포로 정한다(상위 검색 결과로 쿼리 범주를 정하는 방식 — APRF-Net, arXiv 2104.11384):
 사례 반경 안 1단계 상위 PRF_K개의 대표 업종을 순위 가중(1/log2(순위+1))으로 모은 분포(기타 제외). 가게의 '업종 일치도' cat_share = 그 분포에서

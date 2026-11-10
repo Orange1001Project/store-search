@@ -1,7 +1,7 @@
 # 서비스셋 평가 방법 (2026-10-21)
 
-서비스셋(`docs/SERVICE_QUERYSET.md`)으로 "현재 위치 1km 안 결과"라는 서비스 조건에서 검색 품질을 재는 방법이다.
-판정 기준은 `docs/SERVICE_ANNOTATION_GUIDELINE.md`. 각 선택에 근거가 된 관행을 함께 적는다.
+서비스셋(`docs/archive/SERVICE_QUERYSET.md`)으로 "현재 위치 1km 안 결과"라는 서비스 조건에서 검색 품질을 재는 방법이다.
+판정 기준은 `docs/archive/SERVICE_ANNOTATION_GUIDELINE.md`. 각 선택에 근거가 된 관행을 함께 적는다.
 
 ## 1. 평가 단위 — 사례(쿼리 × 가정위치)
 
@@ -122,4 +122,4 @@ v2 0.65(정답이 드물어 낮게 나옴, 이진 일치 96%), v3 0.81, v4 0.96.
 - 6절보다 낮은 이유는 두 가지다.
   - 사례가 늘었다(추가 C·B, anchor_extra).
   - 1km 목록을 다 채운 보충 판정으로 정답이 늘었다.
-  - 서비스 품질 판단은 주 평가셋 점수(docs/SERVICE_PIPELINE_PLAN.md 7~8절)로 한다.
+  - 서비스 품질 판단은 주 평가셋 점수(docs/archive/SERVICE_PIPELINE_PLAN.md 7~8절)로 한다.

@@ -1,4 +1,4 @@
-"""가게 임시 업종 v0 표를 만든다(src/store_search_ai/data/category.py, configs/category/taxonomy_v0.yaml, docs/SERVICE_PIPELINE_PLAN.md 11-14).
+"""가게 임시 업종 v0 표를 만든다(src/store_search_ai/data/category.py, configs/category/taxonomy_v0.yaml, docs/archive/SERVICE_PIPELINE_PLAN.md 11-14).
 
     python scripts/build_store_category.py
 

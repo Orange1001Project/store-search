@@ -14,7 +14,7 @@
 #
 # 갱신 절차 (의도적으로 어떤 패키지를 올릴 때만):
 #   1. pyproject.toml에서 필요한 범위로 올리고 pip install -e ".[dev]" --upgrade
-#   2. pytest 전체 + 06/07 pooling 재실행으로 회귀 확인 (docs/PIPELINE.md, SHARE_NOTES.md 참고)
+#   2. pytest 전체 + 06/07 pooling 재실행으로 회귀 확인 (docs/archive/PIPELINE.md, SHARE_NOTES.md 참고)
 #   3. 문제 없으면 pip freeze로 이 파일을 다시 생성해서 커밋
 #      (store-search-ai 자신을 가리키는 "-e git+..." 줄은 빼고 저장할 것 — 팀원은 각자
 #      자기 로컬 클론을 -e .로 설치하므로 이 파일에 넣을 필요도, 넣어서도 안 됨)

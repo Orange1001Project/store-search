@@ -1,7 +1,7 @@
 # `colab/train_eval.ipynb` 코드 해설
 
 노트북 셀을 위에서부터 하나씩 **무엇을 하는지 → 핵심 코드 → 왜 이렇게 했는지 → 고칠 때 주의점** 순서로 정리한 문서입니다.
-작업 절차(올리기·실행 순서·기록)는 `docs/TRAINING_TEAM.md`, 학습 설계 배경은 `docs/TRAINING.md`를 보세요.
+작업 절차(올리기·실행 순서·기록)는 `docs/archive/TRAINING_TEAM.md`, 학습 설계 배경은 `docs/archive/TRAINING.md`를 보세요.
 
 > 표기: `[n]`은 노트북에서 위에서 n번째(0부터) 셀, "1. 설정"처럼 번호가 붙은 것은 노트북의 마크다운 제목입니다.
 > 셀 맨 첫 줄에 `# @cell 이름`이 있는 셀(settings, compat, rows, runs, eval, board, pool, rescore)은 `tests/test_train_eval_notebook.py`가 이름으로 찾아
@@ -185,7 +185,7 @@ Colab 라이브러리가 업데이트돼도 노트북이 돌도록 버전 차이
 
 | 함수 | 하는 일 | 배경 |
 |---|---|---|
-| `training_precision()` | 학습 정밀도: compute capability 8 이상(L4·A100) `bf16`, T4 `fp16`, CPU `fp32` | `torch.cuda.is_bf16_supported()`는 에뮬레이션까지 True라 T4에서도 True → GPU 세대로 판단(`docs/TRAINING.md` 6절) |
+| `training_precision()` | 학습 정밀도: compute capability 8 이상(L4·A100) `bf16`, T4 `fp16`, CPU `fp32` | `torch.cuda.is_bf16_supported()`는 에뮬레이션까지 True라 T4에서도 True → GPU 세대로 판단(`docs/archive/TRAINING.md` 6절) |
 | `version_tuple(pkg)` | `"5.18.0+cu"` → `(5, 18, 0)` | 버전 비교용 |
 | `library_versions()` | 주요 라이브러리 버전 dict | manifest·평가 json의 `libs`로 기록 |
 | `check_environment()` | 최소 버전 미달·채점 라이브러리 누락이면 에러, 확인 안 된 메이저 버전이면 경고 | |
@@ -445,7 +445,7 @@ if not EVAL_RUN_TAG:
 
 이어서 **서비스 지표**(`service_metrics`, 공식 채점과 별개)를 run 파일과 val qrels로 계산해 출력합니다(qrels가 있는 active 쿼리만):
 - `nDCG@10(판정만)`: 판정 없는 문서를 빼고 매긴 nDCG(condensed, Sakai 2007). Judged@10이 0.95 미만인 새 계열 모델은 이 값으로 고른다
-  (`docs/EVALUATION_POLICY.md` 2절)
+  (`docs/archive/EVALUATION_POLICY.md` 2절)
 - `bad@3`: 상위 3개에 오답(relevance ≤ 1 또는 판정 없음)이 하나라도 섞인 쿼리 비율 — **서비스 목표 ≤ 0.05**
 - `top1_ok`: 1위가 정답(relevance ≥ 2)인 비율
 - `bad@3 T1`…`bad@3 T6`: 쿼리 유형별 `bad@3`(T6는 오타 비활성 뒤 "~추천" 변형만 남음). 판정 없는 문서도 오답으로 세서 실제보다 약간 나쁘게 나옵니다.
@@ -471,10 +471,10 @@ if not EVAL_RUN_TAG:
 
 ## [35] 15. 판정용 val/test 검색 결과 `# @cell pool`
 
-보충 pooling(벤치마크 담당)과 **일괄 판정 후보의 test run 만들기**(`docs/EMBEDDING_V1_PLAN.md` 3절)에 씁니다. `POOL_RUN_MODELS`(preset 키)와 `POOL_RUN_FINETUNED`(Drive `runs/finetune/` TAG)에 적은 모델마다
+보충 pooling(벤치마크 담당)과 **일괄 판정 후보의 test run 만들기**(`docs/archive/EMBEDDING_V1_PLAN.md` 3절)에 씁니다. `POOL_RUN_MODELS`(preset 키)와 `POOL_RUN_FINETUNED`(Drive `runs/finetune/` TAG)에 적은 모델마다
 val+test 쿼리의 상위 `POOL_DEPTH`(기본 100)개를 `runs/pooling_runs/<이름>.csv`로 저장합니다. 지표를 계산하지 않으므로 test 점수를 보는
 것이 아닙니다. 이미 있는 파일은 건너뛰고, prompt만 다른 변형은 문서 임베딩을 재사용합니다. 저장소에서
-`scripts/16_supplemental_round.py make-runs`가 이 파일로 판정 시트를 만듭니다(`docs/PIPELINE.md` 6-2).
+`scripts/16_supplemental_round.py make-runs`가 이 파일로 판정 시트를 만듭니다(`docs/archive/PIPELINE.md` 6-2).
 
 ## [37] 16. 기존 평가 다시 채점 `# @cell rescore`
 
