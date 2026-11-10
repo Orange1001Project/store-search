@@ -21,6 +21,6 @@
 | `TRAINING.md`(옛), `TRAINING_TEAM.md`, `TRAIN_EVAL_NOTEBOOK.md`, `MODELING.md`, `EMBEDDING_V1_PLAN.md` | `TRAINING.md`로 합침 |
 | `SERVICE_READINESS.md` | 지움 — 온라인 검증 방향은 `docs/SERVICE_POLICY.md` 19절, 외부 API 비교는 하지 않기로 함 |
 
-합치면서 뺀 것(날짜별 중간 수치, 작성자 배포용 안내문과 예시, 노트북 셀별 코드 해설, 문제 해결 표, 쿼리 수 검정력 표 등)은 git 커밋 `e2689d8`의
-`docs/archive/` 원본에 그대로 있다: `git show e2689d8:docs/archive/QUERY_WRITING_GUIDE.md`.
+합치면서 뺀 것(날짜별 중간 수치, 작성자 배포용 안내문과 예시, 노트북 셀별 코드 해설, 문제 해결 표, 쿼리 수 검정력 표 등)은 git 커밋 `6d90bb4`의
+`docs/archive/` 원본에 그대로 있다: `git show 6d90bb4:docs/archive/QUERY_WRITING_GUIDE.md`.
 옛 문서를 가리키던 코드·설정의 경로는 새 문서로 바꿨다. 절 번호는 새 문서와 다르므로 지웠다.
