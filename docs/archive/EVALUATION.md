@@ -378,13 +378,13 @@ python scripts/eval_x23.py --dump --suffix _base          # 노출 목록(상위
   (브랜드 지점은 확률 없이 관련), 1km 관련이 `radius.expand_if_relevant_below`개 미만이면 10km, 확장 정렬 `ranking.expanded_order`,
   지역·지도는 범위 안 관련 전부. dev 비교용 덮어쓰기: `--expansion-w`, `--category-gamma`, `--brand-others-min`, `--exact-name 0|1`,
   `--calibrator`, `--area-calibrator`, `--full-cosine --cosine-scope all|name`, `--dense-query full|no_region`, `--refit-oof k --refit-scope all|area`.
-- `eval_x8.py`는 정책 파일을 읽지 않는다. 상호 코사인·완전 일치는 플래그로 켠다. test는 `--only`가 반드시 필요하다.
+- `eval_x8.py`는 정책 파일을 읽지 않는다. 채택 구성은 `--final`(= `--full-cosine --cosine-scope name --exact-name`, `--only` 없으면 `"exp+0.3 cat"`)로 켠다. test는 `--only` 또는 `--final`이 반드시 필요하다.
 
 **최종 test(2026-11-09) 명령** — 정책을 고정·커밋한 뒤 구성 하나만:
 
 ```bash
 python scripts/eval_x23.py --split test
-python scripts/eval_x8.py --split test --full-cosine --cosine-scope name --exact-name --only "exp+0.3 cat"
+python scripts/eval_x8.py --final --split test
 ```
 
 - 결과: `x23/summary_test.csv`·`per_request_test.csv`, `x8/x8_test_fcn_ex.csv`·`_paired.csv`(`results/service_pipeline/` 아래). 같은 이름으로

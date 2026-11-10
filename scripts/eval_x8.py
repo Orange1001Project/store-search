@@ -16,6 +16,10 @@
     python scripts/eval_x8.py                       # dev 주 평가셋
     python scripts/eval_x8.py --set all             # dev 모든 사례(견고성)
     python scripts/eval_x8.py --split test --only "..."   # 마지막에 한 번
+    python scripts/eval_x8.py --final --split test        # 최종 test(2026-11-09) 재현
+
+정책 파일(configs/service/search_policy_v1.yaml)은 읽지 않는다. 채택한 구성(상호 쿼리의 상호 일치 후보 실제 코사인 + 상호 완전 일치 맨 위,
+확장 w 0.3)은 --final로 켠다(= --full-cosine --cosine-scope name --exact-name --only "exp+0.3 cat"). 정책 값이 바뀌면 이 묶음도 같이 바꾼다.
 """
 
 from __future__ import annotations
@@ -74,6 +78,7 @@ BASE = "stage1"
 RR_K = 50                 # 재정렬 범위(반경 안 1단계 상위 — X8 채점 쌍의 깊이)
 RR_A = (0.25, 0.5, 1.0)
 EXP_W = (0.1, 0.2, 0.3, 0.5)
+FINAL_ONLY = "exp+0.3 cat"   # --final: 최종 test에서 채점한 구성(정책 ranking.expansion_w = 0.3)
 
 
 def load_rerank(model: str) -> pd.DataFrame:
@@ -121,6 +126,8 @@ def main() -> None:
     parser.add_argument("--full-cosine", action="store_true", help="P2(a): 임베딩 상위 50 밖 후보에 실제 v1 코사인(results/service_pipeline/p2)")
     parser.add_argument("--cosine-scope", choices=["all", "name"], default="all", help="--full-cosine 범위: 모든 후보 / 상호 일치 후보만")
     parser.add_argument("--exact-name", action="store_true", help="상호 완전 일치 맨 위")
+    parser.add_argument("--final", action="store_true",
+                        help="최종 구성 재현: --full-cosine --cosine-scope name --exact-name, --only 없으면 'exp+0.3 cat'")
     parser.add_argument("--only", action="append", help="채점할 구성(test는 반드시 지정)")
     parser.add_argument("--pool-round", help="확장 구성(exp)들의 반경별 상위 10 중 미판정 쌍 → 판정 라운드(dev+test 모든 사례, 예: service_v12)")
     parser.add_argument("--dry-run", action="store_true", help="--pool-round: 판정 건수만")
@@ -132,6 +139,10 @@ def main() -> None:
     parser.add_argument("--benchmark-config", default="configs/benchmark/storesearch_ko_v1.yaml")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    if args.final:
+        args.full_cosine, args.cosine_scope, args.exact_name = True, "name", True
+        if not args.only and not args.pool_round:
+            args.only = [FINAL_ONLY]
     if args.split == "test" and not args.only and not args.pool_round:
         raise SystemExit("test는 고른 구성만 — --only로 지정하세요")
 

@@ -115,7 +115,7 @@ python scripts/eval_service_pipeline.py --exp brand            # 1km 1단계(검
 python scripts/eval_relevance_threshold.py                     # 관련 확률 계수·임계값(dev) → results/service_pipeline/x1/
 python scripts/build_x23_round.py export|runs|pool --round <라운드>   # 10km·지역·지도 판정 라운드
 python scripts/eval_x23.py                                     # 정책대로 확장·지역·지도 채점(dev). --dump: 노출 목록
-python scripts/eval_x8.py --full-cosine --cosine-scope name --exact-name   # LLM 확장 포함 1km
+python scripts/eval_x8.py --final                                        # 채택 구성(LLM 확장 w 0.3 포함) 1km
 # 최종 test(2026-11-09에 한 번 씀 — 새 판정 없이 다시 고르는 데 쓰지 않는다)
 python scripts/eval_x23.py --split test
 python scripts/eval_x8.py --split test --full-cosine --cosine-scope name --exact-name --only "exp+0.3 cat"
