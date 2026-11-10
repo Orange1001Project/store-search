@@ -3,7 +3,7 @@
 scripts/11_build_qrels.py의 CLI 배관(인자 파싱, 콘솔 출력)을 제외한 핵심 로직 전체 —
 adjudication/provisional train qrels 로딩과 검증, split별 qrels 조립, 저장, 통계/매니페스트
 생성, 동결(freeze)까지. 이 단계를 통과해야 비로소 "gold"라고 부를 수 있다
-(docs/archive/PIPELINE_CODE_REFERENCE.md `11_build_qrels.py` 절 참고).
+(docs/archive/CODE_AND_RUN.md `11_build_qrels.py` 절 참고).
 """
 
 from __future__ import annotations

@@ -6,7 +6,7 @@
 # 새 query_set 버전을 만들 때는 이 파일을 복사해 query_corrections_v005.yaml 등으로
 # 새로 만들고, configs/benchmark/storesearch_ko_v1.yaml의 query_set.version/corrections_path를
 # 함께 올린다 (dataset_version/corpus_version과 동일한 버전 관리 원칙,
-# docs/archive/EXTENDING_DATA.md 참고).
+# docs/archive/CODE_AND_RUN.md 참고).
 
 # 원본유형 태그로 보아 병합 중 다른 family로 잘못 들어간 것이 명백한 행, 그리고
 # 원래 패밀리가 "(미판정)"이던 5행에 대한 재배정.

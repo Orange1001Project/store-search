@@ -1,4 +1,4 @@
-"""서비스셋 채점 — 사례(쿼리 × 가정위치)마다 반경 R km 안의 결과만으로 지표를 낸다(docs/archive/SERVICE_ANNOTATION_GUIDELINE.md).
+"""서비스셋 채점 — 사례(쿼리 × 가정위치)마다 반경 R km 안의 결과만으로 지표를 낸다(docs/archive/EVALUATION.md).
 
 - 반경 안 정답(2점 이상)이 하나도 없는 사례는 순위 지표에서 뺀다(TREC 관례: 정답 없는 토픽은 nDCG 평균에서 제외). 개수는 따로 센다.
 - 이상적인 순위(IDCG)는 그 반경 안 판정된 가맹점으로만 만든다 — 반경 밖 정답은 서비스에서 보이지 않으므로.
@@ -62,7 +62,7 @@ def apply_eval_bundle(instances: pd.DataFrame, overrides: pd.DataFrame | None) -
     """사례의 `bundle`을 평가용 묶음으로 바꾸고 원래 묶음은 `source_bundle`에 남긴다.
 
     query_id·판정·split은 그대로 두고 주 평가셋·채점에서만 묶음을 옮긴다(C 중 업종·품목 이름을 그대로 쓴 쿼리 → A,
-    docs/archive/SERVICE_QUERYSET_REVIEW.md 1절). 목록(query_id, bundle, eval_bundle)의 bundle이 지금 묶음과 다르면 —
+    docs/archive/EVALUATION.md). 목록(query_id, bundle, eval_bundle)의 bundle이 지금 묶음과 다르면 —
     쿼리 표가 바뀌었는데 목록을 안 고친 경우 — 멈춘다. 없는 query_id, 모르는 묶음, 같은 query_id 두 줄도 멈춘다.
     """
 

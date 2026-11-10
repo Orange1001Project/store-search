@@ -1,7 +1,7 @@
 """지금까지 나온 산출물 전체(쿼리/pool/qrels)의 무결성을 점검하는 게이트.
 
 scripts/12_validate_benchmark.py의 CLI 배관(인자 파싱, 파일 저장, 콘솔 출력)을 제외한 핵심
-로직 전체 (docs/archive/PIPELINE_CODE_REFERENCE.md `12_validate_benchmark.py` 절 참고). `pilot`은
+로직 전체 (docs/archive/CODE_AND_RUN.md `12_validate_benchmark.py` 절 참고). `pilot`은
 구조적 검증만, `final`은 config가 정한 최소 기준까지 검사한다.
 """
 

@@ -11,7 +11,7 @@ _v1.1 (2026-09-22) — 실제 데이터에서 확인된 경계 사례(복합 업
 ## 적용 범위
 이 가이드라인은 train/val/test 모두에 적용됩니다. train은 애노테이터 1명의 단일 라벨링
 (`08_make_full_annotation_sheets.py`), val/test는 사람 2명의 이중 라벨링 + adjudication을
-거쳐 확정됩니다(`docs/archive/PIPELINE.md` 4~5절). val/test는 실제 모델 성능을 "보고"하는 gold이므로
+거쳐 확정됩니다(`docs/archive/CODE_AND_RUN.md`). val/test는 실제 모델 성능을 "보고"하는 gold이므로
 반드시 두 사람이 서로의 판정을 모르는 상태로 독립 판정해야 하고, train은 fine-tuning 학습
 신호로만 쓰이므로 단일 판정으로 진행한다.
 

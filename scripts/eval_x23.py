@@ -222,7 +222,7 @@ def main() -> None:
     tau = float(policy["relevance"]["threshold_p"])
     brand_others = (args.brand_others_min if args.brand_others_min is not None
                     else float(policy["ranking"].get("brand_others_min_p", tau)))
-    # test는 정책 파일에 정한 구성 하나만 계산한다(X7 — test로 고르지 않는다, docs/archive/EVALUATION_POLICY.md)
+    # test는 정책 파일에 정한 구성 하나만 계산한다(X7 — test로 고르지 않는다, docs/archive/EVALUATION.md)
     n_grid, orders = (((int(policy["radius"]["expand_if_relevant_below"]),), (policy_order(policy),))
                       if args.split == "test" else (N_GRID, ORDERS))
     calibrator = json.loads(Path(args.calibrator or policy["relevance"]["calibrator"]).read_text(encoding="utf-8"))

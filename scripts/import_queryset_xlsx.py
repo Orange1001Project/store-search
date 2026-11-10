@@ -9,7 +9,7 @@ configs/benchmark/query_families_v1.yaml로 변환한다.
 IO와 인자 파싱만 담당한다. 재배정 규칙(무엇을 어떤 family로 정정하는지)과 seed는
 코드에 하드코딩하지 않고 configs/benchmark/storesearch_ko_v1.yaml의 `query_set` 블록과
 그것이 가리키는 configs/query/*.yaml에서 읽는다 — 자세한 내용/이유는
-docs/archive/EXTENDING_DATA.md 참고.
+docs/archive/CODE_AND_RUN.md 참고.
 
 xlsx 시트 구성(팀이 만든 그대로):
   - 통합질의: 질의, 패밀리, 대분류, 유형(T1~T6), 태그, 출처, 합의, 원본유형,

@@ -4,7 +4,7 @@
 scripts/09_prepare_full_annotations.py의 CLI 배관(인자 파싱, 파일 저장, 콘솔 출력)을 제외한
 핵심 로직 전체 — 완료 시트 로딩/검증, A/B pairwise 비교(합치도/Cohen's kappa 포함), train
 qrels 분리, adjudication 테이블 조립, summary/agreement_report 생성까지
-(docs/archive/PIPELINE_CODE_REFERENCE.md `09_prepare_full_annotations.py` 절 참고).
+(docs/archive/CODE_AND_RUN.md `09_prepare_full_annotations.py` 절 참고).
 """
 
 from __future__ import annotations

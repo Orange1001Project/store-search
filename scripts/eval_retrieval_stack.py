@@ -201,7 +201,7 @@ def main() -> None:
         if tag != "char_bm25_v1":   # BM25는 위에서 만든 캐시 그대로(다시 쓰면 점수 자릿수만 바뀐다)
             run.to_csv(out_dir / f"{tag}.csv", index=False, encoding="utf-8-sig", lineterminator="\n")
     if args.split == "test":
-        print(f"[test] run {len(runs)}개를 {out_dir}에 저장(채점 안 함 — docs/archive/EVALUATION_POLICY.md: 일괄 판정 뒤 한 번만)")
+        print(f"[test] run {len(runs)}개를 {out_dir}에 저장(채점 안 함 — docs/archive/EVALUATION.md: 일괄 판정 뒤 한 번만)")
         return
 
     qrels_path = benchmark_dir / f"qrels_{args.split}.trec"

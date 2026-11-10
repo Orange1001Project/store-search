@@ -3,7 +3,7 @@
 `store-search-ai-enterprise-new`의 팀 공유용 경량 사본입니다. **코드(scripts/, src/, configs/, colab/,
 docs/, tests/, Makefile, pyproject.toml, requirements-lock.txt)는 전부 그대로**입니다.
 `requirements-lock.txt`는 검증된 정확한 패키지 버전 조합을 고정한 파일이니, 환경을 새로 만들 때는
-`pip install -e ".[dev]"`가 아니라 이 파일로 설치할 것(`docs/archive/PIPELINE.md` 0절 참고 — 버전이
+`pip install -e ".[dev]"`가 아니라 이 파일로 설치할 것(`docs/archive/CODE_AND_RUN.md` 참고 — 버전이
 설치 시점마다 달라져서 실제로 문제가 된 적이 있음). 용량이 큰 데이터 산출물 중
 **"코드를 실행하면 그대로 다시 만들어지는 파일"만 뺐습니다.** raw 원본, store_id 발급 대장, 사람이
 직접 채운 relevance 판정(애노테이션 원본/완료 시트, adjudication 기록)처럼 **사람 손을 다시 거쳐야
@@ -20,7 +20,7 @@ docs/, tests/, Makefile, pyproject.toml, requirements-lock.txt)는 전부 그대
 | `artifacts/reports/item_analysis_stores_v003/`의 큰 CSV들 | 7MB | `03_analyze_items.py` (요약본 `item_analysis_summary_*.json`만 남김) |
 | `annotations/full_annotation_v1/`의 split별 파일(`annotation_A_train/val/test*.csv`, `annotation_B_val/test*.csv`, 완료본 포함) | 52MB | **`annotation_A_all(_completed).csv`/`annotation_B_val_test(_completed).csv`(전체 버전)와 완전히 같은 내용을 split별로 나눠놓은 것뿐** — `python scripts/split_completed_annotations.py`로 그 자리에서 다시 만들어짐(사람 입력 불필요, 순수 코드). 전체 버전만 남김 |
 
-`docs/archive/PIPELINE.md` 1~3절 순서대로 실행하면 재생성됩니다(`data/registry/store_registry.parquet`이
+`docs/archive/CODE_AND_RUN.md` 순서대로 실행하면 재생성됩니다(`data/registry/store_registry.parquet`이
 이미 이 폴더에 있어야 store_id가 기존 qrels와 동일하게 재현됩니다 — 아래 참고). 단, 이 "바이트
 단위로 동일하게 재생성된다"는 보장은 **1절(전처리~corpus, 01~04번)까지만 실제로 확인됐습니다**
 — `02_preprocess_data.py`/`04_build_corpus.py`를 두 번 별도로 재실행해서 체크인된 산출물과
@@ -81,7 +81,7 @@ corpus·같은 config로 `06_generate_lexical_runs.py` → `07_build_annotation_
 
 ## 처음부터 다시 돌리려면
 
-`docs/archive/PIPELINE.md` 1절부터 순서대로 실행하면 됩니다. raw와 registry가 이미 이 폴더에 있으므로
+`docs/archive/CODE_AND_RUN.md`부터 순서대로 실행하면 됩니다. raw와 registry가 이미 이 폴더에 있으므로
 `data/interim/`, `data/processed/`, `data/corpus/`는 기존과 바이트 단위로 동일하게 재생성됩니다.
 **pooling 산출물(`runs/pooling/`, `candidate_pool_internal.csv`)은 위 "⚠" 표시 항목에 적은 대로
 기존과 다르게 나올 수 있습니다** — 이미 사람이 판정을 마친 애노테이션이 있다면 pooling을 다시

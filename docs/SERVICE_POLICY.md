@@ -274,7 +274,7 @@
 
 | # | 정책 | 상태 |
 |---|---|---|
-| 19-1 | shadow → interleaving/A·B → 단계적 확대(`docs/archive/SERVICE_READINESS.md` 2-4) | 방향 [팀] |
+| 19-1 | shadow(실제 트래픽에 돌리되 결과는 안 보임) → interleaving/A·B(Chapelle et al., TOIS 2012) → 단계적 확대 | 방향 [팀] |
 | 19-2 | 비교 대상(현행 검색), 온라인 성공 지표·목표, 확대 비율, 롤백 조건 | [미정] |
 
 ## 20. 이번 범위 밖

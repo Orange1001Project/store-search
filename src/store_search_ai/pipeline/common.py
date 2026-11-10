@@ -2,7 +2,7 @@
 
 각 함수는 기존 스크립트들에 있던 코드를 그대로 옮긴 것이며 동작을 바꾸지 않았다
 (리팩터링 전후로 산출물이 바이트 단위로 동일한지 재실행해서 확인함 —
-docs/archive/PIPELINE.md 및 각 스크립트 상단 주석 참고).
+docs/archive/CODE_AND_RUN.md 및 각 스크립트 상단 주석 참고).
 """
 
 from __future__ import annotations

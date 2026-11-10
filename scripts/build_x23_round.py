@@ -467,7 +467,7 @@ def pool(args, cfg: dict, bench: dict) -> None:
                               "pairs": int(sheet["query_id"].isin(qids).sum())} for name, qids in assignment.items()},
         "runs_sha256": {f"{p.parent.name}/{p.name}": sha256_file(p) for p in files},
         "requests_sha256": sha256_file(bdir / "x23" / "requests.csv"),
-        "guideline": "docs/archive/SERVICE_ANNOTATION_GUIDELINE.md",
+        "guideline": "docs/archive/EVALUATION.md",
     }
     (round_dir / "pool_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("저장: %s (전체 %d쌍, 이중 판정 %d쌍)", round_dir, len(sheet), manifest["double_annotation_pairs"])

@@ -1,7 +1,7 @@
 """raw xlsx를 아무것도 바꾸지 않고 읽어서 시트별/전체 프로파일링 리포트를 만드는 로직.
 
 scripts/01_profile_data.py의 CLI 배관(인자 파싱, 파일 저장, 콘솔 출력)을 제외한 핵심 로직
-전체 (docs/archive/PIPELINE_CODE_REFERENCE.md `01_profile_data.py` 절 참고). 가공은 전혀 하지 않는
+전체 (docs/archive/CODE_AND_RUN.md `01_profile_data.py` 절 참고). 가공은 전혀 하지 않는
 순수 진단 단계 — 이후 단계(02~)의 입력이 되지 않는다.
 """
 

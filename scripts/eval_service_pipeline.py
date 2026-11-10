@@ -495,7 +495,7 @@ def write_pool_round(cfg: dict, bench: dict, tops: list[pd.DataFrame], instances
         "annotators": {name: {"writer_id": jcfg["annotators"][name], "queries": len(qids),
                               "pairs": int(sheet["query_id"].isin(qids).sum())} for name, qids in assignment.items()},
         "instances_sha256": sha256_file(bdir / "instances.csv"),
-        "guideline": "docs/archive/SERVICE_ANNOTATION_GUIDELINE.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
+        "guideline": "docs/archive/EVALUATION.md + benchmark/storesearch_ko_v1/annotation_guideline.md(v1.2)",
     }
     (round_dir / "pool_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("저장: %s (전체 %d쌍, 이중 판정 %d쌍)", round_dir, len(sheet), manifest["double_annotation_pairs"])

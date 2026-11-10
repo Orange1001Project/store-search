@@ -1,7 +1,7 @@
 """qrels_train + queries.csv + corpus로부터 임베딩 모델 fine-tuning용 학습쌍을 만든다.
 
 파이프라인 번호가 없는 이유: 01~15 실행 순서와 무관하게, train qrels가 준비된 뒤
-(`docs/archive/PIPELINE.md` 4절, `09_prepare_full_annotations.py`가 만드는
+(`docs/archive/CODE_AND_RUN.md`, `09_prepare_full_annotations.py`가 만드는
 `qrels/{round}/qrels_train_provisional.csv` 또는 `11_build_qrels.py`가 만드는
 최종 `qrels_train.csv`) 필요할 때마다 로컬(GPU 불필요)에서 실행하는 데이터 준비 도구다.
 결과 jsonl은 `scripts/pack_for_colab.py`로 Drive `data/`에 올려 `colab/train_eval.ipynb`가 그대로 읽는다.

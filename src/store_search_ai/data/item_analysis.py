@@ -2,7 +2,7 @@
 
 scripts/03_analyze_items.py의 CLI 배관(인자 파싱, 파일 저장, 콘솔 출력)을 제외한 핵심 로직
 전체 — 토큰 explode/집계, 결측/충돌/이상치 탐지, long-tail 통계, summary 조립까지
-(docs/archive/PIPELINE_CODE_REFERENCE.md `03_analyze_items.py` 절 참고). 파이프라인 진행에 필수는
+(docs/archive/CODE_AND_RUN.md `03_analyze_items.py` 절 참고). 파이프라인 진행에 필수는
 아니고 taxonomy 정비용 정보성 리포트다.
 """
 
