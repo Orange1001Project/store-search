@@ -1,8 +1,8 @@
 # 검색 파이프라인 실험 계획 (2026-10-23, 브랜치 feature/service-pipeline)
 
-서비스셋(`docs/SERVICE_EVAL_METHOD.md`)으로 검색 파이프라인을 서비스 목표까지 끌어올리는 순서다. 원칙은 단계별로 개발·평가하고
-붙여서 전체를 검증하는 것(`docs/SERVICE_READINESS.md` 5절)이고, 각 단계는 **dev로 고르고 test는 단계가 끝날 때 한 번** 채점한다
-(`docs/EVALUATION_POLICY.md` 1절 — 같은 test로 반복해서 고르면 test에 맞춰진다).
+서비스셋(`docs/archive/EVALUATION.md`)으로 검색 파이프라인을 서비스 목표까지 끌어올리는 순서다. 원칙은 단계별로 개발·평가하고
+붙여서 전체를 검증하는 것(`docs/SERVICE_POLICY.md` 5절)이고, 각 단계는 **dev로 고르고 test는 단계가 끝날 때 한 번** 채점한다
+(`docs/archive/EVALUATION.md` — 같은 test로 반복해서 고르면 test에 맞춰진다).
 
 ## 0. 출발점과 목표
 
@@ -13,7 +13,7 @@
 | top1_ok | 0.795 |
 
 **서비스 목표(제안)**: 1km, test 기준
-- bad@3 ≤ 0.05 — 기존 목표(`docs/EVALUATION_POLICY.md` 2절). 사용자 체감에 가장 가깝다("위 3개 안에 맞는 가게가 있다" 95%).
+- bad@3 ≤ 0.05 — 기존 목표(`docs/archive/EVALUATION.md`). 사용자 체감에 가장 가깝다("위 3개 안에 맞는 가게가 있다" 95%).
 - 묶음별 nDCG@10 ≥ 0.85(A·B·C 각각) — 지금 C가 0.744로 가장 먼 묶음이다.
 - top1_ok ≥ 0.85 — 상호명(B)처럼 1위가 중요한 쿼리 때문에 둔다.
 - 지연: 쿼리 1건 p95 ≤ 300ms(인코딩 + 검색 + 재정렬, 서버 기준) — 2026-11-04부터 백엔드에서 잰다(`docs/BACKEND_HANDOFF.md`).
@@ -94,7 +94,7 @@
 
 > 주의(2026-10-30): 이 절의 1-1~1-5 수치(test 1km 0.814 등)는 **10/23 셋**(dev 1km 139 사례, test 1km 390 사례, 그때 판정) 기준이다.
 > `results/service_pipeline/hybrid*_{dev,test}.csv`는 그 뒤 새 주 평가셋·평가용 묶음으로 덮어써져 이 수치와 맞지 않는다.
-> 당시 파일은 git `c132edd`에 있다(`docs/SERVICE_QUERYSET_REVIEW.md` 6절).
+> 당시 파일은 git `c132edd`에 있다(`docs/archive/EVALUATION.md`).
 
 ### 1-1 하이브리드 (2026-10-23, dev 1km 139 사례) — **채택: v1 + 상호 일치 가산점(β=0.5)**
 
@@ -366,7 +366,7 @@ reranker 기반(쌍 export·Colab 채점·재정렬 평가)은 2-1 미세조정 
   순서: S1 평가 보강(A head: 기존 test 업종 28→test, val 15→dev, 업종당 ≤2) → S2 지리 신호 분리(시장·지명 쿼리) ∥ S3 서빙·규모 모의 →
   S4 순위 결합 → S6 결과 없음 → S5 임베딩 v2, 업종(S7)은 데이터가 오면.
 - **A head 추가(2026-10-27)**: 기존 벤치마크 val/test 업종 42개에서 78개(dev 30 / test 48), 사례 144개(random 78 + anchor 66),
-  묶음 `extra_a`·`anchor_extra_a`. 자세한 규칙은 `docs/SERVICE_QUERYSET.md` "A head". 다음: Colab dense run → pool → 판정 → qrels →
+  묶음 `extra_a`·`anchor_extra_a`. 자세한 규칙은 `docs/archive/EVALUATION.md` "A head". 다음: Colab dense run → pool → 판정 → qrels →
   주 평가셋(A 안 head:tail) → 기준선 재측정.
 - **A head 판정·재측정(2026-10-28)**: service_v8 판정(κ 0.96, 조정 54쌍: 16쌍 확정, 38쌍 판단 불가로 gold 제외, qrels 31,549행).
   주 평가셋 재구성(A head:tail 50:50, `eval_set.strata`): test 320 / dev 108. 같은 시스템을 다시 잰 것이라 새 test 선택이 아니다.
@@ -387,7 +387,7 @@ reranker 기반(쌍 export·Colab 채점·재정렬 평가)은 2-1 미세조정 
   - 보충 판정 service_v9(3,553쌍, 이진 κ 0.78, 조정 51쌍) + service_v10(지시문 적용 kse16 372쌍, 이진 일치 98%, 조정 1쌍 완료).
     처음 kse16 run은 노트북이 Qwen3 query 지시문을 넘기지 않아 무효였다(A nDCG 0.639) — 노트북을 모델별 `prompt_name`으로 고쳐 다시 돌렸다.
     test 1km(320), 모두 Judged@10 ≥ 0.99: v1 0.808 ≈ Arctic 0.803(p=0.56) ≈ kse16 0.793(p=0.12), zero-shot 0.745, BM25 0.749.
-    D(지역+업종)만 v1 우위(0.793 vs 0.680 / 0.654). 전체 지표 표와 해석은 `docs/EMBEDDING_V1_PLAN.md` 1-2절.
+    D(지역+업종)만 v1 우위(0.793 vs 0.680 / 0.654). 전체 지표 표와 해석은 `docs/archive/TRAINING.md`.
     - 새 정답이 더해져 같은 시스템 점수가 내려갔다(측정 변화): 1단계(qu) test 1km 0.857 → **0.825** / bad@3 0.053, dev 0.848 / 0.046,
       test 2km 0.805 / 0.066. 이후 기준선은 이 값이다.
 
@@ -490,7 +490,7 @@ Kohavi et al., 2020). 로그는 지표의 바탕이라 설계(`docs/SEARCH_LOGGI
 | 조건부 | X6 | 상황형 C 학습 데이터(6-4) — C는 평가셋 5%·큰 실패 확인용이라 C에서 큰 실패가 남을 때만 | | C bad@3 하락 |
 | 완료 | X0 | 임시 업종 층 v0(11-14) — 화면 업종 칩용, 공식 업종이 오면 교체 | | |
 
-0절의 묶음별 nDCG ≥ 0.85 목표 중 C는 test n=16이라 판단 근거로 쓰지 않는다(평가용 묶음 결정, `docs/SERVICE_QUERYSET.md`).
+0절의 묶음별 nDCG ≥ 0.85 목표 중 C는 test n=16이라 판단 근거로 쓰지 않는다(평가용 묶음 결정, `docs/archive/EVALUATION.md`).
 
 ### 11-5 결정 기록
 

@@ -1,4 +1,4 @@
-"""X2+X3 판정 라운드 — 10km 확장·지역 필터·지도 화면 범위(docs/SERVICE_PIPELINE_PLAN.md 11-4, 11-9).
+"""X2+X3 판정 라운드 — 10km 확장·지역 필터·지도 화면 범위(docs/archive/SERVICE_PIPELINE_PLAN.md 11-4, 11-9).
 
 지금 판정은 사례 위치 2km 안뿐이라 10km 확장 결과, 원격 사용자의 지역 검색 결과, 지도 화면(5km) 결과는 대부분 판정되지 않았다.
 주 평가셋 사례(dev+test)마다 '요청'을 만들어 그 요청의 후보 범위에서 1단계 시스템(v1 임베딩 + 문자 BM25) 상위를 뽑고, 새 쌍만 판정한다.
@@ -24,8 +24,11 @@
   판정 라운드를 만들지 않는다.
 
 판정 대상(pool): 평가할 정책 변형이 실제로 상위 depth에 올리는 가게(TREC pooling — 평가하는 시스템의 상위를 판정한다).
-변형 = 1단계(v1 + 문자 BM25 후보 합집합, 상호 일치·별칭 가산점, 브랜드 거리순)의 유사도순, 반경 요청은 거리 감쇠(점수 × 2^(−거리/h),
-h = 2km·5km — Lv et al. SIGIR 2012의 거리에 따른 클릭률 감소를 반영한 정렬 후보)를 더한다.
+변형의 1단계는 채택한 정책(configs/service/search_policy_v1.yaml의 ranking) 그대로다(2026-11-09부터 — 그 전 라운드 service_v11은
+확장·상호 코사인·완전 일치 없이 모았다): v1 + 문자 BM25 후보 합집합, 상호 일치·별칭 가산점, 브랜드 거리순, 업종 의도 LLM 쿼리 확장
+(expansion_w, --expansion-w로 덮어씀), 상호 일치 후보 실제 코사인(real_cosine), 상호 완전 일치 맨 위(exact_name_first).
+정렬은 유사도순, 반경 요청은 거리 감쇠(점수 × 2^(−거리/h), h = 2km·5km — Lv et al. SIGIR 2012의 거리에 따른 클릭률 감소를 반영한
+정렬 후보)를 더한다.
 판정은 (쿼리, 가맹점) 단위·위치 무관이라 앞 라운드에서 판정한 쌍은 다시 판정하지 않는다(build_service_pool과 같음).
 """
 
@@ -303,9 +306,7 @@ def policy_runs(runs: pd.DataFrame, req: pd.DataFrame, corpus: pd.DataFrame, cat
     def finish(st: pd.DataFrame) -> pd.DataFrame:
         st = brand_distance_sort(st, loc, parsed, geo, aliases, MAX_KM, "stage1")
         if exact_name:   # 상호 완전 일치는 맨 위(넓은 지역은 중심에서 멀 수 있어 넉넉히 찾고 아래 in_range가 범위로 자른다)
-            from eval_service_pipeline import exact_name_sort
-
-            from eval_service_pipeline import BRAND_MIN, BRAND_SCORE
+            from eval_service_pipeline import BRAND_MIN, BRAND_SCORE, exact_name_sort
 
             # 점수 = 100 − 거리라 50km 넘으면 브랜드 기준(50) 아래로 떨어져 관련 확률 특성을 망친다(2026-11-09 점검) — 50km까지만
             st = exact_name_sort(st, loc, parsed, geo, BRAND_SCORE - BRAND_MIN, "stage1")
@@ -458,8 +459,9 @@ def pool(args, cfg: dict, bench: dict) -> None:
         "round": args.round, "set": "x23", "created_at": datetime.now(UTC).isoformat(),
         "reused_judgments": "판정은 (쿼리, 가맹점) 단위·위치 무관 — 앞 라운드에서 판정한 쌍은 다시 판정하지 않음",
         "requests": ok_req["kind"].value_counts().to_dict(), "excluded_requests": sorted(stale), **notes,
-        "pool": "정책 변형(1단계 유사도순, 반경 요청은 거리 감쇠 h=2·5km) 상위 depth",
-        "expansion": {"w": args.expansion_w, "llm": args.llm} if args.expansion_w else None, "max_km": MAX_KM, "radii_km": RADII, "map_half_km": MAP_HALF_KM,
+        "pool": "정책 변형(채택 정책의 1단계 유사도순, 반경 요청은 거리 감쇠 h=2·5km) 상위 depth",
+        "real_cosine": scope, "exact_name_first": bool(policy.get("exact_name_first", False)),
+        "expansion": {"w": ew, "llm": args.llm} if ew else None, "max_km": MAX_KM, "radii_km": RADII, "map_half_km": MAP_HALF_KM,
         "depth": depth, "queries": int(pairs["query_id"].nunique()), "pairs": len(pairs),
         "pairs_by_kind": {k: int(pairs["kinds"].str.contains(k).sum()) for k in ["expand", "region_point", "region_area", "map5"]},
         "double_annotation_queries": len(double), "double_annotation_pairs": int(sheet["query_id"].isin(double).sum()),
@@ -467,7 +469,7 @@ def pool(args, cfg: dict, bench: dict) -> None:
                               "pairs": int(sheet["query_id"].isin(qids).sum())} for name, qids in assignment.items()},
         "runs_sha256": {f"{p.parent.name}/{p.name}": sha256_file(p) for p in files},
         "requests_sha256": sha256_file(bdir / "x23" / "requests.csv"),
-        "guideline": "docs/SERVICE_ANNOTATION_GUIDELINE.md",
+        "guideline": "docs/archive/EVALUATION.md",
     }
     (round_dir / "pool_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     logger.info("저장: %s (전체 %d쌍, 이중 판정 %d쌍)", round_dir, len(sheet), manifest["double_annotation_pairs"])

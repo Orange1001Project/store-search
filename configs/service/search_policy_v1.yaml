@@ -1,4 +1,4 @@
-# 검색 정책 v1 (2026-11-03 회의 결정, 2026-11-04 범위 정리 — docs/SERVICE_PIPELINE_PLAN.md 11절).
+# 검색 정책 v1 (2026-11-03 회의 결정, 2026-11-04 범위 정리 — docs/archive/SERVICE_PIPELINE_PLAN.md 11절).
 # 이 파일은 백엔드(자바)로 넘기는 정책 값의 단일 출처다. 섹션마다 누가 정하는지 적는다.
 #   [실험]   이 저장소의 오프라인 평가(X1·X2·X3·X5)로 값을 정한다 — 검색 품질 지표에 영향
 #   [확정]   팀이 정했다 — 실험 없이 그대로 구현
@@ -18,9 +18,9 @@ location:                     # [확정]
   default:
     name: 소상공인시장진흥공단 본부
     address: 대전광역시 유성구 지족로364번길 92 (지족동) 2층    # 팀 확인(2026-11-03)
-    # 좌표: 같은 길 91번지 가맹점 좌표(36.383177, 127.319176)로 대신 — 약 50m 오차. 정확한 값은 백엔드에서 지오코딩
-    lat: 36.3832
-    lon: 127.3192
+    # 좌표: 팀 확정(2026-11-11, docs/SERVICE_POLICY.md 3-3). 이전 임시값 36.3832, 127.3192(91번지 가맹점 좌표, 약 50m 오차)
+    lat: 36.383625
+    lon: 127.318375
 
 radius:
   first_km: 1                 # [확정] 검색 중심·좁은 지역(동·역·시장)의 첫 반경 = understanding.POINT_KM
@@ -39,6 +39,7 @@ region:                       # [확정] 규칙, 수치는 X3에서 확인
 map_mode:                     # [확정] 지표에 영향이 있는 부분만. 화면(핀 묶음·버튼·상한·문구)은 [백엔드]
   area: viewport_bbox         # 보이는 화면 사각형 = 지역 필터. 1km → 10km 확장 안 함, 화면 밖은 알리지 않음
   show: above_threshold       # 화면 안 관련(relevance.threshold_p 이상) 가게 전부 → 지도 품질 = X1 노출 정밀도
+  max_stores: 300             # [백엔드 확정 2026-11-10] 화면이 아주 넓을 때 상한 — 넘으면 점수순 300곳(평가에서는 상한 없음)
 
 ranking:
   sort: similarity            # 회의안 — 1km 안(확장 안 함)과 확장분 각각의 정렬
@@ -67,7 +68,7 @@ ranking:
                               # 정책 10km 확장 nDCG 0.757 → 0.770(유의), 지도 0.638 → 0.681(유의, 노출 정밀도 0.742 → 0.726 n.s.). 0이면 끔
   expansion_llm: Qwen2.5-14B-Instruct   # 확장어는 미리 만들어 캐시(results/service_pipeline/x8/expansions_<llm>.csv) — 실시간 호출 없음
 
-relevance:                    # [실험 X1] 2026-11-04 dev — docs/SERVICE_PIPELINE_PLAN.md 11-7
+relevance:                    # [실험 X1] 2026-11-04 dev — docs/archive/SERVICE_PIPELINE_PLAN.md 11-7
   # P(관련) = 1 / (1 + exp(−(b0 + b1·score + b2·gap + b3·log_rank + b4·bm25_rel))), 의도 묶음(name/category)마다 계수 따로.
   # score = 사례 후보 안 min-max 정규화한 v1 코사인 + 0.5 × 상호 일치. 브랜드 쿼리의 브랜드 지점은 이 확률 없이 관련으로 센다(판정 기준: 지점은 모두 3점).
   # 특성은 반경 안 후보 기준. 계수는 calibrator 파일. 이 값 이상만 '관련'으로 세고 보여 준다(반경 확장 N, "없음", 지도 노출).
@@ -87,3 +88,4 @@ messages:                     # [백엔드] 문구 확정은 화면 개발에서
   expanded_partial: "1km 안에 {n_first}곳, 10km까지 넓혀 {n_more}곳 더 찾았어요"   # 보완안(팀 확인)
   none: "10km 이내에 맞는 가게가 없어요"
   map_empty: "이 지역에 맞는 가게가 없어요"
+  no_exact_name: "'{query}'와 정확히 일치하는 가게는 없어요"   # [백엔드 확정 2026-11-10] 의도가 상호·브랜드이고 결과에 상호 일치 가게가 없을 때(docs/SERVICE_POLICY.md 8-3 ⑤)

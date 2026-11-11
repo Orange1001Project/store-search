@@ -1,4 +1,4 @@
-"""사람이 쓴 서비스셋 쿼리를 하나의 쿼리 표(CSV)로 가져온다. 설명은 docs/SERVICE_QUERYSET.md 4절.
+"""사람이 쓴 서비스셋 쿼리를 하나의 쿼리 표(CSV)로 가져온다. 설명은 docs/archive/EVALUATION.md.
 
 입력(설정 `import` 블록)
   - 작성자 완료본(data/query/writers_completed/…_completed.xlsx): W1~W3의 A·C·D·E

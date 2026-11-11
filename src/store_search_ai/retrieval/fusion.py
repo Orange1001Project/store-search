@@ -1,4 +1,4 @@
-"""여러 검색 결과(run)를 하나로 합치는 결합 함수 — 하이브리드 검색(docs/SERVICE_PIPELINE_PLAN.md 1-1).
+"""여러 검색 결과(run)를 하나로 합치는 결합 함수 — 하이브리드 검색(docs/archive/SERVICE_PIPELINE_PLAN.md 1-1).
 
 - RRF(Cormack et al. 2009): 점수 = Σ 1/(k + 순위). 점수 크기가 달라도 쓸 수 있고 조정할 값이 k 하나뿐이다.
 - 가중합(convex combination, Bruch et al. 2023): 시스템마다 점수를 사례 안에서 정규화(min-max)한 뒤 가중 평균.

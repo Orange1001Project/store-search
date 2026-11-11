@@ -3,7 +3,7 @@
 
 scripts/06_generate_lexical_runs.py의 CLI 배관(인자 파싱, 콘솔 출력)을 제외한 핵심 로직
 전체 — 문서 텍스트 정규화/토큰화, char n-gram TF-IDF 2종(n-gram 길이만 다름)/char n-gram
-BM25 세 시스템의 fit과 채점, run 조립, manifest 생성까지 (docs/PIPELINE_CODE_REFERENCE.md
+BM25 세 시스템의 fit과 채점, run 조립, manifest 생성까지 (docs/archive/CODE_AND_RUN.md
 `06_generate_lexical_runs.py` 절 참고).
 
 세 시스템 모두 **query 텍스트만** 사용한다 — positive_terms/boundary_terms는 여기서 전혀

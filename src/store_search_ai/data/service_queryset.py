@@ -2,7 +2,7 @@
 
 기존 업종 의도 쿼리셋(query_families_v1)은 업종명을 보고 쓴 쿼리라 상호명·지역·상황 쿼리를 재지 못한다.
 이 모듈은 작성자가 쿼리를 쓸 때 볼 재료(빠진 업종 후보, 가맹점 표본, 체인 목록, 시장 표본, 결과 없음 후보)를
-코퍼스에서 뽑는다. 쿼리 자체는 사람이 쓴다 — 계획과 원칙은 docs/SERVICE_QUERYSET.md.
+코퍼스에서 뽑는다. 쿼리 자체는 사람이 쓴다 — 계획과 원칙은 docs/archive/EVALUATION.md.
 """
 
 from __future__ import annotations

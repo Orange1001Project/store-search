@@ -1,4 +1,4 @@
-"""서비스셋 판정 합치기 → qrels (docs/SERVICE_ANNOTATION_GUIDELINE.md 4절).
+"""서비스셋 판정 합치기 → qrels (docs/archive/EVALUATION.md).
 
 판정은 (쿼리, 가맹점) 단위이고 위치와 무관하다. 그래서 같은 쿼리를 다른 가정위치(맥락)로 평가해도 판정을 다시 쓴다.
 

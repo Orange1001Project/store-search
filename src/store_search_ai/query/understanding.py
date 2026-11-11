@@ -10,7 +10,7 @@
 - 나머지: 업종·상황 표현. 의미 검색(임베딩)이 맡는다.
 
 규칙 기반이라 결과를 그대로 검사할 수 있다. 정책 값(반경 등)은 configs/service/search_policy_v1.yaml과 같아야 한다
-(tests/test_search_policy.py). 업종 분류(가게·쿼리)는 공식 업종이 오면 별도 단계에서 붙인다(docs/SERVICE_PIPELINE_PLAN.md 11-3).
+(tests/test_search_policy.py). 업종 분류(가게·쿼리)는 공식 업종이 오면 별도 단계에서 붙인다(docs/archive/SERVICE_PIPELINE_PLAN.md 11-3).
 """
 
 from __future__ import annotations

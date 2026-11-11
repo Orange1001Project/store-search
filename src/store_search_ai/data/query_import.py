@@ -3,7 +3,7 @@
 scripts/import_queryset_xlsx.py의 CLI 배관(인자 파싱, 파일 IO, yaml 저장)을 제외한
 핵심 변환 로직 전체. 재배정 규칙(RECLASSIFY_QUERIES)과 애매한 slug 목록
 (AMBIGUOUS_SLUGS)은 더 이상 이 모듈에 하드코딩하지 않고 호출부가
-configs/query/*.yaml에서 읽어 인자로 넘긴다(docs/EXTENDING_DATA.md 참고) —
+configs/query/*.yaml에서 읽어 인자로 넘긴다(docs/archive/CODE_AND_RUN.md 참고) —
 그래야 query_set 버전이 바뀔 때 이 코드를 건드리지 않고 새 yaml만 추가하면 된다.
 """
 

@@ -5,7 +5,7 @@ zero-shot 모델과 fine-tuned 모델의 run이 섞여 있어도 상관없다 �
 Colab에서 여러 모델 x 여러 template(t1/t2/t3)로 run을 만들어 오면, 하나씩
 `13_evaluate_run.py`를 손으로 돌리는 대신 이 스크립트로 한 번에 비교한다.
 채점 로직은 재구현하지 않고 `13_evaluate_run.py`를 서브프로세스로 그대로 호출한다
-(docs/MODELING.md의 "왜 이렇게 나눴는가" 원칙과 동일).
+(docs/archive/TRAINING.md의 "왜 이렇게 나눴는가" 원칙과 동일).
 
 핵심 로직(run 탐색, 리더보드 정렬)은 src/store_search_ai/models/leaderboard.py에 있다.
 

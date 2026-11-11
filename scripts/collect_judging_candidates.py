@@ -1,6 +1,6 @@
 """등록된 판정 후보(configs/benchmark/judging_candidates.yaml)를 모아 **한 번에** 보충 판정 시트를 만든다.
 
-docs/EVALUATION_POLICY.md 3절의 일괄 판정 절차. 후보마다 val·test run을 하나로 합쳐(시스템 이름 = 후보 name)
+docs/archive/EVALUATION.md의 일괄 판정 절차. 후보마다 val·test run을 하나로 합쳐(시스템 이름 = 후보 name)
 results/judging_candidates/<round>/<name>.csv로 정리하고, 16_supplemental_round.py make-runs에 넘긴다.
 pool에 이미 있는 (쿼리, 문서)는 다시 판정하지 않으므로, 이미 판정된 후보를 넣어도 비용이 늘지 않는다.
 
@@ -68,7 +68,7 @@ def main() -> None:
     parser.add_argument("--config", default="configs/benchmark/storesearch_ko_v1.yaml")
     parser.add_argument("--registry", default="configs/benchmark/judging_candidates.yaml")
     parser.add_argument("--make", action="store_true", help="판정 시트를 실제로 만든다(없으면 건수만 출력)")
-    parser.add_argument("--reason", default="docs/EVALUATION_POLICY.md 3절 최종 후보 일괄 판정")
+    parser.add_argument("--reason", default="docs/archive/EVALUATION.md 최종 후보 일괄 판정")
     args = parser.parse_args()
 
     config = load_config(args.config)

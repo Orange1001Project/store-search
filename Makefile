@@ -4,7 +4,7 @@
 # 이 Makefile은 scripts/01_*.py ~ scripts/07_*.py 까지 (사람 개입이 없는 구간)를
 # 파일 의존관계 기반으로 자동 재실행합니다. `make <target>`을 실행하면 make가
 # 알아서 "무엇이 이미 최신 상태인지" 파일 수정시각(mtime)으로 판단해서, 필요한
-# 앞단계만 다시 돌립니다 — docs/PIPELINE.md의 실행 순서를 사람이 손으로 따라가지
+# 앞단계만 다시 돌립니다 — docs/archive/CODE_AND_RUN.md의 실행 순서를 사람이 손으로 따라가지
 # 않아도 되게 하기 위한 것입니다.
 #
 # 08번부터는 실제 사람이 애노테이션/adjudication을 해야 하므로 make로 자동화할
@@ -21,7 +21,7 @@
 # Windows 참고: GNU make가 기본 설치돼 있지 않고(MSYS2/choco 등으로 별도 설치 필요),
 # venv 레이아웃도 .venv/Scripts/python.exe로 달라서 이 Makefile을 그대로 못 쓴다.
 # 이 프로젝트는 Windows(PowerShell)에서 검증되므로, Windows에서는 이 파일 대신
-# docs/PIPELINE.md에 있는 `python scripts\NN_*.py` 명령을 순서대로 직접 실행할 것 -
+# docs/archive/CODE_AND_RUN.md에 있는 `python scripts\NN_*.py` 명령을 순서대로 직접 실행할 것 -
 # make 타겟은 전부 같은 스크립트를 파일 의존관계에 따라 자동으로 호출해주는 편의
 # wrapper일 뿐, 유일한 실행 경로가 아니다. 아래 PY는 활성화된 venv의 python을
 # 그대로 쓰므로(운영체제 무관), make를 쓸 수 있는 환경이라면 venv만 activate하면 된다.
@@ -47,7 +47,7 @@ help:
 	@echo "make validate          benchmark 무결성 검증 (pilot)"
 	@echo "make validate-final    benchmark 무결성 검증 (final, double-annotation coverage 등 포함)"
 	@echo "make evaluate RUN=... TAG=...   13_evaluate_run.py 실행"
-	@echo "사람이 개입해야 하는 단계(annotation/adjudication)는 docs/PIPELINE.md 4~5절 참고"
+	@echo "사람이 개입해야 하는 단계(annotation/adjudication)는 docs/archive/CODE_AND_RUN.md 참고"
 
 # ---------- 01: profile (재실행은 자유, 다른 산출물의 선행조건은 아님) ----------
 
@@ -113,7 +113,7 @@ evaluate:
 
 # ============================================================
 # 08~11: 사람 개입 구간 — 자동 실행 대신 가드 + 안내만 제공
-# 자세한 절차는 docs/PIPELINE.md 4~5절 참고
+# 자세한 절차는 docs/archive/CODE_AND_RUN.md 참고
 # ============================================================
 
 ANNOT_DIR := benchmark/storesearch_ko_v1/annotations/full_annotation_v1
@@ -123,7 +123,7 @@ full-annotation-sheets: pool
 	@echo ">> $(ANNOT_DIR)/annotation_A_{train,val,test}.csv, annotation_B_{val,test}.csv 를 전달하세요."
 
 prepare-full-annotations:
-	@test -d "$(ANNOT_DIR)/completed" || (echo "$(ANNOT_DIR)/completed/ 에 5개 *_completed.csv 파일이 필요합니다 (docs/PIPELINE.md 4절)" && exit 1)
+	@test -d "$(ANNOT_DIR)/completed" || (echo "$(ANNOT_DIR)/completed/ 에 5개 *_completed.csv 파일이 필요합니다 (docs/archive/CODE_AND_RUN.md)" && exit 1)
 	$(PY) $(SCRIPTS)/09_prepare_full_annotations.py --config $(CONFIG_BENCH)
 	@echo ">> $(ANNOT_DIR)/analysis/adjudication_val_test_needed_only.csv 를 조정자에게 전달하세요."
 

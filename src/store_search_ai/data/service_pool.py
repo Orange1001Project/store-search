@@ -1,5 +1,5 @@
 """서비스셋 판정 pool — 쿼리 가정위치에서 반경 안 가맹점만 후보로 시스템 run을 만들고 합친다
-(docs/SERVICE_ANNOTATION_GUIDELINE.md 4절).
+(docs/archive/EVALUATION.md).
 
 전국 상위 k개를 판정하면 대부분 반경 밖이라 서비스(현재 위치 1km) 평가에 쓸 수 없다. 반경 안 후보는 쿼리당 수백 곳이라
 시스템 상위 k개 + 키워드 후보로 대부분의 정답을 판정할 수 있다.

@@ -9,7 +9,7 @@
   - 전체 도시철도역사정보: 역 이름·좌표.
   - 전국전통시장표준데이터: 시장 이름·좌표(가맹점이 없는 시장 포함).
 
-kind와 쓰임(docs/SERVICE_PIPELINE_PLAN.md 11절)
+kind와 쓰임(docs/archive/SERVICE_PIPELINE_PLAN.md 11절)
   - 넓은 지역(scope=area): sido, city(구가 있는 시), sigungu, eup·myeon — 코퍼스 legal_dong_code 앞자리(code_prefix)로 거른다.
   - 좁은 지역(scope=point): dong(법정동), hdong(행정동), station, market — 중심 좌표에서 반경(1km → 10km)으로 찾는다.
 """

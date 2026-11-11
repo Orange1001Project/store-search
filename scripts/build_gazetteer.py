@@ -1,4 +1,4 @@
-"""공공데이터 지명 사전을 만든다(src/store_search_ai/data/gazetteer.py, docs/SERVICE_PIPELINE_PLAN.md 11절).
+"""공공데이터 지명 사전을 만든다(src/store_search_ai/data/gazetteer.py, docs/archive/SERVICE_PIPELINE_PLAN.md 11절).
 
 원본(공공데이터, 저장소 밖 — 행정동 경계 shp가 135MB):
   [행정안전부] 행정표준코드 법정동코드 정보.csv, 센서스 공간정보 지역 코드.xlsx, BND_ADM_DONG_PG/(shp·dbf),

@@ -1,4 +1,4 @@
-"""LLM 쿼리 확장(X8, docs/SERVICE_PIPELINE_PLAN.md 11-17·11-18).
+"""LLM 쿼리 확장(X8, docs/archive/SERVICE_PIPELINE_PLAN.md 11-17·11-18).
 
 업종·상황 쿼리마다 LLM이 만든 '찾는 가게 종류·품목' 키워드(Query2doc, Wang et al. EMNLP 2023; HyDE, Gao et al. ACL 2023)로
 범위 안 가맹점을 문자 BM25 채점하고, 사례 안 최댓값으로 나눈 값 × w를 1단계 점수에 더한다. 1단계에 없던 가게는 확장 상위

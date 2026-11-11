@@ -1,11 +1,11 @@
 # 서비스형 쿼리셋 v1 작성 템플릿 설정 — scripts/make_service_queryset_template.py가 읽는다.
-# 계획·작성 원칙은 docs/SERVICE_QUERYSET.md. 기존 업종 의도 쿼리셋(query_families_v1.yaml)과 섞지 않는 별도 셋이다.
+# 계획·작성 원칙은 docs/archive/EVALUATION.md. 기존 업종 의도 쿼리셋(query_families_v1.yaml)과 섞지 않는 별도 셋이다.
 version: service_queryset_v1
 # 가맹점·시장 표본 추출용. 템플릿을 배포한 뒤에는 바꾸지 않는다(바꾸면 표본ID가 다른 가맹점을 가리킴).
 random_seed: 20261019
 output_path: data/query/service_queryset_v1.xlsx
 
-# 묶음별 목표 개수(1차 500개, 2026-10-19 결정). 근거는 docs/SERVICE_QUERYSET.md 1절.
+# 묶음별 목표 개수(1차 500개, 2026-10-19 결정). 근거는 docs/archive/EVALUATION.md.
 # B·C는 묶음별 결론을 낼 수 있게 test 100개 이상이 되도록 150·130으로 잡았다.
 targets:
   A: {name: 업종 확장, count: 150}
@@ -138,7 +138,7 @@ scenario_cards_extra:
   - 아이가 아파서 부드럽고 소화 잘 되는 것을 먹여야 한다
   - 내일 소풍인데 먹을 것을 챙겨 가야 한다
 
-# 작성자별 배정 파일 — scripts/make_writer_sheets.py, 절차는 docs/QUERY_WRITING_GUIDE.md 1부.
+# 작성자별 배정 파일 — scripts/make_writer_sheets.py, 절차는 docs/archive/EVALUATION.md 2-2.
 writers:
   # 2026-10-20: 6명 → 2명 → 3명. 1인 약 120줄(C 45 + E 7 + A 50 + D 17), 1부·2부 두 번에 나눠 쓴다.
   ids: [W1, W2, W3]
@@ -159,7 +159,7 @@ writers:
   # 재료는 B_가맹점표본 중 아직 안 쓴 가게, 상호명만 층은 store_sample.name_only_share만큼.
   extra_b_per_writer: 22
 
-# 작성 결과 → 쿼리셋 — scripts/import_service_queries.py, 설명은 docs/SERVICE_QUERYSET.md 4절.
+# 작성 결과 → 쿼리셋 — scripts/import_service_queries.py, 설명은 docs/archive/EVALUATION.md.
 import:
   # 작성자 완료본(여러 개 가능, 없는 파일은 건너뜀). 추가 C 카드 완료본은 회수하면 같은 폴더에 둔다.
   writers_completed:
@@ -201,7 +201,7 @@ import:
     - {query: 샤넬, bundle: E, intent: 범위 밖(명품 브랜드)}
     - {query: 5성급 호텔, bundle: E, intent: 범위 밖(고급 호텔)}
 
-# 주 평가셋(2026-10-26) — scripts/build_service_eval_set.py, 설명은 docs/SERVICE_QUERYSET.md 1절.
+# 주 평가셋(2026-10-26) — scripts/build_service_eval_set.py, 설명은 docs/archive/EVALUATION.md.
 # 쿼리 수 자체를 가정한 실제 쿼리 비율에 맞춘다(가중 평균을 쓰지 않는다). 비율은 로그를 받으면 그 분포로 바꾼다.
 # 쿼리마다 사례 하나(1km 안 정답이 있는 random, 없으면 anchor). split마다 가장 모자란 묶음이 크기를 정하고 나머지는 줄인다.
 # E(결과 없음)는 순위 지표가 없어 비율 밖에서 따로 본다.
@@ -209,7 +209,7 @@ eval_set:
   shares: {B: 0.50, A: 0.35, D: 0.10, C: 0.05}
   # A 안 층(2026-10-28): head = 기존 벤치마크 val/test 업종, tail = 사람이 새로 쓴 드문 업종. head가 모자라면 tail로 채운다.
   strata: {A: {head: 0.5, tail: 0.5}}
-  # 평가용 묶음(2026-10-28 제안, docs/SERVICE_QUERYSET_REVIEW.md 1절): C 중 업종·품목 이름을 그대로 쓴 쿼리를 A로 센다.
+  # 평가용 묶음(2026-10-28 제안, docs/archive/EVALUATION.md): C 중 업종·품목 이름을 그대로 쓴 쿼리를 A로 센다.
   # query_id·판정·split·판정 규칙은 그대로 — 주 평가셋·채점(build_service_eval_set, score_service_eval, eval_service_pipeline)의
   # 묶음만 바뀐다. 파일 열: query_id, query, bundle(지금 묶음, 어긋나면 멈춤), eval_bundle, rule. 비우면 원래 묶음 그대로.
   bundle_overrides: data/query/service_eval_bundle_v1.csv
@@ -217,7 +217,7 @@ eval_set:
   salt: eval_set_v1
   output: benchmark/service_ko_v1/eval_set.csv
 
-# 판정·pool — docs/SERVICE_ANNOTATION_GUIDELINE.md, scripts/build_service_pool.py
+# 판정·pool — docs/archive/EVALUATION.md, scripts/build_service_pool.py
 judging:
   benchmark_dir: benchmark/service_ko_v1
   # 판정은 2km 안 가맹점으로 하고, 1km(현재 서비스)·2km 두 반경으로 채점한다. 1km ⊂ 2km라 판정 한 번으로 둘 다 잰다.

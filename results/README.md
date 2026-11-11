@@ -2,7 +2,7 @@
 
 모델 가중치는 여기 두지 않는다(`models/`, git 제외 — `.gitignore`가 `results/` 아래 `*.safetensors`·`*.bin`도 막음).
 Colab 결과는 손으로 복사하지 말고 `scripts/import_colab_results.py --drive-dir <내려받은 store-search-ai> --verify`로 가져온다
-(`docs/TRAINING_TEAM.md` 9절).
+(`docs/archive/TRAINING.md`).
 
 | 경로 | 내용 | 만드는 곳 | git |
 |---|---|---|---|
@@ -28,11 +28,11 @@ Colab 결과는 손으로 복사하지 말고 `scripts/import_colab_results.py -
 | `snowflake_arctic_embed_l_v2_ko_ft_lee_20261015_1434` | `067e4aa4` | 0.961 | 0.965 | 0.981 | 0.458 | 0.447 | Arctic-KO, val HP 탐색 11회 중 1등(30 step), KEEP |
 
 **임베딩 v1 후보 3종 비교**(final_v1_val 판정 후, zero-shot 포함): `model_comparison/final_v1_val/summary.csv`(지표·bad@3·95% CI),
-`pairs.csv`(쌍별 Δ·p). 세 후보는 서로 Δ ≤ 0.008, p ≥ 0.28로 같은 수준 — 해석은 `docs/EMBEDDING_V1_PLAN.md` 1-1절.
+`pairs.csv`(쌍별 Δ·p). 세 후보는 서로 Δ ≤ 0.008, p ≥ 0.28로 같은 수준 — 해석은 `docs/archive/TRAINING.md`.
 bge-m3·Arctic 행의 `experiments.csv` Δ·p는 zero-shot이 아니라 **kse16 대비**다(두 계열의 zero-shot 전체 run이 저장소에 없음).
 
 Recall@100·Bpref가 낮은 건 쿼리 하나에 정답이 평균 114개(100개 초과 쿼리 65%)라서다 — 구조적 상한이 약 0.85이고, 모델 간 차이로만 본다
-(`docs/EMBEDDING_V1_PLAN.md` 1절). 전체 지표와 신뢰구간은 `artifacts/evaluation/storesearch_ko_v1/*_evaluation.json`.
+(`docs/archive/TRAINING.md`). 전체 지표와 신뢰구간은 `artifacts/evaluation/storesearch_ko_v1/*_evaluation.json`.
 
 kse1·kse13은 오타 비활성 전 데이터로 학습했다(평가는 모두 현재 qrels로 다시 채점됨). 같은 설정도 다시 돌리면 ±0.005 흔들리므로
 kse1·kse13·kse14 사이 차이는 잡음 수준이다.

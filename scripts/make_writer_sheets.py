@@ -1,8 +1,8 @@
-"""서비스셋 쿼리 직접 작성용 작성자별 xlsx를 만든다. 절차는 docs/QUERY_WRITING_GUIDE.md 1부.
+"""서비스셋 쿼리 직접 작성용 작성자별 xlsx를 만든다. 절차는 docs/archive/EVALUATION.md 2-2.
 
 출력(`writers.output_dir`, 기본 data/query/writers/):
-  --layout single(기본)  서비스셋_직접작성_v1.xlsx 한 파일 — 시트: 안내_1부(C·E), 안내_2부(A·D), 배정표, 작성자정보, 합계,
-                         W1_1부_C_E, W1_2부_A_D, …, W6_2부_A_D
+  --layout single(기본)  `writers.single_file`(현재 서비스셋_직접작성_v1_3명.xlsx, 없으면 서비스셋_직접작성_v1.xlsx) 한 파일 —
+                         시트: 안내_1부(C·E), 안내_2부(A·D), 배정표, 작성자정보, 합계, W1_1부_C_E, W1_2부_A_D, …(작성자는 `writers.ids`, 현재 W1~W3)
   --layout per-writer    W1_1부_C_E.xlsx(먼저 줌), W1_2부_A_D.xlsx(1부를 낸 뒤 줌), …, 진행자_배정표.xlsx
 
 한 파일을 여러 작성자가 공유해 동시에 쓰면 서로의 쿼리가 보인다(독립 작성 원칙 위반). 작성자에게 나눠 줄 때는

@@ -1,7 +1,7 @@
 """임베딩 모델 평가: 인코딩 → exact cosine 검색 → 공식 evaluator 채점.
 
 `--model-config`에 어떤 `configs/models/*.yaml`을 넘기느냐에 따라 zero-shot 모델(HF Hub ID)도,
-fine-tuned 모델(로컬 경로, `docs/TRAINING.md` 참고)도 완전히 동일한 경로로 평가한다 — 그래서
+fine-tuned 모델(로컬 경로, `docs/archive/TRAINING.md` 참고)도 완전히 동일한 경로로 평가한다 — 그래서
 스크립트 이름에 "zero_shot"을 넣지 않았다(둘 다 같은 코드로 도는데 이름이 zero-shot이면 오해의
 소지가 있음).
 
@@ -108,7 +108,7 @@ def main() -> None:
     print(f"[INFO] 공식 evaluator 호출: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
 
-    # model_id가 로컬 경로(=fine-tuned 체크포인트, docs/TRAINING.md)를 가리키고 그 폴더에
+    # model_id가 로컬 경로(=fine-tuned 체크포인트, docs/archive/TRAINING.md)를 가리키고 그 폴더에
     # model_manifest.json이 있으면, 방금 나온 평가 결과를 그 매니페스트에 이어붙인다.
     # HF Hub id(zero-shot 모델)는 로컬 폴더가 아니므로 아무 일도 하지 않는다.
     if args.model_config:

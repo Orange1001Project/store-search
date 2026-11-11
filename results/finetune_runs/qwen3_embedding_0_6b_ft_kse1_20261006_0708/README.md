@@ -18,7 +18,7 @@
 `train_eval_pre.ipynb`는 2026-10-07 수정 전 버전이라 지금 `colab/train_eval.ipynb`와 다음이 다릅니다(학습 방식 자체 — 데이터, loss, LoRA,
 하이퍼파라미터 — 는 같음):
 - 학습 정밀도를 `torch.cuda.is_bf16_supported()`로 골라 **T4에서 bf16(하드웨어 가속 없는 에뮬레이션)으로 학습**됨. bf16 AMP는 정상적인
-  학습 방식이라 모델은 유효하지만, 지금 노트북으로 T4에서 학습하면 fp16이므로 정밀도가 다릅니다(`docs/TRAINING.md` 6절).
+  학습 방식이라 모델은 유효하지만, 지금 노트북으로 T4에서 학습하면 fp16이므로 정밀도가 다릅니다(`docs/archive/TRAINING.md` 6절).
 - GIST guide 모델은 fp16, 평가는 dtype을 지정하지 않음 → 위 val 숫자는 **지금 노트북으로 다시 평가한 결과**(기준·학습 모델 모두 float16).
 - 그 밖에: 학습 실패 시 `final_dir` 초기화, 평가 dtype 기록·리더보드 열, SMOKE 정밀도 확인, SMOKE/데이터 불일치 방지(채점·학습 로직과 무관).
 

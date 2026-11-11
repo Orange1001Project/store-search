@@ -1,4 +1,4 @@
-"""X1 관련 임계값(docs/SERVICE_PIPELINE_PLAN.md 11-4) — 1단계(v1+name(qu) b=0.5) 점수를 P(관련)로 보정하고 임계값을 dev에서 고른다.
+"""X1 관련 임계값(docs/archive/SERVICE_PIPELINE_PLAN.md 11-4) — 1단계(v1+name(qu) b=0.5) 점수를 P(관련)로 보정하고 임계값을 dev에서 고른다.
 
 판정 없이 기존 qrels로 한다. test는 X7에서 한 번만 본다(이 스크립트는 dev 전용).
 

@@ -1,4 +1,4 @@
-"""서비스셋 주 평가셋(eval_set.csv)을 만든다 — 쿼리 수를 가정한 실제 쿼리 비율에 맞춘 사례 목록. 설명은 docs/SERVICE_QUERYSET.md 1절.
+"""서비스셋 주 평가셋(eval_set.csv)을 만든다 — 쿼리 수를 가정한 실제 쿼리 비율에 맞춘 사례 목록. 설명은 docs/archive/EVALUATION.md.
 
 설정 `eval_set`: 묶음 비율(shares), 묶음 안 층 비율(strata — A head:tail), 반경, 해시 salt, 출력 경로.
 - 쿼리마다 사례 하나(반경 안 정답이 있는 random, 없으면 anchor). 이전 셋에 있던 사례는 정답이 남아 있는 한 그대로 쓴다.

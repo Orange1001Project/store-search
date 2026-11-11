@@ -1,4 +1,4 @@
-"""임시 업종(v0, docs/SERVICE_PIPELINE_PLAN.md 11-14) — 취급품목·상호로 가게를 공식 업종 17개 대분류에 붙인다.
+"""임시 업종(v0, docs/archive/SERVICE_PIPELINE_PLAN.md 11-14) — 취급품목·상호로 가게를 공식 업종 17개 대분류에 붙인다.
 
 규칙(configs/category/taxonomy_v0.yaml)
   - 취급품목을 정규화(소문자, 공백·쉼표·괄호 등 구분자 제거한 문자열 + 구분자로 나눈 단어)하고 업종 키워드가 나온 위치를 모두 찾는다.

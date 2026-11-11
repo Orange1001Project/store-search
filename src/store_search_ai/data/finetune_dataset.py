@@ -1,7 +1,7 @@
 """qrels_train + queries.csv + corpus로부터 임베딩 모델 fine-tuning용 학습쌍을 만드는 로직.
 
 scripts/prepare_finetune_dataset.py의 CLI 배관(인자 파싱, 파일 저장, 콘솔 출력)을 제외한 핵심
-로직 전체 (docs/PIPELINE_CODE_REFERENCE.md `prepare_finetune_dataset.py` 절 참고).
+로직 전체 (docs/archive/CODE_AND_RUN.md `prepare_finetune_dataset.py` 절 참고).
 
 query 하나당 (a) positives = 그 query의 candidate pool에서 relevance >= binary_relevance_threshold
 인 문서 **전부**(relevance 높은 순), (b) negatives = 같은 query의 같은 pool에서
@@ -37,7 +37,7 @@ def resolve_train_qrels_path(benchmark_dir: Path, round_name: str) -> Path:
         return provisional_path
     raise SystemExit(
         f"train qrels를 찾을 수 없습니다: {final_path} 또는 {provisional_path}. "
-        "docs/PIPELINE.md 4절(08_make_full_annotation_sheets.py -> 사람이 채움 -> "
+        "docs/archive/CODE_AND_RUN.md(08_make_full_annotation_sheets.py -> 사람이 채움 -> "
         "09_prepare_full_annotations.py)을 먼저 진행하세요."
     )
 

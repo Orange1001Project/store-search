@@ -11,13 +11,13 @@ GPU가 필요한 일(학습, 21만 개 문서 인코딩·채점)은 Colab에서 
 ```
 
 - 노트북을 고쳐도 다시 올리는 건 **그 파일 하나**, 데이터는 바뀔 때만 다시 올립니다.
-- 고치는 방법 두 가지(`docs/TRAINING_TEAM.md` 3절):
+- 고치는 방법 두 가지(`docs/archive/TRAINING.md`):
   - **A. Colab에서 바로** — 작은 수정. 고친 셀 → 8. 학습 → 9. 평가 → 10. 리더보드(세션 유지). 끝나면 파일 > 다운로드 > .ipynb로 받아
     이 폴더의 `train_eval.ipynb`에 덮어쓰기(정본은 저장소 파일).
   - **B. VS Code(Claude)에서** — 큰 수정. 이 파일을 고친 뒤 Drive `내 드라이브/Colab Notebooks/train_eval.ipynb`(이전 사본)를 지우고
     다시 업로드 → 위에서부터 실행.
-- 셀별 코드 설명: `docs/TRAIN_EVAL_NOTEBOOK.md`.
-- 셀 구성·고쳐도 되는 곳·기록 규칙: `docs/TRAINING_TEAM.md`.
+- 셀별 코드 설명: `docs/archive/TRAINING.md`.
+- 셀 구성·고쳐도 되는 곳·기록 규칙: `docs/archive/TRAINING.md`.
 - **`7. 평가` 셀은 고치지 않습니다** — 로컬 공식 evaluator(`scripts/13_evaluate_run.py`)와 같은 채점 로직이고,
   `tests/test_train_eval_notebook.py`가 노트북 셀을 실제로 실행해 공식 evaluator와 같은 결과인지 확인합니다.
   가져올 때 `import_colab_results.py --verify`도 로컬에서 다시 채점해 확인합니다.
@@ -38,7 +38,7 @@ stack_eval/<split>/         ← rerank_scores.ipynb: rerank_pairs.csv(올림) �
 
 ## `rerank_scores.ipynb` — reranker 점수만 GPU로 (검색 파이프라인 탐색, 데이터 담당)
 
-하이브리드·reranker는 임베딩 학습이 아니라 **검색 파이프라인 단계**의 구성 요소다(`docs/EMBEDDING_V1_PLAN.md`). Qwen3-Reranker는 로컬 CPU로
+하이브리드·reranker는 임베딩 학습이 아니라 **검색 파이프라인 단계**의 구성 요소다(`docs/archive/TRAINING.md`). Qwen3-Reranker는 로컬 CPU로
 1만 쌍에 1시간 넘게 걸려서 점수 계산만 Colab에서 한다.
 
 1. 로컬: `python scripts/eval_retrieval_stack.py --dense <dense run 이름들> --export-pairs` → `results/stack_eval/<split>/rerank_pairs.csv`를
@@ -50,7 +50,7 @@ stack_eval/<split>/         ← rerank_scores.ipynb: rerank_pairs.csv(올림) �
 
 ## `service_dense_runs.ipynb` — 서비스셋 임베딩 run(반경 안 상위 결과)
 
-서비스셋 판정 pool·채점용. 쿼리 가정위치에서 반경(2km) 안 가맹점만 놓고 임베딩 모델 상위 50개를 만든다(`docs/SERVICE_ANNOTATION_GUIDELINE.md`).
+서비스셋 판정 pool·채점용. 쿼리 가정위치에서 반경(2km) 안 가맹점만 놓고 임베딩 모델 상위 50개를 만든다(`docs/archive/EVALUATION.md`).
 
 1. 로컬: `python scripts/build_service_pool.py export` → `colab_upload/service_eval/`의 세 파일을 Drive `store-search-ai/service_eval/`에 올림
 2. bge-m3 mj 모델이 Drive `store-search-ai/runs/finetune/bge_m3_ft_mj_20261014_0743/`에 없으면 로컬 `models/` 폴더를 올림

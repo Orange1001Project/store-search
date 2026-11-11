@@ -2,7 +2,7 @@
 라벨링할 후보 pool(candidate_pool_internal.csv)을 만드는 로직 — "pooling"의 핵심 단계.
 
 scripts/07_build_annotation_pool.py의 CLI 배관(인자 파싱, 콘솔 출력)을 제외한 핵심 로직
-전체 (docs/PIPELINE_CODE_REFERENCE.md `07_build_annotation_pool.py` 절 참고). 세 채널:
+전체 (docs/archive/CODE_AND_RUN.md `07_build_annotation_pool.py` 절 참고). 세 채널:
 
 1. `run:{system}` — 06의 lexical run 각각의 상위 N개
 2. `target:positive:{term}`/`target:boundary:{term}` — 취급품목/가맹점명에 직접 문자열
