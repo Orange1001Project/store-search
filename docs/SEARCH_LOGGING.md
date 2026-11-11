@@ -24,16 +24,16 @@ query 기록, 그 뒤 행동 = event 기록, `query_id`로 잇는다)와 Algolia
 | `view`, `viewport` | list / map, 지도 화면 범위(100m 격자) |
 | `user_cell` | 사용자 위치 100m 격자 ID(원 좌표는 남기지 않음) |
 | `parsed` | 지역(이름·scope·code_prefix), intent, name_first, 다른 지역 후보 |
-| `radius_stage` | 1km / 10km / region / region+10km |
+| `radius_stage` | 1km / 10km / area(넓은 지명, 확장 없음) / viewport(지도) |
 | `n_relevant_first`, `n_relevant_final` | 관련 가게 수(확장 판단 근거) |
-| `message` | none / expanded_none_in_first / expanded_partial / no_result / map_empty / no_exact_name / weak_result / map_moved / zoom_in / chip_empty (+ 작은 줄 region_info / default_location)(정책 8-3) |
+| `message` | none / expanded_none_in_first / expanded_partial / no_result / area_empty / map_empty / no_exact_name / weak_result / map_moved / zoom_in / chip_empty (+ 작은 줄 region_info / default_location)(정책 8-3) |
 | `fallback` | 임베딩 장애로 BM25 + 상호 일치만 썼는지 |
 | `expansion_cache_hit` | 확장어 캐시 적중 |
 | `latency_ms` | 단계별 지연 |
 
 ## 3. 노출 결과 (search_result)
 
-검색 1건당 상위 **20개를 20행으로** 저장한다(JSON 묶음 아님): `query_id`, `store_id`, `position`(1부터, 페이지를 넘겨도 절대 순위), `distance_m`, `score`.
+사용자가 본 페이지까지 **가게 하나를 한 행으로** 저장한다(JSON 묶음 아님) — 첫 페이지 1~20위, 다음 페이지를 보면 같은 `query_id`로 21~40위를 더한다: `query_id`, `store_id`, `position`(1부터, 절대 순위), `distance_m`(**검색 중심 기준**, 정렬·반경과 같은 기준), `score`.
 위치 편향 보정·임계값 재조정에는 노출 순위가 꼭 있어야 한다(Joachims et al., WSDM 2017).
 
 ## 4. 행동 이벤트 (모두 `query_id` 포함)
@@ -52,7 +52,7 @@ query 기록, 그 뒤 행동 = event 기록, `query_id`로 잇는다)와 Algolia
 
 ## 5. 봇 의심·보관·통계
 
-- **봇 의심**: 지우지 않고 표시만 하고 통계에서 뺀다. 기본 규칙 — 알려진 봇 User-Agent, 한 세션 1분 30회 초과 검색, 화면 이벤트 없이 검색만 수백 건인 세션.
+- **봇 의심**: 지우지 않고 표시만 하고 통계에서 뺀다. 기본 규칙(세션 기준, IP는 저장하지 않음) — 알려진 봇 User-Agent, 한 세션 1분 30회 초과 검색, 한 세션 하루 200회 이상이면서 클릭 없음.
   규칙과 기준값은 설정으로 바꿀 수 있게(출시 뒤 조정).
 - **보관**: 원본(검색·노출·행동) **1년**, 월 단위로 통째로 삭제. 삭제 전에 **일별 통계 요약**을 만들어 계속 보관. 기간은 법무 결과로 바뀔 수 있다.
 - **관리자 통계**: 인기 검색어, 결과 없음 비율, 확장 비율, 재검색 비율, 첫 클릭 순위, 클릭률, 의도별 지표, 확장어 캐시 적중률, 폴백 비율.
