@@ -18,7 +18,7 @@ query 기록, 그 뒤 행동 = event 기록, `query_id`로 잇는다)와 Algolia
 | `query_id` | UUID. 다음 페이지도 같은 값 |
 | `session_id` | 30분 무활동 기준 세션 |
 | `app_version`, `pipeline_version`, `corpus_version` | 앱, 정책·계수 버전, 가맹점 스냅샷 |
-| `query`, `input` | "신촌 설렁탕", typed / autocomplete / chip |
+| `query`, `input` | "신촌 설렁탕", typed / recent / autocomplete / chip / browse(검색어 없는 조회) |
 | `category_chip` | 음식점 / null |
 | `location_source` | query_region / ui_region / map_viewport / gps / default |
 | `view`, `viewport` | list / map, 지도 화면 범위(100m 격자) |
@@ -26,7 +26,7 @@ query 기록, 그 뒤 행동 = event 기록, `query_id`로 잇는다)와 Algolia
 | `parsed` | 지역(이름·scope·code_prefix), intent, name_first, 다른 지역 후보 |
 | `radius_stage` | 1km / 10km / region / region+10km |
 | `n_relevant_first`, `n_relevant_final` | 관련 가게 수(확장 판단 근거) |
-| `message` | none / expanded_none_in_first / expanded_partial / no_result / map_empty / no_exact_name |
+| `message` | none / expanded_none_in_first / expanded_partial / no_result / map_empty / no_exact_name / weak_result / map_moved / zoom_in / chip_empty (+ 작은 줄 region_info / default_location)(정책 8-3) |
 | `fallback` | 임베딩 장애로 BM25 + 상호 일치만 썼는지 |
 | `expansion_cache_hit` | 확장어 캐시 적중 |
 | `latency_ms` | 단계별 지연 |

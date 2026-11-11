@@ -10,13 +10,13 @@
 |---|---|---|
 | 정책 값 | `configs/service/search_policy_v1.yaml` | git, 버전만 DB·로그 |
 | 관련 확률 계수 | `results/service_pipeline/x1/calibrator.json` | git, 버전만 DB·로그 |
-| 임베딩 모델 v1 | bge-m3 mj `models/bge_m3_ft_mj_20261014_0743/`(git 제외, Drive) | 추론 서버 또는 ONNX(미정) |
+| 임베딩 모델 v1 | bge-m3 mj `models/bge_m3_ft_mj_20261014_0743/`(git 제외, Drive) | 별도 추론 서버(정책 17-2) |
 | 지명 사전 | `data/geo/gazetteer_v1.parquet` (+ `.meta.json` 원본 해시) | DB, 버전 관리 |
 | 브랜드 별칭 | `configs/service/brand_alias_v1.csv` (65행) | DB, 관리자 수정 |
 | 가게 업종(임시 v0) | `data/category/store_category_v0.parquet`, `configs/category/taxonomy_v0.yaml` | DB |
 | 지점 접미사 | `src/store_search_ai/data/service_pool.py branch_suffixes`로 생성(현재 5,239개) | DB, 스냅샷과 묶음 |
 | LLM 확장어 캐시 | `results/service_pipeline/x8/expansions_Qwen2.5-14B-Instruct.csv`, 생성 `colab/query_expansion.ipynb` | DB, 주 1회 배치 |
-| 검색어 해석 규칙 | `src/store_search_ai/query/understanding.py` + `tests/test_query_understanding.py`, `tests/test_gazetteer.py` | 자바 이식 또는 파이썬 서비스(미정) |
+| 검색어 해석 규칙 | `src/store_search_ai/query/understanding.py` + `tests/test_query_understanding.py`, `tests/test_gazetteer.py` | 자바 이식(정책 4-10) |
 | 1단계·정렬 기준 구현 | `scripts/eval_service_pipeline.py`(`first_stage`, `brand_distance_sort`, `augment_v1`, `exact_name_sort`), `scripts/eval_x23.py tier_order`, `src/store_search_ai/retrieval/expansion.py` | 이식 기준 코드 |
 
 ## 2. 그대로 옮겨야 하는 동작
@@ -34,7 +34,7 @@
 | 7 | 확장 목록 순서 = 맨 위 가게(거리순) → 1km 안 P ≥ 0.5 → 나머지 점수순 | 팀 결정 + 평가 |
 | 8 | 모든 거리 규칙의 기준점은 **검색 중심**. GPS를 따로 넣지 않는다 | 평가 좌표가 검색 중심 하나 |
 | 9 | BM25 = **전국 색인 하나**, 글자 2–3gram, k1 1.5, b 0.75, 음수 idf 0, **애플리케이션 메모리 계산**(`pg_trgm`·`ts_rank` 금지) | 식이 달라지면 `bm25_rel` 특성이 계수와 어긋난다 |
-| 10 | 동점 규칙 없음(1단계 순서) | 평가 안 한 규칙 |
+| 10 | 같은 점수면 store_id 오름차순(정책 7-5) | 노출 가게끼리 완전 동점은 드물어 지표 영향 없음 |
 | 11 | 확장어 캐시 키 = 정규화한 전체 검색어(NFKC → 앞뒤 공백 제거 → 연속 공백 하나 → 영문 소문자). 캐시에 없으면 확장 없이 | 평가 요청 756개 모두 이 키와 같았다 |
 | 12 | 지점 접미사 목록은 파일(DB)로 고정해 쓰고 가맹점 갱신 때만 다시 만든다 | 매번 계산하면 갱신마다 달라진다 |
 
@@ -57,9 +57,9 @@ reranker(bge-reranker-v2-m3), 업종 가산점, 모든 후보에 실제 코사�
 
 ## 5. 알려진 한계
 
-- DB에 없는 가게 이름 검색은 비슷한 업종 가게가 나온다 → "정확히 일치하는 가게는 없어요" 문구(정책 8-4).
+- DB에 없는 가게 이름 검색은 비슷한 업종 가게가 나온다 → "정확히 일치하는 가게는 없어요" 문구(정책 8-3 ⑤).
 - 품목이 '음식'·'한식'뿐인 가게가 많아 상황형 검색어(복날 음식, 도시락)가 약하다.
 - 동음·글자 겹침('시계 배터리' → 자동차 배터리).
 - 업종 검색어 1위는 맞는 가게가 없어도 하나는 보인다(정규화의 대가, 동작 1).
-- 검색어 해석이 '오케이 정형외과'를 지명 '오케이' + 업종으로 읽는다(지명 사전 정리 후보).
-- 폴백(임베딩 장애) 동작은 평가하지 않았다(정책 17-11 ~ 17-18).
+- 검색어 해석이 '오케이 정형외과'를 지명 '오케이' + 업종으로 읽는다(지명 제외 목록으로 관리, 정책 4-8).
+- 폴백(임베딩 장애) 동작은 평가하지 않았다(정책 17-6 ~ 17-8).
