@@ -19,7 +19,7 @@ query 기록, 그 뒤 행동 = event 기록, `query_id`로 잇는다)와 Algolia
 | `session_id` | 30분 무활동 기준 세션 |
 | `app_version`, `pipeline_version`, `corpus_version` | 앱, 정책·계수 버전, 가맹점 스냅샷 |
 | `query`, `input` | "신촌 설렁탕", typed / recent / autocomplete / chip / browse(검색어 없는 조회) / place(지명만 입력 — 지도 이동, 품질 통계 제외) |
-| `category_chip` | 음식점 / null |
+| `category_chip`, `payment_chip` | 음식점 / null, qr / card / barcode / null |
 | `location_source` | query_region / ui_region / map_viewport / gps / default |
 | `view`, `viewport` | list / map, 지도 화면 범위(100m 격자) |
 | `user_cell` | 사용자 위치 100m 격자 ID(원 좌표는 남기지 않음) |
@@ -45,7 +45,7 @@ query 기록, 그 뒤 행동 = event 기록, `query_id`로 잇는다)와 Algolia
 | `action` | store_id, position, call / directions / favorite / share / pay — 전환 |
 | `dwell` | store_id, 상세 체류 초 |
 | `region_choice` | 고른 다른 지역(지역 해석이 틀렸다는 신호) |
-| `chip_change`, `research_here` | 업종 변경 / '이 지역에서 다시 검색' — 새 query_id |
+| `chip_change`, `research_here` | 업종·결제 칩 변경 / '이 지역에서 다시 검색' — 새 query_id |
 | `cluster_click`, `pin_click` | 지도 묶음 / 핀 |
 | `reformulate` | 30초 안 같은 세션 재검색(이전 → 새 query_id) |
 | `abandon` | 아무 행동 없이 종료 |
