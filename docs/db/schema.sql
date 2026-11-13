@@ -41,12 +41,12 @@ CREATE TABLE category (                                          -- 업종 대�
     updated_at     timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE payment_method (                                    -- 결제 칩: card, qr, barcode
+CREATE TABLE payment_method (                                    -- 결제 칩: card, qr
     payment_code   varchar(10) PRIMARY KEY,
-    name           varchar(20) NOT NULL UNIQUE,                  -- 카드결제, QR결제, 바코드결제
+    name           varchar(20) NOT NULL UNIQUE,                  -- 카드결제, QR결제
     source_column  varchar(30),                                  -- store의 원천 열(card_payment, mobile_payment). 데이터 없으면 NULL
     sort_order     smallint    NOT NULL,
-    is_visible     boolean     NOT NULL DEFAULT true,            -- 바코드는 데이터가 올 때까지 false
+    is_visible     boolean     NOT NULL DEFAULT true,            -- 칩 표시 여부
     updated_at     timestamptz NOT NULL DEFAULT now()
 );
 
@@ -212,7 +212,7 @@ CREATE TABLE store_snapshot (
     primary_category  varchar(20),                               -- 대표 업종(category.category_code)
     category_source   varchar(10) CHECK (category_source IN ('item', 'name', 'none', 'admin')),   -- 업종 근거(DR-07)
     subcategory       varchar(40),                               -- 세부 업종
-    payment_codes     varchar(10)[] NOT NULL DEFAULT '{}',       -- {card, qr}; 바코드는 데이터 오면 값만 추가
+    payment_codes     varchar(10)[] NOT NULL DEFAULT '{}',       -- {card, qr}
     searchable        boolean      NOT NULL,                     -- 영업중 · 숨김 아님 · 좌표 오류 아님
     doc_text          varchar(300) NOT NULL,                     -- 가맹점명: {상호} / 취급품목: {품목}
     embedding         vector(1024) NOT NULL,                     -- fp32, L2 정규화
@@ -358,8 +358,7 @@ CREATE TABLE stats_daily (
 -- =====================================================================
 INSERT INTO payment_method (payment_code, name, source_column, sort_order, is_visible) VALUES
     ('card',    '카드결제',   'card_payment',   1, true),
-    ('qr',      'QR결제',     'mobile_payment', 2, true),
-    ('barcode', '바코드결제', NULL,             3, false);
+    ('qr',      'QR결제',     'mobile_payment', 2, true);
 
 -- =====================================================================
 -- 10. 갱신 작업이 실행하는 예시(데이터 버전 7 만들기)

@@ -80,7 +80,7 @@
 3. **`store_snapshot`**: **검색이 실제로 읽는 표**예요. 버전마다 칸이 하나씩 있어요.
    - 상호·주소 등은 **원천 값에 관리자 수정을 덮어씌운 최종 값**이에요.
    - `geom`: 좌표예요. 미터 단위 거리를 바로 재는 자료형이라 "1km 안"을 정확하게 골라요.
-   - `category_codes`, `payment_codes`: 업종과 결제 수단 목록이에요. **바코드 데이터가 오면 열을 늘리지 않고 목록에 값만 추가**하면 돼요.
+   - `category_codes`, `payment_codes`: 업종과 결제 수단 목록이에요. 결제 수단이 늘어나도 열을 늘리지 않고 목록에 값만 추가하면 돼요.
    - `searchable`: 검색 대상 여부를 미리 계산해 둔 값이에요.
    - `embedding`: 1024개 숫자로 된 의미 벡터예요. 21만 곳이면 약 0.9GB예요.
 
@@ -95,7 +95,7 @@
 검색 서버가 메모리에 올려 두고 쓰는 사전들이에요.
 
 - **`category`**: 업종 17개예요.
-- **`payment_method`**: 결제 칩이에요. 카드결제, QR결제, 바코드결제예요. 바코드는 데이터가 아직 없어서 화면에 숨겨 뒀어요.
+- **`payment_method`**: 결제 칩이에요. 카드결제, QR결제 두 가지예요.
 - **`brand_alias`**: 브랜드 별칭이에요. 대표 이름 "GS25" 옆에 "지에스25" 같은 다른 표기를 한 줄씩 적어요.
 - **`gazetteer`**: 지명 사전이에요. "신촌", "대전광역시 중구" 같은 이름과 중심 좌표, 지역 전체인지 한 지점인지가 있어요. "신촌 국밥"을 검색하면 여기서 신촌을 찾아요.
 - **`place_exclusion`**: "오케이 정형외과"의 "오케이"처럼 지명으로 읽으면 안 되는 말이에요.
@@ -215,15 +215,15 @@
 | `is_active` | 사용 여부 | boolean |  | 사용 여부 |
 | `updated_at` | 수정 시각 | timestamptz |  | 마지막으로 바꾼 시각 |
 
-### `payment_method` — 결제 수단 · 결제 칩: card, qr, barcode
+### `payment_method` — 결제 수단 · 결제 칩: card, qr
 
 | 컬럼 | 이름 | 자료형 | 키 | 역할 |
 |---|---|---|---|---|
-| `payment_code` | 결제 코드 | varchar(10) | PK | 결제 코드(card, qr, barcode) |
-| `name` | 이름 | varchar(20) |  | 카드결제, QR결제, 바코드결제 |
+| `payment_code` | 결제 코드 | varchar(10) | PK | 결제 코드(card, qr) |
+| `name` | 이름 | varchar(20) |  | 카드결제, QR결제 |
 | `source_column` | 원천 열 | varchar(30) |  | store의 원천 열(card_payment, mobile_payment). 데이터 없으면 NULL |
 | `sort_order` | 정렬 순서 | smallint |  | 화면에 보여 줄 순서 |
-| `is_visible` | 화면 표시 여부 | boolean |  | 바코드는 데이터가 올 때까지 false |
+| `is_visible` | 화면 표시 여부 | boolean |  | 칩 표시 여부 |
 | `updated_at` | 수정 시각 | timestamptz |  | 마지막으로 바꾼 시각 |
 
 ### `brand_alias` — 브랜드 별칭 · 브랜드 별칭(대표 이름 1 : 표기 N을 한 표에)
@@ -370,7 +370,7 @@
 | `primary_category` | 대표 업종 | varchar(20) |  | 대표 업종(category.category_code) |
 | `category_source` | 업종 근거 | varchar(10) |  | 업종 근거(DR-07) · 값: item, name, none, admin |
 | `subcategory` | 세부 업종 | varchar(40) |  | 세부 업종 |
-| `payment_codes` | 결제 코드 목록 | varchar(10)[] |  | {card, qr}; 바코드는 데이터 오면 값만 추가 |
+| `payment_codes` | 결제 코드 목록 | varchar(10)[] |  | {card, qr} |
 | `searchable` | 검색 대상 여부 | boolean |  | 영업중 · 숨김 아님 · 좌표 오류 아님 |
 | `doc_text` | 임베딩 원문 | varchar(300) |  | 가맹점명: {상호} / 취급품목: {품목} |
 | `embedding` | 임베딩 vector(1024) | vector(1024) |  | fp32, L2 정규화 |

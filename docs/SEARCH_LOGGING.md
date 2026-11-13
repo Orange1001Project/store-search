@@ -19,7 +19,7 @@ query 기록, 그 뒤 행동 = event 기록, `query_id`로 잇는다)와 Algolia
 | `session_id` | 30분 무활동 기준 세션 |
 | `app_version`, `pipeline_version`, `corpus_version` | 앱, 정책·계수 버전, 가맹점 스냅샷 |
 | `query`, `input` | "신촌 설렁탕", typed / recent / autocomplete / chip / browse(검색어 없는 조회) / place(지명만 입력 — 지도 이동, 품질 통계 제외) |
-| `category_chip`, `payment_chips` | 음식점 / null, 결제는 여러 개 목록 [qr, card, barcode] / 빈 목록(전체) |
+| `category_chip`, `payment_chips` | 음식점 / null, 결제는 여러 개 목록 [qr, card] / 빈 목록(전체) |
 | `location_source` | query_region / ui_region / map_viewport / gps / default |
 | `view`, `viewport` | list / map, 지도 화면 범위(100m 격자) |
 | `user_cell` | 사용자 위치 100m 격자 ID(원 좌표는 남기지 않음) |

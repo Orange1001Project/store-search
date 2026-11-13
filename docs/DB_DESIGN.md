@@ -1,6 +1,6 @@
 # 가맹점 검색 서비스 DB 설계 (초안 v0.3)
 
-> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임**(8절 변경 내역)
+> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외(8절 변경 내역)
 > 입력: `docs/REQUIREMENTS.md`(4절 DR-01~19), `docs/SERVICE_POLICY.md`, `docs/SEARCH_LOGGING.md`, `docs/BACKEND_HANDOFF.md`
 > 실행 SQL: [`docs/db/schema.sql`](db/schema.sql) · 3절 컬럼표는 schema.sql에서 자동으로 만들었다(둘이 다르면 SQL이 맞다)
 > ERDCloud 보기용: [`docs/db/erdcloud.sql`](db/erdcloud.sql) · 발표 원고: [`docs/db/DB_DESIGN_TALK.md`](db/DB_DESIGN_TALK.md)
@@ -116,7 +116,7 @@
 | | `store_snapshot` | **검색이 읽는 표.** 버전 × 가게의 유효 값 + 벡터. 버전마다 파티션 | DR-04, DR-07 |
 | | `data_version` | 데이터 버전(이름·상태·건수·모델). 활성은 하나 | DR-05 |
 | | `refresh_job` | 주간 갱신 작업(파일 정보·단계·진행·미리보기·승인) | DR-06 |
-| 참조 | `category` / `payment_method` | 업종 17개 / 결제 수단(카드·QR·바코드) | DR-07, FR-MSG-04 |
+| 참조 | `category` / `payment_method` | 업종 17개 / 결제 수단(카드·QR) | DR-07, FR-MSG-04 |
 | | `brand_alias` | 브랜드 대표 이름과 다른 표기 | DR-08 |
 | | `gazetteer` | 지명 사전 | DR-09 |
 | | `place_exclusion` | 지명으로 읽지 않을 말 | DR-10 |
@@ -296,10 +296,10 @@ erDiagram
 | 컬럼 | 자료형 | 키 | NULL | 기본값 | 제약 | 설명 |
 |---|---|---|---|---|---|---|
 | payment_code | varchar(10) | PK | N |  |  |  |
-| name | varchar(20) |  | N |  | UNIQUE | 카드결제, QR결제, 바코드결제 |
+| name | varchar(20) |  | N |  | UNIQUE | 카드결제, QR결제 |
 | source_column | varchar(30) |  | Y |  |  | store의 원천 열(card_payment, mobile_payment). 데이터 없으면 NULL |
 | sort_order | smallint |  | N |  |  |  |
-| is_visible | boolean |  | N | TRUE |  | 바코드는 데이터가 올 때까지 false |
+| is_visible | boolean |  | N | TRUE |  | 칩 표시 여부 |
 | updated_at | timestamptz |  | N | now() |  |  |
 
 #### `brand_alias`
@@ -448,7 +448,7 @@ erDiagram
 | primary_category | varchar(20) |  | Y |  |  | 대표 업종(category.category_code) |
 | category_source | varchar(10) |  | Y |  | CHECK category_source IN ('item', 'name', 'none', 'admin') | 업종 근거(DR-07) |
 | subcategory | varchar(40) |  | Y |  |  | 세부 업종 |
-| payment_codes | varchar(10)[] |  | N | '{}' |  | {card, qr}; 바코드는 데이터 오면 값만 추가 |
+| payment_codes | varchar(10)[] |  | N | '{}' |  | {card, qr} |
 | searchable | boolean |  | N |  |  | 영업중 · 숨김 아님 · 좌표 오류 아님 |
 | doc_text | varchar(300) |  | N |  |  | 가맹점명: {상호} / 취급품목: {품목} |
 | embedding | vector(1024) |  | N |  |  | fp32, L2 정규화 |
@@ -773,7 +773,6 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | DR-16 | 노출 결과 | 가게마다 한 줄 대신 `search_log.results` 목록으로 |
 | DR-18 | 설정값 | 앱 설정 파일(2026-11-13) |
 | DR-19 | 약관 동의 | 약관 표 없이 `member`에 약관 버전·동의 시각(가정 A7) |
-| FR-MSG-05 | 바코드결제 | `payment_method`에 숨김 행. 데이터가 오면 `store`에 원천 열 추가 + `source_column` 연결, 스냅샷 구조는 그대로 |
 | FR-LST-02 | 결과 10분 보관 | 캐시(서버 여러 대면 Redis 등) |
 
 ### 7-3. 팀이 더 정할 것
@@ -788,6 +787,9 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | JPA 매핑 | `vector`·`geography`는 Hibernate Spatial + pgvector 라이브러리 또는 네이티브 쿼리. 검색 ①~⑤는 네이티브 쿼리 추천 |
 
 ## 8. 변경 내역
+
+### v0.3.1 (2026-11-13)
+- 결제 수단은 카드결제·QR결제 두 가지로 확정(요구사항 v0.7): `payment_method` 기본 데이터에서 바코드 행 삭제, 관련 설명·7-2절 FR-MSG-05 행 삭제.
 
 ### v0.3 (2026-11-13) — 36개 → 19개
 
