@@ -33,8 +33,8 @@ CREATE TABLE admin_user (
 -- 2. 참조 데이터 (DR-07~12)
 -- 검색 서버는 1분마다 표마다 count(*)·max(updated_at)를 읽어, 바뀐 표만 통째로 다시 메모리에 올린다.
 -- =====================================================================
-CREATE TABLE category (                                          -- 업종 대분류 17개
-    category_code  varchar(20) PRIMARY KEY,                      -- GAS, CONVENIENCE, MEDICAL ...
+CREATE TABLE category (                                          -- 업종 칩 17개 = 공식 온누리 중분류(configs/category/taxonomy_v1.yaml)
+    category_code  varchar(20) PRIMARY KEY,                      -- K001 식품·마트 … K017 생활서비스
     name           varchar(20) NOT NULL UNIQUE,
     sort_order     smallint    NOT NULL,
     is_active      boolean     NOT NULL DEFAULT true,
@@ -44,7 +44,7 @@ CREATE TABLE category (                                          -- 업종 대�
 CREATE TABLE payment_method (                                    -- 결제 칩: card, qr
     payment_code   varchar(10) PRIMARY KEY,
     name           varchar(20) NOT NULL UNIQUE,                  -- 카드결제, QR결제
-    source_column  varchar(30),                                  -- store의 원천 열(card_payment, mobile_payment). 데이터 없으면 NULL
+    source_column  varchar(30),                                  -- store의 원천 열(card_payment, qr_payment). 데이터 없으면 NULL
     sort_order     smallint    NOT NULL,
     is_visible     boolean     NOT NULL DEFAULT true,            -- 칩 표시 여부
     updated_at     timestamptz NOT NULL DEFAULT now()
@@ -147,14 +147,16 @@ CREATE TABLE store (                                             -- 가게 1곳 
     business_no         varchar(20)  NOT NULL,                   -- 문자열(앞자리 0)
     merchant_no         varchar(20),                             -- 결측·전화번호 형태 섞임, 식별자로 안 씀
     address             varchar(200) NOT NULL,
-    latitude            numeric(9,6),                            -- 원천 그대로(0 좌표 포함)
-    longitude           numeric(9,6),
+    latitude            numeric(9,6),                            -- 원천 그대로(0 좌표 포함). 2026-11-13 파일부터 원천 열 이름은 Y좌표
+    longitude           numeric(9,6),                            -- 원천 X좌표
     legal_dong_code     varchar(10),                             -- 문자열
     market_type         varchar(30),
     market_name         varchar(100),
     items               text,
-    card_payment        boolean,                                 -- 원천 카드결제여부, 빈 값 NULL
-    mobile_payment      boolean,                                 -- 원천 모바일결제여부(화면 이름 QR결제)
+    ksic_code           varchar(5),                              -- 원천 표준산업분류코드(5자리 문자열, 미분류 00000)
+    onnuri_category     varchar(4),                              -- 원천 온누리중분류(K001~K017). 비면 ksic_code로 보충
+    card_payment        boolean,                                 -- 원천 카드결제, 빈 값 NULL
+    qr_payment          boolean,                                 -- 원천 QR결제(이전 파일 열 이름은 모바일결제여부)
     source_conflict     boolean     NOT NULL DEFAULT false,      -- 같은 가게 원천 행끼리 좌표·품목·결제가 다름(결제는 하나라도 Y면 Y)
     -- 상태
     lifecycle_status    varchar(10) NOT NULL DEFAULT 'active'
@@ -211,10 +213,10 @@ CREATE TABLE store_snapshot (
     market_type       varchar(30),                               -- 시장유형(결과 카드·상세, FR-LST-03)
     market_name       varchar(100),
     geom             geography(Point, 4326) NOT NULL,
-    category_codes    varchar(20)[] NOT NULL DEFAULT '{}',       -- 여러 업종 가능
-    primary_category  varchar(20),                               -- 대표 업종(category.category_code)
-    category_source   varchar(10) CHECK (category_source IN ('item', 'name', 'none', 'admin')),   -- 업종 근거(DR-07)
-    subcategory       varchar(40),                               -- 세부 업종
+    category_codes    varchar(20)[] NOT NULL DEFAULT '{}',       -- 업종 칩 거르기용 목록(지금은 공식 업종 하나)
+    primary_category  varchar(20),                               -- 대표 업종(category.category_code, K001~K017)
+    category_source   varchar(10) CHECK (category_source IN ('official', 'ksic', 'admin')),   -- 업종 근거: 원천 온누리중분류 / 산업분류로 보충 / 관리자 수정(DR-07)
+    subcategory       varchar(40),                               -- 세부 업종(표준산업분류 세세분류명)
     payment_codes     varchar(10)[] NOT NULL DEFAULT '{}',       -- {card, qr}
     searchable        boolean      NOT NULL,                     -- 영업중 · 숨김 아님 · 좌표 오류 아님
     doc_text          varchar(300) NOT NULL,                     -- 가맹점명: {상호} / 취급품목: {품목}
@@ -361,7 +363,14 @@ CREATE TABLE stats_daily (
 -- =====================================================================
 INSERT INTO payment_method (payment_code, name, source_column, sort_order, is_visible) VALUES
     ('card',    '카드결제',   'card_payment',   1, true),
-    ('qr',      'QR결제',     'mobile_payment', 2, true);
+    ('qr',      'QR결제',     'qr_payment',     2, true);
+
+INSERT INTO category (category_code, name, sort_order) VALUES
+    ('K001', '식품·마트', 1), ('K002', '의류', 2), ('K003', '생활·잡화', 3), ('K004', '인테리어', 4),
+    ('K005', '가전·디지털', 5), ('K006', '음식점', 6), ('K007', '카페·디저트', 7), ('K008', '편의점', 8),
+    ('K009', '주유소', 9), ('K010', '기타', 10), ('K011', '미용', 11), ('K012', '의료', 12),
+    ('K013', '교육·문화', 13), ('K014', '스포츠', 14), ('K015', '숙박·여행', 15), ('K016', '자동차·교통', 16),
+    ('K017', '생활서비스', 17);
 
 -- =====================================================================
 -- 10. 갱신 작업이 실행하는 예시(데이터 버전 7 만들기)

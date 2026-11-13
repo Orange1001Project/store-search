@@ -1195,8 +1195,9 @@ components:
 
     CategoryCode:
       type: string
-      description: 업종 대분류 코드(category 표, /meta에서 목록)
-      examples: [RESTAURANT]
+      description: 업종 칩 코드 = 공식 온누리 중분류 K001~K017(category 표, /meta에서 목록)
+      pattern: '^K0(0[1-9]|1[0-7])$'
+      examples: [K006]
 
     PaymentCode:
       type: string

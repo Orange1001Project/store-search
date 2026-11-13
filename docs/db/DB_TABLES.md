@@ -14,7 +14,7 @@
 | | `store_snapshot` | **검색이 읽는 표.** 버전 × 가게의 최종 값 + 벡터 | 버전별 파티션(FK 없음) |
 | | `data_version` | 데이터 버전. 활성은 언제나 하나 | `store_snapshot`, `refresh_job`이 가리킴 |
 | | `refresh_job` | 주간 갱신 작업 1건 = 원천 파일 1개 | → `data_version`, `admin_user` |
-| 참조 사전 | `category` | 업종 대분류 17개 | |
+| 참조 사전 | `category` | 업종 칩 17개(공식 온누리 중분류) | |
 | | `payment_method` | 결제 칩(카드결제·QR결제) | |
 | | `brand_alias` | 브랜드 대표 이름과 다른 표기 | |
 | | `gazetteer` | 지명 사전 | |
@@ -45,7 +45,7 @@
 
 - `store_id`는 이미 발급한 번호를 바꾸지 않는다. 평가 정답 데이터가 이 번호로 연결되어 있다. 새 가게만 새로 발급한다.
 - `fingerprint`(지문) = 사업자번호 + 가맹점명 + 주소(원천 값). 다음 주 파일의 행이 지난주 그 가게인지 이것으로 판단한다. 그래서 상호나 주소가 바뀌면 새 가게가 된다.
-- 사업자번호·가맹점번호·법정동코드는 **문자열**이다. 숫자로 두면 앞자리 0이 사라진다.
+- 사업자번호·가맹점번호·법정동코드·표준산업분류코드는 **문자열**이다. 숫자로 두면 앞자리 0이 사라진다.
 - 상태(`lifecycle_status`): 원천에서 한 번 빠지면 확인 대기(`missing_count` = 1, 바로 검색에서 빠짐), 다음 주에 돌아오면 영업중, 2주 연속 빠지면 폐업.
 - 숨김: 숨길 때도 풀 때도 사유가 필수다. 마지막 숨김·해제의 사유·관리자·시각을 남긴다(`ck_store_visibility`).
 - **검색 대상** = 영업중 · 숨김 아님 · 좌표 오류 아님. 이 값은 스냅샷의 `searchable`로 미리 계산해 둔다.
@@ -58,14 +58,16 @@
 | `business_no` | 사업자번호 | varchar(20) |  | 문자열(앞자리 0) |
 | `merchant_no` | 가맹점번호 | varchar(20) |  | 결측·전화번호 형태 섞임, 식별자로 안 씀 |
 | `address` | 주소 | varchar(200) |  | 주소 |
-| `latitude` | 위도 | numeric(9, 6) |  | 원천 그대로(0 좌표 포함) |
-| `longitude` | 경도 | numeric(9, 6) |  | 경도 |
+| `latitude` | 위도 | numeric(9, 6) |  | 원천 그대로(0 좌표 포함). 2026-11-13 파일부터 원천 열 이름은 Y좌표 |
+| `longitude` | 경도 | numeric(9, 6) |  | 원천 X좌표 |
 | `legal_dong_code` | 법정동코드 | varchar(10) |  | 문자열 |
 | `market_type` | 시장 분류 | varchar(30) |  | 시장 분류(골목형상점가 등) |
 | `market_name` | 시장명 | varchar(100) |  | 시장·상점가 이름 |
 | `items` | 취급품목 | text |  | 취급품목 |
-| `card_payment` | 카드결제 여부 | boolean |  | 원천 카드결제여부, 빈 값 NULL |
-| `mobile_payment` | 모바일결제 여부 | boolean |  | 원천 모바일결제여부(화면 이름 QR결제) |
+| `ksic_code` | 표준산업분류코드 | varchar(5) |  | 원천 표준산업분류코드(5자리 문자열, 미분류 00000) |
+| `onnuri_category` | 온누리 중분류 | varchar(4) |  | 원천 온누리중분류(K001~K017). 비면 ksic_code로 보충 |
+| `card_payment` | 카드결제 여부 | boolean |  | 원천 카드결제, 빈 값 NULL |
+| `qr_payment` | QR결제 여부 | boolean |  | 원천 QR결제(이전 파일 열 이름은 모바일결제여부) |
 | `source_conflict` | 원천 충돌 | boolean |  | 같은 가게 원천 행끼리 좌표·품목·결제가 다름(결제는 하나라도 Y면 Y) |
 | `lifecycle_status` | 영업 상태 | varchar(10) |  | 값: active, pending, closed |
 | `missing_count` | 연속 누락 주 수 | smallint |  | 연속으로 원천에 없던 주 수 |
@@ -123,10 +125,10 @@
 | `market_type` | 시장 분류 | varchar(30) |  | 시장유형(결과 카드·상세, FR-LST-03) |
 | `market_name` | 시장명 | varchar(100) |  | 시장·상점가 이름 |
 | `geom` | 좌표(geography) | geography(point, 4326) |  | 좌표(미터 단위 거리 계산용) |
-| `category_codes` | 업종 코드 목록 | varchar(20)[] |  | 여러 업종 가능 |
-| `primary_category` | 대표 업종 | varchar(20) |  | 대표 업종(category.category_code) |
-| `category_source` | 업종 근거 | varchar(10) |  | 업종 근거(DR-07) · 값: item, name, none, admin |
-| `subcategory` | 세부 업종 | varchar(40) |  | 세부 업종 |
+| `category_codes` | 업종 코드 목록 | varchar(20)[] |  | 업종 칩 거르기용 목록(지금은 공식 업종 하나) |
+| `primary_category` | 대표 업종 | varchar(20) |  | 대표 업종(category.category_code, K001~K017) |
+| `category_source` | 업종 근거 | varchar(10) |  | 업종 근거: 원천 온누리중분류 / 산업분류로 보충 / 관리자 수정(DR-07) · 값: official, ksic, admin |
+| `subcategory` | 세부 업종 | varchar(40) |  | 세부 업종(표준산업분류 세세분류명) |
 | `payment_codes` | 결제 코드 목록 | varchar(10)[] |  | {card, qr} |
 | `searchable` | 검색 대상 여부 | boolean |  | 영업중 · 숨김 아님 · 좌표 오류 아님 |
 | `doc_text` | 임베딩 원문 | varchar(300) |  | 가맹점명: {상호} / 취급품목: {품목} |
@@ -187,11 +189,15 @@
 
 ### `category` — 업종
 
-업종 칩 17개다. 결과를 거르기만 하고 순위에는 쓰지 않는다.
+업종 칩 17개 = 공식 온누리 중분류(K001 식품·마트 … K017 생활서비스, `configs/category/taxonomy_v1.yaml`). 결과를 거르기만 하고 순위에는 쓰지 않는다.
+
+- 가게 업종은 원천 파일의 `온누리중분류` 열을 그대로 쓴다(`store.onnuri_category`). 비어 있으면 표준산업분류코드(`store.ksic_code`)로 대응표 `configs/category/ksic_onnuri_v1.csv`에서 찾는다.
+- 대응표 예외: 76299(개인 및 가정용품 임대업)는 코드표에 17개 밖 이름 "가정용품"으로 적혀 있어 교육·문화(K013)로 둔다. 산업분류가 없는 가게(00000)는 기타(K010).
+- 맞지 않는 가게는 관리자 수정(`store_override`의 업종 필드)으로 고친다.
 
 | 컬럼 | 이름 | 자료형 | 키 | 역할 |
 |---|---|---|---|---|
-| `category_code` | 업종 코드 | varchar(20) | PK | GAS, CONVENIENCE, MEDICAL ... |
+| `category_code` | 업종 코드 | varchar(20) | PK | K001 식품·마트 … K017 생활서비스 |
 | `name` | 이름 | varchar(20) |  | 이름 |
 | `sort_order` | 정렬 순서 | smallint |  | 화면에 보여 줄 순서 |
 | `is_active` | 사용 여부 | boolean |  | 사용 여부 |
@@ -205,7 +211,7 @@
 |---|---|---|---|---|
 | `payment_code` | 결제 코드 | varchar(10) | PK | 결제 코드(card, qr) |
 | `name` | 이름 | varchar(20) |  | 카드결제, QR결제 |
-| `source_column` | 원천 열 | varchar(30) |  | store의 원천 열(card_payment, mobile_payment). 데이터 없으면 NULL |
+| `source_column` | 원천 열 | varchar(30) |  | store의 원천 열(card_payment, qr_payment). 데이터 없으면 NULL |
 | `sort_order` | 정렬 순서 | smallint |  | 화면에 보여 줄 순서 |
 | `is_visible` | 화면 표시 여부 | boolean |  | 칩 표시 여부 |
 | `updated_at` | 수정 시각 | timestamptz |  | 마지막으로 바꾼 시각 |

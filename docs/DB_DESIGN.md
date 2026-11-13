@@ -96,7 +96,7 @@
 
 | # | 가정 | 바뀌면 |
 |---|---|---|
-| A1 | 원천 모바일결제는 컬럼 이름을 원천 뜻 그대로(`mobile_payment`) 두고, 화면 이름 QR결제는 `payment_method.source_column`으로 연결 | 매핑 행만 바꿈 |
+| A1 | 원천 결제 열은 `card_payment`·`qr_payment`(2026-11-13 파일부터 원천 열 이름이 QR결제), 칩과는 `payment_method.source_column`으로 연결 | 매핑 행만 바꿈 |
 | A2 | 같은 가게 원천 행끼리 값이 다르면 결제는 하나라도 Y면 Y, `source_conflict` 표시 | 갱신 로직만 |
 | A3 | 지명만 입력도 최근 검색어에 남김 | — |
 | A4 | 100m 격자 ID는 문자열(예: EPSG:5179 100m 격자 행·열) | 문자열 길이 안에서 그대로 |
@@ -116,7 +116,7 @@
 | | `store_snapshot` | **검색이 읽는 표.** 버전 × 가게의 유효 값 + 벡터. 버전마다 파티션 | DR-04, DR-07 |
 | | `data_version` | 데이터 버전(이름·상태·건수·모델). 활성은 하나 | DR-05 |
 | | `refresh_job` | 주간 갱신 작업(파일 정보·단계·진행·미리보기·승인) | DR-06 |
-| 참조 | `category` / `payment_method` | 업종 17개 / 결제 수단(카드·QR) | DR-07, FR-MSG-04 |
+| 참조 | `category` / `payment_method` | 업종 17개(공식 온누리 중분류 K001~K017) / 결제 수단(카드·QR) | DR-07, FR-MSG-04 |
 | | `brand_alias` | 브랜드 대표 이름과 다른 표기 | DR-08 |
 | | `gazetteer` | 지명 사전 | DR-09 |
 | | `place_exclusion` | 지명으로 읽지 않을 말 | DR-10 |
@@ -285,7 +285,7 @@ erDiagram
 
 | 컬럼 | 자료형 | 키 | NULL | 기본값 | 제약 | 설명 |
 |---|---|---|---|---|---|---|
-| category_code | varchar(20) | PK | N |  |  | GAS, CONVENIENCE, MEDICAL ... |
+| category_code | varchar(20) | PK | N |  |  | K001 식품·마트 … K017 생활서비스 |
 | name | varchar(20) |  | N |  | UNIQUE |  |
 | sort_order | smallint |  | N |  |  |  |
 | is_active | boolean |  | N | TRUE |  |  |
@@ -297,7 +297,7 @@ erDiagram
 |---|---|---|---|---|---|---|
 | payment_code | varchar(10) | PK | N |  |  |  |
 | name | varchar(20) |  | N |  | UNIQUE | 카드결제, QR결제 |
-| source_column | varchar(30) |  | Y |  |  | store의 원천 열(card_payment, mobile_payment). 데이터 없으면 NULL |
+| source_column | varchar(30) |  | Y |  |  | store의 원천 열(card_payment, qr_payment). 데이터 없으면 NULL |
 | sort_order | smallint |  | N |  |  |  |
 | is_visible | boolean |  | N | TRUE |  | 칩 표시 여부 |
 | updated_at | timestamptz |  | N | now() |  |  |
@@ -394,14 +394,16 @@ erDiagram
 | business_no | varchar(20) |  | N |  |  | 문자열(앞자리 0) |
 | merchant_no | varchar(20) |  | Y |  |  | 결측·전화번호 형태 섞임, 식별자로 안 씀 |
 | address | varchar(200) |  | N |  |  |  |
-| latitude | numeric(9, 6) |  | Y |  |  | 원천 그대로(0 좌표 포함) |
-| longitude | numeric(9, 6) |  | Y |  |  |  |
+| latitude | numeric(9, 6) |  | Y |  |  | 원천 그대로(0 좌표 포함). 2026-11-13 파일부터 원천 열 이름은 Y좌표 |
+| longitude | numeric(9, 6) |  | Y |  |  | 원천 X좌표 |
 | legal_dong_code | varchar(10) |  | Y |  |  | 문자열 |
 | market_type | varchar(30) |  | Y |  |  |  |
 | market_name | varchar(100) |  | Y |  |  |  |
 | items | text |  | Y |  |  |  |
-| card_payment | boolean |  | Y |  |  | 원천 카드결제여부, 빈 값 NULL |
-| mobile_payment | boolean |  | Y |  |  | 원천 모바일결제여부(화면 이름 QR결제) |
+| ksic_code | varchar(5) |  | Y |  |  | 원천 표준산업분류코드(5자리 문자열, 미분류 00000) |
+| onnuri_category | varchar(4) |  | Y |  |  | 원천 온누리중분류(K001~K017). 비면 ksic_code로 보충 |
+| card_payment | boolean |  | Y |  |  | 원천 카드결제, 빈 값 NULL |
+| qr_payment | boolean |  | Y |  |  | 원천 QR결제(이전 파일 열 이름은 모바일결제여부) |
 | source_conflict | boolean |  | N | FALSE |  | 같은 가게 원천 행끼리 좌표·품목·결제가 다름(결제는 하나라도 Y면 Y) |
 | lifecycle_status | varchar(10) |  | N | 'active' | CHECK lifecycle_status IN ('active', 'pending', 'closed') |  |
 | missing_count | smallint |  | N | 0 | CHECK missing_count >= 0 | 연속으로 원천에 없던 주 수 |
@@ -445,10 +447,10 @@ erDiagram
 | market_type | varchar(30) |  | Y |  |  | 시장유형(결과 카드·상세, FR-LST-03) |
 | market_name | varchar(100) |  | Y |  |  |  |
 | geom | geography(Point, 4326) |  | N |  |  |  |
-| category_codes | varchar(20)[] |  | N | '{}' |  | 여러 업종 가능 |
-| primary_category | varchar(20) |  | Y |  |  | 대표 업종(category.category_code) |
-| category_source | varchar(10) |  | Y |  | CHECK category_source IN ('item', 'name', 'none', 'admin') | 업종 근거(DR-07) |
-| subcategory | varchar(40) |  | Y |  |  | 세부 업종 |
+| category_codes | varchar(20)[] |  | N | '{}' |  | 업종 칩 거르기용 목록(지금은 공식 업종 하나) |
+| primary_category | varchar(20) |  | Y |  |  | 대표 업종(category.category_code, K001~K017) |
+| category_source | varchar(10) |  | Y |  | CHECK category_source IN ('official', 'ksic', 'admin') | 업종 근거: 원천 온누리중분류 / 산업분류로 보충 / 관리자 수정(DR-07) |
+| subcategory | varchar(40) |  | Y |  |  | 세부 업종(표준산업분류 세세분류명) |
 | payment_codes | varchar(10)[] |  | N | '{}' |  | {card, qr} |
 | searchable | boolean |  | N |  |  | 영업중 · 숨김 아님 · 좌표 오류 아님 |
 | doc_text | varchar(300) |  | N |  |  | 가맹점명: {상호} / 취급품목: {품목} |
@@ -789,6 +791,10 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | JPA 매핑 | `vector`·`geography`는 Hibernate Spatial + pgvector 라이브러리 또는 네이티브 쿼리. 검색 ①~⑤는 네이티브 쿼리 추천 |
 
 ## 8. 변경 내역
+
+### v0.3.3 (2026-11-13) — 공식 업종 반영
+- 원천 파일(2026-11-13)에 `표준산업분류코드`·`온누리중분류`가 들어옴: `store.ksic_code`·`onnuri_category` 추가, `mobile_payment` → `qr_payment`(원천 열 이름이 QR결제로 바뀜), 좌표 열은 X좌표(경도)·Y좌표(위도).
+- `category`는 공식 온누리 중분류 17개(K001~K017) 기본 데이터. 스냅샷 `category_source`는 `official`(원천 온누리중분류) / `ksic`(비어 있으면 산업분류 대응표로 보충, `configs/category/ksic_onnuri_v1.csv`) / `admin`. 임시 v0(품목 키워드)의 item·name·none은 없앰. `subcategory` = 산업분류 세세분류명.
 
 ### v0.3.2 (2026-11-13)
 - `store`의 `hidden_reason`·`hidden_by` → `visibility_reason`·`visibility_changed_by`·`visibility_changed_at`. 숨김과 해제 모두 사유·처리자·시각을 남긴다(FR-STO-07, 마지막 한 번만). CHECK `ck_store_hidden_reason` → `ck_store_visibility`.
