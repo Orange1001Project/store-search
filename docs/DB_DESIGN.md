@@ -696,11 +696,12 @@ SELECT * FROM stats_daily
 WHERE  stat_date BETWEEN :from AND :to AND view = 'all' AND intent = 'all'
 ORDER  BY stat_date;
 
--- ⑪ 결과 없는 검색어 상위 20(기간, 첫 페이지만)
+-- ⑪ 결과 없는 검색어 상위 20(기간, 첫 페이지만): 결과 없음 + 문구 ⑤·⑥(FR-STA-02)
 SELECT query_text, count(*) AS n
 FROM   search_log
 WHERE  logged_at >= :from AND logged_at < :to AND page = 1
-  AND  n_relevant_final = 0 AND NOT is_bot AND input_type NOT IN ('browse', 'place')
+  AND  (n_relevant_final = 0 OR message IN ('no_exact_name', 'weak_result'))
+  AND  NOT is_bot AND input_type NOT IN ('browse', 'place')
 GROUP  BY query_text ORDER BY n DESC LIMIT 20;
 
 -- ⑫ 검색 한 건에서 보여 준 가게 펼치기(순위별 분석)
@@ -789,6 +790,7 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 ## 8. 변경 내역
 
 ### v0.3.1 (2026-11-13)
+- 조회 ⑪(결과 없는 검색어)에 문구 ⑤ `no_exact_name`·⑥ `weak_result`도 포함(FR-STA-02).
 - 결제 수단은 카드결제·QR결제 두 가지로 확정(요구사항 v0.7): `payment_method` 기본 데이터에서 바코드 행 삭제, 관련 설명·7-2절 FR-MSG-05 행 삭제.
 
 ### v0.3 (2026-11-13) — 36개 → 19개
