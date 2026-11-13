@@ -14,7 +14,7 @@
 | 지명 사전 | `data/geo/gazetteer_v1.parquet` (+ `.meta.json` 원본 해시) | DB, 버전 관리 |
 | 브랜드 별칭 | `configs/service/brand_alias_v1.csv` (65행) | DB, 관리자 수정 |
 | 가게 업종(임시 v0) | `data/category/store_category_v0.parquet`, `configs/category/taxonomy_v0.yaml` | DB |
-| 지점 접미사 | `src/store_search_ai/data/service_pool.py branch_suffixes`로 생성(현재 5,239개) | DB, 스냅샷과 묶음 |
+| 지점 접미사 | `src/store_search_ai/data/service_pool.py branch_suffixes`로 생성(현재 5,239개) | DB 표 없음. 검색 서버가 활성 스냅샷 상호에서 같은 방식으로 계산(DB 설계 v0.3) |
 | LLM 확장어 캐시 | `results/service_pipeline/x8/expansions_Qwen2.5-14B-Instruct.csv`, 생성 `colab/query_expansion.ipynb` | DB, 주 1회 배치 |
 | 검색어 해석 규칙 | `src/store_search_ai/query/understanding.py` + `tests/test_query_understanding.py`, `tests/test_gazetteer.py` | 자바 이식(정책 4-10) |
 | 1단계·정렬 기준 구현 | `scripts/eval_service_pipeline.py`(`first_stage`, `brand_distance_sort`, `augment_v1`, `exact_name_sort`), `scripts/eval_x23.py tier_order`, `src/store_search_ai/retrieval/expansion.py` | 이식 기준 코드 |
