@@ -3,7 +3,7 @@
 > 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장(8절 변경 내역)
 > 입력: `docs/REQUIREMENTS.md`(4절 DR-01~19), `docs/SERVICE_POLICY.md`, `docs/SEARCH_LOGGING.md`, `docs/BACKEND_HANDOFF.md`
 > 실행 SQL: [`docs/db/schema.sql`](db/schema.sql) · 3절 컬럼표는 schema.sql에서 자동으로 만들었다(둘이 다르면 SQL이 맞다)
-> ERDCloud 보기용: [`docs/db/erdcloud.sql`](db/erdcloud.sql) · 테이블 설명서: [`docs/db/DB_TABLES.md`](db/DB_TABLES.md)
+> ERDCloud 보기용: [`docs/db/erdcloud.sql`](db/erdcloud.sql) · 테이블 설명서: [`docs/db/DB_TABLES.md`](db/DB_TABLES.md) · 설계 이유서: [`docs/db/DB_DESIGN_WHY.md`](db/DB_DESIGN_WHY.md)
 > 검증: PostgreSQL 파서(pglast)로 문법만 통과. **실제 DB에서 실행해 본 것은 아니다**(7-3절)
 
 ## 0. 한눈에 보기
