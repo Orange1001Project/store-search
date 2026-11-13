@@ -116,9 +116,9 @@
 | 관리자 세션을 서버 세션으로 둘지 토큰으로 둘지 세부(지금은 서버 세션) | 백엔드 |
 | 위치 정밀도(격자 크기) 최종 | 법무 |
 
-## 10. API 목록 (명세 v0.2)
+## 10. API 목록 (명세 v0.3)
 
-자세한 요청·응답은 [`openapi.yaml`](openapi.yaml). P1 API(소셜 로그인, 회원, 이벤트, 별칭·지명 제외, 원천 변경 알림, 통계, 관리자 계정)는 다음 판에서.
+자세한 요청·응답은 [`openapi.yaml`](openapi.yaml). P1 API(소셜 로그인, 회원, 이벤트, 통계)는 다음 판에서. 관리자 화면 축소(2026-11-13)로 주간 갱신·별칭·지명 제외·원천 변경 알림·관리자 계정 화면과 그 API는 P2이고, 1차는 서버 스크립트·DB 직접 작업으로 한다.
 
 | 우선 | 메서드·주소 | 하는 일 | 화면 |
 |---|---|---|---|
@@ -131,9 +131,9 @@
 | P0 | `PUT /admin/me/password` | 비밀번호 변경(첫 로그인 강제) | A-01 |
 | P0 | `GET /admin/stores` | 가맹점 목록(검색·거르기·50건씩) | A-03 |
 | P0 | `GET /admin/stores/{storeId}` | 원천 값·수정 값·마지막 수정 | A-04 |
-| P0 | `PUT·DELETE /admin/stores/{storeId}/overrides/{field}` | 필드 수정(사유 필수)·해제 | A-04 |
+| P0 | `PUT·DELETE /admin/stores/{storeId}/overrides/{field}` | 필드 수정(사유 필수)·해제. 주소·좌표(`location`)는 P2 | A-04 |
 | P0 | `PUT /admin/stores/{storeId}/visibility` | 숨김·해제(사유 필수) | A-04 |
-| P0 | `GET /admin/data-versions/active` | 지금 검색이 쓰는 데이터 버전 | A-05 |
-| P0 | `POST /admin/refresh-jobs` | 원천 엑셀 올리기 → 갱신 시작(202) | A-05 |
-| P0 | `GET /admin/refresh-jobs/current`, `GET /admin/refresh-jobs/{jobId}` | 진행 중 작업, 진행·결과 | A-05 |
-| P1 | `POST /admin/refresh-jobs/{jobId}/approve`, `/cancel` | 안전장치 승인·취소 | A-05 |
+| P2 | `GET /admin/data-versions/active` | 지금 검색이 쓰는 데이터 버전 | A-05 |
+| P2 | `POST /admin/refresh-jobs` | 원천 엑셀 올리기 → 갱신 시작(202). 1차는 서버 스크립트 | A-05 |
+| P2 | `GET /admin/refresh-jobs/current`, `GET /admin/refresh-jobs/{jobId}` | 진행 중 작업, 진행·결과 | A-05 |
+| P2 | `POST /admin/refresh-jobs/{jobId}/approve`, `/cancel` | 안전장치 승인·취소. 1차는 스크립트 명령 | A-05 |
