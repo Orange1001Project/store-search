@@ -1,0 +1,157 @@
+openapi: 3.1.0
+info:
+  title: 가맹점 검색 서비스 API
+  version: 0.1.0
+  description: |
+    공통 규칙은 docs/api/API_RULES.md, 기능 근거는 docs/REQUIREMENTS.md(5절 IR).
+    v0.1은 공통 부분(인증, 오류, 좌표, 커서)만 담은 뼈대이고 개별 API(paths)는 이어서 채운다.
+servers:
+  - url: /api/v1
+    description: 사용자 API (관리자는 /api/v1/admin)
+
+tags:
+  - name: search
+    description: 검색·조회·다음 페이지 (IR-01~03)
+  - name: stores
+    description: 가게 상세 (IR-04)
+  - name: events
+    description: 행동 이벤트 수집 (IR-05)
+  - name: auth
+    description: 소셜 로그인·토큰 (IR-06, P1)
+  - name: me
+    description: 내 정보·최근 검색어·관심 가맹점·탈퇴 (IR-06, P1)
+  - name: admin
+    description: 관리자 (5-2절)
+
+paths: {}
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: sid
+      description: 익명 세션(FR-LOG-05). 비회원 포함 모든 사용자
+    memberAccess:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: 회원 접근 토큰 30분(FR-MBR-06). HttpOnly·Secure·SameSite=Lax
+    adminSession:
+      type: apiKey
+      in: cookie
+      name: admin_sid
+      description: 관리자 서버 세션, 경로 /api/v1/admin, 30분 무활동 만료(FR-ADM-02)
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: 쿠키 인증을 쓰는 POST·PATCH·DELETE에 필요(NFR-SEC-02)
+
+  headers:
+    TraceId:
+      description: 서버 로그와 맞춰 보는 요청 ID
+      schema: { type: string }
+    RetryAfter:
+      description: 다시 시도할 수 있을 때까지 초
+      schema: { type: integer }
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message, traceId]
+      properties:
+        code:
+          type: string
+          description: 화면이 분기에 쓰는 고정 코드(API_RULES.md 4절)
+          examples: [SEARCH_RESULT_EXPIRED]
+        message:
+          type: string
+          description: 사람이 읽는 한국어 설명
+        details:
+          type: object
+          additionalProperties: true
+          properties:
+            fields:
+              type: array
+              items:
+                type: object
+                required: [field, reason]
+                properties:
+                  field: { type: string }
+                  reason: { type: string, examples: [TOO_LONG, REQUIRED, OUT_OF_RANGE] }
+        traceId:
+          type: string
+
+    LatLng:
+      type: object
+      description: WGS84 좌표
+      required: [lat, lng]
+      properties:
+        lat: { type: number, minimum: 33, maximum: 39 }
+        lng: { type: number, minimum: 124, maximum: 132 }
+
+    Bounds:
+      type: object
+      description: 지도 화면 범위
+      required: [sw, ne]
+      properties:
+        sw: { $ref: '#/components/schemas/LatLng' }
+        ne: { $ref: '#/components/schemas/LatLng' }
+
+    DateTime:
+      type: string
+      format: date-time
+      description: KST 오프셋을 붙인 ISO 8601
+      examples: ['2026-11-13T14:30:00+09:00']
+
+    Cursor:
+      type: string
+      description: 다음 페이지 요청에 그대로 보내는 값. 없으면 마지막 페이지
+
+    CategoryCode:
+      type: string
+      description: 업종 대분류 코드(category 표)
+
+    PaymentCode:
+      type: string
+      enum: [card, qr]
+
+    MessageCode:
+      type: string
+      description: 큰 안내 문구 코드(FR-MSG-02 ①~⑥·⑧·⑩~⑫). ⑪ empty_query는 화면이 띄우고 서버는 검색하지 않는다(FR-SRC-03)
+      enum: [none, expanded_none_in_first, expanded_partial, no_result, area_empty, map_empty,
+             no_exact_name, weak_result, map_moved, zoom_in, empty_query, chip_empty]
+
+    SubMessageCode:
+      type: string
+      description: 검색창 아래 작은 줄 문구 코드(FR-MSG-02 ⑦·⑨)
+      enum: [region_info, default_location]
+
+  responses:
+    BadRequest:
+      description: 형식 오류
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: 로그인 필요·토큰 만료
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: 권한 없음·CSRF 실패
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: 없는 대상(폐업·숨김 가게 포함)
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Gone:
+      description: 검색 결과 보관 10분이 지남
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    TooManyRequests:
+      description: 요청 제한 초과
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/TraceId' }
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
