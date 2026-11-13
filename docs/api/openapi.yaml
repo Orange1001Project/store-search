@@ -1,0 +1,1857 @@
+openapi: 3.1.0
+info:
+  title: 가맹점 검색 서비스 API
+  version: 0.4.0
+  description: |
+    공통 규칙은 docs/api/API_RULES.md, 기능 근거는 docs/REQUIREMENTS.md(2절 FR, 5절 IR).
+    v0.2는 P0 API(사용자 검색·조회·상세, 관리자 로그인·가맹점 수정·숨김·주간 갱신)를 담는다.
+    각 API의 x-priority는 출시 우선순위(요구사항 1-4), x-requirements는 근거 요구사항 ID다.
+    v0.4(2026-11-13): P1 API(소셜 로그인·회원·최근 검색어·관심 가맹점·행동 이벤트·관리자 통계·지명만 입력)를 더했다.
+    v0.3(2026-11-13): 관리자 화면 축소. 주간 갱신 API는 P2(1차는 서버 스크립트), 주소·좌표 수정은 화면 없이 DB에서 직접.
+servers:
+  - url: /api/v1
+
+tags:
+  - name: meta
+    description: 화면 시작에 필요한 고정 정보
+  - name: search
+    description: 검색·조회·다음 페이지 (IR-01~03)
+  - name: stores
+    description: 가게 상세 (IR-04)
+  - name: auth
+    description: 소셜 로그인·토큰 (P1, IR-06)
+  - name: me
+    description: 내 정보·최근 검색어·관심 가맹점·탈퇴 (P1, IR-06)
+  - name: events
+    description: 행동 이벤트 (P1, IR-05)
+  - name: admin-stats
+    description: 관리자 통계 (P1, FR-STA)
+  - name: admin-auth
+    description: 관리자 로그인 (FR-ADM-01·02)
+  - name: admin-stores
+    description: 관리자 가맹점 조회·수정·숨김 (FR-STO)
+  - name: admin-refresh
+    description: 주간 갱신 화면용 API (P2). 1차는 서버에서 갱신 스크립트로 실행하고 같은 상태를 refresh_job 표에 남긴다(FR-UPD-01·09)
+
+paths:
+  # ───────────────────────── 사용자 ─────────────────────────
+  /meta:
+    get:
+      tags: [meta]
+      operationId: getMeta
+      summary: 칩 목록·기본 위치·제한 값
+      description: 화면이 처음 열릴 때 한 번 부른다. 업종 칩 17개, 결제 칩, 기본 위치, 검색어 최대 길이 등.
+      x-priority: P0
+      x-requirements: [FR-MSG-01, FR-MSG-04, FR-LOC-02, FR-SRC-01]
+      security: [{}, { sessionCookie: [] }]
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Meta' }
+
+  /search:
+    post:
+      tags: [search]
+      operationId: search
+      summary: 검색 (목록 규칙 또는 현 지도 재검색)
+      description: |
+        - 검색창 검색은 view=list(반경 1km → 10km, FR-LOC-05·06). 결과를 목록 첫 20곳과 지도 핀으로 함께 준다(FR-MAP-09).
+        - '현 지도 재검색'은 view=map, bounds 필수(보이는 사각형, 확장 없음, FR-MAP-02). 0곳이면 화면 중심에서 목록 규칙으로 다시 찾는다(FR-MAP-04, 문구 ⑧).
+        - 검색 중심은 서버가 정한다: 검색어 지명 → regionChoice → center(centerSource) → 기본 위치(FR-LOC-01).
+        - 결과 0곳은 오류가 아니다. 200 + 빈 목록 + message.
+        - 검색하지 않는 입력(빈 값, 일반어만)은 화면이 막는다(⑪). 서버에 오면 400 INVALID_REQUEST.
+        - 요청마다 새 queryId. 칩을 바꾸면 새 검색이다(FR-MSG-01·04).
+        - 로그인했으면(P1) 회원 쿠키를 읽어 최근 검색어를 저장한다. P0에서는 무시한다.
+      x-priority: P0
+      x-requirements: [IR-01, FR-SRC-05, FR-LOC-01, FR-LOC-05, FR-LOC-06, FR-RNK-01, FR-RNK-09, FR-MSG-02, FR-MAP-02, FR-MAP-03, FR-MAP-04, FR-LST-02]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchRequest' }
+            examples:
+              listSearch:
+                summary: 검색창 검색(GPS 있음)
+                value:
+                  q: 신촌 설렁탕
+                  inputType: typed
+                  view: list
+                  center: { lat: 37.5551, lng: 126.9368 }
+                  centerSource: gps
+                  userLocation: { lat: 37.5551, lng: 126.9368 }
+                  categoryCode: null
+                  paymentCodes: []
+              mapSearch:
+                summary: 현 지도 재검색
+                value:
+                  q: 치킨
+                  inputType: typed
+                  view: map
+                  center: { lat: 36.3518, lng: 127.3786 }
+                  centerSource: map_viewport
+                  bounds: { sw: { lat: 36.3402, lng: 127.3651 }, ne: { lat: 36.3634, lng: 127.3921 } }
+                  paymentCodes: [qr]
+      responses:
+        '200':
+          description: 성공(결과 0곳 포함)
+          headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /browse:
+    post:
+      tags: [search]
+      operationId: browse
+      summary: 검색어 없는 조회 (화면 안 가맹점)
+      description: |
+        첫 화면, 칩만 고름, 검색어 없이 '현 지도 재검색'(FR-BRW-01~04). 화면 안 검색 대상 가게를 검색 중심 가까운 순으로 최대 300곳.
+        관련 확률·점수 없음. 핀은 전부, 시트 목록은 첫 20곳(다음은 /search/{queryId}/page).
+      x-priority: P0
+      x-requirements: [IR-03, FR-BRW-01, FR-BRW-02, FR-BRW-03, FR-BRW-04]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BrowseRequest' }
+      responses:
+        '200':
+          description: 성공(0곳 포함, message map_empty 또는 chip_empty)
+          headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BrowseResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /search/{queryId}/page:
+    get:
+      tags: [search]
+      operationId: getSearchPage
+      summary: 다음 20곳
+      description: |
+        검색·조회 결과(≤ 300)는 서버 캐시에 10분 보관한다(FR-LST-02). 그 목록에서 다음 20곳을 준다.
+        페이지를 볼 때마다 검색 로그에 같은 queryId로 한 줄을 남긴다(FR-LOG-02).
+        10분이 지나면 410 SEARCH_RESULT_EXPIRED → 화면이 같은 조건으로 다시 검색(8절).
+      x-priority: P0
+      x-requirements: [IR-02, FR-LST-01, FR-LST-02, FR-LOG-02]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/QueryId'
+        - name: cursor
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/Cursor' }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Gone' }
+
+  /stores/{storeId}:
+    get:
+      tags: [stores]
+      operationId: getStore
+      summary: 가게 상세
+      description: |
+        관리자 수정 값을 반영한 현재 활성 데이터 버전의 값(FR-DTL-02).
+        확인 대기 가게는 평소처럼 보여 준다. 폐업·숨김·없는 ID는 404 STORE_NOT_FOUND → U-11(FR-DTL-07).
+        거리는 화면이 GPS로 계산한다(FR-LST-04).
+      x-priority: P0
+      x-requirements: [IR-04, FR-DTL-01, FR-DTL-02, FR-DTL-03, FR-DTL-07]
+      security: [{}, { sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ───────────────────────── 관리자: 로그인 ─────────────────────────
+  /admin/auth/login:
+    post:
+      tags: [admin-auth]
+      operationId: adminLogin
+      summary: 관리자 로그인
+      description: |
+        성공하면 admin_sid 세션 쿠키와 CSRF 토큰 쿠키(csrf_token)를 준다. 30분 무활동이면 만료(FR-ADM-02).
+        5번 연속 실패하면 30분 잠금(403 ACCOUNT_LOCKED, details.lockedUntil).
+        mustChangePassword가 true면 화면은 비밀번호 변경(A-01 비밀번호)으로 보낸다.
+      x-priority: P0
+      x-requirements: [FR-ADM-01, FR-ADM-02]
+      security: [{}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [loginId, password]
+              properties:
+                loginId: { type: string, maxLength: 30 }
+                password: { type: string, maxLength: 100, format: password }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminMe' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /admin/auth/logout:
+    post:
+      tags: [admin-auth]
+      operationId: adminLogout
+      summary: 관리자 로그아웃
+      x-priority: P0
+      x-requirements: [FR-ADM-02]
+      security: [{ adminSession: [], csrfToken: [] }]
+      responses:
+        '204': { description: 로그아웃(세션 폐기) }
+
+  /admin/me:
+    get:
+      tags: [admin-auth]
+      operationId: getAdminMe
+      summary: 로그인한 관리자
+      description: 관리자 화면이 열릴 때 세션이 살아 있는지 확인한다. 401이면 A-01로.
+      x-priority: P0
+      x-requirements: [FR-ADM-02]
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminMe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/me/password:
+    put:
+      tags: [admin-auth]
+      operationId: changeAdminPassword
+      summary: 비밀번호 변경(첫 로그인 포함)
+      description: |
+        규칙: 영문·숫자·특수문자 3종 8자 이상 또는 2종 10자 이상(FR-ADM-01). 어기면 400 PASSWORD_POLICY.
+        첫 계정은 배포 때 mustChangePassword = true로 만든다(FR-ADM-04).
+      x-priority: P0
+      x-requirements: [FR-ADM-01, FR-ADM-04]
+      security: [{ adminSession: [], csrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, format: password }
+                newPassword: { type: string, minLength: 8, maxLength: 100, format: password }
+      responses:
+        '204': { description: 변경됨 }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ───────────────────────── 관리자: 가맹점 ─────────────────────────
+  /admin/stores:
+    get:
+      tags: [admin-stores]
+      operationId: listAdminStores
+      summary: 가맹점 목록(A-03)
+      description: 검색·거르기·50건씩 페이지(FR-STO-01). 관리자 표는 페이지 번호 방식(API_RULES 2절).
+      x-priority: P0
+      x-requirements: [FR-STO-01]
+      security: [{ adminSession: [] }]
+      parameters:
+        - name: q
+          in: query
+          description: 상호·사업자번호·주소·시장명·storeId 중 하나와 일치·포함
+          schema: { type: string, maxLength: 100 }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/LifecycleStatus' }
+        - name: hidden
+          in: query
+          schema: { type: boolean }
+        - name: edited
+          in: query
+          description: 관리자 수정 값이 하나라도 있는 가게
+          schema: { type: boolean }
+        - name: coordError
+          in: query
+          schema: { type: boolean }
+        - name: categoryCode
+          in: query
+          schema: { $ref: '#/components/schemas/CategoryCode' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size50'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, page, size, totalCount]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminStoreRow' }
+                  page: { type: integer }
+                  size: { type: integer }
+                  totalCount: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/stores/{storeId}:
+    get:
+      tags: [admin-stores]
+      operationId: getAdminStore
+      summary: 가맹점 상세(A-04)
+      description: 필드별 원천 값·수정 값·마지막 수정 정보를 나란히, 현재 상태와 바뀐 시각(FR-STO-02·09). 폐업·숨김 가게도 보인다.
+      x-priority: P0
+      x-requirements: [FR-STO-02, FR-STO-04, FR-STO-09]
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminStoreDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/stores/{storeId}/overrides/{field}:
+    put:
+      tags: [admin-stores]
+      operationId: putStoreOverride
+      summary: 필드 수정(사유 필수)
+      description: |
+        저장 즉시(최대 1분) 검색에 반영(FR-STO-05). 같은 필드를 다시 고치면 덮어쓴다(이력 없음, FR-STO-09).
+        value 모양은 field에 따라 다르다(StoreOverrideRequest 참고). 좌표는 국내 범위 검사(400 OUT_OF_RANGE).
+        갱신이 도는 중에도 저장할 수 있고, 전환 직전에 새 버전에도 다시 적용된다(FR-UPD-07).
+        field=location(주소·좌표)은 P2다. 1차 화면에서는 고치지 않고 DB의 store_override에 직접 넣는다(FR-STO-03).
+      x-priority: P0
+      x-requirements: [FR-STO-03, FR-STO-05, FR-UPD-07]
+      security: [{ adminSession: [], csrfToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/OverrideField'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StoreOverrideRequest' }
+            examples:
+              location:
+                summary: 좌표 고치기
+                value:
+                  value: { address: 대전광역시 서구 둔산로 8 (둔산동) 밀레니엄프라자 105호, lat: 36.351234, lng: 127.378901, legalDongCode: '3017011200' }
+                  reason: 원천 좌표가 길 건너편 건물로 찍혀 있음
+              qr:
+                summary: QR결제 가능으로
+                value: { value: true, reason: 현장 확인, QR 키트 비치 }
+      responses:
+        '200':
+          description: 저장됨. 바뀐 가맹점 상세
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminStoreDetail' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [admin-stores]
+      operationId: deleteStoreOverride
+      summary: 필드 수정 해제(원천 값으로)
+      x-priority: P0
+      x-requirements: [FR-STO-06]
+      security: [{ adminSession: [], csrfToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/OverrideField'
+      responses:
+        '200':
+          description: 해제됨. 바뀐 가맹점 상세
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminStoreDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/stores/{storeId}/visibility:
+    put:
+      tags: [admin-stores]
+      operationId: putStoreVisibility
+      summary: 숨김·해제(사유 필수)
+      description: 숨기면 검색에서 빠지고 회원 즐겨찾기에서 지운다(P1 회원 기능이 있을 때). 주간 갱신 뒤에도 유지(FR-STO-07).
+      x-priority: P0
+      x-requirements: [FR-STO-07]
+      security: [{ adminSession: [], csrfToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hidden, reason]
+              properties:
+                hidden: { type: boolean }
+                reason: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        '200':
+          description: 바뀐 가맹점 상세
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminStoreDetail' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ───────────────────────── 관리자: 주간 갱신 ─────────────────────────
+  /admin/data-versions/active:
+    get:
+      tags: [admin-refresh]
+      operationId: getActiveDataVersion
+      summary: 지금 검색이 쓰는 데이터 버전
+      x-priority: P2
+      x-requirements: [FR-UPD-06, FR-UPD-07]
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DataVersion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/refresh-jobs:
+    post:
+      tags: [admin-refresh]
+      operationId: createRefreshJob
+      summary: 원천 파일 올리기 → 갱신 시작
+      description: |
+        .xlsx, 최대 100MB(FR-UPD-01). 받으면 바로 검사 → 차이 계산 → 임베딩 → 전환을 뒤에서 돌린다(202).
+        진행은 GET /admin/refresh-jobs/{jobId}로 본다. 이미 도는 작업이 있으면 409 REFRESH_ALREADY_RUNNING(FR-UPD-08),
+        전에 반영한 파일과 같으면 409 SAME_FILE_ALREADY_APPLIED.
+        P0에서는 승인 단계 없이 끝까지 간다. 안전장치(3% 초과 시 승인 대기)는 P1.
+      x-priority: P2
+      x-requirements: [FR-UPD-01, FR-UPD-02, FR-UPD-03, FR-UPD-06, FR-UPD-08]
+      security: [{ adminSession: [], csrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: 원천 엑셀(.xlsx) }
+      responses:
+        '202':
+          description: 받음. 작업 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefreshJob' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+
+  /admin/refresh-jobs/current:
+    get:
+      tags: [admin-refresh]
+      operationId: getCurrentRefreshJob
+      summary: 진행 중인 갱신(없으면 204)
+      description: A-05를 열 때 부른다. 진행 중이면 진행 화면, 없으면 파일 올리기 화면(FR-UPD-08).
+      x-priority: P2
+      x-requirements: [FR-UPD-08, FR-UPD-09]
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: 진행 중인 작업
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefreshJob' }
+        '204': { description: 진행 중인 작업 없음 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/refresh-jobs/{jobId}:
+    get:
+      tags: [admin-refresh]
+      operationId: getRefreshJob
+      summary: 갱신 진행·결과
+      description: 화면은 끝날 때까지 몇 초마다 부른다(FR-UPD-09). 파일 검사 실패면 status=failed, validationErrors에 이유.
+      x-priority: P2
+      x-requirements: [FR-UPD-02, FR-UPD-09]
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefreshJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/refresh-jobs/{jobId}/approve:
+    post:
+      tags: [admin-refresh]
+      operationId: approveRefreshJob
+      summary: 승인하고 반영(안전장치)
+      description: status=awaiting_approval일 때만. 다른 상태면 409.
+      x-priority: P2
+      x-requirements: [FR-UPD-04, FR-UPD-05]
+      security: [{ adminSession: [], csrfToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '202':
+          description: 반영 계속
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefreshJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/refresh-jobs/{jobId}/cancel:
+    post:
+      tags: [admin-refresh]
+      operationId: cancelRefreshJob
+      summary: 승인하지 않고 취소
+      description: status=awaiting_approval일 때만. 검색은 이전 버전 그대로.
+      x-priority: P2
+      x-requirements: [FR-UPD-05]
+      security: [{ adminSession: [], csrfToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: 취소됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RefreshJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ───────────────────────── 회원: 로그인 (P1) ─────────────────────────
+  /auth/{provider}/login:
+    get:
+      tags: [auth]
+      operationId: startSocialLogin
+      summary: 소셜 로그인 시작(제공자 화면으로 이동)
+      description: |
+        카카오·구글 인가 화면으로 302. 위조 방지용 state를 HttpOnly 쿠키(oauth_state, 10분)에 넣는다(FR-MBR-01).
+        returnTo는 로그인 뒤 돌아갈 우리 서비스 안의 경로만 받는다(`/`로 시작, 다른 사이트 주소 거부).
+        카카오는 닉네임만, 구글은 openid·profile·email 범위를 요청한다(IR-13·14).
+      x-priority: P1
+      x-requirements: [FR-MBR-01, IR-13, IR-14]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Provider'
+        - name: returnTo
+          in: query
+          schema: { type: string, pattern: '^/(?!/)', maxLength: 200, default: / }
+      responses:
+        '302': { description: 제공자 인가 화면으로 이동 }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /auth/{provider}/callback:
+    get:
+      tags: [auth]
+      operationId: socialLoginCallback
+      summary: 소셜 로그인 콜백
+      description: |
+        제공자가 돌려보내는 주소. state를 확인하고 인가 코드로 제공자 회원 번호를 받는다. 결과는 모두 302로 화면에 넘긴다.
+        - 가입된 회원이고 지금 약관 버전에 동의함 → 접근·갱신 토큰 쿠키를 주고 returnTo로.
+        - 처음 온 사람 또는 약관 버전이 바뀐 회원 → 가입 토큰 쿠키(signup_token, 10분)를 주고 가입 동의 화면(U-08)으로.
+        - 사용자가 제공자 화면에서 취소 → 안내 없이 returnTo로(8절).
+        - 그 밖의 실패 → returnTo에 `login=failed`를 붙여 이동, 화면이 "로그인하지 못했어요 · 다시 시도"(8절).
+        같은 이메일이라도 다른 제공자 계정과 자동으로 합치지 않는다(FR-MBR-04).
+      x-priority: P1
+      x-requirements: [FR-MBR-01, FR-MBR-02, FR-MBR-04]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Provider'
+        - name: code
+          in: query
+          schema: { type: string }
+        - name: state
+          in: query
+          schema: { type: string }
+        - name: error
+          in: query
+          description: 제공자가 준 오류(사용자 취소면 access_denied)
+          schema: { type: string }
+      responses:
+        '302': { description: 결과에 따라 화면으로 이동 }
+
+  /auth/terms:
+    get:
+      tags: [auth]
+      operationId: getTerms
+      summary: 지금 약관 묶음(가입 동의 화면용)
+      x-priority: P1
+      x-requirements: [FR-MBR-02, DR-19]
+      security: [{}, { sessionCookie: [] }]
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TermsBundle' }
+
+  /auth/signup:
+    post:
+      tags: [auth]
+      operationId: signup
+      summary: 가입 완료(약관 동의) 또는 바뀐 약관 다시 동의
+      description: |
+        콜백이 준 signup_token 쿠키가 있어야 한다(없거나 10분 지나면 401 SIGNUP_EXPIRED → 다시 로그인).
+        필수 동의(이용약관·개인정보·만 14세)가 모두 true여야 한다(400 TERMS_REQUIRED).
+        처음 온 사람이면 회원을 만들고(닉네임 없으면 `회원` + 숫자 4자리), 기존 회원이면 약관 버전·동의 시각만 바꾼다.
+        성공하면 접근·갱신 토큰 쿠키를 준다.
+      x-priority: P1
+      x-requirements: [FR-MBR-02, FR-MBR-03, DR-19]
+      security: [{ signupToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [termsVersion, agreements]
+              properties:
+                termsVersion: { type: string, description: /auth/terms에서 받은 버전 }
+                agreements:
+                  type: object
+                  required: [service, privacy, age14]
+                  properties:
+                    service: { type: boolean, description: 이용약관 }
+                    privacy: { type: boolean, description: 개인정보 수집·이용 }
+                    age14: { type: boolean, description: 만 14세 이상 }
+      responses:
+        '201':
+          description: 가입(또는 다시 동의) 완료
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refreshToken
+      summary: 접근 토큰 다시 받기
+      description: |
+        갱신 토큰 쿠키(refresh_token, 경로 /api/v1/auth, 14일)로 새 접근 토큰과 새 갱신 토큰을 준다. 쓴 갱신 토큰은 바로 폐기(FR-MBR-06).
+        이미 쓴 갱신 토큰이 다시 오면 탈취로 보고 그 계열 토큰을 모두 폐기하고 401.
+      x-priority: P1
+      x-requirements: [FR-MBR-06]
+      security: [{ refreshCookie: [] }]
+      responses:
+        '204': { description: 새 쿠키 발급 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: 로그아웃
+      description: 갱신 토큰을 폐기하고 쿠키를 지운다(FR-MBR-06).
+      x-priority: P1
+      x-requirements: [FR-MBR-06, FR-MBR-09]
+      security: [{ memberAccess: [], csrfToken: [] }]
+      responses:
+        '204': { description: 로그아웃됨 }
+
+  # ───────────────────────── 회원: 내 정보 (P1) ─────────────────────────
+  /me:
+    get:
+      tags: [me]
+      operationId: getMe
+      summary: 내 정보(U-09)
+      x-priority: P1
+      x-requirements: [FR-MBR-09]
+      security: [{ memberAccess: [] }]
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [me]
+      operationId: updateMe
+      summary: 닉네임 변경
+      description: 2~12자, 한글·영문·숫자. 다른 회원과 같아도 된다(FR-MBR-10).
+      x-priority: P2
+      x-requirements: [FR-MBR-10]
+      security: [{ memberAccess: [], csrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nickname]
+              properties:
+                nickname: { type: string, minLength: 2, maxLength: 12, pattern: '^[가-힣A-Za-z0-9]+$' }
+      responses:
+        '200':
+          description: 바뀐 내 정보
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [me]
+      operationId: withdraw
+      summary: 탈퇴
+      description: |
+        화면에서 확인을 받은 뒤 부른다. 회원을 탈퇴 상태로 바꾸고 닉네임·이메일·마지막 로그인을 비운다.
+        로그인 수단·최근 검색어·관심 가맹점은 바로 지우고, 갱신 토큰을 폐기하고, 제공자에 연결 끊기를 요청한다(FR-MBR-11).
+        연결 끊기 요청이 실패해도 탈퇴는 완료하고 서버가 다시 시도한다.
+      x-priority: P1
+      x-requirements: [FR-MBR-11, NFR-PRV-06]
+      security: [{ memberAccess: [], csrfToken: [] }]
+      responses:
+        '204': { description: 탈퇴 완료(쿠키 지움) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me/recent-searches:
+    get:
+      tags: [me]
+      operationId: listRecentSearches
+      summary: 최근 검색어(최신 10개)
+      description: |
+        검색창을 누르면 부른다(U-02). 저장은 회원이 검색 API를 부를 때 서버가 한다(정규화가 같으면 한 줄, 시각 갱신).
+        검색어 없는 조회·지명만 입력은 저장하지 않는다(FR-BRW-05). 비회원은 401 → 화면이 로그인 안내 한 줄.
+      x-priority: P1
+      x-requirements: [FR-MBR-07]
+      security: [{ memberAccess: [] }]
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 10
+                    items: { $ref: '#/components/schemas/RecentSearch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [me]
+      operationId: clearRecentSearches
+      summary: 최근 검색어 전체 삭제
+      x-priority: P1
+      x-requirements: [FR-MBR-07]
+      security: [{ memberAccess: [], csrfToken: [] }]
+      responses:
+        '204': { description: 지움 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me/recent-searches/{recentId}:
+    delete:
+      tags: [me]
+      operationId: deleteRecentSearch
+      summary: 최근 검색어 하나 삭제
+      description: recentId는 목록 응답에 있는 값(정규화한 검색어를 서버가 인코딩한 것). 없으면 그냥 204.
+      x-priority: P1
+      x-requirements: [FR-MBR-07]
+      security: [{ memberAccess: [], csrfToken: [] }]
+      parameters:
+        - name: recentId
+          in: path
+          required: true
+          schema: { type: string, maxLength: 300 }
+      responses:
+        '204': { description: 지움 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me/favorites:
+    get:
+      tags: [me]
+      operationId: listFavorites
+      summary: 관심 가맹점 목록(U-10)
+      description: |
+        추가한 최신 순. 확인 대기 가게는 목록에서 숨기고, 폐업·숨김 가게는 이미 지워져 없다(FR-MBR-08).
+        거리는 화면이 GPS로 계산한다(가게 좌표는 응답에 있음).
+      x-priority: P1
+      x-requirements: [FR-MBR-08]
+      security: [{ memberAccess: [] }]
+      parameters:
+        - name: cursor
+          in: query
+          schema: { $ref: '#/components/schemas/Cursor' }
+      responses:
+        '200':
+          description: 성공(50곳씩)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, totalCount]
+                properties:
+                  items:
+                    type: array
+                    maxItems: 50
+                    items: { $ref: '#/components/schemas/FavoriteItem' }
+                  totalCount: { type: integer, maximum: 500 }
+                  nextCursor: { $ref: '#/components/schemas/Cursor' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me/favorites/{storeId}:
+    put:
+      tags: [me]
+      operationId: addFavorite
+      summary: 관심 가맹점 추가
+      description: |
+        같은 가게를 다시 넣으면 그대로 200(두 번 들어가지 않음). 500곳을 넘으면 409 FAVORITE_LIMIT →
+        "즐겨찾기는 500곳까지 저장할 수 있어요"(8절). 폐업·숨김·없는 가게는 404.
+      x-priority: P1
+      x-requirements: [FR-MBR-08, FR-DTL-06]
+      security: [{ memberAccess: [], csrfToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+      responses:
+        '201': { description: 추가됨 }
+        '200': { description: 이미 있음 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [me]
+      operationId: removeFavorite
+      summary: 관심 가맹점 해제
+      description: 없어도 204.
+      x-priority: P1
+      x-requirements: [FR-MBR-08, FR-DTL-06]
+      security: [{ memberAccess: [], csrfToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+      responses:
+        '204': { description: 해제됨 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ───────────────────────── 행동 이벤트 (P1) ─────────────────────────
+  /events:
+    post:
+      tags: [events]
+      operationId: postEvents
+      summary: 행동 이벤트 묶음 보내기
+      description: |
+        화면이 몇 초마다 모아 보내고, 떠날 때는 navigator.sendBeacon으로 보낸다(FR-LOG-03). 한 번에 최대 50개.
+        sendBeacon 때문에 CSRF 토큰과 회원 쿠키를 요구하지 않는다(익명 세션만). 회원 ID는 로그에 넣지 않는다(FR-LOG-05).
+        형식이 틀린 이벤트는 그 이벤트만 버리고 나머지는 받는다. 같은 eventId가 다시 오면 통계 때 한 번만 센다.
+      x-priority: P1
+      x-requirements: [IR-05, FR-LOG-03, FR-LOG-04, FR-LST-05]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: { $ref: '#/components/schemas/Event' }
+      responses:
+        '202':
+          description: 받음
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted: { type: integer }
+                  rejected: { type: integer }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ───────────────────────── 관리자: 통계 (P1) ─────────────────────────
+  /admin/stats/summary:
+    get:
+      tags: [admin-stats]
+      operationId: getStatsSummary
+      summary: 지표 요약과 기간별 추이(A-10)
+      description: |
+        일별 요약 표(stats_daily)를 기간 단위로 묶는다. 날짜·주·월은 한국 시간 기준.
+        봇·폴백·검색어 없는 조회·지명만 입력은 품질 지표에서 뺀다(FR-STA-01).
+      x-priority: P1
+      x-requirements: [FR-STA-01]
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StatFrom'
+        - $ref: '#/components/parameters/StatTo'
+        - name: unit
+          in: query
+          schema: { type: string, enum: [day, week, month], default: day }
+        - $ref: '#/components/parameters/StatView'
+        - name: intent
+          in: query
+          schema: { type: string, enum: [all, name, brand, category], default: all }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StatsSummary' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/stats/top-queries:
+    get:
+      tags: [admin-stats]
+      operationId: getTopQueries
+      summary: 인기 검색어(상위 100)
+      description: 검색 로그에서 기간 안 정규화한 검색어별 검색 수(봇 제외).
+      x-priority: P1
+      x-requirements: [FR-STA-01]
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StatFrom'
+        - $ref: '#/components/parameters/StatTo'
+        - $ref: '#/components/parameters/StatView'
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [query, count]
+                      properties:
+                        query: { type: string }
+                        count: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/stats/problem-queries:
+    get:
+      tags: [admin-stats]
+      operationId: getProblemQueries
+      summary: 결과 없는 검색어
+      description: 결과 없음 또는 문구 ⑤(정확히 일치하는 가게 없음)·⑥(약한 결과)이 많은 순(FR-STA-02, DB 설계 조회 ⑪). 지명 제외·별칭을 DB에 넣을 때 참고한다.
+      x-priority: P1
+      x-requirements: [FR-STA-02]
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StatFrom'
+        - $ref: '#/components/parameters/StatTo'
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [query, count]
+                      properties:
+                        query: { type: string }
+                        count: { type: integer }
+                        topMessage:
+                          type: [string, 'null']
+                          enum: [no_result, area_empty, no_exact_name, weak_result, null]
+                          description: 가장 많이 나온 문구(결과 없음이면 no_result·area_empty)
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/stats/messages:
+    get:
+      tags: [admin-stats]
+      operationId: getMessageStats
+      summary: 안내 문구별 비율
+      description: 검색 로그의 message 코드별 횟수와 비율(봇 제외).
+      x-priority: P1
+      x-requirements: [FR-STA-01]
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StatFrom'
+        - $ref: '#/components/parameters/StatTo'
+        - $ref: '#/components/parameters/StatView'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [total, items]
+                properties:
+                  total: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [code, count, ratio]
+                      properties:
+                        code: { $ref: '#/components/schemas/MessageCode' }
+                        count: { type: integer }
+                        ratio: { type: number, minimum: 0, maximum: 1 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: sid
+      description: 익명 세션(FR-LOG-05). 없으면 서버가 첫 응답에서 발급한다. 비회원 포함 모든 사용자
+    memberAccess:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: 회원 접근 토큰 30분(FR-MBR-06, P1). HttpOnly·Secure·SameSite=Lax
+    signupToken:
+      type: apiKey
+      in: cookie
+      name: signup_token
+      description: 소셜 로그인 콜백이 준 가입 대기 토큰(10분, HttpOnly). 가입 동의에만 쓴다
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: 갱신 토큰 14일(경로 /api/v1/auth, HttpOnly·Secure). 쓸 때마다 새로 발급
+    adminSession:
+      type: apiKey
+      in: cookie
+      name: admin_sid
+      description: 관리자 서버 세션, 경로 /api/v1/admin, 30분 무활동 만료(FR-ADM-02)
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: 로그인 때 받은 csrf_token 쿠키 값을 그대로 헤더에(NFR-SEC-02). 쿠키 인증을 쓰는 POST·PUT·PATCH·DELETE에 필요
+
+  parameters:
+    QueryId:
+      name: queryId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    StoreId:
+      name: storeId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    OverrideField:
+      name: field
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/OverrideField' }
+    Provider:
+      name: provider
+      in: path
+      required: true
+      schema: { type: string, enum: [kakao, google] }
+    StatFrom:
+      name: from
+      in: query
+      required: true
+      description: 시작 날짜(한국 시간, 포함)
+      schema: { type: string, format: date }
+    StatTo:
+      name: to
+      in: query
+      required: true
+      description: 끝 날짜(한국 시간, 포함). 최대 1년
+      schema: { type: string, format: date }
+    StatView:
+      name: view
+      in: query
+      schema: { type: string, enum: [all, list, map], default: all }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Size50:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+
+  headers:
+    TraceId:
+      description: 서버 로그와 맞춰 보는 요청 ID
+      schema: { type: string }
+    RetryAfter:
+      description: 다시 시도할 수 있을 때까지 초
+      schema: { type: integer }
+
+  schemas:
+    # ── 공통 ──
+    Error:
+      type: object
+      required: [code, message, traceId]
+      properties:
+        code:
+          type: string
+          description: 화면이 분기에 쓰는 고정 코드(API_RULES.md 4절)
+          examples: [SEARCH_RESULT_EXPIRED]
+        message:
+          type: string
+          description: 사람이 읽는 한국어 설명
+        details:
+          type: object
+          additionalProperties: true
+          properties:
+            fields:
+              type: array
+              items:
+                type: object
+                required: [field, reason]
+                properties:
+                  field: { type: string }
+                  reason: { type: string, examples: [TOO_LONG, REQUIRED, OUT_OF_RANGE] }
+        traceId:
+          type: string
+
+    LatLng:
+      type: object
+      description: WGS84 좌표. 국내 범위(위도 33~39, 경도 124~132)
+      required: [lat, lng]
+      properties:
+        lat: { type: number, minimum: 33, maximum: 39 }
+        lng: { type: number, minimum: 124, maximum: 132 }
+
+    Bounds:
+      type: object
+      description: 지도 화면 범위
+      required: [sw, ne]
+      properties:
+        sw: { $ref: '#/components/schemas/LatLng' }
+        ne: { $ref: '#/components/schemas/LatLng' }
+
+    DateTime:
+      type: string
+      format: date-time
+      description: KST 오프셋을 붙인 ISO 8601
+      examples: ['2026-11-13T14:30:00+09:00']
+
+    Cursor:
+      type: string
+      description: 다음 페이지 요청에 그대로 보내는 값. 응답에 없으면 마지막 페이지
+
+    CategoryCode:
+      type: string
+      description: 업종 칩 코드 = 공식 온누리 중분류 K001~K017(category 표, /meta에서 목록)
+      pattern: '^K0(0[1-9]|1[0-7])$'
+      examples: [K006]
+
+    PaymentCode:
+      type: string
+      enum: [card, qr]
+
+    LifecycleStatus:
+      type: string
+      description: active 영업중, pending 확인 대기, closed 폐업
+      enum: [active, pending, closed]
+
+    MessageCode:
+      type: string
+      description: 큰 안내 문구 코드(FR-MSG-02 ①~⑥·⑧·⑩~⑫). ⑪ empty_query는 화면이 띄우고 서버는 검색하지 않는다(FR-SRC-03)
+      enum: [expanded_none_in_first, expanded_partial, no_result, area_empty, map_empty,
+             no_exact_name, weak_result, map_moved, zoom_in, empty_query, chip_empty]
+
+    SubMessageCode:
+      type: string
+      description: 검색창 아래 작은 줄 문구 코드(FR-MSG-02 ⑦·⑨)
+      enum: [region_info, default_location]
+
+    Message:
+      type: object
+      description: 문구는 코드와 치환값만. 문장은 화면 설정값(FR-MSG-02)
+      required: [code]
+      properties:
+        code: { $ref: '#/components/schemas/MessageCode' }
+        params:
+          type: object
+          description: 'n, m(①②), region(③-2), query(⑤)'
+          properties:
+            n: { type: integer }
+            m: { type: integer }
+            region: { type: string }
+            query: { type: string }
+
+    SubMessage:
+      type: object
+      required: [code]
+      properties:
+        code: { $ref: '#/components/schemas/SubMessageCode' }
+        params:
+          type: object
+          description: 'region, name(같은 이름 지명), storeName(상호 우선)'
+          properties:
+            region: { type: string }
+            name: { type: string }
+            storeName: { type: string }
+
+    # ── 사용자 ──
+    Meta:
+      type: object
+      required: [categories, paymentMethods, defaultLocation, limits, corpusVersion]
+      properties:
+        categories:
+          type: array
+          description: 업종 칩(정렬 순서대로)
+          items:
+            type: object
+            required: [code, name]
+            properties:
+              code: { $ref: '#/components/schemas/CategoryCode' }
+              name: { type: string, examples: [음식점] }
+        paymentMethods:
+          type: array
+          description: 결제 칩(보이는 것만)
+          items:
+            type: object
+            required: [code, name]
+            properties:
+              code: { $ref: '#/components/schemas/PaymentCode' }
+              name: { type: string, examples: [QR결제] }
+        defaultLocation:
+          description: 기본 위치(소상공인시장진흥공단 본부, FR-LOC-02)
+          $ref: '#/components/schemas/LatLng'
+        limits:
+          type: object
+          required: [queryMaxLength, pageSize, maxResults, mapMaxDiagonalKm]
+          properties:
+            queryMaxLength: { type: integer, const: 50 }
+            pageSize: { type: integer, const: 20 }
+            maxResults: { type: integer, const: 300 }
+            mapMaxDiagonalKm: { type: integer, const: 50, description: 넘으면 확대 안내 ⑩(P1) }
+        corpusVersion: { type: string, examples: ['2026-11-09'] }
+
+    SearchRequest:
+      type: object
+      required: [q, inputType, view]
+      properties:
+        q:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: 검색어. 서버가 NFKC·공백 정리(FR-SRC-02)
+        inputType:
+          type: string
+          description: 'typed 직접 입력, chip 칩을 바꿔 다시 검색. recent·autocomplete는 P1·P2'
+          enum: [typed, recent, autocomplete, chip]
+        view:
+          type: string
+          enum: [list, map]
+          description: list = 검색창 검색(목록 규칙), map = 현 지도 재검색
+        center:
+          description: 화면이 아는 중심. 지도 화면 중심 또는 GPS. 없으면 기본 위치
+          $ref: '#/components/schemas/LatLng'
+        centerSource:
+          type: string
+          enum: [map_viewport, gps, default]
+          description: center가 무엇인지. 검색어 지명·고른 지역이 있으면 서버가 그쪽을 쓴다
+        userLocation:
+          description: GPS 원 좌표(선택). 검색 처리에만 쓰고 저장하지 않으며 로그엔 100m 격자만(NFR-PRV-02)
+          $ref: '#/components/schemas/LatLng'
+        bounds:
+          description: 지도 화면 범위. view=map이면 필수, list면 로그용(100m 격자로 저장)
+          $ref: '#/components/schemas/Bounds'
+        regionChoice:
+          type: string
+          description: '"다른 ○○"에서 고른 지역 ID(P1, FR-MAP-10)'
+        categoryCode:
+          oneOf:
+            - $ref: '#/components/schemas/CategoryCode'
+            - type: 'null'
+          description: 업종 칩. null = 전체
+        paymentCodes:
+          type: array
+          description: 결제 칩. 빈 목록 = 전체, 여러 개면 OR(FR-MSG-04)
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/PaymentCode' }
+          default: []
+
+    BrowseRequest:
+      type: object
+      required: [bounds]
+      properties:
+        bounds: { $ref: '#/components/schemas/Bounds' }
+        center:
+          description: 거리순 정렬 기준. 없으면 bounds 가운데
+          $ref: '#/components/schemas/LatLng'
+        centerSource:
+          type: string
+          enum: [map_viewport, gps, default]
+        userLocation:
+          description: GPS 원 좌표(선택). 저장하지 않음
+          $ref: '#/components/schemas/LatLng'
+        categoryCode:
+          oneOf:
+            - $ref: '#/components/schemas/CategoryCode'
+            - type: 'null'
+        paymentCodes:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/PaymentCode' }
+          default: []
+
+    StoreCardBase:
+      type: object
+      description: 결과 카드(FR-LST-03). 품목·전화 없음
+      required: [storeId, name, location, paymentCodes]
+      properties:
+        storeId: { type: string, format: uuid }
+        name: { type: string }
+        categoryCode: { $ref: '#/components/schemas/CategoryCode' }
+        categoryName: { type: string, examples: [음식점] }
+        marketName: { type: [string, 'null'] }
+        marketType: { type: [string, 'null'], description: 원천에 값이 있을 때만(골목형상점가 등) }
+        addressShort: { type: string, description: 시군구 + 도로명, examples: [서구 둔산로 8] }
+        location: { $ref: '#/components/schemas/LatLng' }
+        paymentCodes:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentCode' }
+        favorited:
+          type: boolean
+          description: 로그인한 회원의 관심 가맹점이면 true(P1). 비회원 응답에는 없음
+
+    StoreCard:
+      description: 검색·조회 결과 카드
+      allOf:
+        - $ref: '#/components/schemas/StoreCardBase'
+        - type: object
+          required: [rank]
+          properties:
+            rank: { type: integer, minimum: 1, description: 전체 목록 안 순위(1부터) }
+            distanceFromCenterM:
+              type: integer
+              description: 검색 중심에서의 거리(m). 화면 거리 표시는 GPS로 화면이 계산(FR-LST-04)
+
+    StorePin:
+      type: object
+      description: 지도 핀(최소 필드)
+      required: [storeId, location]
+      properties:
+        storeId: { type: string, format: uuid }
+        name: { type: string }
+        location: { $ref: '#/components/schemas/LatLng' }
+        topStore: { type: boolean, description: 맨 위 가게(FR-RNK-05) }
+
+    Interpretation:
+      type: object
+      description: 검색어 해석(FR-SRC-05)
+      properties:
+        region:
+          type: [object, 'null']
+          properties:
+            name: { type: string, examples: [대전 중구] }
+            scope: { type: string, enum: [wide, narrow] }
+        intent:
+          type: [string, 'null']
+          enum: [name, brand, category, null]
+        nameFirst: { type: boolean, description: 상호 우선(FR-SRC-07) }
+        otherRegions:
+          type: array
+          description: '"다른 ○○" 선택지(P1, 최대 5)'
+          items:
+            type: object
+            required: [regionId, name]
+            properties:
+              regionId: { type: string }
+              name: { type: string }
+
+    SearchResponse:
+      type: object
+      required: [queryId, view, center, centerSource, radiusStage, results, pins, totalCount, corpusVersion, pipelineVersion]
+      properties:
+        queryId: { type: string, format: uuid }
+        view: { type: string, enum: [list, map] }
+        interpretation: { $ref: '#/components/schemas/Interpretation' }
+        center: { $ref: '#/components/schemas/LatLng' }
+        centerSource:
+          type: string
+          enum: [query_region, ui_region, map_viewport, gps, default]
+        radiusStage:
+          type: string
+          enum: ['1km', '10km', area, viewport]
+        message:
+          oneOf:
+            - $ref: '#/components/schemas/Message'
+            - type: 'null'
+        subMessage:
+          oneOf:
+            - $ref: '#/components/schemas/SubMessage'
+            - type: 'null'
+        results:
+          type: array
+          maxItems: 20
+          description: 첫 20곳
+          items: { $ref: '#/components/schemas/StoreCard' }
+        pins:
+          type: array
+          maxItems: 300
+          description: 결과 전체 핀(≤ 300)
+          items: { $ref: '#/components/schemas/StorePin' }
+        totalCount: { type: integer, maximum: 300 }
+        nextCursor: { $ref: '#/components/schemas/Cursor' }
+        mapFit:
+          description: '검색창 검색이고 결과가 있으면 지도를 맞출 범위(FR-MAP-03). 현 지도 재검색은 null, 0곳이라 옮긴 경우(⑧)는 옮길 범위'
+          oneOf:
+            - $ref: '#/components/schemas/Bounds'
+            - type: 'null'
+        placeOnly:
+          description: 검색어가 지명뿐이면(P1, FR-SRC-04) 가게를 검색하지 않고 이 값만 채운다. results·pins는 빈 목록
+          oneOf:
+            - $ref: '#/components/schemas/PlaceOnly'
+            - type: 'null'
+        corpusVersion: { type: string, examples: ['2026-11-09'] }
+        pipelineVersion: { type: string, examples: [policy_v1+calib_x1] }
+
+    BrowseResponse:
+      type: object
+      required: [queryId, results, pins, totalCount, corpusVersion]
+      properties:
+        queryId: { type: string, format: uuid }
+        message:
+          oneOf:
+            - $ref: '#/components/schemas/Message'
+            - type: 'null'
+        subMessage:
+          oneOf:
+            - $ref: '#/components/schemas/SubMessage'
+            - type: 'null'
+        results:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/StoreCard' }
+        pins:
+          type: array
+          maxItems: 300
+          items: { $ref: '#/components/schemas/StorePin' }
+        totalCount: { type: integer, maximum: 300 }
+        nextCursor: { $ref: '#/components/schemas/Cursor' }
+        corpusVersion: { type: string }
+
+    PageResponse:
+      type: object
+      required: [queryId, results]
+      properties:
+        queryId: { type: string, format: uuid }
+        results:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/StoreCard' }
+        nextCursor: { $ref: '#/components/schemas/Cursor' }
+
+    StoreDetail:
+      type: object
+      description: 가게 상세(FR-DTL-02). 관리자 수정 값 반영
+      required: [storeId, name, address, location, paymentCodes]
+      properties:
+        storeId: { type: string, format: uuid }
+        name: { type: string }
+        categoryCode: { $ref: '#/components/schemas/CategoryCode' }
+        categoryName: { type: string }
+        marketName: { type: [string, 'null'] }
+        marketType: { type: [string, 'null'] }
+        address: { type: string }
+        location: { $ref: '#/components/schemas/LatLng' }
+        paymentCodes:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentCode' }
+        favorited:
+          type: boolean
+          description: 로그인한 회원의 관심 가맹점이면 true(P1). 비회원 응답에는 없음
+
+    # ── 관리자 ──
+    AdminMe:
+      type: object
+      required: [adminId, loginId, mustChangePassword]
+      properties:
+        adminId: { type: integer, format: int64 }
+        loginId: { type: string }
+        mustChangePassword: { type: boolean }
+        lastLoginAt: { $ref: '#/components/schemas/DateTime' }
+
+    OverrideField:
+      type: string
+      description: 고칠 수 있는 필드(FR-STO-03). DB store_override.field_name의 camelCase. location은 P2(1차는 DB 직접)
+      enum: [storeName, items, location, marketName, paymentCard, paymentQr, category]
+
+    LocationValue:
+      type: object
+      required: [address, lat, lng, legalDongCode]
+      properties:
+        address: { type: string, maxLength: 200 }
+        lat: { type: number, minimum: 33, maximum: 39 }
+        lng: { type: number, minimum: 124, maximum: 132 }
+        legalDongCode:
+          type: string
+          pattern: '^[0-9]{10}$'
+          description: 법정동 코드. 화면이 네이버 지도 역지오코딩으로 받아 보낸다
+
+    StoreOverrideRequest:
+      type: object
+      required: [value, reason]
+      properties:
+        value:
+          description: |
+            storeName·items·marketName → 문자열, location → LocationValue,
+            paymentCard·paymentQr → true/false, category → CategoryCode
+          oneOf:
+            - type: string
+              maxLength: 1000
+            - type: boolean
+            - $ref: '#/components/schemas/LocationValue'
+        reason: { type: string, minLength: 1, maxLength: 200 }
+
+    AdminStoreRow:
+      type: object
+      required: [storeId, name, address, status, hidden, edited, coordError]
+      properties:
+        storeId: { type: string, format: uuid }
+        name: { type: string, description: 수정 값 반영 }
+        address: { type: string }
+        marketName: { type: [string, 'null'] }
+        categoryCode: { $ref: '#/components/schemas/CategoryCode' }
+        status: { $ref: '#/components/schemas/LifecycleStatus' }
+        statusChangedAt: { $ref: '#/components/schemas/DateTime' }
+        hidden: { type: boolean }
+        edited: { type: boolean }
+        coordError: { type: boolean }
+
+    FieldValue:
+      type: object
+      description: 필드 하나의 원천 값·수정 값·마지막 수정(FR-STO-02·09)
+      required: [field, editable]
+      properties:
+        field: { type: string, description: 'OverrideField 값 또는 수정 불가 필드(businessNo, merchantNo, marketType)' }
+        editable: { type: boolean }
+        sourceValue: { description: 원천 값(모양은 StoreOverrideRequest.value와 같음) }
+        overrideValue: { description: 수정 값. 없으면 null }
+        lastEdit:
+          type: [object, 'null']
+          properties:
+            adminLoginId: { type: string }
+            editedAt: { $ref: '#/components/schemas/DateTime' }
+            reason: { type: string }
+        sourceChanged:
+          type: boolean
+          description: 고친 뒤 원천 값이 바뀜(원천 변경 알림, P1)
+
+    AdminStoreDetail:
+      type: object
+      required: [storeId, businessNo, status, statusChangedAt, hidden, coordError, sourceConflict, fields]
+      properties:
+        storeId: { type: string, format: uuid }
+        businessNo: { type: string }
+        merchantNo: { type: [string, 'null'] }
+        marketType: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/LifecycleStatus' }
+        statusChangedAt: { $ref: '#/components/schemas/DateTime' }
+        hidden: { type: boolean }
+        visibility:
+          type: [object, 'null']
+          description: 마지막 숨김·해제(FR-STO-07). 한 번도 안 바꿨으면 null
+          required: [reason, changedBy, changedAt]
+          properties:
+            reason: { type: string }
+            changedBy: { type: string, description: 관리자 loginId }
+            changedAt: { $ref: '#/components/schemas/DateTime' }
+        coordError: { type: boolean }
+        sourceConflict: { type: boolean, description: 원천 안 같은 가게 행끼리 값이 다름 }
+        fields:
+          type: array
+          items: { $ref: '#/components/schemas/FieldValue' }
+
+    DataVersion:
+      type: object
+      required: [versionName, status]
+      properties:
+        versionName: { type: string, examples: ['2026-11-09'] }
+        status: { type: string, enum: [building, active, retired, failed] }
+        embeddingModel: { type: string }
+        activatedAt: { $ref: '#/components/schemas/DateTime' }
+        counts:
+          type: object
+          properties:
+            total: { type: integer }
+            new: { type: integer }
+            changed: { type: integer }
+            pending: { type: integer }
+            closed: { type: integer }
+            coordError: { type: integer }
+
+    RefreshStep:
+      type: object
+      required: [step, state]
+      properties:
+        step: { type: string, enum: [validate, diff, embed, switch], description: '검사·차이 계산·임베딩 생성·버전 전환(색인 포함)' }
+        state: { type: string, enum: [waiting, running, done, failed] }
+        progressPct: { type: integer, minimum: 0, maximum: 100 }
+
+    RefreshJob:
+      type: object
+      required: [jobId, status, steps, fileName, createdAt]
+      properties:
+        jobId: { type: integer, format: int64 }
+        status:
+          type: string
+          enum: [uploaded, validating, diffing, awaiting_approval, approved, embedding, switching, succeeded, failed, cancelled]
+        steps:
+          type: array
+          items: { $ref: '#/components/schemas/RefreshStep' }
+        fileName: { type: string }
+        fileSize: { type: integer }
+        startedBy: { type: string, description: 관리자 loginId }
+        createdAt: { $ref: '#/components/schemas/DateTime' }
+        finishedAt: { $ref: '#/components/schemas/DateTime' }
+        targetVersionName: { type: [string, 'null'] }
+        needsApproval: { type: boolean, description: 사라지는 가게가 기준(3%)을 넘음(P1) }
+        preview:
+          type: [object, 'null']
+          description: 차이 계산 뒤 건수와 목록(FR-UPD-02·04)
+          properties:
+            new: { type: integer }
+            changed: { type: integer }
+            toPending: { type: integer, description: 확인 대기 전환(사라짐) }
+            restored: { type: integer }
+            toClosed: { type: integer }
+            conflicts: { type: integer }
+            coordErrors: { type: integer }
+            missingRatePct: { type: number, description: 사라지는 가게 비율 }
+            coordErrorStores:
+              type: array
+              description: 좌표 오류 가게(최대 500, 고치면 검색에 들어감)
+              items:
+                type: object
+                properties:
+                  storeId: { type: string, format: uuid }
+                  name: { type: string }
+                  reason: { type: string, enum: [zero, out_of_range, conflict] }
+        validationErrors:
+          type: array
+          description: 파일 검사 실패 이유(행 번호 포함, 최대 100)
+          items:
+            type: object
+            required: [reason]
+            properties:
+              row: { type: integer }
+              column: { type: string }
+              reason: { type: string }
+        errorMessage: { type: [string, 'null'], description: 실패 단계·이유 }
+
+    # ── 회원 (P1) ──
+    TermsBundle:
+      type: object
+      description: 지금 약관 묶음. 위치기반서비스 약관은 법무 결과에 따라 추가 ⚠(FR-MBR-02)
+      required: [termsVersion, items]
+      properties:
+        termsVersion: { type: string, examples: ['2026-11'] }
+        items:
+          type: array
+          items:
+            type: object
+            required: [key, title, required]
+            properties:
+              key: { type: string, enum: [service, privacy, age14] }
+              title: { type: string, examples: [이용약관 동의] }
+              required: { type: boolean }
+              url: { type: [string, 'null'], description: 전문 보기 주소(만 14세 확인은 없음) }
+
+    Me:
+      type: object
+      required: [nickname, providers, createdAt, termsVersion]
+      properties:
+        nickname: { type: string, examples: [회원1234] }
+        email: { type: [string, 'null'], description: 구글에서 동의한 경우만. 카카오는 늘 null }
+        providers:
+          type: array
+          description: 연결된 로그인 수단
+          items: { type: string, enum: [kakao, google] }
+        createdAt: { $ref: '#/components/schemas/DateTime' }
+        termsVersion: { type: string }
+
+    RecentSearch:
+      type: object
+      required: [recentId, query, searchedAt]
+      properties:
+        recentId: { type: string, description: 하나 지우기에 쓰는 값 }
+        query: { type: string, description: 마지막으로 입력한 원문 }
+        searchedAt: { $ref: '#/components/schemas/DateTime' }
+
+    FavoriteItem:
+      description: 결과 카드와 같은 모양 + 추가한 시각. rank·distanceFromCenterM은 없음
+      allOf:
+        - $ref: '#/components/schemas/StoreCardBase'
+        - type: object
+          required: [addedAt]
+          properties:
+            addedAt: { $ref: '#/components/schemas/DateTime' }
+
+    # ── 행동 이벤트 (P1) ──
+    Event:
+      type: object
+      description: SEARCH_LOGGING.md 4절. 서버가 serverTs·sessionId·봇 표시를 붙여 저장
+      required: [eventId, clientTs, type]
+      properties:
+        eventId: { type: string, format: uuid, description: 화면이 만든 번호(재전송 중복 제거) }
+        clientTs: { $ref: '#/components/schemas/DateTime' }
+        type:
+          type: string
+          enum: [impression, click, action, dwell, region_choice, chip_change, research_here, cluster_click, pin_click, reformulate, abandon]
+        queryId: { type: [string, 'null'], format: uuid }
+        storeId: { type: [string, 'null'], format: uuid }
+        position: { type: [integer, 'null'], minimum: 1, description: 목록 안 순위 }
+        actionType:
+          type: [string, 'null']
+          enum: [directions, favorite, share, null]
+          description: type=action일 때
+        payload:
+          type: object
+          description: 종류별 추가 값
+          properties:
+            impressedStoreIds: { type: array, maxItems: 50, items: { type: string, format: uuid }, description: impression }
+            dwellSec: { type: integer, minimum: 0, description: dwell(P2) }
+            regionId: { type: string, description: region_choice }
+            previousQueryId: { type: string, format: uuid, description: reformulate, chip_change, research_here }
+            clusterSize: { type: integer, description: cluster_click }
+
+    # ── 지명만 입력 (P1) ──
+    PlaceOnly:
+      type: object
+      description: 검색어가 지명뿐일 때(FR-SRC-04). 가게를 검색하지 않고 지도를 옮긴다
+      required: [region, mapFit]
+      properties:
+        region: { type: string, examples: [노량진] }
+        mapFit: { $ref: '#/components/schemas/Bounds' }
+        storeSuggestion:
+          type: [object, 'null']
+          description: "그 이름이 든 가게가 있으면 검색창 아래 작은 줄 \"'노량진수산' 가게 보기\""
+          properties:
+            name: { type: string, examples: [노량진수산] }
+
+    # ── 관리자 통계 (P1) ──
+    StatsKpis:
+      type: object
+      properties:
+        searches: { type: integer }
+        noResultRate: { type: number }
+        expandedRate: { type: number }
+        reformulateRate: { type: number }
+        clickRate: { type: number, description: 클릭이 1번 이상 있었던 검색 비율 }
+        avgFirstClickPos: { type: [number, 'null'] }
+        cacheHitRate: { type: [number, 'null'], description: 확장어 캐시 적중률 }
+        fallbackRate: { type: number }
+        botSearches: { type: integer, description: 지표에서 뺀 봇 검색 수 }
+
+    StatsSummary:
+      type: object
+      required: [from, to, unit, kpis, series]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        unit: { type: string, enum: [day, week, month] }
+        kpis: { $ref: '#/components/schemas/StatsKpis' }
+        series:
+          type: array
+          items:
+            allOf:
+              - type: object
+                required: [period]
+                properties:
+                  period: { type: string, description: '기간 시작 날짜(한국 시간), 예: 2026-11-09' }
+              - $ref: '#/components/schemas/StatsKpis'
+
+  responses:
+    BadRequest:
+      description: 형식 오류
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: 로그인 필요·세션 만료·아이디나 비밀번호가 틀림
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: 권한 없음·CSRF 실패·계정 잠금·비활성 계정
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: 없는 대상(폐업·숨김 가게 포함)
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: 상태 충돌(갱신 실행 중, 같은 파일, 승인할 수 없는 상태)
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Gone:
+      description: 검색 결과 보관 10분이 지남
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    PayloadTooLarge:
+      description: 올린 파일이 100MB를 넘음
+      headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    TooManyRequests:
+      description: 요청 제한 초과
+      headers:
+        X-Trace-Id: { $ref: '#/components/headers/TraceId' }
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
