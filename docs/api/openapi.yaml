@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: 가맹점 검색 서비스 API
-  version: 0.3.0
+  version: 0.3.1
   description: |
     공통 규칙은 docs/api/API_RULES.md, 기능 근거는 docs/REQUIREMENTS.md(2절 FR, 5절 IR).
     v0.2는 P0 API(사용자 검색·조회·상세, 관리자 로그인·가맹점 수정·숨김·주간 갱신)를 담는다.
@@ -1063,7 +1063,14 @@ components:
         status: { $ref: '#/components/schemas/LifecycleStatus' }
         statusChangedAt: { $ref: '#/components/schemas/DateTime' }
         hidden: { type: boolean }
-        hiddenReason: { type: [string, 'null'] }
+        visibility:
+          type: [object, 'null']
+          description: 마지막 숨김·해제(FR-STO-07). 한 번도 안 바꿨으면 null
+          required: [reason, changedBy, changedAt]
+          properties:
+            reason: { type: string }
+            changedBy: { type: string, description: 관리자 loginId }
+            changedAt: { $ref: '#/components/schemas/DateTime' }
         coordError: { type: boolean }
         sourceConflict: { type: boolean, description: 원천 안 같은 가게 행끼리 값이 다름 }
         fields:

@@ -135,8 +135,9 @@ CREATE TABLE `store` (
   `missing_count` SMALLINT NOT NULL COMMENT '연속 누락 주 수',
   `status_changed_at` DATETIME NOT NULL COMMENT '상태 변경 시각',
   `is_hidden` BOOLEAN NOT NULL COMMENT '숨김 여부',
-  `hidden_reason` VARCHAR(200) NULL COMMENT '숨김 사유',
-  `hidden_by` BIGINT NULL COMMENT '숨김 처리자',
+  `visibility_reason` VARCHAR(200) NULL COMMENT '숨김·해제 사유',
+  `visibility_changed_by` BIGINT NULL COMMENT '숨김·해제 처리자',
+  `visibility_changed_at` DATETIME NULL COMMENT '숨김·해제 시각',
   `coord_error` BOOLEAN NOT NULL COMMENT '좌표 오류',
   `last_seen_version_id` SMALLINT NOT NULL COMMENT '마지막 확인 버전',
   `created_at` DATETIME NOT NULL COMMENT '생성 시각',
@@ -292,7 +293,7 @@ ALTER TABLE `place_exclusion` ADD CONSTRAINT `fk_place_exclusion_2` FOREIGN KEY 
 ALTER TABLE `refresh_job` ADD CONSTRAINT `fk_refresh_job_3` FOREIGN KEY (`target_version_id`) REFERENCES `data_version` (`version_id`);
 ALTER TABLE `refresh_job` ADD CONSTRAINT `fk_refresh_job_4` FOREIGN KEY (`started_by`) REFERENCES `admin_user` (`admin_id`);
 ALTER TABLE `refresh_job` ADD CONSTRAINT `fk_refresh_job_5` FOREIGN KEY (`approved_by`) REFERENCES `admin_user` (`admin_id`);
-ALTER TABLE `store` ADD CONSTRAINT `fk_store_6` FOREIGN KEY (`hidden_by`) REFERENCES `admin_user` (`admin_id`);
+ALTER TABLE `store` ADD CONSTRAINT `fk_store_6` FOREIGN KEY (`visibility_changed_by`) REFERENCES `admin_user` (`admin_id`);
 ALTER TABLE `store` ADD CONSTRAINT `fk_store_7` FOREIGN KEY (`last_seen_version_id`) REFERENCES `data_version` (`version_id`);
 ALTER TABLE `store_override` ADD CONSTRAINT `fk_store_override_8` FOREIGN KEY (`store_id`) REFERENCES `store` (`store_id`);
 ALTER TABLE `store_override` ADD CONSTRAINT `fk_store_override_9` FOREIGN KEY (`admin_id`) REFERENCES `admin_user` (`admin_id`);

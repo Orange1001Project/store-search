@@ -54,7 +54,7 @@
 - `source_conflict`: 같은 가게가 원천에 여러 줄로 나왔는데 값이 서로 다를 때 켜는 표시예요.
 - `lifecycle_status`: 영업중 / 확인 대기 / 폐업이에요.
 - `missing_count`: **원천 파일에 연속으로 안 나온 주 수**예요. 한 번 빠지면 "확인 대기"가 되면서 바로 검색에서 빠지고, 다음 주에 돌아오면 다시 영업중이에요. 2주 연속 빠지면 폐업이에요.
-- `is_hidden`, `hidden_reason`: 관리자가 숨긴 가게예요. 숨기려면 사유를 꼭 적어야 해요.
+- `is_hidden`, `visibility_reason`: 관리자가 숨긴 가게예요. 숨길 때도, 숨김을 풀 때도 사유를 꼭 적어야 해요. 마지막으로 누가 언제 바꿨는지(`visibility_changed_by`, `visibility_changed_at`)도 남겨요.
 - `coord_error`: 좌표가 0이거나 국내 밖인 가게예요. 지금 281곳이에요.
 
 **검색에 나오는 가게 = 영업중이고, 숨김이 아니고, 좌표 오류가 아닌 가게**예요.
@@ -331,8 +331,9 @@
 | `missing_count` | 연속 누락 주 수 | smallint |  | 연속으로 원천에 없던 주 수 |
 | `status_changed_at` | 상태 변경 시각 | timestamptz |  | 상태가 마지막으로 바뀐 시각 |
 | `is_hidden` | 숨김 여부 | boolean |  | 관리자 숨김 여부 |
-| `hidden_reason` | 숨김 사유 | varchar(200) |  | 숨긴 사유(숨기면 필수) |
-| `hidden_by` | 숨김 처리자 | bigint | FK→admin_user | 숨긴 관리자 |
+| `visibility_reason` | 숨김·해제 사유 | varchar(200) |  | 마지막 숨김·해제 사유(둘 다 필수, FR-STO-07) |
+| `visibility_changed_by` | 숨김·해제 처리자 | bigint | FK→admin_user | 마지막으로 숨기거나 해제한 관리자 |
+| `visibility_changed_at` | 숨김·해제 시각 | timestamptz |  | 마지막으로 숨기거나 해제한 시각. 한 번도 안 바꿨으면 NULL |
 | `coord_error` | 좌표 오류 | boolean |  | 수정 값까지 반영한 좌표가 0·국내 밖·충돌 |
 | `last_seen_version_id` | 마지막 확인 버전 | smallint | FK→data_version | 원천에서 마지막으로 본 버전 |
 | `created_at` | 생성 시각 | timestamptz |  | 이 줄을 만든 시각 |

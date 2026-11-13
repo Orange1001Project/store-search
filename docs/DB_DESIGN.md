@@ -1,6 +1,6 @@
 # 가맹점 검색 서비스 DB 설계 (초안 v0.3)
 
-> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외(8절 변경 내역)
+> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장(8절 변경 내역)
 > 입력: `docs/REQUIREMENTS.md`(4절 DR-01~19), `docs/SERVICE_POLICY.md`, `docs/SEARCH_LOGGING.md`, `docs/BACKEND_HANDOFF.md`
 > 실행 SQL: [`docs/db/schema.sql`](db/schema.sql) · 3절 컬럼표는 schema.sql에서 자동으로 만들었다(둘이 다르면 SQL이 맞다)
 > ERDCloud 보기용: [`docs/db/erdcloud.sql`](db/erdcloud.sql) · 발표 원고: [`docs/db/DB_DESIGN_TALK.md`](db/DB_DESIGN_TALK.md)
@@ -139,7 +139,7 @@
 | data_version | store_snapshot | 1 : N | 이전 버전은 파티션째 삭제 |
 | data_version | refresh_job, store(last_seen) | 1 : N | 버전 행은 지우지 않음 |
 | member | member_auth, member_recent_search, member_favorite | 1 : N | 회원 행은 탈퇴해도 남김. 탈퇴 때 앱이 자식 행을 즉시 삭제(FK는 CASCADE) |
-| admin_user | store_override, refresh_job, brand_alias, place_exclusion, store(hidden_by) | 1 : N | 관리자는 지우지 않고 비활성화 |
+| admin_user | store_override, refresh_job, brand_alias, place_exclusion, store(visibility_changed_by) | 1 : N | 관리자는 지우지 않고 비활성화 |
 | (없음) | search_log ↔ event_log | query_id로 연결, FK 없음 | 파티션째 삭제 |
 
 - **N:M 연결 테이블**: 회원–가게 즐겨찾기(`member_favorite`).
@@ -407,14 +407,15 @@ erDiagram
 | missing_count | smallint |  | N | 0 | CHECK missing_count >= 0 | 연속으로 원천에 없던 주 수 |
 | status_changed_at | timestamptz |  | N | now() |  | 상태가 마지막으로 바뀐 시각 |
 | is_hidden | boolean |  | N | FALSE |  |  |
-| hidden_reason | varchar(200) |  | Y |  |  |  |
-| hidden_by | bigint | FK → admin_user(admin_id) | Y |  |  |  |
+| visibility_reason | varchar(200) |  | Y |  |  | 마지막 숨김·해제 사유(둘 다 필수, FR-STO-07) |
+| visibility_changed_by | bigint | FK → admin_user(admin_id) | Y |  |  | 마지막으로 숨기거나 해제한 관리자 |
+| visibility_changed_at | timestamptz |  | Y |  |  | 마지막으로 숨기거나 해제한 시각. 한 번도 안 바꿨으면 NULL |
 | coord_error | boolean |  | N | FALSE |  | 수정 값까지 반영한 좌표가 0·국내 밖·충돌 |
 | last_seen_version_id | smallint | FK → data_version(version_id) | N |  |  | 원천에서 마지막으로 본 버전 |
 | created_at | timestamptz |  | N | now() |  |  |
 | updated_at | timestamptz |  | N | now() |  |  |
 
-표 제약: `NOT is_hidden OR hidden_reason IS NOT NULL` · `lifecycle_status <> 'closed' OR missing_count >= 2`
+표 제약: `(NOT is_hidden OR visibility_changed_at IS NOT NULL) AND (visibility_changed_at IS NULL OR (visibility_reason IS NOT NULL AND visibility_changed_by IS NOT NULL))` · `lifecycle_status <> 'closed' OR missing_count >= 2`
 
 #### `store_override`
 
@@ -579,7 +580,7 @@ erDiagram
 | 같은 소셜 계정으로 두 회원 | `member_auth` UNIQUE(provider, provider_user_id) |
 | 한 표기가 두 브랜드에 | `brand_alias.alias_norm` UNIQUE |
 | 활성 버전 둘 / 진행 중 갱신 둘 | 조건부 UNIQUE 인덱스 |
-| 숨김인데 사유 없음 / 2주 안 됐는데 폐업 | CHECK(`ck_store_hidden_reason`, `ck_store_closed_missing`) |
+| 숨김·해제에 사유·처리자 없음 / 2주 안 됐는데 폐업 | CHECK(`ck_store_visibility`, `ck_store_closed_missing`) |
 | 탈퇴인데 개인정보가 남음 | CHECK(`ck_member_status`) |
 | 없는 가게·회원 참조 | FK(로그·스냅샷 제외) |
 
@@ -788,6 +789,9 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | JPA 매핑 | `vector`·`geography`는 Hibernate Spatial + pgvector 라이브러리 또는 네이티브 쿼리. 검색 ①~⑤는 네이티브 쿼리 추천 |
 
 ## 8. 변경 내역
+
+### v0.3.2 (2026-11-13)
+- `store`의 `hidden_reason`·`hidden_by` → `visibility_reason`·`visibility_changed_by`·`visibility_changed_at`. 숨김과 해제 모두 사유·처리자·시각을 남긴다(FR-STO-07, 마지막 한 번만). CHECK `ck_store_hidden_reason` → `ck_store_visibility`.
 
 ### v0.3.1 (2026-11-13)
 - 조회 ⑪(결과 없는 검색어)에 문구 ⑤ `no_exact_name`·⑥ `weak_result`도 포함(FR-STA-02).

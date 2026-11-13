@@ -162,13 +162,16 @@ CREATE TABLE store (                                             -- 가게 1곳 
     missing_count       smallint    NOT NULL DEFAULT 0 CHECK (missing_count >= 0),   -- 연속으로 원천에 없던 주 수
     status_changed_at   timestamptz NOT NULL DEFAULT now(),      -- 상태가 마지막으로 바뀐 시각
     is_hidden           boolean     NOT NULL DEFAULT false,
-    hidden_reason       varchar(200),
-    hidden_by           bigint      REFERENCES admin_user (admin_id),
+    visibility_reason   varchar(200),                            -- 마지막 숨김·해제 사유(둘 다 필수, FR-STO-07)
+    visibility_changed_by bigint    REFERENCES admin_user (admin_id),   -- 마지막으로 숨기거나 해제한 관리자
+    visibility_changed_at timestamptz,                           -- 마지막으로 숨기거나 해제한 시각. 한 번도 안 바꿨으면 NULL
     coord_error         boolean     NOT NULL DEFAULT false,      -- 수정 값까지 반영한 좌표가 0·국내 밖·충돌
     last_seen_version_id smallint   NOT NULL REFERENCES data_version (version_id),   -- 원천에서 마지막으로 본 버전
     created_at          timestamptz NOT NULL DEFAULT now(),
     updated_at          timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT ck_store_hidden_reason CHECK (NOT is_hidden OR hidden_reason IS NOT NULL),
+    CONSTRAINT ck_store_visibility CHECK (
+        (NOT is_hidden OR visibility_changed_at IS NOT NULL)
+        AND (visibility_changed_at IS NULL OR (visibility_reason IS NOT NULL AND visibility_changed_by IS NOT NULL))),
     CONSTRAINT ck_store_closed_missing CHECK (lifecycle_status <> 'closed' OR missing_count >= 2)
 );
 CREATE INDEX ix_store_business_no ON store (business_no);
