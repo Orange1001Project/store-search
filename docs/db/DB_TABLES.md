@@ -1,6 +1,6 @@
 # DB 테이블 설명서
 
-> 기준: `docs/DB_DESIGN.md` v0.3.4(테이블 19개) · 실행 SQL `docs/db/schema.sql` · ERDCloud 그림 `docs/db/erdcloud.sql`
+> 기준: `docs/DB_DESIGN.md` v0.3.5(테이블 20개) · 실행 SQL `docs/db/schema.sql` · ERDCloud 그림 `docs/db/erdcloud.sql`
 > 각 테이블의 역할·주요 규칙과 모든 컬럼의 역할을 적는다. 컬럼표는 `schema.sql`에서 자동으로 만들었다(둘이 다르면 SQL이 맞다).
 > 왜 이렇게 설계했는지(관계·키·줄인 테이블)는 [`DB_DESIGN_WHY.md`](DB_DESIGN_WHY.md).
 > 표기: **PK** = 기본 키(행 하나를 집어내는 값), **FK** = 다른 테이블에 꼭 있어야 하는 값(연결선). 자료형은 PostgreSQL 기준.
@@ -22,6 +22,7 @@
 | | `expansion_cache` | 업종 검색어 확장어 | |
 | 회원 | `member` | 회원 1명 = 1행. 탈퇴도 행을 남김 | `member_auth`, `member_recent_search`, `member_favorite`이 가리킴 |
 | | `member_auth` | 로그인 수단(카카오·구글) | → `member` |
+| | `member_refresh_token` | 로그인 유지용 갱신 토큰(14일) | → `member` |
 | | `member_recent_search` | 최근 검색어 10개 | → `member` |
 | | `member_favorite` | 관심 가맹점 500곳 | → `member`, `store` |
 | 관리자 | `admin_user` | 관리자 계정 | 수정·갱신·숨김 기록이 가리킴 |
@@ -279,7 +280,7 @@
 - 닉네임은 중복을 허용한다. 없으면 `회원` + 숫자 4자리.
 - 동의한 약관 묶음 버전과 동의 시각을 이 행에 둔다(약관 표 없음). 탈퇴하면 이것도 비운다.
 - **탈퇴**: 행을 지우지 않고 `status`를 탈퇴로, `withdrawn_at`에 시각을 적는다. 닉네임·이메일·마지막 로그인·약관 버전·동의 시각은 그 자리에서 비우고(CHECK로 강제), 로그인 수단·최근 검색어·관심 가맹점은 바로 지운다. 남는 것은 회원 번호와 시각뿐이라 누구였는지 알 수 없다.
-- 로그인 유지용 갱신 토큰은 DB가 아니라 세션 저장소(Redis)에 둔다.
+- 로그인 유지용 갱신 토큰은 `member_refresh_token`에 둔다(아래).
 
 | 컬럼 | 이름 | 자료형 | 키 | 역할 |
 |---|---|---|---|---|
@@ -303,6 +304,25 @@
 | `member_id` | 회원 ID | uuid | FK→member | 회원 번호(탈퇴하면 이 줄은 삭제) |
 | `provider` | 로그인 제공자 | varchar(10) |  | 값: kakao, google |
 | `provider_user_id` | 제공자 회원 ID | varchar(255) |  | 카카오·구글이 준 회원 번호 |
+| `created_at` | 생성 시각 | timestamptz |  | 이 줄을 만든 시각 |
+
+### `member_refresh_token` — 갱신 토큰
+
+로그인을 14일 유지하는 토큰이다. PoC는 서버 1대라 Redis 대신 DB 표에 둔다(2026-11-16).
+
+- 토큰 원문은 저장하지 않고 해시(`token_hash`)만 둔다. DB가 새어도 토큰을 쓸 수 없다.
+- 한 번 쓰면 새 토큰을 주고 옛 토큰에 `used_at`을 적는다. 이미 쓴 토큰이 다시 오면 탈취로 보고 같은 묶음(`family_id`) 토큰을 모두 폐기한다.
+- 로그아웃하면 폐기(`revoked_at`), 탈퇴하면 행을 지운다. 만료된 토큰은 매일 지운다.
+
+| 컬럼 | 이름 | 자료형 | 키 | 역할 |
+|---|---|---|---|---|
+| `token_id` | 토큰 ID | uuid | PK | 토큰 번호 |
+| `member_id` | 회원 ID | uuid | FK→member | 회원 번호(탈퇴하면 이 줄은 삭제) |
+| `family_id` | 토큰 묶음 ID | uuid |  | 같은 로그인에서 이어 받은 토큰 묶음. 이미 쓴 토큰이 다시 오면 묶음 전체 폐기 |
+| `token_hash` | 토큰 해시 | char(64) |  | sha256(토큰) |
+| `expires_at` | 만료 시각 | timestamptz |  | 발급 + 14일 |
+| `used_at` | 사용 시각 | timestamptz |  | 새 토큰으로 바꿔 준 시각(한 번만 쓸 수 있음) |
+| `revoked_at` | 폐기 시각 | timestamptz |  | 로그아웃·탈취 의심으로 폐기한 시각 |
 | `created_at` | 생성 시각 | timestamptz |  | 이 줄을 만든 시각 |
 
 ### `member_recent_search` — 최근 검색어

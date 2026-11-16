@@ -1,6 +1,6 @@
 # DB 설계 이유서
 
-> 기준: `docs/DB_DESIGN.md` v0.3.4(테이블 19개) · `docs/db/schema.sql`
+> 기준: `docs/DB_DESIGN.md` v0.3.5(테이블 20개) · `docs/db/schema.sql`
 > 이 문서는 **왜 이렇게 설계했는지**를 적는다. 무엇이 있는지는 [`DB_TABLES.md`](DB_TABLES.md)(테이블·컬럼 설명), 전체 명세는 [`../DB_DESIGN.md`](../DB_DESIGN.md)를 본다.
 > 결정의 출처는 요구사항(`docs/REQUIREMENTS.md` 4절 DR)과 팀 결정(2026-11-10 ~ 11-13)이다.
 
@@ -78,6 +78,7 @@
 | `data_version` → `refresh_job` | 1 : N | 같은 날 두 번 돌리거나 실패한 작업이 있을 수 있다. 실패 작업은 버전이 없을 수도 있어서 빈칸 허용 | 있음 |
 | `data_version` → `store`(마지막 확인 버전) | 1 : N | 가게마다 원천에서 마지막으로 본 버전 하나. 몇 주 빠졌는지 계산에 쓴다 | 있음 |
 | `member` → `member_auth` | 1 : N | 한 사람이 **카카오와 구글을 둘 다** 연결할 수 있다. 회원 표에 칸으로 두면 제공자가 늘 때마다 칸을 늘려야 한다 | 있음, 탈퇴 정리 때 함께 삭제 |
+| `member` → `member_refresh_token` | 1 : N | 한 회원이 휴대폰·PC처럼 여러 기기에서 로그인하고, 로그인마다 토큰 묶음이 생긴다 | 있음, 탈퇴 때 삭제 |
 | `member` → `member_recent_search` | 1 : N | 회원당 최근 검색어 10개 | 있음, 함께 삭제 |
 | `member` ↔ `store` (`member_favorite`) | **N : M** | 회원 한 명이 여러 가게를, 가게 하나가 여러 회원에게 즐겨찾기될 수 있다. 그래서 가운데 연결 표가 필요하고, PK = 회원 + 가게라 같은 가게를 두 번 넣지 못한다 | 둘 다 있음 |
 | `admin_user` → 수정·갱신·숨김 기록 | 1 : N | 관리자 한 명이 여러 가게를 고치고 여러 갱신을 돌린다. 숨김 처리자(`visibility_changed_by`)는 한 번도 숨긴 적 없으면 빈칸이라 선택적 관계 | 있음 |
@@ -126,7 +127,7 @@ ERDCloud 그림에는 관계가 보이도록 스냅샷의 두 선(→ `store`, �
 
 ## 6. 첫 설계(v0.1, 36개)와 달라진 점
 
-ERDCloud에 예전에 그렸던 그림(37개)은 v0.1이다. v0.3에서 19개로 줄였다(2026-11-13 "필수 테이블만" 결정).
+ERDCloud에 예전에 그렸던 그림(37개)은 v0.1이다. v0.3에서 19개로 줄였다(2026-11-13 "필수 테이블만" 결정). v0.3.5에서 PoC에 Redis를 쓰지 않기로 해 갱신 토큰 표를 다시 넣어 20개다.
 
 | v0.1에 있던 표 | 지금 | 줄인 이유 |
 |---|---|---|
@@ -136,7 +137,7 @@ ERDCloud에 예전에 그렸던 그림(37개)은 v0.1이다. v0.3에서 19개로
 | `admin_access_log` | 없음 | 남기지 않기로 결정(법무 답에 따라 다시 볼 수 있음) |
 | `search_result_log`, `stats_daily_query`, `event_dedup` | `search_log.results`, 로그에서 바로 계산, 통계 때 중복 제거 | 로그를 검색 로그 하나 중심으로(2-5절) |
 | `terms`, `member_terms_agreement` | `member`의 약관 버전·동의 시각 | 3-3절 |
-| `member_refresh_token` | 세션 저장소(Redis) | 로그인 유지 토큰은 짧게 살고 자주 바뀌어 DB보다 세션 저장소가 맞다 |
+| `member_refresh_token` | v0.3에서 세션 저장소(Redis)로 뺐다가 v0.3.5에서 **다시 DB 표로** | PoC는 서버 1대라 Redis를 두지 않기로 함. 배포·재시작 때 로그인이 풀리지 않게 DB에 둔다 |
 | `brand_alias_group`, `gazetteer_version`, `gazetteer_entry`, `branch_suffix`, `reference_revision` | 한 표씩으로 합침, 검색 서버가 계산, 표마다 `updated_at` | 데이터가 작고 관리 화면도 1차에는 없다(2-6절) |
 
 ## 7. 포기한 것과 다시 필요해지면

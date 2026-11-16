@@ -182,6 +182,17 @@ CREATE TABLE `member_auth` (
 	`created_at`	DATETIME	NOT NULL	COMMENT '생성 시각'
 );
 
+CREATE TABLE `member_refresh_token` (
+	`token_id`	CHAR(36)	NOT NULL	COMMENT '토큰 ID',
+	`member_id`	CHAR(36)	NOT NULL	COMMENT '회원 ID',
+	`family_id`	CHAR(36)	NOT NULL	COMMENT '토큰 묶음 ID',
+	`token_hash`	CHAR(64)	NOT NULL	COMMENT '토큰 해시',
+	`expires_at`	DATETIME	NOT NULL	COMMENT '만료 시각',
+	`used_at`	DATETIME	NULL	COMMENT '사용 시각',
+	`revoked_at`	DATETIME	NULL	COMMENT '폐기 시각',
+	`created_at`	DATETIME	NOT NULL	COMMENT '생성 시각'
+);
+
 CREATE TABLE `member_recent_search` (
 	`member_id`	CHAR(36)	NOT NULL	COMMENT '회원 ID',
 	`query_norm`	VARCHAR(100)	NOT NULL	COMMENT '정규화 검색어',
@@ -274,6 +285,7 @@ ALTER TABLE `store_override` ADD CONSTRAINT `PK_STORE_OVERRIDE` PRIMARY KEY (`st
 ALTER TABLE `store_snapshot` ADD CONSTRAINT `PK_STORE_SNAPSHOT` PRIMARY KEY (`version_id`, `store_id`);
 ALTER TABLE `member` ADD CONSTRAINT `PK_MEMBER` PRIMARY KEY (`member_id`);
 ALTER TABLE `member_auth` ADD CONSTRAINT `PK_MEMBER_AUTH` PRIMARY KEY (`auth_id`);
+ALTER TABLE `member_refresh_token` ADD CONSTRAINT `PK_MEMBER_REFRESH_TOKEN` PRIMARY KEY (`token_id`);
 ALTER TABLE `member_recent_search` ADD CONSTRAINT `PK_MEMBER_RECENT_SEARCH` PRIMARY KEY (`member_id`, `query_norm`);
 ALTER TABLE `member_favorite` ADD CONSTRAINT `PK_MEMBER_FAVORITE` PRIMARY KEY (`member_id`, `store_id`);
 ALTER TABLE `search_log` ADD CONSTRAINT `PK_SEARCH_LOG` PRIMARY KEY (`query_id`, `page`, `logged_at`);
@@ -290,8 +302,9 @@ ALTER TABLE `store` ADD CONSTRAINT `fk_store_7` FOREIGN KEY (`last_seen_version_
 ALTER TABLE `store_override` ADD CONSTRAINT `fk_store_override_8` FOREIGN KEY (`store_id`) REFERENCES `store` (`store_id`);
 ALTER TABLE `store_override` ADD CONSTRAINT `fk_store_override_9` FOREIGN KEY (`admin_id`) REFERENCES `admin_user` (`admin_id`);
 ALTER TABLE `member_auth` ADD CONSTRAINT `fk_member_auth_10` FOREIGN KEY (`member_id`) REFERENCES `member` (`member_id`);
-ALTER TABLE `member_recent_search` ADD CONSTRAINT `fk_member_recent_search_11` FOREIGN KEY (`member_id`) REFERENCES `member` (`member_id`);
-ALTER TABLE `member_favorite` ADD CONSTRAINT `fk_member_favorite_12` FOREIGN KEY (`member_id`) REFERENCES `member` (`member_id`);
-ALTER TABLE `member_favorite` ADD CONSTRAINT `fk_member_favorite_13` FOREIGN KEY (`store_id`) REFERENCES `store` (`store_id`);
-ALTER TABLE `store_snapshot` ADD CONSTRAINT `fk_store_snapshot_14` FOREIGN KEY (`version_id`) REFERENCES `data_version` (`version_id`);
-ALTER TABLE `store_snapshot` ADD CONSTRAINT `fk_store_snapshot_15` FOREIGN KEY (`store_id`) REFERENCES `store` (`store_id`);
+ALTER TABLE `member_refresh_token` ADD CONSTRAINT `fk_member_refresh_token_11` FOREIGN KEY (`member_id`) REFERENCES `member` (`member_id`);
+ALTER TABLE `member_recent_search` ADD CONSTRAINT `fk_member_recent_search_12` FOREIGN KEY (`member_id`) REFERENCES `member` (`member_id`);
+ALTER TABLE `member_favorite` ADD CONSTRAINT `fk_member_favorite_13` FOREIGN KEY (`member_id`) REFERENCES `member` (`member_id`);
+ALTER TABLE `member_favorite` ADD CONSTRAINT `fk_member_favorite_14` FOREIGN KEY (`store_id`) REFERENCES `store` (`store_id`);
+ALTER TABLE `store_snapshot` ADD CONSTRAINT `fk_store_snapshot_15` FOREIGN KEY (`version_id`) REFERENCES `data_version` (`version_id`);
+ALTER TABLE `store_snapshot` ADD CONSTRAINT `fk_store_snapshot_16` FOREIGN KEY (`store_id`) REFERENCES `store` (`store_id`);

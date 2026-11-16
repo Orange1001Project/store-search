@@ -90,7 +90,7 @@
 | 대상 | 방식 | 근거 |
 |---|---|---|
 | 모든 사용자 | 익명 세션 쿠키 `sid`(첫 방문에 발급, 30분 무활동이면 새로). 로그용이고 회원 ID와 잇지 않는다 | FR-LOG-05 |
-| 회원 | 접근 토큰 `access_token` 30분 + 갱신 토큰 `refresh_token` 14일(경로 `/api/v1/auth`), 둘 다 HttpOnly·Secure·SameSite=Lax 쿠키. 갱신 토큰은 쓸 때마다 새로 발급, 이미 쓴 토큰이 오면 그 계열을 모두 폐기. 서버 쪽 저장은 세션 저장소(Redis) | FR-MBR-06, DR-13 |
+| 회원 | 접근 토큰 `access_token` 30분 + 갱신 토큰 `refresh_token` 14일(경로 `/api/v1/auth`), 둘 다 HttpOnly·Secure·SameSite=Lax 쿠키. 갱신 토큰은 쓸 때마다 새로 발급, 이미 쓴 토큰이 오면 그 계열을 모두 폐기. 서버 쪽 저장은 DB 표 `member_refresh_token`(해시만, PoC는 Redis 없음) | FR-MBR-06, DR-13 |
 | 소셜 로그인 | `GET /auth/{provider}/login` → 제공자 화면 → `GET /auth/{provider}/callback`. 위조 방지 state는 `oauth_state` 쿠키(10분). 처음 온 사람·약관이 바뀐 회원은 `signup_token` 쿠키(10분)를 받고 가입 동의(U-08) 뒤 `POST /auth/signup`. 돌아갈 주소(returnTo)는 우리 서비스 안 경로만 | FR-MBR-01·02 |
 | 관리자 | 아이디·비밀번호 로그인 후 서버 세션 쿠키(회원과 다른 이름·경로 `/api/v1/admin`). 30분 무활동 만료, 5회 실패 30분 잠금 | FR-ADM-01·02 |
 | CSRF | 관리자 로그인, 회원 로그인 콜백·가입·토큰 갱신 때 읽을 수 있는 쿠키 `csrf_token`을 주고, 쿠키 인증을 쓰는 `POST·PUT·PATCH·DELETE`는 그 값을 헤더 `X-CSRF-Token`에 넣는다. 검색·이벤트 수집처럼 로그인과 무관한 요청은 제외 | NFR-SEC-02 |

@@ -1,4 +1,4 @@
--- 가맹점 검색 서비스 DB 스키마 (초안 v0.3.4, 2026-11-16) — 필수 테이블 19개
+-- 가맹점 검색 서비스 DB 스키마 (초안 v0.3.5, 2026-11-16) — 테이블 20개
 -- 대상: PostgreSQL 16 + PostGIS 3.4 + pgvector 0.8 이상
 -- 설계 설명: docs/DB_DESIGN.md · 입력: docs/REQUIREMENTS.md 4절(DR-01~19)
 --
@@ -227,11 +227,11 @@ CREATE TABLE store_snapshot (
 
 -- =====================================================================
 -- 6. 회원 (DR-13, DR-14, DR-19)
--- 갱신 토큰(FR-MBR-06, 14일)은 DB 표 대신 세션 저장소(Redis 등)에 해시로 두고 만료되면 자동 삭제한다.
+-- 갱신 토큰(FR-MBR-06, 14일)은 member_refresh_token에 해시로 둔다(PoC에서 Redis를 쓰지 않기로 함, 2026-11-16).
 -- =====================================================================
 -- 탈퇴는 행을 지우지 않고 status = 'withdrawn'으로 바꾼다(가입·탈퇴 시각을 남기려고, DR-13).
--- 같은 트랜잭션에서 닉네임·이메일·마지막 로그인을 비우고, 로그인 수단·최근 검색어·즐겨찾기는 지운다(P9-4).
--- 남는 것은 회원 번호·시각·약관 버전뿐이라 누구인지 알 수 없다. 같은 소셜 계정으로 다시 가입하면 새 회원.
+-- 같은 트랜잭션에서 닉네임·이메일·마지막 로그인·약관 버전·동의 시각을 비우고, 로그인 수단·갱신 토큰·최근 검색어·즐겨찾기는 지운다(P9-4).
+-- 남는 것은 회원 번호와 가입·탈퇴 시각뿐이라 누구인지 알 수 없다. 같은 소셜 계정으로 다시 가입하면 새 회원.
 CREATE TABLE member (
     member_id        uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     status           varchar(10) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'withdrawn')),
@@ -260,6 +260,20 @@ CREATE TABLE member_auth (                                       -- 로그인 �
     CONSTRAINT uq_member_auth_provider_user UNIQUE (provider, provider_user_id),
     CONSTRAINT uq_member_auth_member_provider UNIQUE (member_id, provider)
 );
+
+CREATE TABLE member_refresh_token (                              -- 로그인 유지용 갱신 토큰(FR-MBR-06, 14일). 토큰 원문은 저장하지 않음
+    token_id     uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id    uuid        NOT NULL REFERENCES member (member_id) ON DELETE CASCADE,
+    family_id    uuid        NOT NULL,                           -- 같은 로그인에서 이어 받은 토큰 묶음. 이미 쓴 토큰이 다시 오면 묶음 전체 폐기
+    token_hash   char(64)    NOT NULL UNIQUE,                    -- sha256(토큰)
+    expires_at   timestamptz NOT NULL,                           -- 발급 + 14일
+    used_at      timestamptz,                                    -- 새 토큰으로 바꿔 준 시각(한 번만 쓸 수 있음)
+    revoked_at   timestamptz,                                    -- 로그아웃·탈취 의심으로 폐기한 시각
+    created_at   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_member_refresh_token_member ON member_refresh_token (member_id);
+CREATE INDEX ix_member_refresh_token_family ON member_refresh_token (family_id);
+CREATE INDEX ix_member_refresh_token_expires ON member_refresh_token (expires_at);   -- 매일 만료 토큰 삭제
 
 CREATE TABLE member_recent_search (                              -- 최근 검색어(회원당 10개, 좌표·query_id 없음)
     member_id    uuid         NOT NULL REFERENCES member (member_id) ON DELETE CASCADE,

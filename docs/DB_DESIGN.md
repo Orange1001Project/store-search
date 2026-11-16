@@ -1,6 +1,6 @@
-# 가맹점 검색 서비스 DB 설계 (초안 v0.3.4)
+# 가맹점 검색 서비스 DB 설계 (초안 v0.3.5)
 
-> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장 · v0.3.3 공식 업종 · v0.3.4 PR #11 리뷰 반영(8절 변경 내역)
+> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장 · v0.3.3 공식 업종 · v0.3.4 PR #11 리뷰 반영 · v0.3.5 갱신 토큰 표(Redis 안 씀)(8절 변경 내역)
 > 입력: `docs/REQUIREMENTS.md`(4절 DR-01~19), `docs/SERVICE_POLICY.md`, `docs/SEARCH_LOGGING.md`, `docs/BACKEND_HANDOFF.md`
 > 실행 SQL: [`docs/db/schema.sql`](db/schema.sql) · 3절 컬럼표는 schema.sql에서 자동으로 만들었다(둘이 다르면 SQL이 맞다)
 > ERDCloud 보기용: [`docs/db/erdcloud.sql`](db/erdcloud.sql) · 테이블 설명서: [`docs/db/DB_TABLES.md`](db/DB_TABLES.md) · 설계 이유서: [`docs/db/DB_DESIGN_WHY.md`](db/DB_DESIGN_WHY.md)
@@ -8,8 +8,8 @@
 
 ## 0. 한눈에 보기
 
-- 테이블 **19개**, 다섯 묶음: 가맹점·갱신(5) · 참조(6) · 회원(4) · 관리자(1) · 로그·통계(3).
-- 원칙: **필수 테이블만** 둔다. 따로 떼어 두면 편하지만 없어도 되는 것(이력, 임시 작업 표, 토큰, 중복 확인 표)은 다른 테이블의 컬럼이나 서버 메모리로 대신한다.
+- 테이블 **20개**, 다섯 묶음: 가맹점·갱신(5) · 참조(6) · 회원(5) · 관리자(1) · 로그·통계(3). PoC는 Redis를 쓰지 않아 갱신 토큰을 DB 표로 둔다(v0.3.5).
+- 원칙: **필수 테이블만** 둔다. 따로 떼어 두면 편하지만 없어도 되는 것(이력, 임시 작업 표, 중복 확인 표)은 다른 테이블의 컬럼이나 서버 메모리로 대신한다.
 - 로그는 **`search_log`가 중심**이다. 검색 결과 한 페이지 = 한 줄이고, 보여 준 가게 목록도 그 줄에 같이 들어간다. 회원 ID는 넣지 않는다.
 
 **핵심 결정 세 가지**
@@ -54,7 +54,7 @@
 | 업로드한 엑셀 본문 | 파일 저장소(DB에는 위치·지문만) |
 | 갱신 중 원천 행 비교 | 갱신 작업의 메모리(21만 줄) |
 | 지점 접미사(DR-11) | 검색 서버가 스냅샷 상호에서 계산해 메모리에 |
-| 로그인 유지(갱신 토큰, FR-MBR-06) | 세션 저장소(Redis 등)에 토큰 해시, 14일 뒤 자동 만료. 로그아웃·탈퇴하면 삭제 |
+| 로그인 유지(갱신 토큰, FR-MBR-06) | `member_refresh_token`에 토큰 해시, 14일 만료. 쓸 때마다 새로 발급하고 옛것은 사용 표시. 로그아웃·탈퇴하면 폐기·삭제, 만료 토큰은 매일 삭제 |
 | 결과 10분 보관(FR-LST-02) | 캐시 |
 | 인기·결과 없는 검색어 | 필요할 때 `search_log`에서 계산 |
 
@@ -123,6 +123,7 @@
 | | `expansion_cache` | 업종 검색어 확장어 | DR-12 |
 | 회원 | `member` | 회원(닉네임·이메일·약관 동의·탈퇴 상태) | DR-13, DR-19 |
 | | `member_auth` | 카카오·구글 로그인 연결(1:N) | DR-13 |
+| | `member_refresh_token` | 로그인 유지용 갱신 토큰 해시(14일) | DR-13, FR-MBR-06 |
 | | `member_recent_search` / `member_favorite` | 최근 검색어 10개 / 즐겨찾기 500곳 | DR-14 |
 | 관리자 | `admin_user` | 관리자 계정(권한 한 단계) | DR-15 |
 | 로그·통계 | **`search_log`** | **중심 로그.** 검색 결과 한 페이지 = 1행, 보여 준 가게 목록 포함 | DR-16 |
@@ -138,7 +139,7 @@
 | store | member_favorite | 1 : N | 폐업·숨김 때 앱이 즐겨찾기 삭제 |
 | data_version | store_snapshot | 1 : N | 이전 버전은 파티션째 삭제 |
 | data_version | refresh_job, store(last_seen) | 1 : N | 버전 행은 지우지 않음 |
-| member | member_auth, member_recent_search, member_favorite | 1 : N | 회원 행은 탈퇴해도 남김. 탈퇴 때 앱이 자식 행을 즉시 삭제(FK는 CASCADE) |
+| member | member_auth, member_refresh_token, member_recent_search, member_favorite | 1 : N | 회원 행은 탈퇴해도 남김. 탈퇴 때 앱이 자식 행을 즉시 삭제(FK는 CASCADE) |
 | admin_user | store_override, refresh_job, brand_alias, place_exclusion, store(visibility_changed_by) | 1 : N | 관리자는 지우지 않고 비활성화 |
 | (없음) | search_log ↔ event_log | query_id로 연결, FK 없음 | 파티션째 삭제 |
 
@@ -483,6 +484,19 @@ erDiagram
 | provider_user_id | varchar(255) |  | N |  | UNIQUE(provider, provider_user_id) | 카카오·구글이 준 회원 번호 |
 | created_at | timestamptz |  | N | now() |  |  |
 
+#### `member_refresh_token`
+
+| 컬럼 | 자료형 | 키 | NULL | 기본값 | 제약 | 설명 |
+|---|---|---|---|---|---|---|
+| token_id | uuid | PK | N | gen_random_uuid() |  |  |
+| member_id | uuid | FK → member(member_id) ON DELETE CASCADE | N |  |  |  |
+| family_id | uuid |  | N |  |  | 같은 로그인에서 이어 받은 토큰 묶음. 이미 쓴 토큰이 다시 오면 묶음 전체 폐기 |
+| token_hash | char(64) |  | N |  | UNIQUE | sha256(토큰) |
+| expires_at | timestamptz |  | N |  |  | 발급 + 14일 |
+| used_at | timestamptz |  | Y |  |  | 새 토큰으로 바꿔 준 시각(한 번만 쓸 수 있음) |
+| revoked_at | timestamptz |  | Y |  |  | 로그아웃·탈취 의심으로 폐기한 시각 |
+| created_at | timestamptz |  | N | now() |  |  |
+
 #### `member_recent_search`
 
 | 컬럼 | 자료형 | 키 | NULL | 기본값 | 제약 | 설명 |
@@ -592,7 +606,7 @@ erDiagram
 
 | 일 | 처리 |
 |---|---|
-| 회원 탈퇴 | 한 트랜잭션에서 회원 행을 잠그고 → `status = 'withdrawn'`, `withdrawn_at = now()`, 닉네임·이메일·마지막 로그인·약관 버전·동의 시각 NULL → 로그인 수단·최근 검색어·즐겨찾기 삭제, 세션 저장소의 갱신 토큰 삭제. 남는 것은 회원 번호·가입·탈퇴 시각뿐(DR-13, P9-4). 소셜 연결 끊기는 앱이 먼저 호출. 같은 소셜 계정으로 다시 가입하면 새 회원 |
+| 회원 탈퇴 | 한 트랜잭션에서 회원 행을 잠그고 → `status = 'withdrawn'`, `withdrawn_at = now()`, 닉네임·이메일·마지막 로그인·약관 버전·동의 시각 NULL → 로그인 수단·갱신 토큰·최근 검색어·즐겨찾기 삭제. 남는 것은 회원 번호·가입·탈퇴 시각뿐(DR-13, P9-4). 소셜 연결 끊기는 앱이 먼저 호출. 같은 소셜 계정으로 다시 가입하면 새 회원 |
 | 가게 폐업 확정·관리자 숨김 | 가게 행은 그대로(상태만). 같은 트랜잭션에서 그 가게 즐겨찾기 삭제(정책 9-3), 활성 스냅샷 `searchable = false` |
 | 가게 확인 대기 | 즐겨찾기는 지우지 않고 목록에서만 숨긴다 |
 | 관리자 수정 해제 | `store_override` 행 삭제 → 원천 값으로 돌아감 |
@@ -792,7 +806,7 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | DR-16 | 노출 결과 | 가게마다 한 줄 대신 `search_log.results` 목록으로 |
 | DR-18 | 설정값 | 앱 설정 파일(2026-11-13) |
 | DR-19 | 약관 동의 | 약관 표 없이 `member`에 약관 버전·동의 시각(가정 A7) |
-| FR-LST-02 | 결과 10분 보관 | 캐시(서버 여러 대면 Redis 등) |
+| FR-LST-02 | 결과 10분 보관 | API 서버 메모리 캐시(PoC는 서버 1대). 서버를 늘리면 공용 캐시(Redis 등)로 바꿈 |
 
 ### 7-3. 팀이 더 정할 것
 
@@ -802,10 +816,14 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | 업로드 파일 저장소(디스크 / 오브젝트 저장소) | `refresh_job.file_path` |
 | 파티션 자동화(pg_partman / 앱 스케줄러) | 매달 로그 파티션 생성·삭제, 매주 스냅샷 파티션 |
 | 100m 격자 ID 형식 | `user_cell`·`viewport_cells`(가정 A4) |
-| 갱신 토큰 저장소 | 토큰 표를 뺐으므로 Redis 등 세션 저장소가 필요(결과 캐시와 같이 쓸 수 있음) |
+| 갱신 토큰 저장소 | PoC는 DB 표(`member_refresh_token`, v0.3.5). 요청이 많아지면 Redis로 옮길 수 있게 저장 부분을 인터페이스로 감쌈 |
 | JPA 매핑 | `vector`·`geography`는 Hibernate Spatial + pgvector 라이브러리 또는 네이티브 쿼리. 검색 ①~⑤는 네이티브 쿼리 추천 |
 
 ## 8. 변경 내역
+
+### v0.3.5 (2026-11-16) — Redis 없이(PoC)
+- PoC는 서버 1대라 Redis를 쓰지 않는다. 검색 결과 10분 보관은 API 서버 메모리, 갱신 토큰은 `member_refresh_token` 표(테이블 20개). v0.3에서 뺀 표를 다시 넣은 것.
+- 탈퇴하면 갱신 토큰 행도 지운다. 만료 토큰은 매일 삭제.
 
 ### v0.3.4 (2026-11-16) — PR #11 리뷰 반영
 - 같은 가게 판단(지문)을 도로명 주소(시군구 + 도로명 + 건물번호, 시도·상세 주소 제외)로. 9월 → 11월 원천에서 사라짐 31,838곳(14.9%) → 11,943곳(5.6%).
