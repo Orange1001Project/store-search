@@ -1,6 +1,6 @@
-# 가맹점 검색 서비스 DB 설계 (초안 v0.3)
+# 가맹점 검색 서비스 DB 설계 (초안 v0.3.4)
 
-> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장(8절 변경 내역)
+> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장 · v0.3.3 공식 업종 · v0.3.4 PR #11 리뷰 반영(8절 변경 내역)
 > 입력: `docs/REQUIREMENTS.md`(4절 DR-01~19), `docs/SERVICE_POLICY.md`, `docs/SEARCH_LOGGING.md`, `docs/BACKEND_HANDOFF.md`
 > 실행 SQL: [`docs/db/schema.sql`](db/schema.sql) · 3절 컬럼표는 schema.sql에서 자동으로 만들었다(둘이 다르면 SQL이 맞다)
 > ERDCloud 보기용: [`docs/db/erdcloud.sql`](db/erdcloud.sql) · 테이블 설명서: [`docs/db/DB_TABLES.md`](db/DB_TABLES.md) · 설계 이유서: [`docs/db/DB_DESIGN_WHY.md`](db/DB_DESIGN_WHY.md)
@@ -61,12 +61,12 @@
 ### 1-2. 데이터가 생기고 바뀌는 흐름
 
 ```
-[주간 갱신] 관리자가 엑셀 업로드 → refresh_job 생성(파일 이름·지문·위치)
+[주간 갱신] 운영자가 서버에서 갱신 스크립트 실행(원천 엑셀 경로 + 실행 관리자 계정) → refresh_job 생성(파일 이름·지문·위치)
             → 메모리에서 원천 행 검사 → 지문으로 기존 가게와 맞춤(새로 생김·바뀜·그대로·사라짐)
-            → 미리보기(건수·좌표 오류·충돌) → 사라짐이 기준 %를 넘으면 관리자 승인
+            → 미리보기(건수·좌표 오류·충돌, 스크립트 결과) → 사라짐이 기준 %를 넘으면 멈추고 승인 명령을 기다림(원천 정리 기간에는 적용 안 함)
             → 새 버전(data_version, building) + 새 스냅샷 파티션 만들기
                (바뀌지 않은 가게는 이전 벡터 복사, 바뀐 가게만 임베딩 서버로)
-            → 전환 트랜잭션: 그사이 관리자 수정 다시 적용 → store 원천 값·상태 반영
+            → 전환 트랜잭션: 그사이 관리자 수정·숨김 다시 적용 → store 원천 값·상태 반영
                → 파티션 붙이기 → 이전 버전 retired, 새 버전 active
                → 폐업·숨김 가게 즐겨찾기 삭제, 수정한 필드의 원천이 바뀌었으면 source_changed 표시
             → 실패하면 아무것도 반영되지 않고 이전 버전 그대로(FR-UPD-09)
@@ -74,7 +74,7 @@
 [관리자 수정] store_override 저장 → 유효 값 다시 계산 → 활성 스냅샷의 그 가게 행 갱신(상호·품목이면 벡터도) → 1분 안 검색 반영
 [검색]       활성 버전 번호로 store_snapshot 조회(범위 + 벡터) → 점수·노출·정렬은 앱 → search_log 한 줄 기록(비동기)
 [회원]       가입 = member(약관 버전·동의 시각) + member_auth
-             탈퇴 = member를 withdrawn으로(닉네임·이메일 비움) + 로그인 수단·최근 검색어·즐겨찾기 삭제
+             탈퇴 = member를 withdrawn으로(닉네임·이메일·약관 버전·동의 시각 비움) + 로그인 수단·최근 검색어·즐겨찾기 삭제
 [로그]       매일 새벽 전날 통계 요약(stats_daily) → 매달 다음 달 파티션 생성, 13개월 전 파티션 삭제
 ```
 
@@ -285,7 +285,7 @@ erDiagram
 
 | 컬럼 | 자료형 | 키 | NULL | 기본값 | 제약 | 설명 |
 |---|---|---|---|---|---|---|
-| category_code | varchar(20) | PK | N |  |  | K001 식품·마트 … K017 생활서비스 |
+| category_code | varchar(4) | PK | N |  |  | K001 식품·마트 … K017 생활서비스 |
 | name | varchar(20) |  | N |  | UNIQUE |  |
 | sort_order | smallint |  | N |  |  |  |
 | is_active | boolean |  | N | TRUE |  |  |
@@ -324,6 +324,7 @@ erDiagram
 | scope | varchar(5) |  | N |  | CHECK scope IN ('area', 'point') | area = 지역 전체, point = 1km 원 |
 | code_prefix | varchar(10) |  | Y |  |  | 법정동 코드 앞자리(2·5·8자리), area일 때 |
 | center | geography(Point, 4326) |  | N |  |  | 지명 중심(검색 중심으로 씀) |
+| dict_version | varchar(30) |  | N |  |  | 지명 사전 버전(파일 이름·날짜, 행마다 같은 값, DR-09) |
 | evidence_count | smallint |  | Y |  |  | 같은 이름 지명 고르기용(근거 수) |
 | updated_at | timestamptz |  | N | now() |  |  |
 
@@ -378,8 +379,8 @@ erDiagram
 | needs_approval | boolean |  | N | FALSE |  | 사라지는 가게가 기준 %를 넘음(FR-UPD-05) |
 | preview | jsonb |  | Y |  |  | 건수, 좌표 오류·충돌 목록 |
 | error_message | text |  | Y |  |  |  |
-| edits_applied_until | timestamptz |  | Y |  |  | 이 시각까지의 관리자 수정을 새 버전에 반영함(FR-UPD-07) |
-| started_by | bigint | FK → admin_user(admin_id) | N |  |  |  |
+| edits_applied_until | timestamptz |  | Y |  |  | 이 시각까지의 관리자 수정·숨김을 새 버전에 반영함(FR-UPD-07) |
+| started_by | bigint | FK → admin_user(admin_id) | N |  |  | 실행한 관리자. 스크립트도 실행할 관리자 계정을 인자로 받는다 |
 | approved_by | bigint | FK → admin_user(admin_id) | Y |  |  |  |
 | created_at | timestamptz |  | N | now() |  |  |
 | finished_at | timestamptz |  | Y |  |  |  |
@@ -389,7 +390,7 @@ erDiagram
 | 컬럼 | 자료형 | 키 | NULL | 기본값 | 제약 | 설명 |
 |---|---|---|---|---|---|---|
 | store_id | uuid | PK | N |  |  | 기존 UUID 유지(평가 정답과 연결), 새 가게만 gen_random_uuid() |
-| fingerprint | char(64) |  | N |  | UNIQUE | sha256(사업자번호+가맹점명+주소), 원천 값으로 |
+| fingerprint | char(64) |  | N |  | UNIQUE | sha256(사업자번호+가맹점명+도로명 주소), 원천 값으로. 도로명 주소 = 시군구+도로명+건물번호(시도·상세 주소·괄호 뒤 제외, 공백 무시) |
 | store_name | varchar(100) |  | N |  |  |  |
 | business_no | varchar(20) |  | N |  |  | 문자열(앞자리 0) |
 | merchant_no | varchar(20) |  | Y |  |  | 결측·전화번호 형태 섞임, 식별자로 안 씀 |
@@ -425,7 +426,7 @@ erDiagram
 |---|---|---|---|---|---|---|
 | store_id | uuid | PK · FK → store(store_id) | N |  |  |  |
 | field_name | varchar(20) | PK | N |  | CHECK field_name IN ('store_name', 'items', 'location', 'market_name', 'payment_card', 'payment_qr', 'category') |  |
-| override_value | jsonb |  | N |  |  | location = {lat, lon, legal_dong_code, address} |
+| override_value | jsonb |  | N |  |  | location = {lat, lng, legal_dong_code, address} |
 | source_value_at_edit | jsonb |  | Y |  |  | 수정할 때의 원천 값 |
 | source_changed | boolean |  | N | FALSE |  | 그 뒤 원천 값이 바뀜 → 관리자 화면에 알림(FR-STO-08) |
 | new_source_value | jsonb |  | Y |  |  | 바뀐 원천 값 |
@@ -447,9 +448,9 @@ erDiagram
 | market_type | varchar(30) |  | Y |  |  | 시장유형(결과 카드·상세, FR-LST-03) |
 | market_name | varchar(100) |  | Y |  |  |  |
 | geom | geography(Point, 4326) |  | N |  |  |  |
-| category_codes | varchar(20)[] |  | N | '{}' |  | 업종 칩 거르기용 목록(지금은 공식 업종 하나) |
-| primary_category | varchar(20) |  | Y |  |  | 대표 업종(category.category_code, K001~K017) |
-| category_source | varchar(10) |  | Y |  | CHECK category_source IN ('official', 'ksic', 'admin') | 업종 근거: 원천 온누리중분류 / 산업분류로 보충 / 관리자 수정(DR-07) |
+| category_codes | varchar(4)[] |  | N | '{}' |  | 업종 칩 거르기용 목록(지금은 공식 업종 하나) |
+| primary_category | varchar(4) |  | N |  |  | 대표 업종(category.category_code, K001~K017). 못 찾으면 K010 기타 |
+| category_source | varchar(10) |  | N |  | CHECK category_source IN ('official', 'ksic', 'admin') | 업종 근거: 원천 온누리중분류 / 산업분류로 보충 / 관리자 수정(DR-07) |
 | subcategory | varchar(40) |  | Y |  |  | 세부 업종(표준산업분류 세세분류명) |
 | payment_codes | varchar(10)[] |  | N | '{}' |  | {card, qr} |
 | searchable | boolean |  | N |  |  | 영업중 · 숨김 아님 · 좌표 오류 아님 |
@@ -464,13 +465,13 @@ erDiagram
 | status | varchar(10) |  | N | 'active' | CHECK status IN ('active', 'withdrawn') |  |
 | nickname | varchar(12) |  | Y |  |  | 중복 허용, 없으면 '회원1234'. 탈퇴하면 NULL |
 | email | varchar(254) |  | Y |  |  | 선택 동의. 탈퇴하면 NULL |
-| terms_version | varchar(20) |  | N |  |  | 동의한 약관 묶음 버전(이용약관·개인정보·만 14세) |
-| terms_agreed_at | timestamptz |  | N |  |  | 약관 동의 시각(DR-19) |
+| terms_version | varchar(20) |  | Y |  |  | 동의한 약관 묶음 버전(이용약관·개인정보·만 14세). 탈퇴하면 NULL |
+| terms_agreed_at | timestamptz |  | Y |  |  | 약관 동의 시각(DR-19). 탈퇴하면 NULL |
 | created_at | timestamptz |  | N | now() |  | 가입 시각 |
 | last_login_at | timestamptz |  | Y |  |  | 탈퇴하면 NULL |
 | withdrawn_at | timestamptz |  | Y |  |  | 탈퇴 시각 |
 
-표 제약: `nickname IS NULL OR char_length(nickname) BETWEEN 2 AND 12` · `(status = 'active' AND nickname IS NOT NULL AND withdrawn_at IS NULL) OR (status = 'withdrawn' AND withdrawn_at IS NOT NULL AND nickname IS NULL AND email IS NULL AND last_login_at IS NULL)`
+표 제약: `nickname IS NULL OR char_length(nickname) BETWEEN 2 AND 12` · `(status = 'active' AND nickname IS NOT NULL AND withdrawn_at IS NULL AND terms_version IS NOT NULL AND terms_agreed_at IS NOT NULL) OR (status = 'withdrawn' AND withdrawn_at IS NOT NULL AND nickname IS NULL AND email IS NULL AND last_login_at IS NULL AND terms_version IS NULL AND terms_agreed_at IS NULL)`
 
 #### `member_auth`
 
@@ -513,7 +514,7 @@ erDiagram
 | corpus_version_id | smallint |  | N |  |  | 검색한 데이터 버전(FK 없음) |
 | query_text | varchar(50) |  | Y |  |  | 검색어 없는 조회는 NULL |
 | input_type | varchar(15) |  | N |  | CHECK input_type IN ('typed', 'recent', 'autocomplete', 'chip', 'browse', 'place') |  |
-| category_code | varchar(20) |  | Y |  |  | 고른 업종 칩 |
+| category_code | varchar(4) |  | Y |  |  | 고른 업종 칩 |
 | payment_codes | varchar(10)[] |  | N | '{}' |  | 고른 결제 칩(여러 개, 빈 목록 = 전체) |
 | view | varchar(4) |  | N |  | CHECK view IN ('list', 'map') |  |
 | location_source | varchar(15) |  | N |  | CHECK location_source IN ('query_region', 'ui_region', 'map_viewport', 'gps', 'default') |  |
@@ -539,12 +540,13 @@ erDiagram
 | event_id | uuid | PK | N |  |  | 화면이 만든 번호. 재전송 중복은 통계 때 한 번만 셈 |
 | server_ts | timestamptz | PK | N |  |  |  |
 | client_ts | timestamptz |  | Y |  |  |  |
+| schema_version | smallint |  | N |  |  | 이벤트 형식 버전(FR-LOG-04) |
 | session_id | uuid |  | N |  |  |  |
 | query_id | uuid |  | Y |  |  | 어느 검색에서 나온 행동인지 |
 | event_type | varchar(15) |  | N |  | CHECK event_type IN ('impression', 'click', 'action', 'dwell', 'region_choice', 'chip_change', 'research_here', 'cluster_click', 'pin_click', 'reformulate', 'abandon') |  |
 | store_id | uuid |  | Y |  |  |  |
 | position | smallint |  | Y |  |  |  |
-| action_type | varchar(10) |  | Y |  | CHECK action_type IN ('call', 'directions', 'favorite', 'share', 'pay') |  |
+| action_type | varchar(10) |  | Y |  | CHECK action_type IN ('directions', 'favorite', 'share') |  |
 | payload | jsonb |  | Y |  |  | 본 가게 목록, 머문 초, 고른 지역 등 |
 | is_bot | boolean |  | N | FALSE |  |  |
 
@@ -590,14 +592,15 @@ erDiagram
 
 | 일 | 처리 |
 |---|---|
-| 회원 탈퇴 | 한 트랜잭션에서 회원 행을 잠그고 → `status = 'withdrawn'`, `withdrawn_at = now()`, 닉네임·이메일·마지막 로그인 NULL → 로그인 수단·최근 검색어·즐겨찾기 삭제, 세션 저장소의 갱신 토큰 삭제. 남는 것은 회원 번호·가입·탈퇴 시각·약관 버전뿐(DR-13, P9-4). 소셜 연결 끊기는 앱이 먼저 호출. 같은 소셜 계정으로 다시 가입하면 새 회원 |
+| 회원 탈퇴 | 한 트랜잭션에서 회원 행을 잠그고 → `status = 'withdrawn'`, `withdrawn_at = now()`, 닉네임·이메일·마지막 로그인·약관 버전·동의 시각 NULL → 로그인 수단·최근 검색어·즐겨찾기 삭제, 세션 저장소의 갱신 토큰 삭제. 남는 것은 회원 번호·가입·탈퇴 시각뿐(DR-13, P9-4). 소셜 연결 끊기는 앱이 먼저 호출. 같은 소셜 계정으로 다시 가입하면 새 회원 |
 | 가게 폐업 확정·관리자 숨김 | 가게 행은 그대로(상태만). 같은 트랜잭션에서 그 가게 즐겨찾기 삭제(정책 9-3), 활성 스냅샷 `searchable = false` |
 | 가게 확인 대기 | 즐겨찾기는 지우지 않고 목록에서만 숨긴다 |
 | 관리자 수정 해제 | `store_override` 행 삭제 → 원천 값으로 돌아감 |
 | 원천 변경 알림 처리 | "수정 유지"면 `source_changed = false`, `source_value_at_edit = new_source_value`. "원천으로"면 행 삭제 |
 | 관리자 퇴사 | 삭제하지 않고 `status = 'disabled'` |
-| 이전 데이터 버전 | 활성 + 직전 1개만 남기고 파티션 DETACH 후 DROP. `data_version` 행은 남김 |
-| 로그 | 1년 지난 달 파티션 DROP. `stats_daily`는 계속 보관 |
+| 이전 데이터 버전 | 활성 + 직전 1개만 남기고 파티션 `DETACH … CONCURRENTLY`(검색을 막지 않음) 후 DROP. `data_version` 행은 남김 |
+| 로그 | 1년 지난 달 파티션 DROP. `stats_daily`는 계속 보관(숫자 지표만. 검색어 목록·문구별 비율은 1년 안만 볼 수 있음) |
+| 갱신 작업 | `refresh_job`은 1년 지나면 삭제(DR-06). 단 활성·직전 버전을 만든 작업은 남김 |
 
 | 데이터 | 물리 삭제 / 논리 삭제 | 이유 |
 |---|---|---|
@@ -617,7 +620,7 @@ erDiagram
 | 즐겨찾기 500곳 직전에 두 요청 | 501곳 | 트랜잭션에서 `SELECT … FROM member WHERE member_id = ? FOR UPDATE`로 그 회원을 잠그고 → `status = 'active'` 확인 → 개수 확인 → 넣기 |
 | 최근 검색어 동시 저장 | 11개 이상 | 같은 회원 잠금 → upsert → 최신 10개 밖 삭제 |
 | 갱신 두 번 동시 실행 | 둘 다 진행 | 조건부 UNIQUE로 두 번째 INSERT 실패 → "진행 중" 표시(FR-UPD-08) |
-| 갱신 중 관리자 수정 | 새 버전에 수정이 빠짐 | 새 버전은 `edits_applied_until`까지의 수정으로 만들고, 전환 트랜잭션에서 그 뒤 수정을 다시 적용. 전환은 권고 잠금(`pg_advisory_xact_lock`)을 독점, 수정은 공유로 잡는다 |
+| 갱신 중 관리자 수정·숨김 | 새 버전에 수정·숨김이 빠짐 | 새 버전은 `edits_applied_until`까지의 수정·숨김으로 만들고, 전환 트랜잭션에서 그 뒤 것(`store_override.updated_at`, `store.visibility_changed_at` > 기준 시각)을 다시 적용(숨김이면 그 가게 `searchable = false`). 전환은 권고 잠금(`pg_advisory_xact_lock`)을 독점, 수정은 공유로 잡는다 |
 | 갱신 중 검색 | 반쯤 바뀐 데이터 | 검색은 시작할 때 활성 버전 번호 하나를 잡고 그 번호로만 조회 |
 | 두 관리자가 같은 필드 수정 | 앞 값을 덮음 | `store_override.updated_at`으로 낙관적 잠금(JPA `@Version`) |
 | 이벤트 재전송 | 같은 클릭 두 번 | 그대로 저장하고, 통계를 낼 때 같은 `event_id`는 한 번만 센다 |
@@ -684,11 +687,23 @@ ORDER  BY f.created_at DESC;
 SELECT query_text FROM member_recent_search
 WHERE  member_id = :member ORDER BY searched_at DESC LIMIT 10;
 
--- ⑧ 관리자 가맹점 조회(상호 앞부분 / 사업자번호)
-SELECT store_id, store_name, address, lifecycle_status, is_hidden
-FROM   store
-WHERE  store_name LIKE :prefix || '%'               -- 또는 business_no = :bno
-ORDER  BY store_name LIMIT 50 OFFSET :offset;
+-- ⑧ 관리자 가맹점 조회(A-03): 상호·주소·시장명 부분 일치 또는 사업자번호·store_id 일치, 상태·숨김·수정 여부·업종·좌표 오류로 거르기.
+--    업종은 수정 값까지 반영한 활성 스냅샷의 대표 업종. 관리자만 쓰므로 부분 일치는 훑기로 충분(LIKE 앞부분 인덱스에 기대지 않음)
+SELECT s.store_id, coalesce(o.override_value #>> '{}', s.store_name) AS store_name, s.address,
+       s.lifecycle_status, s.status_changed_at, s.is_hidden, s.coord_error,
+       sn.primary_category, sn.market_name, sn.market_type,
+       EXISTS (SELECT 1 FROM store_override x WHERE x.store_id = s.store_id) AS edited
+FROM   store s
+LEFT   JOIN store_override o ON o.store_id = s.store_id AND o.field_name = 'store_name'
+LEFT   JOIN store_snapshot sn ON sn.version_id = :active_version AND sn.store_id = s.store_id
+WHERE  (:q IS NULL OR s.business_no = :q OR s.store_id::text = :q
+        OR s.store_name ILIKE '%' || :q || '%' OR s.address ILIKE '%' || :q || '%' OR s.market_name ILIKE '%' || :q || '%')
+  AND  (:status IS NULL OR s.lifecycle_status = :status)
+  AND  (:hidden IS NULL OR s.is_hidden = :hidden)
+  AND  (:coord_error IS NULL OR s.coord_error = :coord_error)
+  AND  (:category IS NULL OR sn.primary_category = :category)
+  AND  (:edited IS NULL OR EXISTS (SELECT 1 FROM store_override x WHERE x.store_id = s.store_id) = :edited)
+ORDER  BY s.store_name, s.store_id LIMIT 50 OFFSET :offset;
 
 -- ⑨ 원천 변경 알림 목록
 SELECT store_id, field_name, override_value, new_source_value
@@ -723,13 +738,13 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | 스냅샷 파티션마다 `GIST(geom) WHERE searchable` | ①③⑤ | 반경·사각형·가까운 순을 공간 인덱스로. 검색 대상만 담아 작게 |
 | 스냅샷 파티션마다 `(legal_dong_code varchar_pattern_ops) WHERE searchable` | ② | `LIKE '3014%'` 앞부분 일치 |
 | 스냅샷 PK(version_id, store_id) | ④⑥ | 특정 가게 행 |
-| `store (store_name varchar_pattern_ops)`, `(business_no)` | ⑧ | 관리자 조회 |
+| `store (business_no)`, `store (visibility_changed_at)` | ⑧, 전환 직전 숨김 재적용 | 사업자번호는 정확히 일치. 상호·주소·시장명 부분 검색은 훑기(21만 행, 관리자만) |
 | `store_override (updated_at)`, `(updated_at) WHERE source_changed` | 전환 직전 재적용, ⑨ | |
 | `member_recent_search (member_id, searched_at DESC)` | ⑦ | 먼저 회원으로 좁히고 그 안에서 시각 정렬 |
 | `member_favorite (member_id, created_at DESC)`, `(store_id)` | ⑥, 폐업·숨김 때 일괄 삭제 | |
 | `search_log (logged_at)`, `(session_id, logged_at)` | 통계·⑪, 재검색·봇 판단 | |
 | `event_log (query_id)`, `(server_ts)` | 통계에서 검색과 이벤트 잇기 | |
-| `gazetteer (name_norm)`, `brand_alias (canonical_name)` | 관리자 화면 조회 | 검색은 메모리에서 |
+| `gazetteer (name_norm)`, `brand_alias (canonical_name)` | 운영자 DB 조회(1차는 화면 없음) | 검색은 메모리에서 |
 
 **넣지 않은 인덱스**: 스냅샷 업종·결제 배열 GIN(⑤는 화면 사각형으로 먼저 줄어듦), 관리자 중간 글자 검색용 `pg_trgm`(21만 행이면 훑어도 충분), 로그 `store_id`(가게별 로그 화면 없음), `search_log.results` GIN(통계는 기간으로 먼저 자름).
 
@@ -791,6 +806,17 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | JPA 매핑 | `vector`·`geography`는 Hibernate Spatial + pgvector 라이브러리 또는 네이티브 쿼리. 검색 ①~⑤는 네이티브 쿼리 추천 |
 
 ## 8. 변경 내역
+
+### v0.3.4 (2026-11-16) — PR #11 리뷰 반영
+- 같은 가게 판단(지문)을 도로명 주소(시군구 + 도로명 + 건물번호, 시도·상세 주소 제외)로. 9월 → 11월 원천에서 사라짐 31,838곳(14.9%) → 11,943곳(5.6%).
+- 탈퇴하면 `member.terms_version`·`terms_agreed_at`도 비움(NULL 허용, `ck_member_status`가 강제). 남는 것은 회원 번호와 가입·탈퇴 시각뿐.
+- 업종 코드 길이를 `varchar(4)`로 맞춤(`category`, 스냅샷, 검색 로그). 스냅샷 `primary_category`·`category_source`는 NOT NULL(못 찾으면 K010).
+- `event_log.schema_version` 추가(FR-LOG-04), `action_type`에서 call·pay 삭제(FR-LOG-03 범위 밖).
+- `gazetteer.dict_version` 추가(DR-09). `refresh_job.started_by`는 스크립트도 실행 관리자 계정을 받는다. 1년 지난 갱신 작업 삭제 규칙(DR-06).
+- 갱신 중 들어온 숨김·해제도 전환 직전에 다시 적용(`store.visibility_changed_at` 인덱스).
+- 수정 값 위치 JSON의 경도 키를 API와 같은 `lng`로.
+- `schema.sql`의 갱신 예시(v7 파티션)를 주석으로 바꿔 실행되지 않게 하고, 이전 파티션 떼기는 `DETACH … CONCURRENTLY`. 로그 DEFAULT 파티션은 없앰(다음 달 파티션 생성을 막음) → 두 달 앞까지 미리 생성.
+- 관리자 가맹점 조회 ⑧을 A-03 거르기 조건에 맞게 다시 씀. 상호 앞부분 인덱스 삭제.
 
 ### v0.3.3 (2026-11-13) — 공식 업종 반영
 - 원천 파일(2026-11-13)에 `표준산업분류코드`·`온누리중분류`가 들어옴: `store.ksic_code`·`onnuri_category` 추가, `mobile_payment` → `qr_payment`(원천 열 이름이 QR결제로 바뀜), 좌표 열은 X좌표(경도)·Y좌표(위도).

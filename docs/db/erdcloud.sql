@@ -11,7 +11,7 @@ CREATE TABLE `admin_user` (
 );
 
 CREATE TABLE `category` (
-	`category_code`	VARCHAR(20)	NOT NULL	COMMENT '업종 코드',
+	`category_code`	VARCHAR(4)	NOT NULL	COMMENT '업종 코드',
 	`name`	VARCHAR(20)	NOT NULL	COMMENT '이름',
 	`sort_order`	SMALLINT	NOT NULL	COMMENT '정렬 순서',
 	`is_active`	BOOLEAN	NOT NULL	COMMENT '사용 여부',
@@ -44,6 +44,7 @@ CREATE TABLE `gazetteer` (
 	`scope`	VARCHAR(5)	NOT NULL	COMMENT '지명 범위',
 	`code_prefix`	VARCHAR(10)	NULL	COMMENT '법정동 코드 앞자리',
 	`center`	VARCHAR(100)	NOT NULL	COMMENT '중심 좌표',
+	`dict_version`	VARCHAR(30)	NOT NULL	COMMENT '사전 버전',
 	`evidence_count`	SMALLINT	NULL	COMMENT '근거 가게 수',
 	`updated_at`	DATETIME	NOT NULL	COMMENT '수정 시각'
 );
@@ -152,8 +153,8 @@ CREATE TABLE `store_snapshot` (
 	`market_name`	VARCHAR(100)	NULL	COMMENT '시장명',
 	`geom`	VARCHAR(100)	NOT NULL	COMMENT '좌표(geography)',
 	`category_codes`	JSON	NOT NULL	COMMENT '업종 코드 목록',
-	`primary_category`	VARCHAR(20)	NULL	COMMENT '대표 업종',
-	`category_source`	VARCHAR(10)	NULL	COMMENT '업종 근거',
+	`primary_category`	VARCHAR(4)	NOT NULL	COMMENT '대표 업종',
+	`category_source`	VARCHAR(10)	NOT NULL	COMMENT '업종 근거',
 	`subcategory`	VARCHAR(40)	NULL	COMMENT '세부 업종',
 	`payment_codes`	JSON	NOT NULL	COMMENT '결제 코드 목록',
 	`searchable`	BOOLEAN	NOT NULL	COMMENT '검색 대상 여부',
@@ -166,8 +167,8 @@ CREATE TABLE `member` (
 	`status`	VARCHAR(10)	NOT NULL	COMMENT '상태',
 	`nickname`	VARCHAR(12)	NULL	COMMENT '닉네임',
 	`email`	VARCHAR(254)	NULL	COMMENT '이메일',
-	`terms_version`	VARCHAR(20)	NOT NULL	COMMENT '약관 버전',
-	`terms_agreed_at`	DATETIME	NOT NULL	COMMENT '약관 동의 시각',
+	`terms_version`	VARCHAR(20)	NULL	COMMENT '약관 버전',
+	`terms_agreed_at`	DATETIME	NULL	COMMENT '약관 동의 시각',
 	`created_at`	DATETIME	NOT NULL	COMMENT '생성 시각',
 	`last_login_at`	DATETIME	NULL	COMMENT '마지막 로그인',
 	`withdrawn_at`	DATETIME	NULL	COMMENT '탈퇴 시각'
@@ -205,7 +206,7 @@ CREATE TABLE `search_log` (
 	`corpus_version_id`	SMALLINT	NOT NULL	COMMENT '데이터 버전 ID',
 	`query_text`	VARCHAR(50)	NULL	COMMENT '검색어',
 	`input_type`	VARCHAR(15)	NOT NULL	COMMENT '입력 방식',
-	`category_code`	VARCHAR(20)	NULL	COMMENT '업종 코드',
+	`category_code`	VARCHAR(4)	NULL	COMMENT '업종 코드',
 	`payment_codes`	JSON	NOT NULL	COMMENT '결제 코드 목록',
 	`view`	VARCHAR(4)	NOT NULL	COMMENT '화면 종류',
 	`location_source`	VARCHAR(15)	NOT NULL	COMMENT '검색 중심 출처',
@@ -229,6 +230,7 @@ CREATE TABLE `event_log` (
 	`event_id`	CHAR(36)	NOT NULL	COMMENT '이벤트 ID',
 	`server_ts`	DATETIME	NOT NULL	COMMENT '서버 시각',
 	`client_ts`	DATETIME	NULL	COMMENT '화면 시각',
+	`schema_version`	SMALLINT	NOT NULL	COMMENT '로그 형식 버전',
 	`session_id`	CHAR(36)	NOT NULL	COMMENT '세션 ID',
 	`query_id`	CHAR(36)	NULL	COMMENT '검색 ID',
 	`event_type`	VARCHAR(15)	NOT NULL	COMMENT '이벤트 종류',

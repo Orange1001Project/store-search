@@ -1,6 +1,6 @@
 # DB 테이블 설명서
 
-> 기준: `docs/DB_DESIGN.md` v0.3.2(테이블 19개) · 실행 SQL `docs/db/schema.sql` · ERDCloud 그림 `docs/db/erdcloud.sql`
+> 기준: `docs/DB_DESIGN.md` v0.3.4(테이블 19개) · 실행 SQL `docs/db/schema.sql` · ERDCloud 그림 `docs/db/erdcloud.sql`
 > 각 테이블의 역할·주요 규칙과 모든 컬럼의 역할을 적는다. 컬럼표는 `schema.sql`에서 자동으로 만들었다(둘이 다르면 SQL이 맞다).
 > 왜 이렇게 설계했는지(관계·키·줄인 테이블)는 [`DB_DESIGN_WHY.md`](DB_DESIGN_WHY.md).
 > 표기: **PK** = 기본 키(행 하나를 집어내는 값), **FK** = 다른 테이블에 꼭 있어야 하는 값(연결선). 자료형은 PostgreSQL 기준.
@@ -44,7 +44,7 @@
 가게 한 곳이 한 행이다. 원천 엑셀 값과 지금 상태가 같이 있다. 예: 천안의 "피양옥 신불당점".
 
 - `store_id`는 이미 발급한 번호를 바꾸지 않는다. 평가 정답 데이터가 이 번호로 연결되어 있다. 새 가게만 새로 발급한다.
-- `fingerprint`(지문) = 사업자번호 + 가맹점명 + 주소(원천 값). 다음 주 파일의 행이 지난주 그 가게인지 이것으로 판단한다. 그래서 상호나 주소가 바뀌면 새 가게가 된다.
+- `fingerprint`(지문) = 사업자번호 + 가맹점명 + 도로명 주소(원천 값). 도로명 주소는 시군구 + 도로명 + 건물번호까지만 본다(시도 이름·상세 주소·괄호 뒤는 뺌). 다음 주 파일의 행이 지난주 그 가게인지 이것으로 판단한다. 예: "무학1길 30 (봉방동)"과 "무학1길 30 (봉방동) 김창숙미용실"은 같은 가게. 상호나 건물번호가 바뀌면 새 가게가 된다.
 - 사업자번호·가맹점번호·법정동코드·표준산업분류코드는 **문자열**이다. 숫자로 두면 앞자리 0이 사라진다.
 - 상태(`lifecycle_status`): 원천에서 한 번 빠지면 확인 대기(`missing_count` = 1, 바로 검색에서 빠짐), 다음 주에 돌아오면 영업중, 2주 연속 빠지면 폐업.
 - 숨김: 숨길 때도 풀 때도 사유가 필수다. 마지막 숨김·해제의 사유·관리자·시각을 남긴다(`ck_store_visibility`).
@@ -53,7 +53,7 @@
 | 컬럼 | 이름 | 자료형 | 키 | 역할 |
 |---|---|---|---|---|
 | `store_id` | 가맹점 ID | uuid | PK | 기존 UUID 유지(평가 정답과 연결), 새 가게만 gen_random_uuid() |
-| `fingerprint` | 지문 | char(64) |  | sha256(사업자번호+가맹점명+주소), 원천 값으로 |
+| `fingerprint` | 지문 | char(64) |  | sha256(사업자번호+가맹점명+도로명 주소), 원천 값으로. 도로명 주소 = 시군구+도로명+건물번호(시도·상세 주소·괄호 뒤 제외, 공백 무시) |
 | `store_name` | 가맹점명 | varchar(100) |  | 가맹점명(원천 값) |
 | `business_no` | 사업자번호 | varchar(20) |  | 문자열(앞자리 0) |
 | `merchant_no` | 가맹점번호 | varchar(20) |  | 결측·전화번호 형태 섞임, 식별자로 안 씀 |
@@ -94,7 +94,7 @@
 |---|---|---|---|---|
 | `store_id` | 가맹점 ID | uuid | PK FK→store | 가게 고유 번호(평가 데이터와 같은 UUID) |
 | `field_name` | 필드명 | varchar(20) | PK | 수정 대상 필드 · 값: store_name, items, location, market_name, payment_card, payment_qr, category |
-| `override_value` | 수정 값 | jsonb |  | location = {lat, lon, legal_dong_code, address} |
+| `override_value` | 수정 값 | jsonb |  | location = {lat, lng, legal_dong_code, address} |
 | `source_value_at_edit` | 수정 당시 원천 값 | jsonb |  | 수정할 때의 원천 값 |
 | `source_changed` | 원천 바뀜 | boolean |  | 그 뒤 원천 값이 바뀜 → 관리자 화면에 알림(FR-STO-08) |
 | `new_source_value` | 새 원천 값 | jsonb |  | 바뀐 원천 값 |
@@ -125,8 +125,8 @@
 | `market_type` | 시장 분류 | varchar(30) |  | 시장유형(결과 카드·상세, FR-LST-03) |
 | `market_name` | 시장명 | varchar(100) |  | 시장·상점가 이름 |
 | `geom` | 좌표(geography) | geography(point, 4326) |  | 좌표(미터 단위 거리 계산용) |
-| `category_codes` | 업종 코드 목록 | varchar(20)[] |  | 업종 칩 거르기용 목록(지금은 공식 업종 하나) |
-| `primary_category` | 대표 업종 | varchar(20) |  | 대표 업종(category.category_code, K001~K017) |
+| `category_codes` | 업종 코드 목록 | varchar(4)[] |  | 업종 칩 거르기용 목록(지금은 공식 업종 하나) |
+| `primary_category` | 대표 업종 | varchar(4) |  | 대표 업종(category.category_code, K001~K017). 못 찾으면 K010 기타 |
 | `category_source` | 업종 근거 | varchar(10) |  | 업종 근거: 원천 온누리중분류 / 산업분류로 보충 / 관리자 수정(DR-07) · 값: official, ksic, admin |
 | `subcategory` | 세부 업종 | varchar(40) |  | 세부 업종(표준산업분류 세세분류명) |
 | `payment_codes` | 결제 코드 목록 | varchar(10)[] |  | {card, qr} |
@@ -161,7 +161,8 @@
 
 - 파일 본문은 DB에 두지 않고 저장 위치(`file_path`)와 지문(`file_sha256`)만 둔다. 이미 반영한 파일을 다시 넣으면 DB가 막는다.
 - 단계: 올림 → 검사 → 차이 계산 → (승인 대기) → 임베딩 → 전환 → 완료 / 실패 / 취소.
-- 사라지는 가게가 기준(3%)을 넘으면 `needs_approval`이 켜지고 승인을 기다린다.
+- 스크립트도 실행할 관리자 계정을 받아 `started_by`에 넣는다. 1년 지난 작업은 지우되, 활성·직전 버전을 만든 작업은 남긴다.
+- 사라지는 가게가 기준(3%)을 넘으면 `needs_approval`이 켜지고 승인을 기다린다. 원천 정리 기간에는 적용하지 않는다.
 - 진행 중인 작업은 언제나 하나뿐이다(부분 유일 색인).
 
 | 컬럼 | 이름 | 자료형 | 키 | 역할 |
@@ -177,8 +178,8 @@
 | `needs_approval` | 승인 필요 | boolean |  | 사라지는 가게가 기준 %를 넘음(FR-UPD-05) |
 | `preview` | 미리보기 요약 | jsonb |  | 건수, 좌표 오류·충돌 목록 |
 | `error_message` | 오류 메시지 | text |  | 실패 이유 |
-| `edits_applied_until` | 수정 재적용 기준 시각 | timestamptz |  | 이 시각까지의 관리자 수정을 새 버전에 반영함(FR-UPD-07) |
-| `started_by` | 실행자 | bigint | FK→admin_user | 실행한 관리자 |
+| `edits_applied_until` | 수정 재적용 기준 시각 | timestamptz |  | 이 시각까지의 관리자 수정·숨김을 새 버전에 반영함(FR-UPD-07) |
+| `started_by` | 실행자 | bigint | FK→admin_user | 실행한 관리자. 스크립트도 실행할 관리자 계정을 인자로 받는다 |
 | `approved_by` | 승인자 | bigint | FK→admin_user | 승인한 관리자 |
 | `created_at` | 생성 시각 | timestamptz |  | 이 줄을 만든 시각 |
 | `finished_at` | 종료 시각 | timestamptz |  | 끝난 시각 |
@@ -197,7 +198,7 @@
 
 | 컬럼 | 이름 | 자료형 | 키 | 역할 |
 |---|---|---|---|---|
-| `category_code` | 업종 코드 | varchar(20) | PK | K001 식품·마트 … K017 생활서비스 |
+| `category_code` | 업종 코드 | varchar(4) | PK | K001 식품·마트 … K017 생활서비스 |
 | `name` | 이름 | varchar(20) |  | 이름 |
 | `sort_order` | 정렬 순서 | smallint |  | 화면에 보여 줄 순서 |
 | `is_active` | 사용 여부 | boolean |  | 사용 여부 |
@@ -242,6 +243,7 @@
 | `scope` | 지명 범위 | varchar(5) |  | area = 지역 전체, point = 1km 원 · 값: area, point |
 | `code_prefix` | 법정동 코드 앞자리 | varchar(10) |  | 법정동 코드 앞자리(2·5·8자리), area일 때 |
 | `center` | 중심 좌표 | geography(point, 4326) |  | 지명 중심(검색 중심으로 씀) |
+| `dict_version` | 사전 버전 | varchar(30) |  | 지명 사전 버전(파일 이름·날짜, 행마다 같은 값, DR-09) |
 | `evidence_count` | 근거 가게 수 | smallint |  | 같은 이름 지명 고르기용(근거 수) |
 | `updated_at` | 수정 시각 | timestamptz |  | 마지막으로 바꾼 시각(검색 서버가 1분마다 확인) |
 
@@ -275,8 +277,8 @@
 ### `member` — 회원
 
 - 닉네임은 중복을 허용한다. 없으면 `회원` + 숫자 4자리.
-- 동의한 약관 묶음 버전과 동의 시각을 이 행에 둔다(약관 표 없음).
-- **탈퇴**: 행을 지우지 않고 `status`를 탈퇴로, `withdrawn_at`에 시각을 적는다. 닉네임·이메일·마지막 로그인은 그 자리에서 비우고(CHECK로 강제), 로그인 수단·최근 검색어·관심 가맹점은 바로 지운다. 남는 것은 회원 번호와 시각뿐이라 누구였는지 알 수 없다.
+- 동의한 약관 묶음 버전과 동의 시각을 이 행에 둔다(약관 표 없음). 탈퇴하면 이것도 비운다.
+- **탈퇴**: 행을 지우지 않고 `status`를 탈퇴로, `withdrawn_at`에 시각을 적는다. 닉네임·이메일·마지막 로그인·약관 버전·동의 시각은 그 자리에서 비우고(CHECK로 강제), 로그인 수단·최근 검색어·관심 가맹점은 바로 지운다. 남는 것은 회원 번호와 시각뿐이라 누구였는지 알 수 없다.
 - 로그인 유지용 갱신 토큰은 DB가 아니라 세션 저장소(Redis)에 둔다.
 
 | 컬럼 | 이름 | 자료형 | 키 | 역할 |
@@ -285,8 +287,8 @@
 | `status` | 상태 | varchar(10) |  | 회원 / 탈퇴. 탈퇴해도 행은 지우지 않고 개인정보만 비움 · 값: active, withdrawn |
 | `nickname` | 닉네임 | varchar(12) |  | 중복 허용, 없으면 '회원1234'. 탈퇴하면 NULL |
 | `email` | 이메일 | varchar(254) |  | 선택 동의. 탈퇴하면 NULL |
-| `terms_version` | 약관 버전 | varchar(20) |  | 동의한 약관 묶음 버전(이용약관·개인정보·만 14세) |
-| `terms_agreed_at` | 약관 동의 시각 | timestamptz |  | 약관 동의 시각(DR-19) |
+| `terms_version` | 약관 버전 | varchar(20) |  | 동의한 약관 묶음 버전(이용약관·개인정보·만 14세). 탈퇴하면 NULL |
+| `terms_agreed_at` | 약관 동의 시각 | timestamptz |  | 약관 동의 시각(DR-19). 탈퇴하면 NULL |
 | `created_at` | 생성 시각 | timestamptz |  | 가입 시각 |
 | `last_login_at` | 마지막 로그인 | timestamptz |  | 탈퇴하면 NULL |
 | `withdrawn_at` | 탈퇴 시각 | timestamptz |  | 탈퇴 시각 |
@@ -369,7 +371,7 @@
 | `corpus_version_id` | 데이터 버전 ID | smallint |  | 검색한 데이터 버전(FK 없음) |
 | `query_text` | 검색어 | varchar(50) |  | 검색어 없는 조회는 NULL |
 | `input_type` | 입력 방식 | varchar(15) |  | 값: typed, recent, autocomplete, chip, browse, place |
-| `category_code` | 업종 코드 | varchar(20) |  | 고른 업종 칩 |
+| `category_code` | 업종 코드 | varchar(4) |  | 고른 업종 칩 |
 | `payment_codes` | 결제 코드 목록 | varchar(10)[] |  | 고른 결제 칩(여러 개, 빈 목록 = 전체) |
 | `view` | 화면 종류 | varchar(4) |  | 목록 / 지도 · 값: list, map |
 | `location_source` | 검색 중심 출처 | varchar(15) |  | 값: query_region, ui_region, map_viewport, gps, default |
@@ -390,25 +392,26 @@
 
 ### `event_log` — 행동 이벤트 로그
 
-노출·클릭·길찾기·공유 같은 행동이다. `query_id`로 어느 검색에서 나온 행동인지 잇는다. 같은 이벤트가 재전송되면 통계 때 `event_id`로 한 번만 센다.
+노출·클릭·길찾기·공유 같은 행동이다. 이벤트 형식 버전(`schema_version`)을 같이 남긴다. `query_id`로 어느 검색에서 나온 행동인지 잇는다. 같은 이벤트가 재전송되면 통계 때 `event_id`로 한 번만 센다.
 
 | 컬럼 | 이름 | 자료형 | 키 | 역할 |
 |---|---|---|---|---|
 | `event_id` | 이벤트 ID | uuid | PK | 화면이 만든 번호. 재전송 중복은 통계 때 한 번만 셈 |
 | `server_ts` | 서버 시각 | timestamptz | PK | 서버가 받은 시각(월 파티션 기준) |
 | `client_ts` | 화면 시각 | timestamptz |  | 화면에서 일어난 시각 |
+| `schema_version` | 로그 형식 버전 | smallint |  | 이벤트 형식 버전(FR-LOG-04) |
 | `session_id` | 세션 ID | uuid |  | 세션 번호(30분 쉬면 새로 발급, 회원과 무관) |
 | `query_id` | 검색 ID | uuid |  | 어느 검색에서 나온 행동인지 |
 | `event_type` | 이벤트 종류 | varchar(15) |  | 값: impression, click, action, dwell, region_choice, chip_change, research_here, cluster_click, pin_click, reformulate, abandon |
 | `store_id` | 가맹점 ID | uuid |  | 가게 고유 번호(평가 데이터와 같은 UUID) |
 | `position` | 순위 | smallint |  | 화면 순위(1부터) |
-| `action_type` | 행동 종류 | varchar(10) |  | 값: call, directions, favorite, share, pay |
+| `action_type` | 행동 종류 | varchar(10) |  | 값: directions, favorite, share |
 | `payload` | 추가 정보 | jsonb |  | 본 가게 목록, 머문 초, 고른 지역 등 |
 | `is_bot` | 봇 여부 | boolean |  | 봇으로 판정되면 true(통계 제외) |
 
 ### `stats_daily` — 일별 통계
 
-날짜 × 화면(목록·지도) × 검색 의도별 검색 수, 결과 없음, 클릭, 재검색 같은 숫자다. 관리자 통계 화면이 이것을 읽고, 1년이 지나도 계속 보관한다. 인기 검색어·결과 없는 검색어는 필요할 때 검색 로그에서 계산한다.
+날짜 × 화면(목록·지도) × 검색 의도별 검색 수, 결과 없음, 클릭, 재검색 같은 숫자다. 관리자 통계 화면이 이것을 읽고, 1년이 지나도 계속 보관한다. 인기 검색어·결과 없는 검색어·문구별 비율은 검색 로그에서 계산하므로 1년 안 기간만 볼 수 있다.
 
 | 컬럼 | 이름 | 자료형 | 키 | 역할 |
 |---|---|---|---|---|

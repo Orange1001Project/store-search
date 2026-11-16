@@ -1,4 +1,4 @@
--- 가맹점 검색 서비스 DB 스키마 (초안 v0.3, 2026-11-13) — 필수 테이블 19개
+-- 가맹점 검색 서비스 DB 스키마 (초안 v0.3.4, 2026-11-16) — 필수 테이블 19개
 -- 대상: PostgreSQL 16 + PostGIS 3.4 + pgvector 0.8 이상
 -- 설계 설명: docs/DB_DESIGN.md · 입력: docs/REQUIREMENTS.md 4절(DR-01~19)
 --
@@ -34,7 +34,7 @@ CREATE TABLE admin_user (
 -- 검색 서버는 1분마다 표마다 count(*)·max(updated_at)를 읽어, 바뀐 표만 통째로 다시 메모리에 올린다.
 -- =====================================================================
 CREATE TABLE category (                                          -- 업종 칩 17개 = 공식 온누리 중분류(configs/category/taxonomy_v1.yaml)
-    category_code  varchar(20) PRIMARY KEY,                      -- K001 식품·마트 … K017 생활서비스
+    category_code  varchar(4)  PRIMARY KEY,                      -- K001 식품·마트 … K017 생활서비스
     name           varchar(20) NOT NULL UNIQUE,
     sort_order     smallint    NOT NULL,
     is_active      boolean     NOT NULL DEFAULT true,
@@ -69,6 +69,7 @@ CREATE TABLE gazetteer (                                         -- 지명 사�
     scope           varchar(5)  NOT NULL CHECK (scope IN ('area', 'point')),   -- area = 지역 전체, point = 1km 원
     code_prefix     varchar(10),                                 -- 법정동 코드 앞자리(2·5·8자리), area일 때
     center          geography(Point, 4326) NOT NULL,             -- 지명 중심(검색 중심으로 씀)
+    dict_version    varchar(30) NOT NULL,                        -- 지명 사전 버전(파일 이름·날짜, 행마다 같은 값, DR-09)
     evidence_count  smallint,                                    -- 같은 이름 지명 고르기용(근거 수)
     updated_at      timestamptz NOT NULL DEFAULT now()
 );
@@ -124,8 +125,8 @@ CREATE TABLE refresh_job (                                       -- 주간 갱�
     needs_approval      boolean      NOT NULL DEFAULT false,     -- 사라지는 가게가 기준 %를 넘음(FR-UPD-05)
     preview             jsonb,                                   -- 건수, 좌표 오류·충돌 목록
     error_message       text,
-    edits_applied_until timestamptz,                             -- 이 시각까지의 관리자 수정을 새 버전에 반영함(FR-UPD-07)
-    started_by          bigint       NOT NULL REFERENCES admin_user (admin_id),
+    edits_applied_until timestamptz,                             -- 이 시각까지의 관리자 수정·숨김을 새 버전에 반영함(FR-UPD-07)
+    started_by          bigint       NOT NULL REFERENCES admin_user (admin_id),   -- 실행한 관리자. 스크립트도 실행할 관리자 계정을 인자로 받는다
     approved_by         bigint       REFERENCES admin_user (admin_id),
     created_at          timestamptz  NOT NULL DEFAULT now(),
     finished_at         timestamptz
@@ -141,7 +142,7 @@ CREATE UNIQUE INDEX uq_refresh_job_file_done ON refresh_job (file_sha256) WHERE 
 -- =====================================================================
 CREATE TABLE store (                                             -- 가게 1곳 = 1행: 원천 값 + 현재 상태
     store_id            uuid        PRIMARY KEY,                 -- 기존 UUID 유지(평가 정답과 연결), 새 가게만 gen_random_uuid()
-    fingerprint         char(64)    NOT NULL UNIQUE,             -- sha256(사업자번호+가맹점명+주소), 원천 값으로
+    fingerprint         char(64)    NOT NULL UNIQUE,             -- sha256(사업자번호+가맹점명+도로명 주소), 원천 값으로. 도로명 주소 = 시군구+도로명+건물번호(시도·상세 주소·괄호 뒤 제외, 공백 무시)
     -- 원천 값(매주 원천 파일로 덮어씀. 관리자가 고친 값은 store_override에)
     store_name          varchar(100) NOT NULL,
     business_no         varchar(20)  NOT NULL,                   -- 문자열(앞자리 0)
@@ -177,14 +178,14 @@ CREATE TABLE store (                                             -- 가게 1곳 
     CONSTRAINT ck_store_closed_missing CHECK (lifecycle_status <> 'closed' OR missing_count >= 2)
 );
 CREATE INDEX ix_store_business_no ON store (business_no);
-CREATE INDEX ix_store_name ON store (store_name varchar_pattern_ops);   -- 관리자 상호 앞부분 검색
+CREATE INDEX ix_store_visibility ON store (visibility_changed_at);   -- 전환 직전 숨김·해제 재적용 대상 찾기(FR-UPD-07)
 
 CREATE TABLE store_override (                                    -- 관리자 수정 값(가게 × 필드, 해제하면 행 삭제)
     store_id             uuid        NOT NULL REFERENCES store (store_id),
     field_name           varchar(20) NOT NULL
                          CHECK (field_name IN ('store_name', 'items', 'location', 'market_name',
                                                'payment_card', 'payment_qr', 'category')),
-    override_value       jsonb       NOT NULL,                   -- location = {lat, lon, legal_dong_code, address}
+    override_value       jsonb       NOT NULL,                   -- location = {lat, lng, legal_dong_code, address}
     source_value_at_edit jsonb,                                  -- 수정할 때의 원천 값
     source_changed       boolean     NOT NULL DEFAULT false,     -- 그 뒤 원천 값이 바뀜 → 관리자 화면에 알림(FR-STO-08)
     new_source_value     jsonb,                                  -- 바뀐 원천 값
@@ -213,9 +214,9 @@ CREATE TABLE store_snapshot (
     market_type       varchar(30),                               -- 시장유형(결과 카드·상세, FR-LST-03)
     market_name       varchar(100),
     geom             geography(Point, 4326) NOT NULL,
-    category_codes    varchar(20)[] NOT NULL DEFAULT '{}',       -- 업종 칩 거르기용 목록(지금은 공식 업종 하나)
-    primary_category  varchar(20),                               -- 대표 업종(category.category_code, K001~K017)
-    category_source   varchar(10) CHECK (category_source IN ('official', 'ksic', 'admin')),   -- 업종 근거: 원천 온누리중분류 / 산업분류로 보충 / 관리자 수정(DR-07)
+    category_codes    varchar(4)[] NOT NULL DEFAULT '{}',        -- 업종 칩 거르기용 목록(지금은 공식 업종 하나)
+    primary_category  varchar(4)   NOT NULL,                     -- 대표 업종(category.category_code, K001~K017). 못 찾으면 K010 기타
+    category_source   varchar(10)  NOT NULL CHECK (category_source IN ('official', 'ksic', 'admin')),   -- 업종 근거: 원천 온누리중분류 / 산업분류로 보충 / 관리자 수정(DR-07)
     subcategory       varchar(40),                               -- 세부 업종(표준산업분류 세세분류명)
     payment_codes     varchar(10)[] NOT NULL DEFAULT '{}',       -- {card, qr}
     searchable        boolean      NOT NULL,                     -- 영업중 · 숨김 아님 · 좌표 오류 아님
@@ -236,16 +237,18 @@ CREATE TABLE member (
     status           varchar(10) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'withdrawn')),
     nickname         varchar(12),                                -- 중복 허용, 없으면 '회원1234'. 탈퇴하면 NULL
     email            varchar(254),                               -- 선택 동의. 탈퇴하면 NULL
-    terms_version    varchar(20) NOT NULL,                       -- 동의한 약관 묶음 버전(이용약관·개인정보·만 14세)
-    terms_agreed_at  timestamptz NOT NULL,                       -- 약관 동의 시각(DR-19)
+    terms_version    varchar(20),                                -- 동의한 약관 묶음 버전(이용약관·개인정보·만 14세). 탈퇴하면 NULL
+    terms_agreed_at  timestamptz,                                -- 약관 동의 시각(DR-19). 탈퇴하면 NULL
     created_at       timestamptz NOT NULL DEFAULT now(),         -- 가입 시각
     last_login_at    timestamptz,                                -- 탈퇴하면 NULL
     withdrawn_at     timestamptz,                                -- 탈퇴 시각
     CONSTRAINT ck_member_nickname_len CHECK (nickname IS NULL OR char_length(nickname) BETWEEN 2 AND 12),
     CONSTRAINT ck_member_status CHECK (
-        (status = 'active'    AND nickname IS NOT NULL AND withdrawn_at IS NULL)
+        (status = 'active'    AND nickname IS NOT NULL AND withdrawn_at IS NULL
+                              AND terms_version IS NOT NULL AND terms_agreed_at IS NOT NULL)
      OR (status = 'withdrawn' AND withdrawn_at IS NOT NULL
-                              AND nickname IS NULL AND email IS NULL AND last_login_at IS NULL))
+                              AND nickname IS NULL AND email IS NULL AND last_login_at IS NULL
+                              AND terms_version IS NULL AND terms_agreed_at IS NULL))
 );
 
 CREATE TABLE member_auth (                                       -- 로그인 수단(회원 1 : N)
@@ -291,7 +294,7 @@ CREATE TABLE search_log (                                        -- 중심 로�
     query_text         varchar(50),                              -- 검색어 없는 조회는 NULL
     input_type         varchar(15) NOT NULL
                        CHECK (input_type IN ('typed', 'recent', 'autocomplete', 'chip', 'browse', 'place')),
-    category_code      varchar(20),                              -- 고른 업종 칩
+    category_code      varchar(4),                               -- 고른 업종 칩
     payment_codes      varchar(10)[] NOT NULL DEFAULT '{}',      -- 고른 결제 칩(여러 개, 빈 목록 = 전체)
     view               varchar(4)  NOT NULL CHECK (view IN ('list', 'map')),
     location_source    varchar(15) NOT NULL
@@ -315,10 +318,11 @@ CREATE TABLE search_log (                                        -- 중심 로�
 CREATE INDEX ix_search_log_time    ON search_log (logged_at);
 CREATE INDEX ix_search_log_session ON search_log (session_id, logged_at);
 
-CREATE TABLE event_log (                                         -- 행동 이벤트(노출·클릭·전화·길찾기 등)
+CREATE TABLE event_log (                                         -- 행동 이벤트(노출·클릭·길찾기·공유 등)
     event_id        uuid        NOT NULL,                        -- 화면이 만든 번호. 재전송 중복은 통계 때 한 번만 셈
     server_ts       timestamptz NOT NULL,
     client_ts       timestamptz,
+    schema_version  smallint    NOT NULL,                        -- 이벤트 형식 버전(FR-LOG-04)
     session_id      uuid        NOT NULL,
     query_id        uuid,                                        -- 어느 검색에서 나온 행동인지
     event_type      varchar(15) NOT NULL
@@ -326,7 +330,7 @@ CREATE TABLE event_log (                                         -- 행동 이�
                                           'research_here', 'cluster_click', 'pin_click', 'reformulate', 'abandon')),
     store_id        uuid,
     position        smallint,
-    action_type     varchar(10) CHECK (action_type IN ('call', 'directions', 'favorite', 'share', 'pay')),
+    action_type     varchar(10) CHECK (action_type IN ('directions', 'favorite', 'share')),
     payload         jsonb,                                       -- 본 가게 목록, 머문 초, 고른 지역 등
     is_bot          boolean     NOT NULL DEFAULT false,
     PRIMARY KEY (event_id, server_ts)
@@ -373,28 +377,29 @@ INSERT INTO category (category_code, name, sort_order) VALUES
     ('K017', '생활서비스', 17);
 
 -- =====================================================================
--- 10. 갱신 작업이 실행하는 예시(데이터 버전 7 만들기)
+-- 10. 갱신 작업이 실행하는 예시(데이터 버전 7 만들기) — 설명용 주석. 이 파일을 실행해도 돌지 않는다
 -- =====================================================================
 -- (1) 새 버전 파티션: 빈 테이블로 만들어 채우고 인덱스까지 만든 뒤 붙인다(붙이기 전에는 검색에 안 보임)
-CREATE TABLE store_snapshot_v7 (LIKE store_snapshot INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
+-- CREATE TABLE store_snapshot_v7 (LIKE store_snapshot INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
 --   ... INSERT INTO store_snapshot_v7 SELECT ... (바뀌지 않은 가게는 이전 버전 벡터를 복사, 바뀐 가게만 임베딩 서버로) ...
-ALTER TABLE store_snapshot_v7 ADD PRIMARY KEY (version_id, store_id);
-CREATE INDEX ix_store_snapshot_v7_geom ON store_snapshot_v7 USING gist (geom) WHERE searchable;
-CREATE INDEX ix_store_snapshot_v7_code ON store_snapshot_v7 (legal_dong_code varchar_pattern_ops) WHERE searchable;
-ALTER TABLE store_snapshot_v7 ADD CONSTRAINT ck_store_snapshot_v7_version CHECK (version_id = 7);
+-- ALTER TABLE store_snapshot_v7 ADD PRIMARY KEY (version_id, store_id);
+-- CREATE INDEX ix_store_snapshot_v7_geom ON store_snapshot_v7 USING gist (geom) WHERE searchable;
+-- CREATE INDEX ix_store_snapshot_v7_code ON store_snapshot_v7 (legal_dong_code varchar_pattern_ops) WHERE searchable;
+-- ALTER TABLE store_snapshot_v7 ADD CONSTRAINT ck_store_snapshot_v7_version CHECK (version_id = 7);
 -- (2) 전환(한 트랜잭션): 파티션 붙이기 → 이전 활성 버전 내리기 → 새 버전 올리기(활성은 하나만 허용)
 -- BEGIN;
-ALTER TABLE store_snapshot ATTACH PARTITION store_snapshot_v7 FOR VALUES IN (7);
+-- ALTER TABLE store_snapshot ATTACH PARTITION store_snapshot_v7 FOR VALUES IN (7);
 -- UPDATE data_version SET status = 'retired' WHERE status = 'active';
 -- UPDATE data_version SET status = 'active', activated_at = now() WHERE version_id = 7;
 -- COMMIT;
 -- (3) 직전 버전 1개만 남기고 더 오래된 파티션은 떼어 내고 지운다
--- ALTER TABLE store_snapshot DETACH PARTITION store_snapshot_v5; DROP TABLE store_snapshot_v5;
+-- ALTER TABLE store_snapshot DETACH PARTITION store_snapshot_v5 CONCURRENTLY;   -- 트랜잭션 밖에서. 부모 표를 길게 잠그지 않아 검색이 멈추지 않는다(NFR-OPS-02)
+-- DROP TABLE store_snapshot_v5;
 
--- 로그 파티션 예시(한국 시간 2026년 11월). 스케줄러가 매달 다음 달 것을 미리 만들고, 1년 지난 달은 DROP
+-- 로그 파티션(한국 시간 2026년 11월). 스케줄러가 매달 두 달 앞 것까지 미리 만들고, 1년 지난 달은 DROP
 CREATE TABLE search_log_2026_11 PARTITION OF search_log
     FOR VALUES FROM ('2026-11-01 00:00:00+09') TO ('2026-12-01 00:00:00+09');
 CREATE TABLE event_log_2026_11 PARTITION OF event_log
     FOR VALUES FROM ('2026-11-01 00:00:00+09') TO ('2026-12-01 00:00:00+09');
-CREATE TABLE search_log_default PARTITION OF search_log DEFAULT;   -- 파티션을 못 만든 달에 대비
-CREATE TABLE event_log_default PARTITION OF event_log DEFAULT;
+-- DEFAULT 파티션은 두지 않는다: 그 달 행이 DEFAULT에 들어가면 다음 달 파티션을 만들 수 없고 월 단위 삭제에서도 빠진다.
+-- 대신 스케줄러가 두 달 앞 파티션까지 미리 만들고, 다음 달 파티션이 없으면 알람.

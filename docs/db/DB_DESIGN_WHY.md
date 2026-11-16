@@ -1,6 +1,6 @@
 # DB 설계 이유서
 
-> 기준: `docs/DB_DESIGN.md` v0.3.2(테이블 19개) · `docs/db/schema.sql`
+> 기준: `docs/DB_DESIGN.md` v0.3.4(테이블 19개) · `docs/db/schema.sql`
 > 이 문서는 **왜 이렇게 설계했는지**를 적는다. 무엇이 있는지는 [`DB_TABLES.md`](DB_TABLES.md)(테이블·컬럼 설명), 전체 명세는 [`../DB_DESIGN.md`](../DB_DESIGN.md)를 본다.
 > 결정의 출처는 요구사항(`docs/REQUIREMENTS.md` 4절 DR)과 팀 결정(2026-11-10 ~ 11-13)이다.
 
