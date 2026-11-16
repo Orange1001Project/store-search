@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: 가맹점 검색 서비스 API
-  version: 0.5.0
+  version: 0.6.0
   description: |
     공통 규칙은 docs/api/API_RULES.md, 기능 근거는 docs/REQUIREMENTS.md(2절 FR, 5절 IR).
     v0.2: P0 API(사용자 검색·조회·상세, 관리자 로그인·가맹점 수정·숨김).
@@ -10,6 +10,9 @@ info:
     v0.3(2026-11-13): 관리자 화면 축소. 주간 갱신 API는 P2(1차는 서버 스크립트), 주소·좌표 수정은 화면 없이 DB에서 직접.
     v0.5(2026-11-16): PR #11 리뷰 반영. 회원도 csrf_token을 받음, returnTo 검사 강화, P0 필드 수정에서 location 제외,
     모든 API에 429, 이벤트 schemaVersion, 갱신 업로드 422.
+    v0.6(2026-11-16): 화면 흐름 보완. 칩 재검색 규칙, 핀에 카드 필드(핀만 눌러도 요약 카드), "○○ 지역으로 보기"(skipNameFirst·regionId),
+    작은 줄 문구 name_first·region_ambiguous 분리, favorited는 응답 때마다 계산, 지명만 입력은 주변 가게까지 한 번에,
+    inputType 정리, 통계 intent·view 필터. P2 API는 API_RULES.md 10절에 목록만.
     모든 API는 요청 제한(NFR-SEC-04)을 넘으면 429 RATE_LIMITED와 Retry-After를 줄 수 있다.
 servers:
   - url: /api/v1
@@ -43,7 +46,9 @@ paths:
       tags: [meta]
       operationId: getMeta
       summary: 칩 목록·기본 위치·제한 값
-      description: 화면이 처음 열릴 때 한 번 부른다. 업종 칩 17개, 결제 칩, 기본 위치, 검색어 최대 길이 등.
+      description: |
+        화면이 처음 열릴 때 한 번 부른다. 업종 칩 17개, 결제 칩, 기본 위치, 검색어 최대 길이 등.
+        관리자 화면도 업종 목록(A-03 필터, A-04 업종 수정 선택지)을 이 API에서 받는다. 관리자 전용 업종 API는 두지 않는다.
       x-priority: P0
       x-requirements: [FR-MSG-01, FR-MSG-04, FR-LOC-02, FR-SRC-01]
       security: [{}, { sessionCookie: [] }]
@@ -67,9 +72,20 @@ paths:
         - 결과 0곳은 오류가 아니다. 200 + 빈 목록 + message.
         - 검색하지 않는 입력(빈 값, 일반어만)은 화면이 막는다(⑪). 서버에 오면 400 INVALID_REQUEST.
         - 요청마다 새 queryId. 칩을 바꾸면 새 검색이다(FR-MSG-01·04).
+        - **칩 재검색**: 화면은 직전 /search 요청 본문을 그대로 두고 categoryCode·paymentCodes만 바꾸고 inputType=chip으로 보낸다.
+          q·view·center·centerSource·bounds·regionChoice·skipNameFirst는 직전 값 그대로(그사이 지도를 옮겼어도 '현 지도 재검색'을 누르기 전에는 직전 조건).
+          지도: view=list면 mapFit으로 결과에 다시 맞추고, view=map이면 mapFit = null(지도를 옮기지 않음).
+        - **"○○ 지역으로 보기"**(상호 우선 결과의 작은 줄 name_first, FR-SRC-07): 같은 q에 skipNameFirst=true, inputType=region_view로 다시 검색.
+          서버는 상호 우선을 건너뛰고 검색어의 지역(interpretation.region)으로 거른다.
+        - **"다른 ○○"**(P1, FR-MAP-10): 같은 q에 regionChoice=고른 regionId, inputType=region_choice.
+        - **지명만 입력**(P1, FR-SRC-04): placeOnly를 채우고, 그 지역 화면 범위(placeOnly.mapFit)의 검색어 없는 조회 결과를
+          results·pins·nextCursor에 함께 준다(/browse를 따로 부르지 않음). 로그 입력 방식은 서버가 place로 정한다.
+          "'노량진수산' 가게 보기"는 q=노량진수산, inputType=place_store로 새 검색.
+        - pins는 결과 카드와 같은 필드를 가진다. 핀을 누르면 추가 호출 없이 요약 카드(U-05)를 띄운다.
+        - favorited(P1)는 결과를 캐시에 넣을 때가 아니라 응답할 때마다 그 회원의 관심 가맹점으로 붙인다(/page 포함).
         - 로그인했으면(P1) 회원 쿠키를 읽어 최근 검색어를 저장한다. P0에서는 무시한다.
       x-priority: P0
-      x-requirements: [IR-01, FR-SRC-05, FR-LOC-01, FR-LOC-05, FR-LOC-06, FR-RNK-01, FR-RNK-09, FR-MSG-02, FR-MAP-02, FR-MAP-03, FR-MAP-04, FR-LST-02]
+      x-requirements: [IR-01, FR-SRC-05, FR-SRC-07, FR-LOC-01, FR-LOC-05, FR-LOC-06, FR-LOC-07, FR-RNK-01, FR-RNK-09, FR-MSG-01, FR-MSG-02, FR-MSG-04, FR-MAP-02, FR-MAP-03, FR-MAP-04, FR-MAP-08, FR-LST-02]
       security: [{ sessionCookie: [] }]
       requestBody:
         required: true
@@ -98,6 +114,27 @@ paths:
                   centerSource: map_viewport
                   bounds: { sw: { lat: 36.3402, lng: 127.3651 }, ne: { lat: 36.3634, lng: 127.3921 } }
                   paymentCodes: [qr]
+              chipChange:
+                summary: 칩 재검색(위 검색창 검색에서 업종만 바꿈)
+                value:
+                  q: 신촌 설렁탕
+                  inputType: chip
+                  view: list
+                  center: { lat: 37.5551, lng: 126.9368 }
+                  centerSource: gps
+                  userLocation: { lat: 37.5551, lng: 126.9368 }
+                  categoryCode: K006
+                  paymentCodes: []
+              regionView:
+                summary: "○○ 지역으로 보기(상호 우선 끄기)"
+                value:
+                  q: 둔산 가마치통닭
+                  inputType: region_view
+                  view: list
+                  center: { lat: 36.3518, lng: 127.3786 }
+                  centerSource: gps
+                  skipNameFirst: true
+                  paymentCodes: []
       responses:
         '200':
           description: 성공(결과 0곳 포함)
@@ -115,9 +152,10 @@ paths:
       summary: 검색어 없는 조회 (화면 안 가맹점)
       description: |
         첫 화면, 칩만 고름, 검색어 없이 '현 지도 재검색'(FR-BRW-01~04). 화면 안 검색 대상 가게를 검색 중심 가까운 순으로 최대 300곳.
-        관련 확률·점수 없음. 핀은 전부, 시트 목록은 첫 20곳(다음은 /search/{queryId}/page).
+        관련 확률·점수 없음. 핀은 전부(결과 카드와 같은 필드), 시트 목록은 첫 20곳(다음은 /search/{queryId}/page).
+        칩을 바꾸면 지금 보이는 화면 범위(bounds)에 칩을 적용해 다시 부른다(FR-BRW-02). 지도는 옮기지 않는다.
       x-priority: P0
-      x-requirements: [IR-03, FR-BRW-01, FR-BRW-02, FR-BRW-03, FR-BRW-04]
+      x-requirements: [IR-03, FR-BRW-01, FR-BRW-02, FR-BRW-03, FR-BRW-04, FR-MAP-08]
       security: [{ sessionCookie: [] }]
       requestBody:
         required: true
@@ -141,6 +179,7 @@ paths:
       summary: 다음 20곳
       description: |
         검색·조회 결과(≤ 300)는 서버 캐시에 10분 보관한다(FR-LST-02). 그 목록에서 다음 20곳을 준다.
+        캐시에는 가게 순서·점수·카드 값만 두고, favorited(P1)는 이 응답을 만들 때 다시 붙인다.
         페이지를 볼 때마다 검색 로그에 같은 queryId로 한 줄을 남긴다(FR-LOG-02).
         10분이 지나면 410 SEARCH_RESULT_EXPIRED → 화면이 같은 조건으로 다시 검색(8절).
       x-priority: P0
@@ -964,9 +1003,7 @@ paths:
           in: query
           schema: { type: string, enum: [day, week, month], default: day }
         - $ref: '#/components/parameters/StatView'
-        - name: intent
-          in: query
-          schema: { type: string, enum: [all, name, brand, category], default: all }
+        - $ref: '#/components/parameters/StatIntent'
       responses:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '200':
@@ -990,6 +1027,7 @@ paths:
         - $ref: '#/components/parameters/StatFrom'
         - $ref: '#/components/parameters/StatTo'
         - $ref: '#/components/parameters/StatView'
+        - $ref: '#/components/parameters/StatIntent'
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
@@ -1025,6 +1063,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/StatFrom'
         - $ref: '#/components/parameters/StatTo'
+        - $ref: '#/components/parameters/StatView'
+        - $ref: '#/components/parameters/StatIntent'
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -1065,6 +1105,7 @@ paths:
         - $ref: '#/components/parameters/StatFrom'
         - $ref: '#/components/parameters/StatTo'
         - $ref: '#/components/parameters/StatView'
+        - $ref: '#/components/parameters/StatIntent'
       responses:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '200':
@@ -1162,6 +1203,11 @@ components:
       name: view
       in: query
       schema: { type: string, enum: [all, list, map], default: all }
+    StatIntent:
+      name: intent
+      in: query
+      description: 검색어 해석 의도별(FR-STA-01). all = 전체
+      schema: { type: string, enum: [all, name, brand, category], default: all }
     Page:
       name: page
       in: query
@@ -1256,8 +1302,12 @@ components:
 
     SubMessageCode:
       type: string
-      description: 검색창 아래 작은 줄 문구 코드(FR-MSG-02 ⑦·⑨)
-      enum: [region_info, default_location]
+      description: |
+        검색창 아래 작은 줄 문구 코드(FR-MSG-02 ⑦·⑨). ⑦은 두 경우라 코드를 나눈다(v0.6).
+        name_first(P0): '{storeName}' 가게를 먼저 보여 드려요 · {region} 지역으로 보기 → skipNameFirst=true로 다시 검색.
+        region_ambiguous(P1): {region}에서 찾았어요 · 다른 {name} → interpretation.otherRegions에서 골라 regionChoice로 다시 검색.
+        default_location: 위치 정보가 없어 기본 위치 기준으로 찾았어요 · 위치 켜기(⑨).
+      enum: [name_first, region_ambiguous, default_location]
 
     Message:
       type: object
@@ -1281,7 +1331,7 @@ components:
         code: { $ref: '#/components/schemas/SubMessageCode' }
         params:
           type: object
-          description: 'region, name(같은 이름 지명), storeName(상호 우선)'
+          description: 'name_first → storeName·region, region_ambiguous → region·name'
           properties:
             region: { type: string }
             name: { type: string }
@@ -1334,8 +1384,13 @@ components:
           description: 검색어. 서버가 NFKC·공백 정리(FR-SRC-02)
         inputType:
           type: string
-          description: 'typed 직접 입력, chip 칩을 바꿔 다시 검색. recent·autocomplete는 P1·P2'
-          enum: [typed, recent, autocomplete, chip]
+          description: |
+            화면이 사용자가 한 일을 보낸다(로그 input_type, SEARCH_LOGGING.md 2절).
+            typed 직접 입력·'현 지도 재검색', recent 최근 검색어(P1), chip 칩을 바꿔 다시 검색,
+            region_view "○○ 지역으로 보기"(skipNameFirst), region_choice "다른 ○○"(P1), place_store 지명만 입력의 "'○○' 가게 보기"(P1),
+            autocomplete 자동완성(P2).
+            browse(검색어 없는 조회)·place(지명만 입력)는 화면이 보내지 않고 서버가 정한다.
+          enum: [typed, recent, chip, region_view, region_choice, place_store, autocomplete]
         view:
           type: string
           enum: [list, map]
@@ -1355,7 +1410,13 @@ components:
           $ref: '#/components/schemas/Bounds'
         regionChoice:
           type: string
-          description: '"다른 ○○"에서 고른 지역 ID(P1, FR-MAP-10)'
+          description: '"다른 ○○"에서 고른 지역 ID(interpretation.otherRegions[].regionId, P1, FR-MAP-10)'
+        skipNameFirst:
+          type: boolean
+          default: false
+          description: |
+            true면 상호 우선(FR-SRC-07)을 건너뛰고 검색어의 지역으로 거른다. 작은 줄 name_first의 "○○ 지역으로 보기"를 누를 때(inputType=region_view).
+            칩 재검색에서는 직전 값 그대로.
         categoryCode:
           oneOf:
             - $ref: '#/components/schemas/CategoryCode'
@@ -1410,7 +1471,7 @@ components:
           items: { $ref: '#/components/schemas/PaymentCode' }
         favorited:
           type: boolean
-          description: 로그인한 회원의 관심 가맹점이면 true(P1). 비회원 응답에는 없음
+          description: 로그인한 회원의 관심 가맹점이면 true(P1). 비회원 응답에는 없음. 캐시하지 않고 응답할 때마다 계산(/page 포함)
 
     StoreCard:
       description: 검색·조회 결과 카드
@@ -1425,14 +1486,14 @@ components:
               description: 검색 중심에서의 거리(m). 화면 거리 표시는 GPS로 화면이 계산(FR-LST-04)
 
     StorePin:
-      type: object
-      description: 지도 핀(최소 필드)
-      required: [storeId, location]
-      properties:
-        storeId: { type: string, format: uuid }
-        name: { type: string }
-        location: { $ref: '#/components/schemas/LatLng' }
-        topStore: { type: boolean, description: 맨 위 가게(FR-RNK-05) }
+      description: |
+        지도 핀. 결과 카드(StoreCard)와 같은 필드 + topStore(v0.6). 핀을 누르면 추가 호출 없이 요약 카드(U-05, FR-MAP-08)를 띄우고,
+        pin_click 이벤트의 position에 rank를 쓴다. 300곳이면 압축 전 약 75KB.
+      allOf:
+        - $ref: '#/components/schemas/StoreCard'
+        - type: object
+          properties:
+            topStore: { type: boolean, description: 맨 위 가게(FR-RNK-05) }
 
     Interpretation:
       type: object
@@ -1440,13 +1501,15 @@ components:
       properties:
         region:
           type: [object, 'null']
+          description: 검색어에서 읽은 지역. 상호 우선이면 거르지 않았어도 채운다("○○ 지역으로 보기"의 ○○)
           properties:
+            regionId: { type: string, description: 지명 사전 ID(regionChoice와 같은 형식) }
             name: { type: string, examples: [대전 중구] }
             scope: { type: string, enum: [wide, narrow] }
         intent:
           type: [string, 'null']
           enum: [name, brand, category, null]
-        nameFirst: { type: boolean, description: 상호 우선(FR-SRC-07) }
+        nameFirst: { type: boolean, description: 상호 우선을 적용했는지(FR-SRC-07). skipNameFirst=true로 보낸 요청이면 false }
         otherRegions:
           type: array
           description: '"다른 ○○" 선택지(P1, 최대 5)'
@@ -1492,12 +1555,17 @@ components:
         totalCount: { type: integer, maximum: 300 }
         nextCursor: { $ref: '#/components/schemas/Cursor' }
         mapFit:
-          description: '검색창 검색이고 결과가 있으면 지도를 맞출 범위(FR-MAP-03). 현 지도 재검색은 null, 0곳이라 옮긴 경우(⑧)는 옮길 범위'
+          description: |
+            지도를 옮길 범위. view=list이고 결과가 있으면 결과에 맞춘 범위(FR-MAP-03, 칩 재검색 포함).
+            view=map은 null(옮기지 않음), 단 0곳이라 화면 중심에서 다시 찾아 옮긴 경우(⑧)는 옮길 범위. 지명만 입력이면 placeOnly.mapFit과 같다
           oneOf:
             - $ref: '#/components/schemas/Bounds'
             - type: 'null'
         placeOnly:
-          description: 검색어가 지명뿐이면(P1, FR-SRC-04) 가게를 검색하지 않고 이 값만 채운다. results·pins는 빈 목록
+          description: |
+            검색어가 지명뿐이면(P1, FR-SRC-04) 가게를 검색하지 않고 지도를 그 지역으로 옮긴다.
+            이때 results·pins·totalCount·nextCursor는 placeOnly.mapFit 범위의 검색어 없는 조회 결과(/browse와 같은 규칙·순서)다.
+            message는 그 조회가 0곳이면 map_empty
           oneOf:
             - $ref: '#/components/schemas/PlaceOnly'
             - type: 'null'

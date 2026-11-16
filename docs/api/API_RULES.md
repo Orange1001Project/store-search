@@ -1,6 +1,6 @@
-# API 공통 규칙 (v0.4)
+# API 공통 규칙 (v0.5)
 
-> 작성 2026-11-13 · 고침 2026-11-16(PR #11 리뷰) · 기준: `docs/REQUIREMENTS.md` v0.12(5절 IR, 3절 NFR-SEC·PRV) · 명세: [`openapi.yaml`](openapi.yaml)(OpenAPI 3.1)
+> 작성 2026-11-13 · 고침 2026-11-16(PR #11 리뷰, 화면 흐름 보완 v0.5) · 기준: `docs/REQUIREMENTS.md` v0.13(5절 IR, 3절 NFR-SEC·PRV) · 명세: [`openapi.yaml`](openapi.yaml)(OpenAPI 3.1)
 > 모든 API에 똑같이 적용한다. 개별 API 명세는 `openapi.yaml`에 쓰고, 이 문서와 다르면 이 문서를 먼저 고친다.
 
 ## 1. 결정 요약
@@ -119,15 +119,15 @@
 | 관리자 세션을 서버 세션으로 둘지 토큰으로 둘지 세부(지금은 서버 세션) | 백엔드 |
 | 위치 정밀도(격자 크기) 최종 | 법무 |
 
-## 10. API 목록 (명세 v0.5)
+## 10. API 목록 (명세 v0.6)
 
 자세한 요청·응답은 [`openapi.yaml`](openapi.yaml). P1 API(소셜 로그인, 회원, 이벤트, 통계)는 v0.4에서 더했다. 관리자 화면 축소(2026-11-13)로 주간 갱신·별칭·지명 제외·원천 변경 알림·관리자 계정 화면과 그 API는 P2이고, 1차는 서버 스크립트·DB 직접 작업으로 한다.
 
 | 우선 | 메서드·주소 | 하는 일 | 화면 |
 |---|---|---|---|
 | P0 | `GET /meta` | 업종·결제 칩 목록, 기본 위치, 제한 값 | 처음 열 때 |
-| P0 | `POST /search` | 검색(검색창 = 목록 규칙, '현 지도 재검색' = 지도 규칙). 첫 20곳 + 핀 전부 + 문구 + 지도 맞춤 범위 | U-01·03·04 |
-| P0 | `POST /browse` | 검색어 없는 조회(화면 안 가게, 가까운 순) | U-01 |
+| P0 | `POST /search` | 검색(검색창 = 목록 규칙, '현 지도 재검색' = 지도 규칙), 칩 재검색, "○○ 지역으로 보기". 첫 20곳 + 핀 전부(카드 필드 포함) + 문구 + 지도 맞춤 범위 | U-01·03·04·05 |
+| P0 | `POST /browse` | 검색어 없는 조회(화면 안 가게, 가까운 순), 칩만 고름 | U-01·05 |
 | P0 | `GET /search/{queryId}/page?cursor=` | 다음 20곳. 10분 지나면 410 | U-03 |
 | P0 | `GET /stores/{storeId}` | 가게 상세. 폐업·숨김·없음은 404 | U-06·11 |
 | P0 | `POST /admin/auth/login`, `POST /admin/auth/logout`, `GET /admin/me` | 관리자 로그인·로그아웃·세션 확인 | A-01 |
@@ -144,9 +144,49 @@
 | P1 | `GET·DELETE /me/recent-searches`, `DELETE /me/recent-searches/{recentId}` | 최근 검색어 10개, 전체·하나 삭제 | U-02 |
 | P1 | `GET /me/favorites`, `PUT·DELETE /me/favorites/{storeId}` | 관심 가맹점 목록(50곳씩), 추가(최대 500)·해제 | U-10, U-03·U-06 별 버튼 |
 | P1 | `POST /events` | 행동 이벤트 묶음(최대 50개, sendBeacon 가능) | 전 화면 |
-| P1 | `POST /search`의 `placeOnly`, `regionChoice`, 문구 `zoom_in` | 지명만 입력, 다른 지역 선택, 확대 안내 | U-01·U-04 |
+| P1 | `POST /search`의 `placeOnly`(주변 가게 포함), `regionChoice`, 문구 `zoom_in`·`region_ambiguous` | 지명만 입력, 다른 지역 선택, 확대 안내 | U-01·U-04 |
 | P1 | `GET /admin/stats/summary`, `/top-queries`, `/problem-queries`, `/messages` | 지표 요약·추이, 인기 검색어, 결과 없는 검색어, 문구별 비율 | A-10 |
 | P2 | `GET /admin/data-versions/active` | 지금 검색이 쓰는 데이터 버전 | A-05 |
 | P2 | `POST /admin/refresh-jobs` | 원천 엑셀 올리기 → 갱신 시작(202). 1차는 서버 스크립트 | A-05 |
 | P2 | `GET /admin/refresh-jobs/current`, `GET /admin/refresh-jobs/{jobId}` | 진행 중 작업, 진행·결과 | A-05 |
 | P2 | `POST /admin/refresh-jobs/{jobId}/approve`, `/cancel` | 안전장치 승인·취소. 1차는 스크립트 명령 | A-05 |
+
+### 10-1. 출시 뒤(P2) 예정 API — 목록만
+
+1차에는 만들지 않고 자세한 명세도 아직 쓰지 않는다. 주소는 가안이다.
+
+| 화면·기능 | 예정 API(가안) | 하는 일 | 근거 |
+|---|---|---|---|
+| 자동완성 | `GET /autocomplete?q=` | 상호·지명·브랜드 제안 최대 8개 | FR-SRC-12 |
+| 로그인 수단 추가·해제 | `GET /auth/{provider}/link`, `DELETE /me/providers/{provider}` | 다른 소셜 계정 연결·해제 | FR-MBR-05 |
+| 통계 CSV | `GET /admin/stats/{표}.csv` | 통계 표 내려받기 | FR-STA-03 |
+| A-02 관리자 홈 | `GET /admin/home` | 오늘 지표, 최근 갱신 상태, 확인할 알림 | FR-ADM-06 |
+| A-04 주소·좌표 수정 | `PUT /admin/stores/{storeId}/overrides/location` | 지도 핀 이동으로 주소·좌표·법정동 코드 수정 | FR-STO-03 |
+| A-06 원천 변경 알림 | `GET /admin/source-changes`, `POST /admin/source-changes/{id}/keep`·`/revert` | 알림 목록, 수정 유지 / 원천으로 | FR-STO-08 |
+| A-07 브랜드 별칭 | `GET·POST /admin/brand-aliases`, `PUT·DELETE /admin/brand-aliases/{id}` | 묶음 조회·추가·수정·삭제 | FR-REF-01 |
+| A-08 지명 제외 | `GET·POST /admin/place-exclusions`, `DELETE /admin/place-exclusions/{id}` | 말·사유 추가·삭제 | FR-REF-02 |
+| A-09 해석 미리보기 | `POST /admin/parse-preview` | 검색어·검색 중심 → 해석 결과 | FR-REF-03 |
+| A-12 관리자 계정 | `GET·POST /admin/accounts`, `PATCH /admin/accounts/{id}`, `POST /admin/accounts/{id}/reset-password` | 생성·비활성화·비밀번호 초기화 | FR-ADM-04 |
+
+## 11. 화면 동작별 호출 (v0.6)
+
+화면설계(`docs/design/`)의 동작마다 어느 API를 어떤 값으로 부르는지. 자세한 필드는 `openapi.yaml`.
+
+| 화면 동작 | 호출 | 보내는 값·받은 값 쓰는 법 | 우선 |
+|---|---|---|---|
+| 처음 열기 | `GET /meta` → `POST /browse` | 지금 지도 범위·GPS. 칩 목록은 `/meta`에서 | P0 |
+| 검색창 검색 | `POST /search` | `view=list`, `inputType=typed`. 응답 `mapFit`으로 지도를 맞추고 `pins`·`results`를 함께 표시 | P0 |
+| 지도를 옮기고 '현 지도 재검색' | 검색어 있음 `POST /search`(`view=map`, `bounds`) / 없음 `POST /browse` | `mapFit`은 null(지도 그대로). 0곳이라 옮긴 경우(⑧)만 범위가 온다 | P0 |
+| **칩 변경**(검색어 있음) | `POST /search` | **직전 요청 본문 그대로, `categoryCode`·`paymentCodes`만 바꾸고 `inputType=chip`**. 그사이 지도를 옮겼어도 직전 조건. `view=list`면 `mapFit`으로 다시 맞추고 `view=map`이면 지도 그대로 | P0 |
+| 칩 변경(검색어 없음) | `POST /browse` | 지금 보이는 `bounds`에 칩 적용. 지도 그대로 | P0 |
+| **핀 누름** | 호출 없음(+ 이벤트 `pin_click`) | `pins[]`에 카드 필드가 다 있어 바로 요약 카드(U-05). `position`은 `rank` | P0 |
+| 핀 묶음 누름 | 호출 없음(+ 이벤트 `cluster_click`) | 지도를 그 영역으로 확대만 | P1 |
+| 목록 아래로 내림 | `GET /search/{queryId}/page` | `nextCursor`. 410이면 직전 요청으로 다시 검색 | P0 |
+| 카드·요약 카드 누름 | `GET /stores/{storeId}` | 404면 U-11 | P0 |
+| **"○○ 지역으로 보기"**(작은 줄 `name_first`) | `POST /search` | 같은 `q`에 `skipNameFirst=true`, `inputType=region_view` | P0 |
+| "다른 ○○"(작은 줄 `region_ambiguous`) | `POST /search` | 같은 `q`에 `regionChoice=otherRegions[].regionId`, `inputType=region_choice` | P1 |
+| 지명만 입력 | `POST /search` | 응답 `placeOnly.mapFit`으로 지도 이동, 주변 가게는 같은 응답의 `pins`·`results`(따로 `/browse` 안 부름) | P1 |
+| "'○○' 가게 보기" | `POST /search` | `q`=가게 이름, `inputType=place_store` | P1 |
+| 최근 검색어 누름 | `POST /search` | `inputType=recent` | P1 |
+| 별(관심 가맹점) 누름 | `PUT`·`DELETE /me/favorites/{storeId}` | 비회원은 401 → 로그인 안내. 다음 페이지의 `favorited`는 서버가 응답 때마다 새로 계산 | P1 |
+| 관리자 A-03 필터·A-04 업종 선택지 | `GET /meta` | 업종 17개를 여기서 받는다(관리자 전용 업종 API 없음) | P0 |

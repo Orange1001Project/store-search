@@ -1,6 +1,6 @@
 # DB 테이블 설명서
 
-> 기준: `docs/DB_DESIGN.md` v0.3.4(테이블 19개) · 실행 SQL `docs/db/schema.sql` · ERDCloud 그림 `docs/db/erdcloud.sql`
+> 기준: `docs/DB_DESIGN.md` v0.3.5(테이블 19개) · 실행 SQL `docs/db/schema.sql` · ERDCloud 그림 `docs/db/erdcloud.sql`
 > 각 테이블의 역할·주요 규칙과 모든 컬럼의 역할을 적는다. 컬럼표는 `schema.sql`에서 자동으로 만들었다(둘이 다르면 SQL이 맞다).
 > 왜 이렇게 설계했는지(관계·키·줄인 테이블)는 [`DB_DESIGN_WHY.md`](DB_DESIGN_WHY.md).
 > 표기: **PK** = 기본 키(행 하나를 집어내는 값), **FK** = 다른 테이블에 꼭 있어야 하는 값(연결선). 자료형은 PostgreSQL 기준.
@@ -370,7 +370,7 @@
 | `pipeline_version` | 검색 정책 버전 | varchar(20) |  | 검색 정책·계수 버전 |
 | `corpus_version_id` | 데이터 버전 ID | smallint |  | 검색한 데이터 버전(FK 없음) |
 | `query_text` | 검색어 | varchar(50) |  | 검색어 없는 조회는 NULL |
-| `input_type` | 입력 방식 | varchar(15) |  | 값: typed, recent, autocomplete, chip, browse, place |
+| `input_type` | 입력 방식 | varchar(15) |  | 값: typed, recent, chip, region_view, region_choice, place_store, autocomplete, browse, place |
 | `category_code` | 업종 코드 | varchar(4) |  | 고른 업종 칩 |
 | `payment_codes` | 결제 코드 목록 | varchar(10)[] |  | 고른 결제 칩(여러 개, 빈 목록 = 전체) |
 | `view` | 화면 종류 | varchar(4) |  | 목록 / 지도 · 값: list, map |
@@ -383,7 +383,7 @@
 | `n_relevant_first` | 첫 범위 관련 수 | smallint |  | 첫 범위(1km 등)의 관련 결과 수(확장 판단 근거) |
 | `n_relevant_final` | 최종 관련 수 | smallint |  | 최종 관련 결과 수 |
 | `message` | 안내 문구 | varchar(25) |  | 화면에 띄운 안내 문구 |
-| `sub_message` | 보조 문구 | varchar(20) |  | 작은 줄 문구 · 값: region_info, default_location |
+| `sub_message` | 보조 문구 | varchar(20) |  | 작은 줄 문구 · 값: name_first, region_ambiguous, default_location |
 | `expansion_cache_hit` | 확장어 캐시 적중 | boolean |  | 업종 의도일 때만 |
 | `results` | 보여 준 가게 목록 | jsonb |  | 보여 준 가게: [{store_id, position, distance_m, score}] |
 | `latency_ms` | 단계별 지연(ms) | jsonb |  | 단계별 지연(ms) |

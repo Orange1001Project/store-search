@@ -1,4 +1,4 @@
--- 가맹점 검색 서비스 DB 스키마 (초안 v0.3.4, 2026-11-16) — 필수 테이블 19개
+-- 가맹점 검색 서비스 DB 스키마 (초안 v0.3.5, 2026-11-16) — 필수 테이블 19개
 -- 대상: PostgreSQL 16 + PostGIS 3.4 + pgvector 0.8 이상
 -- 설계 설명: docs/DB_DESIGN.md · 입력: docs/REQUIREMENTS.md 4절(DR-01~19)
 --
@@ -293,7 +293,7 @@ CREATE TABLE search_log (                                        -- 중심 로�
     corpus_version_id  smallint    NOT NULL,                     -- 검색한 데이터 버전(FK 없음)
     query_text         varchar(50),                              -- 검색어 없는 조회는 NULL
     input_type         varchar(15) NOT NULL
-                       CHECK (input_type IN ('typed', 'recent', 'autocomplete', 'chip', 'browse', 'place')),
+                       CHECK (input_type IN ('typed', 'recent', 'chip', 'region_view', 'region_choice', 'place_store', 'autocomplete', 'browse', 'place')),
     category_code      varchar(4),                               -- 고른 업종 칩
     payment_codes      varchar(10)[] NOT NULL DEFAULT '{}',      -- 고른 결제 칩(여러 개, 빈 목록 = 전체)
     view               varchar(4)  NOT NULL CHECK (view IN ('list', 'map')),
@@ -307,7 +307,7 @@ CREATE TABLE search_log (                                        -- 중심 로�
     n_relevant_first   smallint,                                 -- 첫 범위(1km 등)의 관련 결과 수(확장 판단 근거)
     n_relevant_final   smallint,                                 -- 최종 관련 결과 수
     message            varchar(25),                              -- 화면에 띄운 안내 문구
-    sub_message        varchar(20) CHECK (sub_message IN ('region_info', 'default_location')),   -- 작은 줄 문구
+    sub_message        varchar(20) CHECK (sub_message IN ('name_first', 'region_ambiguous', 'default_location')),   -- 작은 줄 문구
     expansion_cache_hit boolean,                                 -- 업종 의도일 때만
     results            jsonb       NOT NULL DEFAULT '[]',        -- 보여 준 가게: [{store_id, position, distance_m, score}]
     latency_ms         jsonb,                                    -- 단계별 지연(ms)

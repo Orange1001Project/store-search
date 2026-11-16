@@ -1,6 +1,6 @@
-# 가맹점 검색 서비스 DB 설계 (초안 v0.3.4)
+# 가맹점 검색 서비스 DB 설계 (초안 v0.3.5)
 
-> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장 · v0.3.3 공식 업종 · v0.3.4 PR #11 리뷰 반영(8절 변경 내역)
+> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장 · v0.3.3 공식 업종 · v0.3.4 PR #11 리뷰 반영 · v0.3.5 API v0.6 코드 값(8절 변경 내역)
 > 입력: `docs/REQUIREMENTS.md`(4절 DR-01~19), `docs/SERVICE_POLICY.md`, `docs/SEARCH_LOGGING.md`, `docs/BACKEND_HANDOFF.md`
 > 실행 SQL: [`docs/db/schema.sql`](db/schema.sql) · 3절 컬럼표는 schema.sql에서 자동으로 만들었다(둘이 다르면 SQL이 맞다)
 > ERDCloud 보기용: [`docs/db/erdcloud.sql`](db/erdcloud.sql) · 테이블 설명서: [`docs/db/DB_TABLES.md`](db/DB_TABLES.md) · 설계 이유서: [`docs/db/DB_DESIGN_WHY.md`](db/DB_DESIGN_WHY.md)
@@ -513,7 +513,7 @@ erDiagram
 | pipeline_version | varchar(20) |  | N |  |  | 검색 정책·계수 버전 |
 | corpus_version_id | smallint |  | N |  |  | 검색한 데이터 버전(FK 없음) |
 | query_text | varchar(50) |  | Y |  |  | 검색어 없는 조회는 NULL |
-| input_type | varchar(15) |  | N |  | CHECK input_type IN ('typed', 'recent', 'autocomplete', 'chip', 'browse', 'place') |  |
+| input_type | varchar(15) |  | N |  | CHECK input_type IN ('typed', 'recent', 'chip', 'region_view', 'region_choice', 'place_store', 'autocomplete', 'browse', 'place') |  |
 | category_code | varchar(4) |  | Y |  |  | 고른 업종 칩 |
 | payment_codes | varchar(10)[] |  | N | '{}' |  | 고른 결제 칩(여러 개, 빈 목록 = 전체) |
 | view | varchar(4) |  | N |  | CHECK view IN ('list', 'map') |  |
@@ -526,7 +526,7 @@ erDiagram
 | n_relevant_first | smallint |  | Y |  |  | 첫 범위(1km 등)의 관련 결과 수(확장 판단 근거) |
 | n_relevant_final | smallint |  | Y |  |  | 최종 관련 결과 수 |
 | message | varchar(25) |  | Y |  |  | 화면에 띄운 안내 문구 |
-| sub_message | varchar(20) |  | Y |  | CHECK sub_message IN ('region_info', 'default_location') | 작은 줄 문구 |
+| sub_message | varchar(20) |  | Y |  | CHECK sub_message IN ('name_first', 'region_ambiguous', 'default_location') | 작은 줄 문구 |
 | expansion_cache_hit | boolean |  | Y |  |  | 업종 의도일 때만 |
 | results | jsonb |  | N | '[]' |  | 보여 준 가게: [{store_id, position, distance_m, score}] |
 | latency_ms | jsonb |  | Y |  |  | 단계별 지연(ms) |
@@ -806,6 +806,10 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | JPA 매핑 | `vector`·`geography`는 Hibernate Spatial + pgvector 라이브러리 또는 네이티브 쿼리. 검색 ①~⑤는 네이티브 쿼리 추천 |
 
 ## 8. 변경 내역
+
+### v0.3.5 (2026-11-16) — API 명세 v0.6 반영
+- `search_log.input_type`에 region_view(○○ 지역으로 보기)·region_choice(다른 ○○)·place_store(지명만 입력의 가게 보기) 추가.
+- `search_log.sub_message`의 region_info를 name_first(상호 우선)·region_ambiguous(같은 이름 지명)로 나눔.
 
 ### v0.3.4 (2026-11-16) — PR #11 리뷰 반영
 - 같은 가게 판단(지문)을 도로명 주소(시군구 + 도로명 + 건물번호, 시도·상세 주소 제외)로. 9월 → 11월 원천에서 사라짐 31,838곳(14.9%) → 11,943곳(5.6%).

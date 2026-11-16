@@ -1,4 +1,4 @@
-# 가맹점 검색 서비스 요구사항 정의서 (초안 v0.12)
+# 가맹점 검색 서비스 요구사항 정의서 (초안 v0.13)
 
 > 작성 2026-11-11 · 화면설계 반영 2026-11-13(10절 변경 이력) · 화면설계를 진행하며 함께 고친다 · 기준: `docs/SERVICE_POLICY.md`(정책), `docs/BACKEND_HANDOFF.md`(검색 이식), `docs/SEARCH_LOGGING.md`(로그)
 > 정책과 다르면 정책을 따르고 이 문서를 고친다. 결정 배경은 노션 "가맹점 검색 서비스 정책" 페이지 아래 "요구사항 정의서 설명".
@@ -120,7 +120,7 @@
 | ④ `map_empty` | 이 지역에 맞는 가게가 없어요 | 지도 검색 결과 0곳(FR-MAP-04 뒤에도), 검색어 없는 조회(칩 없음) 0곳 |
 | ⑤ `no_exact_name` | '{query}'와 정확히 일치하는 가게는 없어요 | 상호·브랜드 의도이고 결과에 상호 일치 가게 0곳 |
 | ⑥ `weak_result` | 꼭 맞는 가게를 찾지 못해 비슷한 가게를 보여 드려요 | 맨 위 가게를 뺀 노출 가게가 모두 확률 < 0.52(평가 때 쓴 값을 설정값으로 둔다. 출시 뒤 ⑥ 비율을 보고 조정, 2026-11-13) |
-| ⑦ `region_info` | {지역}에서 찾았어요 · 다른 {이름} / '{상호}' 가게를 먼저 보여 드려요 · {지역} 지역으로 보기 | 같은 이름 지명이 여러 곳 / 상호 우선 |
+| ⑦ `region_ambiguous` / `name_first` | {지역}에서 찾았어요 · 다른 {이름} / '{상호}' 가게를 먼저 보여 드려요 · {지역} 지역으로 보기 | 같은 이름 지명이 여러 곳(P1) / 상호 우선(P0). 화면이 문장을 고를 수 있게 코드를 나눈다 |
 | ⑧ `map_moved` | 이 화면에는 없어 가까운 곳을 보여 드려요 | FR-MAP-04로 지도를 옮김 |
 | ⑨ `default_location` | 위치 정보가 없어 기본 위치 기준으로 찾았어요 · 위치 켜기 | 검색 중심이 기본 위치 |
 | ⑩ `zoom_in` | 지도를 확대하면 가게를 볼 수 있어요 | 화면 대각선 50km 초과 |
@@ -365,9 +365,9 @@ DB 테이블 설계의 입력이다. 이름은 예시이고 설계 단계에서 
 
 | ID | API | 요청 | 응답 |
 |---|---|---|---|
-| IR-01 | `POST /api/v1/search` | 본문(JSON): q, inputType, view(list·map), center(lat,lng — GPS·지도 중심), centerSource, bounds(지도), regionChoice, categoryCode, paymentCodes(목록), userLocation(GPS, 선택 — 저장 안 함, 로그엔 격자). session_id는 쿠키. 좌표·세션을 URL에 넣지 않음(NFR-PRV-02) | query_id, 해석(지역·의도·다른 지역), 범위 단계, 문구(코드·치환값), 결과 20곳(store_id, 상호, 업종, 시장명, 짧은 주소, 결제, 좌표, 검색 중심 거리, 순위), 전체 건수, 다음 커서, 지도 이동 정보, 버전 |
+| IR-01 | `POST /api/v1/search` | 본문(JSON): q, inputType, view(list·map), center(lat,lng — GPS·지도 중심), centerSource, bounds(지도), regionChoice, skipNameFirst("○○ 지역으로 보기"), categoryCode, paymentCodes(목록), userLocation(GPS, 선택 — 저장 안 함, 로그엔 격자). session_id는 쿠키. 좌표·세션을 URL에 넣지 않음(NFR-PRV-02) | query_id, 해석(지역·의도·다른 지역), 범위 단계, 문구(코드·치환값), 결과 20곳(store_id, 상호, 업종, 시장명, 짧은 주소, 결제, 좌표, 검색 중심 거리, 순위), 핀(최대 300, 결과 카드와 같은 필드 — 핀만 눌러도 요약 카드), 전체 건수, 다음 커서, 지도 이동 정보, 버전. 칩을 바꾸면 직전 요청에서 칩만 바꿔 다시 부른다 |
 | IR-02 | `GET /api/v1/search/{query_id}/page` | cursor | 다음 20곳, 만료 여부 |
-| IR-03 | `POST /api/v1/browse` | 본문(JSON): bounds, center, centerSource, userLocation, categoryCode, paymentCodes(목록). session_id는 쿠키 | query_id, 핀(최대 300, 최소 필드), 시트 목록 첫 20곳(결과 카드 필드, 다음은 IR-02), 확대 안내 여부 |
+| IR-03 | `POST /api/v1/browse` | 본문(JSON): bounds, center, centerSource, userLocation, categoryCode, paymentCodes(목록). session_id는 쿠키 | query_id, 핀(최대 300, 결과 카드와 같은 필드), 시트 목록 첫 20곳(결과 카드 필드, 다음은 IR-02), 확대 안내 여부 |
 | IR-04 | `GET /api/v1/stores/{store_id}` | — | 상세(수정 값 우선), 상태 |
 | IR-05 | `POST /api/v1/events` | 이벤트 묶음(최대 50개) | 202 |
 | IR-06 | 회원 | 로그인 시작·콜백, 토큰 갱신, 로그아웃, 내 정보, 탈퇴, 최근 검색어(조회·삭제), 즐겨찾기(조회·추가·삭제) | — |
@@ -500,3 +500,4 @@ A-01 로그인 ──▶ A-03 가맹점 목록 ▶ A-04 상세·수정
 | v0.10.1 | 2026-11-13 | 숨김 해제 사유도 저장: 마지막 숨김·해제의 사유·관리자·시각(FR-STO-07, DR-03, DB 설계 v0.3.2) |
 | v0.11 | 2026-11-13 | 공식 업종 반영: 2026-11-13 원천 파일의 온누리중분류(K001~K017)·표준산업분류코드를 업종으로 씀(FR-MSG-01, DR-01, DR-07, FR-REF-05). 원천 열 이름 변경(X·Y좌표, QR결제) 반영. 이번 갱신은 업종이 처음 들어오며 변화가 커서 안전장치(3%)를 넘어도 진행하기로 함(한 번만) |
 | v0.12 | 2026-11-16 | PR #11 리뷰 반영: 같은 가게 판단을 도로명 주소(건물번호까지)로(FR-UPD-03, 9월→11월 원천 사라짐 14.9% → 5.6%), 안전장치는 원천 정리 기간에 적용 안 함(FR-UPD-05, v0.11의 "업종이 처음 들어와서"라는 이유는 잘못), 첫 관리자 계정·첫 비밀번호 변경 P0(FR-ADM-04), 시장유형 수정 불가(FR-STO-04), 노출 로그 = 검색 로그 목록(FR-LOG-02), 검색어 목록 통계는 1년 안만(FR-STA-01, DR-17), DR-05·06·09 보완, IR 필드 이름을 API와 맞춤, v0.10 축소가 빠진 문장 정리(1-2, 5-2, FR-UPD-02, 8절) |
+| v0.13 | 2026-11-16 | API 명세 v0.6(화면 흐름 보완)에 맞춤: 문구 ⑦을 `region_ambiguous`(같은 이름 지명)·`name_first`(상호 우선)로 나눔(FR-MSG-02), IR-01에 skipNameFirst("○○ 지역으로 보기")·칩 재검색 규칙, 핀은 결과 카드와 같은 필드(IR-01·03) |
