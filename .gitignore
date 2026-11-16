@@ -56,3 +56,6 @@ __pycache__/
 
 # 작성자 배포용 xlsx(scripts/make_writer_sheets.py, seed로 다시 만들 수 있음). 회수한 파일은 data/query/writers_completed/에 둔다
 /data/query/writers/
+
+# 로컬 개발 비밀 값(infra/.env.example 참고)
+infra/.env

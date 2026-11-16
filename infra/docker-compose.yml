@@ -1,0 +1,68 @@
+# 로컬 개발용 Docker Compose (docs/LOCAL_DEV_SETUP.md)
+# - db: PostgreSQL 16 + PostGIS 3.4 + pgvector. 처음 뜰 때 docs/db/schema.sql을 실행해 테이블 20개를 만든다.
+# - embedding: 임베딩 서버(bge-m3 미세조정 v1, CPU). 모델 파일이 있어야 해서 `--profile ai`로만 뜬다.
+# API 서버(Spring)와 화면(React)은 IDE에서 실행한다. Redis는 쓰지 않는다(docs/ARCHITECTURE.md 6-6).
+#
+# 사용: infra 폴더에서
+#   cp .env.example .env          # 값 확인
+#   docker compose up -d db       # DB만
+#   docker compose --profile ai up -d   # DB + 임베딩 서버
+name: storesearch
+
+services:
+  db:
+    build: ./db
+    image: storesearch-db:16-3.4-pgvector
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-storesearch}
+      POSTGRES_USER: ${POSTGRES_USER:-storesearch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?infra/.env에 POSTGRES_PASSWORD를 넣으세요}
+      TZ: UTC
+    command:
+      - postgres
+      - -c
+      - timezone=UTC
+      - -c
+      - shared_buffers=${DB_SHARED_BUFFERS:-2GB}
+      - -c
+      - work_mem=64MB
+      - -c
+      - maintenance_work_mem=1GB
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"   # 이 PC에서만 접속
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # 처음 만들 때만 실행된다(볼륨이 비어 있을 때). 백엔드가 Flyway를 쓰기 시작하면 이 줄을 지운다.
+      - ../docs/db/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  embedding:
+    profiles: ["ai"]
+    build: ../embedding-server
+    image: storesearch-embedding:dev
+    environment:
+      MODEL_PATH: /models/current
+      MODEL_NAME: ${EMBED_MODEL_NAME:-bge_m3_ft_mj_20261014_0743}
+      MAX_BATCH: "64"
+      TORCH_NUM_THREADS: ${EMBED_THREADS:-4}
+    ports:
+      - "127.0.0.1:${EMBED_PORT:-8001}:8000"
+    volumes:
+      # 모델 폴더(git 밖, Drive에서 받음)를 읽기 전용으로 연결
+      - ${EMBED_MODEL_DIR:-../models/bge_m3_ft_mj_20261014_0743}:/models/current:ro
+    mem_limit: 6g
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+volumes:
+  db-data:

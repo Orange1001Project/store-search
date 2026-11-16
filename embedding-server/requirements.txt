@@ -1,0 +1,6 @@
+# 임베딩 서버 의존성. torch는 Dockerfile에서 CPU 전용 판으로 따로 설치한다(GPU 판은 수 GB).
+# 모델을 학습·평가한 Colab과 버전이 다르면 벡터가 미세하게 다를 수 있다 → 첫 실행 때 평가 벡터와 비교(LOCAL_DEV_SETUP 5절).
+fastapi==0.115.6
+uvicorn==0.32.1
+sentence-transformers==4.1.0
+transformers==4.51.3
