@@ -1,6 +1,6 @@
 # 화면설계
 
-> 원본: claude.ai 디자인 캔버스 [가맹점 찾기 화면설계](https://claude.ai/artifact/PRLSNyFnSkW8ema6xMRv7M) (조직 안에서만 열림) · 이 폴더의 그림은 캔버스 버전 `1794793927-b25c`(2026-11-16, A-04는 이 버전, 나머지는 2026-11-13 그림)에서 만든 사본이다.
+> 원본: claude.ai 디자인 캔버스 [가맹점 찾기 화면설계](https://claude.ai/artifact/PRLSNyFnSkW8ema6xMRv7M) (조직 안에서만 열림) · 이 폴더의 그림은 캔버스 버전 `1794817446-e4f7`(2026-11-16)에서 만든 사본이다. 2026-11-16에 회원 메뉴·닉네임 변경·탈퇴 확인·관심 가맹점 빈 목록·E-01 연결 안 됨·공통 대화상자·A-04 수정 대화상자를 더하고 U-01 확대 안내를 고쳤다(요구사항 v0.14). 나머지 그림은 2026-11-13·16 그대로다.
 > 화면 ID와 기능은 [`docs/REQUIREMENTS.md`](../REQUIREMENTS.md) 7절(화면 목록·흐름), 우선순위는 1-4절을 따른다. 캔버스와 이 그림이 다르면 캔버스가 맞다.
 > 그림은 캔버스의 화면 원본을 브라우저로 찍은 것이다. 모바일은 390×844, 관리자는 1440 너비. `[N]`·`[상호]`는 실제 데이터로 채울 자리다.
 
@@ -11,21 +11,27 @@
 | **U-01 메인 (처음 화면)**<br>`Main.dc.html` | <img src="screens/Main.png" width="260" alt="U-01 메인 (처음 화면)"> |
 | **U-01 결제 칩 (여러 개 선택)**<br>`U01-Payment.dc.html` | <img src="screens/U01-Payment.png" width="260" alt="U-01 결제 칩 (여러 개 선택)"> |
 | **U-01 지명만 입력**<br>`U01-PlaceOnly.dc.html` | <img src="screens/U01-PlaceOnly.png" width="260" alt="U-01 지명만 입력"> |
-| **U-01 확대 안내 ⑩**<br>`U01-ZoomIn.dc.html` | <img src="screens/U01-ZoomIn.png" width="260" alt="U-01 확대 안내 ⑩"> |
+| **U-01 확대 안내 ⑩**<br>`U01-ZoomIn.dc.html`<br>부르지 않고 이전 핀·시트 유지 | <img src="screens/U01-ZoomIn.png" width="260" alt="U-01 확대 안내 ⑩"> |
 | **U-01 화면 안 0곳 ④**<br>`U01-Empty.dc.html` | <img src="screens/U01-Empty.png" width="260" alt="U-01 화면 안 0곳 ④"> |
 | **U-02 검색창 열림 (회원)**<br>`U02-Member.dc.html` | <img src="screens/U02-Member.png" width="260" alt="U-02 검색창 열림 (회원)"> |
 | **U-02 검색창 열림 (비회원)**<br>`U02-Guest.dc.html` | <img src="screens/U02-Guest.png" width="260" alt="U-02 검색창 열림 (비회원)"> |
 | **U-04 검색 결과 – 지도 (시트 중간)**<br>`U04-Map.dc.html` | <img src="screens/U04-Map.png" width="260" alt="U-04 검색 결과 – 지도 (시트 중간)"> |
 | **U-03 검색 결과 – 목록 (시트 전체)**<br>`U03-List.dc.html` | <img src="screens/U03-List.png" width="260" alt="U-03 검색 결과 – 목록 (시트 전체)"> |
 | **U-05 가게 요약 카드**<br>`U05-Card.dc.html` | <img src="screens/U05-Card.png" width="260" alt="U-05 가게 요약 카드"> |
-| **U-04 같은 이름 지명 – 다른 ○○**<br>`U04-OtherRegion.dc.html` | <img src="screens/U04-OtherRegion.png" width="260" alt="U-04 같은 이름 지명 – 다른 ○○"> |
+| **U-04 같은 이름 지명 – 다른 ○○**<br>`U04-OtherRegion.dc.html`<br>지금 지역 포함 모두 거리순 | <img src="screens/U04-OtherRegion.png" width="260" alt="U-04 같은 이름 지명 – 다른 ○○"> |
+| **공통 대화상자·토스트** (요구사항 8절)<br>`Dialogs.dc.html` | <img src="screens/Dialogs.png" width="520" alt="공통 대화상자·토스트"> |
+| **E-01 연결 안 됨** (첫 화면을 못 불러옴)<br>`E01-Offline.dc.html` | <img src="screens/E01-Offline.png" width="260" alt="E-01 연결 안 됨"> |
 | **U-06 가게 상세**<br>`U06-Detail.dc.html` | <img src="screens/U06-Detail.png" width="260" alt="U-06 가게 상세"> |
 | **U-11 찾을 수 없음**<br>`U11-NotFound.dc.html` | <img src="screens/U11-NotFound.png" width="260" alt="U-11 찾을 수 없음"> |
 | **메뉴 (☰, 비회원)**<br>`Menu.dc.html` | <img src="screens/Menu.png" width="260" alt="메뉴 (☰, 비회원)"> |
+| **메뉴 (☰, 회원)**<br>`Menu-Member.dc.html` | <img src="screens/Menu-Member.png" width="260" alt="메뉴 (☰, 회원)"> |
 | **U-07 로그인**<br>`U07-Login.dc.html` | <img src="screens/U07-Login.png" width="260" alt="U-07 로그인"> |
 | **U-08 가입 동의**<br>`U08-Terms.dc.html` | <img src="screens/U08-Terms.png" width="260" alt="U-08 가입 동의"> |
 | **U-09 내 정보**<br>`U09-MyInfo.dc.html` | <img src="screens/U09-MyInfo.png" width="260" alt="U-09 내 정보"> |
+| **U-09 닉네임 변경**<br>`U09-Nickname.dc.html` | <img src="screens/U09-Nickname.png" width="260" alt="U-09 닉네임 변경"> |
+| **U-09 탈퇴 확인**<br>`U09-Withdraw.dc.html` | <img src="screens/U09-Withdraw.png" width="260" alt="U-09 탈퇴 확인"> |
 | **U-10 관심 가맹점**<br>`U10-Favorites.dc.html` | <img src="screens/U10-Favorites.png" width="260" alt="U-10 관심 가맹점"> |
+| **U-10 관심 가맹점 – 빈 목록**<br>`U10-Empty.dc.html` | <img src="screens/U10-Empty.png" width="260" alt="U-10 관심 가맹점 – 빈 목록"> |
 
 ## 2. 관리자 화면 (1차)
 
@@ -37,7 +43,8 @@
 | **A-01 첫 로그인 비밀번호 변경**<br>`A01-Password.dc.html` | <img src="screens/A01-Password.png" width="520" alt="A-01 첫 로그인 비밀번호 변경"> |
 | **A-03 가맹점 목록**<br>`A03-Stores.dc.html` | <img src="screens/A03-Stores.png" width="520" alt="A-03 가맹점 목록"> |
 | **A-04 가맹점 상세·수정**<br>`A04-StoreDetail.dc.html` | <img src="screens/A04-StoreDetail.png" width="520" alt="A-04 가맹점 상세·수정"> |
-| **A-10 통계**<br>`A10-Stats.dc.html` | <img src="screens/A10-Stats.png" width="520" alt="A-10 통계"> |
+| **A-04 필드 수정 대화상자**<br>`A04-EditDialog.dc.html` | <img src="screens/A04-EditDialog.png" width="520" alt="A-04 필드 수정 대화상자"> |
+| **A-10 통계**<br>`A10-Stats.dc.html`<br>CSV는 화면이 받은 표로 만듦 | <img src="screens/A10-Stats.png" width="520" alt="A-10 통계"> |
 
 ## 3. 출시 뒤(P2) 관리자 화면
 
