@@ -8,18 +8,31 @@
 
 ```mermaid
 flowchart TB
-  U["사용자 브라우저<br/>(모바일 웹)"] -->|HTTPS| N
-  A["관리자 브라우저<br/>(/admin)"] -->|HTTPS| N
-  U -.->|지도 표시·길찾기| NM["네이버 지도"]
-  subgraph VM["서버 1대 · Docker Compose (로컬 PC도 같은 구성)"]
-    N["① Nginx<br/>HTTPS · 화면 파일 · /api 전달"] -->|/api| API
-    API["② API 서버 (Spring Boot)<br/>검색 · 회원 · 관리자 · 로그<br/>메모리: BM25 색인, 사전, 정책 값, 결과 캐시<br/>명령: 주간 갱신 · 정기 작업"]
-    API -->|검색어 1개 / 갱신 때 가게 문장| E["③ 임베딩 서버 (Python)<br/>bge-m3 미세조정 v1 · CPU<br/>문장 → 벡터 1024"]
-    API -->|SQL| D[("④ PostgreSQL 16<br/>PostGIS · pgvector<br/>테이블 20개")]
+  U["사용자 브라우저<br/>모바일 웹"]
+  A["관리자 브라우저<br/>/admin"]
+  NM["네이버 지도"]
+  SO["카카오 · 구글<br/>로그인 (P1)"]
+
+  subgraph VM["서버 1대 · Docker Compose"]
+    direction TB
+    N["① Nginx<br/>HTTPS · 화면 파일<br/>/api 전달"]
+    API["② API 서버<br/>Spring Boot<br/>────────<br/>검색 · 회원 · 관리자 · 로그<br/>메모리: BM25 색인 · 사전<br/>정책 값 · 결과 캐시<br/>명령: 주간 갱신 · 정기 작업"]
+    E["③ 임베딩 서버<br/>Python · CPU<br/>bge-m3 미세조정 v1<br/>문장 → 벡터 1024"]
+    D[("④ PostgreSQL 16<br/>PostGIS · pgvector<br/>테이블 20개")]
   end
-  API -.->|로그인(P1)| SO["카카오 · 구글"]
-  F[("디스크<br/>DB 볼륨 · 원천 엑셀 · 모델 파일")] --- VM
+
+  U -->|"HTTPS"| N
+  A -->|"HTTPS"| N
+  U -.->|"지도 표시 · 길찾기"| NM
+  N -->|"/api"| API
+  API -->|"검색어 · 가게 문장"| E
+  API -->|"SQL"| D
+  API -.->|"로그인 (P1)"| SO
 ```
+
+- 로컬 PC도 같은 구성으로 띄운다(로컬에선 Nginx 대신 화면 개발 서버, [`LOCAL_DEV_SETUP.md`](LOCAL_DEV_SETUP.md)).
+- 디스크에는 DB 볼륨, 원천 엑셀, 모델 파일을 둔다.
+- 실선은 서버 안 요청, 점선은 바깥 서비스다.
 
 구성 요소는 **4개**다: Nginx, API 서버, 임베딩 서버, DB. 캐시 서버(Redis)는 PoC에서 쓰지 않는다(6-6절).
 
