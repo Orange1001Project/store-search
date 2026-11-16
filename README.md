@@ -87,6 +87,7 @@ tests/                          단위 테스트 (pytest)
 colab/                          Colab(GPU) 노트북 — train_eval.ipynb(학습·평가), rerank_scores.ipynb(reranker 채점) (colab/README.md 참고)
 docs/
   SERVICE_POLICY.md              서비스 기획·정책(백엔드 개발 기준 문서 — 여기서 시작)
+  REQUIREMENTS.md                요구사항 정의서 초안(기능·비기능·데이터·인터페이스)
   BACKEND_HANDOFF.md             자바 백엔드로 넘기는 산출물, 옮길 때 지킬 동작, 최종 성능, 알려진 한계
   SEARCH_LOGGING.md              검색 로그 설계 추천안(백엔드 구현용)
   DB_DESIGN_PROMPT.md            DB 테이블 설계 요청문(2026-11-10 팀 결정 포함 — 정책 기준은 SERVICE_POLICY.md)

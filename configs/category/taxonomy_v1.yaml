@@ -1,0 +1,75 @@
+# 공식 업종 체계 v1 = 온누리 중분류 17개(2026-11-13 받은 업종분류코드표_20261113.xlsx "온누리 중분류 기준" 시트).
+# 가게 업종은 원천 파일의 `온누리중분류` 열을 그대로 쓴다(임시 v0의 품목 키워드 분류는 쓰지 않음).
+# 원천에 업종이 비어 있으면 `표준산업분류코드`로 ksic_onnuri_v1.csv에서 찾는다. 거기도 없으면 K010 기타.
+# 코드 = 업종 칩 코드(category.category_code). 칩 순서는 sort_order.
+version: onnuri_v1
+source: 업종분류코드표_20261113.xlsx
+categories:
+  - code: K001
+    name: 식품·마트
+    sort_order: 1
+    examples: "슈퍼, 식료품점, 반찬, 건강식품"
+  - code: K002
+    name: 의류
+    sort_order: 2
+    examples: "의류, 신발, 가방, 잡화, 한복, 속옷"
+  - code: K003
+    name: 생활·잡화
+    sort_order: 3
+    examples: "생활용품, 주방용품, 문구, 완구, 꽃, 애완용품"
+  - code: K004
+    name: 인테리어
+    sort_order: 4
+    examples: "가구, 조명, 침구, 커튼, 철물, 인테리어용품"
+  - code: K005
+    name: 가전·디지털
+    sort_order: 5
+    examples: "가전제품, 휴대폰, 컴퓨터, 전자기기, 통신기기"
+  - code: K006
+    name: 음식점
+    sort_order: 6
+    examples: "한식, 중식, 일식, 양식, 분식, 치킨, 피자, 패스트푸드, 기타 음식점"
+  - code: K007
+    name: 카페·디저트
+    sort_order: 7
+    examples: "카페, 커피전문점, 제과점, 아이스크림, 음료점"
+  - code: K008
+    name: 편의점
+    sort_order: 8
+    examples: "편의점(CU, GS25, 세븐일레븐, 이마트24)"
+  - code: K009
+    name: 주유소
+    sort_order: 9
+    examples: "주유소 전체"
+  - code: K010
+    name: 기타
+    sort_order: 10
+    examples: "나이스 미분류, 각종 도매업 일괄, 산업용 기계 제작 및 수리, 운반 및 창고관리, 주류, 담배, 유흥업종, PC방 등"
+  - code: K011
+    name: 미용
+    sort_order: 11
+    examples: "미용실, 이발소, 네일, 피부관리, 화장품"
+  - code: K012
+    name: 의료
+    sort_order: 12
+    examples: "병원, 의원, 한의원, 치과, 약국, 의료기기"
+  - code: K013
+    name: 교육·문화
+    sort_order: 13
+    examples: "학원, 교습소, 서점, 음악·미술교육, 교육서비스, 공연"
+  - code: K014
+    name: 스포츠
+    sort_order: 14
+    examples: "헬스장, 골프, 스포츠시설, 오락, 스포츠용품"
+  - code: K015
+    name: 숙박·여행
+    sort_order: 15
+    examples: "호텔, 모텔, 펜션, 게스트하우스, 여행서비스"
+  - code: K016
+    name: 자동차·교통
+    sort_order: 16
+    examples: "자동차수리, 세차, 주유 관련, 자전거, 자동차용품"
+  - code: K017
+    name: 생활서비스
+    sort_order: 17
+    examples: "세탁, 사진관, 열쇠, 수선, 청소, 렌탈, 장례, 부동산, 법무·세무, 디자인, 광고, 전문서비스"
