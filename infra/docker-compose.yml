@@ -1,5 +1,5 @@
 # 로컬 개발용 Docker Compose (docs/LOCAL_DEV_SETUP.md)
-# - db: PostgreSQL 16 + PostGIS 3.4 + pgvector. 처음 뜰 때 docs/db/schema.sql을 실행해 테이블 20개를 만든다.
+# - db: PostgreSQL 16 + PostGIS 3(2026-11 빌드 시 3.7) + pgvector 0.8 (infra/db/Dockerfile). 처음 뜰 때 docs/db/schema.sql을 실행해 테이블 20개를 만든다.
 # - embedding: 임베딩 서버(bge-m3 미세조정 v1, CPU). 모델 파일이 있어야 해서 `--profile ai`로만 뜬다.
 # API 서버(Spring)와 화면(React)은 IDE에서 실행한다. Redis는 쓰지 않는다(docs/ARCHITECTURE.md 6-6).
 #
@@ -12,7 +12,7 @@ name: storesearch
 services:
   db:
     build: ./db
-    image: storesearch-db:16-3.4-pgvector
+    image: storesearch-db:16-postgis3-pgvector0.8
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-storesearch}
       POSTGRES_USER: ${POSTGRES_USER:-storesearch}

@@ -2,7 +2,7 @@
 
 > 작성 2026-11-16 · 기준: [`ARCHITECTURE.md`](ARCHITECTURE.md), [`db/schema.sql`](db/schema.sql) v0.3.5, [`api/openapi.yaml`](api/openapi.yaml) v0.5
 > 파일: [`infra/docker-compose.yml`](../infra/docker-compose.yml), [`infra/db/Dockerfile`](../infra/db/Dockerfile), [`infra/.env.example`](../infra/.env.example), [`embedding-server/`](../embedding-server/)
-> **아직 실제로 띄워 본 적이 없다**(작성한 PC에 Docker가 없음). 처음 띄우는 사람이 막히는 곳을 8절에 적어 주세요.
+> **2026-11-17 Windows 11 + Docker Desktop 29.9에서 DB까지 띄워 확인**(PostgreSQL 16.16, PostGIS 3.7.0, pgvector 0.8.0, 표 20개, 업종 17·결제 2). 임베딩 서버는 아직. 막히는 곳은 8절에 적어 주세요.
 
 ## 0. 로컬에서 무엇이 어디서 도나
 
@@ -49,7 +49,7 @@
 2. Docker 둘 중 하나
    - 라이선스가 있으면 Docker Desktop(WSL2 엔진 사용).
    - 없으면 WSL Ubuntu 안에 Docker 엔진 설치(docs.docker.com의 Ubuntu 설치 절차), `sudo usermod -aG docker $USER`.
-3. WSL 메모리: `%UserProfile%\.wslconfig`에 아래를 두고 `wsl --shutdown`. DB(약 4~8GB) + 임베딩 서버(약 3~4GB)가 들어가야 한다.
+3. WSL 메모리: 기본은 PC 메모리의 절반(32GB PC면 약 16GB)이라 보통 그대로 둔다. 모자라면 `%UserProfile%\.wslconfig`에 아래를 두고 `wsl --shutdown`. DB(약 4~8GB) + 임베딩 서버(약 3~4GB)가 들어가야 한다.
 
 ```ini
 [wsl2]
@@ -84,7 +84,7 @@ docker compose logs -f embedding   # "Application startup complete"까지
 | 하고 싶은 것 | 방법 |
 |---|---|
 | 접속 | `docker compose exec db psql -U storesearch -d storesearch`, 또는 DBeaver 등으로 `localhost:5432` |
-| 테이블 확인 | `\dt` → 20개(파티션 포함 더 보임), `SELECT * FROM category;` → 17행 |
+| 테이블 확인 | `\dt` → 우리 표 20개 + PostGIS가 만드는 `spatial_ref_sys`(파티션 포함 더 보임), `SELECT * FROM category;` → 17행 |
 | 처음부터 다시 | `docker compose down -v`(데이터 삭제) → `docker compose up -d db` |
 | 테이블 구조 바꾸기 | **지금**: `docs/db/schema.sql`을 고치고 다시 처음부터. **백엔드가 생기면**: Flyway로 옮긴다 — `schema.sql`을 `V1__init.sql`로 넣고, 그 뒤 변경은 `V2__…sql`처럼 새 파일만 더한다(이미 실행한 파일은 고치지 않음). 그때 `docker-compose.yml`의 `schema.sql` 연결 줄을 지운다 |
 | 설계 문서 맞추기 | 구조를 바꾸면 `DB_DESIGN.md` 3-2절·`DB_TABLES.md`·`erdcloud.sql`을 같이 다시 만든다 |
@@ -137,6 +137,10 @@ curl -s -X POST localhost:8001/embed -H "Content-Type: application/json" -d '{"t
 | `docker compose up`에서 이미지 내려받기 실패·인증서 오류 | 회사 프록시·SSL 검사(1절 ⛔3). Docker에 프록시 설정, 회사 루트 인증서 등록 |
 | `db`가 뜨다가 멈춤, 로그에 `schema.sql` 오류 | `docker compose logs db`. 스키마 오류면 고치고 `down -v` 뒤 다시 |
 | `extension "vector" is not available` | `infra/db/Dockerfile`로 이미지가 만들어졌는지(`docker compose build db`) |
+| `postgis-3.so: undefined symbol` | PostGIS가 이미지의 PostgreSQL보다 새 판으로 빌드됨. Dockerfile에서 `postgresql-16`도 같이 설치(올림)하는지 확인 → `docker compose build --no-cache db` → `down -v` 뒤 다시 |
+| 스키마 오류 뒤에도 `healthy`로 보임 | 처음 실행이 중간에 멈춰도 DB는 뜬다. 반드시 `docker compose logs db`에서 `ERROR` 없이 `init process complete`인지 본다 |
+| Docker Desktop이 `WSL not installed` | 관리자 PowerShell에서 `wsl --install --no-distribution` → 재부팅 |
 | 임베딩 서버가 `model not loaded` | `.env`의 `EMBED_MODEL_DIR`가 모델 폴더(안에 `config.json` 등)를 가리키는지 |
 | 메모리 부족으로 컨테이너가 죽음 | `.wslconfig` 메모리, `DB_SHARED_BUFFERS`를 1GB로 |
+| DBeaver 등에서 `password authentication failed` | DB를 처음 만든 뒤 `.env`의 `POSTGRES_PASSWORD`를 바꾸면 DB에는 반영되지 않는다(처음 만들 때만 읽음). `docker compose exec db psql -U storesearch -d storesearch -c "ALTER ROLE storesearch PASSWORD '새 비밀번호';"`로 맞추거나 `down -v` 뒤 다시 |
 | 5432 포트 사용 중 | `.env`의 `DB_PORT`를 5433 등으로 |

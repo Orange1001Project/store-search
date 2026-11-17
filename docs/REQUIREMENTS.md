@@ -37,7 +37,7 @@
 | 웹 화면 | 사용자 웹(반응형), 관리자 웹 | React, 네이버 지도 JavaScript API v3 |
 | API 서버 | 검색(해석·후보·점수·노출·정렬), 회원, 관리자, 로그 수집 | Spring Boot + JPA |
 | 임베딩 추론 서버 | 검색어 문장 → 1024차원 벡터, 주간 갱신 때 가게 벡터 생성 | 별도 서버(bge-m3 미세조정 v1, fp32) |
-| DB | 가맹점·벡터·참조 데이터·회원·로그 | PostgreSQL 16 + PostGIS 3.4 + pgvector 0.8 이상 |
+| DB | 가맹점·벡터·참조 데이터·회원·로그 | PostgreSQL 16 + PostGIS 3.4 이상 + pgvector 0.8 이상 |
 | 배치 | 주간 갱신(명령), 로그 집계·삭제, 만료 토큰 삭제, 즐겨찾기 정리. 확장어 주간 생성은 P2 | API 서버 안 명령·스케줄러(같은 코드) |
 | 웹 서버 | HTTPS, 화면 파일, `/api` 전달 | Nginx |
 | 외부 연동 | 지도, 소셜 로그인 | 네이버 지도(NAVER Cloud Platform Maps), 카카오 로그인, 구글 로그인 |
@@ -394,7 +394,7 @@ DB 테이블 설계의 입력이다. 이름은 예시이고 설계 단계에서 
 
 | ID | 제약 |
 |---|---|
-| CR-01 | 기술: Spring Boot + JPA, PostgreSQL 16 + PostGIS 3.4 + pgvector 0.8 이상. 벡터 전용 DB 쓰지 않음 |
+| CR-01 | 기술: Spring Boot + JPA, PostgreSQL 16 + PostGIS 3.4 이상 + pgvector 0.8 이상. 벡터 전용 DB 쓰지 않음 |
 | CR-02 | 검색 품질 동작(FR-RNK, `docs/BACKEND_HANDOFF.md` 2절)은 평가로 정했다. 바꾸려면 새 판정이나 서비스 로그로 검증한 뒤 정책 버전을 올린다 |
 | CR-03 | store_id는 기존 UUID 유지(평가 정답 연결) |
 | CR-04 | 실시간 LLM 호출 없음(임베딩·확장어는 내부) |
