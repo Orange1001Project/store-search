@@ -17,7 +17,7 @@
 | 위치 권한 없음 → 작은 줄 ⑨ | `POST /browse` | `centerSource=default` → `subMessage=default_location` | P0 |
 | 핀 묶음 라벨 "○○ 외 N개" | — | 묶음 안 `rank`가 가장 작은 핀의 상호(검색 = 목록 맨 위, 조회 = 가장 가까운 곳) | P1 |
 | 핀 묶음 누름 | — (+ 이벤트 `cluster_click`) | 갈라지면 확대, 안 갈라지면(최대 줌·30m 안) 겹친 가게 목록 | P1 |
-| 같은 좌표 핀 누름 | — (조회가 300곳에서 잘렸으면 그 지점만 `POST /browse`) | U-05b "이 위치 가맹점 n곳" 목록. 검색 = rank 순, 조회 = 상호 가나다순 | P0 |
+| 같은 좌표 핀 누름 | — (조회가 300곳에서 잘렸으면 `POST /browse`에 `spot` = 누른 핀 좌표, 300곳 상한 없이 20곳씩 `/page`) | U-05b "이 위치 가맹점 n곳" 목록. 검색 = rank 순, 조회 = 상호 가나다순 | P0 |
 | 내 위치 버튼 | — | 지도만 이동, '현 지도 재검색' 버튼 표시. 두 버튼은 시트 위 12px에 붙어 시트와 함께 움직이고 시트 전체면 숨김 | P0 |
 | 지도 이동 → '현 지도 재검색' | `POST /browse` (+ `research_here`) | 지금 `bounds` | P0 |
 | 화면 0곳 ④ | `POST /browse` | `message=map_empty` | P0 |

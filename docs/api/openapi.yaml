@@ -115,7 +115,7 @@ paths:
 
         - 검색어가 기호·일반어뿐이면 검색하지 않고 200 + 0곳 + message empty_query(FR-SRC-03).
 
-        오류: 400 INVALID_REQUEST(빈 검색어, 50자 초과, view=map인데 bounds 없음, 좌표 범위 밖, bounds 대각선이 limits.mapMaxDiagonalKm 초과)
+        오류: 400 INVALID_REQUEST(빈 검색어, 50자 초과, view=map인데 bounds 없음, 좌표 형식 오류, bounds 대각선이 limits.mapMaxDiagonalKm 초과)
       x-priority: P0
       x-requirements: [IR-01, FR-SRC-03, FR-SRC-04, FR-SRC-05, FR-SRC-06, FR-SRC-07, FR-MAP-10, FR-LOC-01, FR-LOC-05, FR-LOC-06, FR-LOC-07, FR-RNK-01, FR-RNK-09, FR-MSG-01, FR-MSG-02, FR-MSG-04, FR-MAP-02, FR-MAP-03, FR-MAP-04, FR-MAP-08, FR-LST-02]
       security: [{}, { sessionCookie: [] }, { sessionCookie: [], memberAccess: [] }]
@@ -467,9 +467,10 @@ paths:
         첫 화면, 칩만 고름, 검색어 없이 '현 지도 재검색'(FR-BRW-01~04). 화면 안 검색 대상 가게를 검색 중심 가까운 순으로 최대 300곳.
         관련 확률·점수 없음. 핀은 전부(결과 카드와 같은 필드), 시트 목록은 첫 20곳(다음은 /search/{queryId}/page). 지도는 옮기지 않는다.
         - 같은 거리면 상호 가나다순, 그다음 storeId(좌표가 같은 가게가 많다, FR-MAP-11).
-        - 겹친 가게 목록: totalCount가 pins 수보다 크면(300 상한으로 잘림) 화면이 그 지점만 bounds로(그 좌표 ±0.00001°, 약 1m) 다시 부른다.
+        - 겹친 가게 목록(U-05b, FR-MAP-11): 조회가 300곳에서 잘렸으면(totalCount > pins 수) 화면이 bounds 대신 spot(누른 핀 좌표)으로 다시 부른다.
+          spot이면 좌표를 소수 다섯째 자리로 반올림해 같은 가게만, 300곳 상한 없이 모두 상호 가나다순으로 준다. results는 첫 20곳, 나머지는 /page, pins는 빈 목록(화면에 이미 있음).
 
-        오류: 400 INVALID_REQUEST(bounds 없음·좌표 범위 밖·bounds 대각선이 limits.mapMaxDiagonalKm 초과 — 화면은 먼저 재서 부르지 않는다)
+        오류: 400 INVALID_REQUEST(bounds·spot 둘 다 없음·둘 다 있음, 좌표 형식 오류, bounds 대각선이 limits.mapMaxDiagonalKm 초과 — 화면은 먼저 재서 부르지 않는다)
       x-priority: P0
       x-requirements: [IR-03, FR-BRW-01, FR-BRW-02, FR-BRW-03, FR-BRW-04, FR-MAP-08, FR-MAP-11]
       security: [{}, { sessionCookie: [] }, { sessionCookie: [], memberAccess: [] }]
@@ -488,11 +489,9 @@ paths:
                   userLocation: { lat: 36.3518, lng: 127.3786 }
                   paymentCodes: []
               sameSpot:
-                summary: 겹친 가게 목록이 300곳에서 잘렸을 때 그 지점만
+                summary: 겹친 가게 목록이 300곳에서 잘렸을 때 그 지점만(spot)
                 value:
-                  bounds: { sw: { lat: 36.35162, lng: 127.37841 }, ne: { lat: 36.35164, lng: 127.37843 } }
-                  center: { lat: 36.35163, lng: 127.37842 }
-                  centerSource: map_viewport
+                  spot: { lat: 36.35163, lng: 127.37842 }
                   paymentCodes: []
       responses:
         '200':
@@ -547,6 +546,37 @@ paths:
                     totalCount: 1240
                     nextCursor: MjA
                     corpusVersion: '2026-11-09'
+                sameSpot:
+                  summary: 겹친 가게 목록(spot) — 그 지점 501곳, 첫 20곳 중 2곳만 표시
+                  value:
+                    queryId: 7d9f1b3d-5e6a-4c8b-9d0e-2f4a6c8e0b46
+                    results:
+                      - storeId: 2b4d6f8a-0c1e-4a3b-9d5f-7b9d1f3a5c80
+                        name: 가나반찬
+                        categoryCode: K001
+                        categoryName: 식품·마트
+                        marketName: 대전중앙시장
+                        marketType: 전통시장
+                        addressShort: 동구 대전로 783
+                        location: { lat: 36.32901, lng: 127.43005 }
+                        paymentCodes: [card, qr]
+                        rank: 1
+                        distanceFromCenterM: 0
+                      - storeId: 3c5e7a9b-1d2f-4b4c-8e6a-8c0e2a4b6d91
+                        name: 가람한복
+                        categoryCode: K002
+                        categoryName: 의류
+                        marketName: 대전중앙시장
+                        marketType: 전통시장
+                        addressShort: 동구 대전로 783
+                        location: { lat: 36.32901, lng: 127.43005 }
+                        paymentCodes: [card]
+                        rank: 2
+                        distanceFromCenterM: 0
+                    pins: []
+                    totalCount: 501
+                    nextCursor: MjA
+                    corpusVersion: '2026-11-09'
                 chipEmpty:
                   summary: 칩 조건에 맞는 가게 없음
                   value:
@@ -566,7 +596,7 @@ paths:
       operationId: getSearchPage
       summary: 다음 20곳
       description: |
-        검색·조회 결과(≤ 300)는 서버 캐시에 보관한다(FR-LST-02). 보관은 마지막 요청부터 10분이고 이 API를 부를 때마다 10분 연장한다. 그 목록에서 다음 20곳을 준다.
+        검색·조회 결과(≤ 300, /browse의 spot은 그 지점 전부)는 서버 캐시에 보관한다(FR-LST-02). 보관은 마지막 요청부터 10분이고 이 API를 부를 때마다 10분 연장한다. 그 목록에서 다음 20곳을 준다.
         화면은 받은 20곳을 목록 끝에 이어 붙이고 앞의 카드는 지우지 않는다(API_RULES.md 11절).
         favorited(P1)는 이 응답을 만들 때 다시 붙인다. 페이지를 볼 때마다 같은 queryId로 검색 로그 한 줄(FR-LOG-02).
 
@@ -752,7 +782,7 @@ paths:
         - 첫 로그인(mustChangePassword = true): newPassword만. 임시 비밀번호로 막 로그인한 것이 확인을 대신한다. 성공하면 mustChangePassword = false.
         - 평소 변경: currentPassword 필수. 틀린 횟수는 로그인 5회 잠금에 포함.
 
-        오류: 400 INVALID_REQUEST(평소 변경인데 currentPassword 없음)·PASSWORD_POLICY · 401 AUTH_REQUIRED·INVALID_CREDENTIALS(currentPassword 틀림) · 403 CSRF_FAILED·ACCOUNT_LOCKED
+        오류: 400 INVALID_REQUEST(평소 변경인데 currentPassword 없음)·PASSWORD_POLICY·CURRENT_PASSWORD_WRONG(currentPassword 틀림, 5회 잠금에 셈) · 401 AUTH_REQUIRED · 403 CSRF_FAILED·ACCOUNT_LOCKED(틀린 횟수가 5회가 되면 잠그고 세션도 끝냄)
       x-priority: P0
       x-requirements: [FR-ADM-01, FR-ADM-04]
       security: [{ adminSession: [], csrfToken: [] }]
@@ -783,7 +813,7 @@ paths:
       operationId: listAdminStores
       summary: 가맹점 목록(A-03)
       description: |
-        검색·거르기·50건씩 페이지(FR-STO-01). 순서는 고정: 상호(수정 값 반영) 가나다순(ko-KR), 같으면 storeId. 정렬 파라미터 없음.
+        검색·거르기·50건씩 페이지(FR-STO-01). 순서는 고정: 상호(수정 값 반영) 가나다순, 같으면 storeId. 정렬 파라미터 없음.
         폐업·숨김 가게도 나온다(status·hidden으로 거름).
 
         오류: 400 INVALID_REQUEST · 401 AUTH_REQUIRED · 403 PASSWORD_CHANGE_REQUIRED
@@ -1536,8 +1566,10 @@ paths:
         회원 API가 401 TOKEN_EXPIRED를 주면 한 번 부르고, 성공하면 원래 요청을 다시 보낸다.
         refresh_token 쿠키(14일)로 새 access_token과 새 refresh_token을 준다. 쓴 refresh_token은 바로 폐기(FR-MBR-06).
         이미 쓴 refresh_token이 다시 오면 탈취로 보고 그 계열 토큰을 모두 폐기한다.
+        401이면 회원 쿠키(access_token·refresh_token·csrf_token)를 지운다(Max-Age=0, 만들 때와 같은 Path) — 만료된 토큰을 계속 보내지 않게.
+        회원이 동의한 약관 버전이 지금 버전과 다르면 갱신하지 않고 그 계열 토큰을 폐기한다(비회원으로). 다음 로그인 때 콜백이 가입 동의(U-08)로 보내 다시 동의받는다(FR-MBR-02).
 
-        오류: 401 AUTH_REQUIRED(refresh_token 없음·만료 → 비회원으로)·REFRESH_REUSED(이미 쓴 토큰 → 비회원으로) · 403 CSRF_FAILED
+        오류: 401 AUTH_REQUIRED(refresh_token 없음·만료·약관 버전이 바뀜 → 비회원으로)·REFRESH_REUSED(이미 쓴 토큰 → 비회원으로) · 403 CSRF_FAILED
       x-priority: P1
       x-requirements: [FR-MBR-06, NFR-SEC-02]
       security: [{ refreshCookie: [], csrfToken: [] }]
@@ -2155,7 +2187,7 @@ components:
       type: string
       description: |
         화면이 분기에 쓰는 고정 코드(API_RULES.md 4절). 새 코드는 이 목록과 API_RULES.md를 함께 고친다.
-        400 INVALID_REQUEST·PASSWORD_POLICY·INVALID_FILE·TERMS_REQUIRED /
+        400 INVALID_REQUEST·PASSWORD_POLICY·CURRENT_PASSWORD_WRONG·INVALID_FILE·TERMS_REQUIRED /
         401 AUTH_REQUIRED·TOKEN_EXPIRED·INVALID_CREDENTIALS·SIGNUP_EXPIRED·REFRESH_REUSED /
         403 CSRF_FAILED·ACCOUNT_LOCKED·ACCOUNT_DISABLED·PASSWORD_CHANGE_REQUIRED /
         404 STORE_NOT_FOUND·NOT_FOUND / 409 REFRESH_ALREADY_RUNNING·SAME_FILE_ALREADY_APPLIED·INVALID_STATE·FAVORITE_LIMIT·ALREADY_MEMBER /
@@ -2164,6 +2196,7 @@ components:
       enum:
         - INVALID_REQUEST
         - PASSWORD_POLICY
+        - CURRENT_PASSWORD_WRONG
         - INVALID_FILE
         - TERMS_REQUIRED
         - AUTH_REQUIRED
@@ -2192,11 +2225,14 @@ components:
 
     LatLng:
       type: object
-      description: WGS84 좌표. 국내 범위(위도 33~39, 경도 124~132)
+      description: |
+        WGS84 좌표. 형식 검사는 위도 -90~90, 경도 -180~180만 한다(넘으면 400).
+        국내 범위(위도 33~39, 경도 124~132) 밖은 오류가 아니다: center·userLocation은 없는 것으로 보고 기본 위치로(FR-LOC-02, 작은 줄 ⑨),
+        bounds는 국내 범위와 겹치는 부분만 쓴다(안 겹치면 0곳). 가게 좌표는 원천 값 그대로(소수 여섯째 자리까지)
       required: [lat, lng]
       properties:
-        lat: { type: number, format: double, minimum: 33, maximum: 39 }
-        lng: { type: number, format: double, minimum: 124, maximum: 132 }
+        lat: { type: number, format: double, minimum: -90, maximum: 90 }
+        lng: { type: number, format: double, minimum: -180, maximum: 180 }
 
     Bounds:
       type: object
@@ -2317,7 +2353,8 @@ components:
               nullable: true
               description: |
                 위치기반서비스 이용약관. 법무 결과 동의가 필요하면 채우고, 필요 없으면 null(U-12는 안내만) ⚠.
-                화면은 동의한 version을 브라우저에 저장하고, 이 값이 바뀌면 U-12를 다시 띄운다
+                화면은 U-12에서 고른 뒤 지금 값(version, null이면 문자열 none)을 브라우저에 저장하고, 저장한 값이 없거나 지금 값과 다르면 U-12를 띄운다.
+                그래서 null → 버전이 생기면 한 번 다시 묻고, null인 동안에는 다시 묻지 않는다
               required: [version, url]
               properties:
                 version: { type: string, example: '2026-11' }
@@ -2389,9 +2426,16 @@ components:
 
     BrowseRequest:
       type: object
-      required: [bounds]
+      description: bounds(화면 범위)나 spot(겹친 가게 목록의 한 지점) 중 하나만 보낸다
       properties:
-        bounds: { $ref: '#/components/schemas/Bounds' }
+        bounds:
+          description: 화면 범위. 화면 안 가게를 가까운 순 300곳까지
+          allOf: [{ $ref: '#/components/schemas/Bounds' }]
+        spot:
+          description: |
+            겹친 가게 목록(U-05b, FR-MAP-11). 누른 핀 좌표. 좌표를 소수 다섯째 자리로 반올림해 같은 가게만, 300곳 상한 없이 모두(한 지점 최대 약 500곳).
+            순서는 상호 가나다순, 그다음 storeId. pins는 빈 목록
+          allOf: [{ $ref: '#/components/schemas/LatLng' }]
         center:
           description: 거리순 정렬 기준. 없으면 bounds 가운데
           allOf: [{ $ref: '#/components/schemas/LatLng' }]
@@ -2563,12 +2607,12 @@ components:
         pins:
           type: array
           maxItems: 300
-          description: 가까운 순 앞 300곳까지
+          description: 가까운 순 앞 300곳까지. spot 요청이면 빈 목록
           items: { $ref: '#/components/schemas/StorePin' }
         totalCount:
           type: integer
           minimum: 0
-          description: 화면 안 조건에 맞는 전체 가게 수(300을 넘을 수 있다). totalCount가 pins 수보다 크면 300곳에서 잘린 것
+          description: 조건에 맞는 전체 가게 수(300을 넘을 수 있다). bounds 요청에서 totalCount가 pins 수보다 크면 300곳에서 잘린 것. spot 요청은 그 지점 전부라 /page로 끝까지 볼 수 있다
         nextCursor: { $ref: '#/components/schemas/Cursor' }
         corpusVersion: { type: string }
 
@@ -3088,6 +3132,9 @@ components:
             passwordPolicy:
               summary: PASSWORD_POLICY — 비밀번호 규칙 위반
               value: { code: PASSWORD_POLICY, message: 비밀번호 규칙에 맞지 않습니다., traceId: 4bf92f3577b34da6 }
+            currentPasswordWrong:
+              summary: CURRENT_PASSWORD_WRONG — 비밀번호 변경에서 지금 비밀번호가 틀림(401이 아니라 400이라 로그인 화면으로 보내지 않는다)
+              value: { code: CURRENT_PASSWORD_WRONG, message: 지금 비밀번호가 맞지 않습니다., traceId: 4bf92f3577b34da6 }
             termsRequired:
               summary: TERMS_REQUIRED — 필수 약관 미동의
               value: { code: TERMS_REQUIRED, message: 필수 약관에 동의해 주세요., traceId: 4bf92f3577b34da6 }

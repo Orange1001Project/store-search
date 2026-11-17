@@ -673,8 +673,22 @@ WHERE  s.version_id = :v AND s.searchable
   AND  s.geom && ST_MakeEnvelope(:west, :south, :east, :north, 4326)::geography
   AND  (:cat IS NULL OR :cat = ANY(s.category_codes))
   AND  (cardinality(:pays) = 0 OR s.payment_codes && :pays)   -- && = 목록이 하나라도 겹침
-ORDER  BY s.geom <-> ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
+ORDER  BY s.geom <-> ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
+          s.store_name COLLATE "C", s.store_id                     -- 같은 거리면 상호 가나다순, 그다음 store_id(API와 같은 순서)
 LIMIT  300;
+
+-- ⑤-2 겹친 가게 목록(spot, FR-MAP-11): 좌표를 소수 다섯째 자리로 반올림해 같은 가게 전부(상한 없음), 상호 가나다순
+--      geom && 작은 상자로 먼저 좁혀 공간 색인을 쓰고, 반올림 비교로 옆 좌표를 뺀다
+SELECT s.store_id, s.store_name, s.primary_category, s.market_type, s.market_name, s.payment_codes,
+       ST_Y(s.geom::geometry) AS lat, ST_X(s.geom::geometry) AS lng
+FROM   store_snapshot s
+WHERE  s.version_id = :v AND s.searchable
+  AND  s.geom && ST_MakeEnvelope(:lng - 0.00001, :lat - 0.00001, :lng + 0.00001, :lat + 0.00001, 4326)::geography
+  AND  round(ST_Y(s.geom::geometry)::numeric, 5) = round(:lat, 5)
+  AND  round(ST_X(s.geom::geometry)::numeric, 5) = round(:lng, 5)
+  AND  (:cat IS NULL OR :cat = ANY(s.category_codes))
+  AND  (cardinality(:pays) = 0 OR s.payment_codes && :pays)
+ORDER  BY s.store_name COLLATE "C", s.store_id;
 
 -- ⑥ 즐겨찾기 목록(확인 대기는 숨김)
 SELECT f.store_id, s.store_name, s.market_type, s.market_name, s.address_short
@@ -704,7 +718,9 @@ WHERE  (:q IS NULL OR s.business_no = :q OR s.store_id::text = :q
   AND  (:coord_error IS NULL OR s.coord_error = :coord_error)
   AND  (:category IS NULL OR sn.primary_category = :category)
   AND  (:edited IS NULL OR EXISTS (SELECT 1 FROM store_override x WHERE x.store_id = s.store_id) = :edited)
-ORDER  BY 2, s.store_id LIMIT 50 OFFSET :offset;   -- 수정 값을 반영한 상호 가나다순 고정. 한글 음절은 코드 순서가 가나다순이라 기본 정렬로 충분
+ORDER  BY coalesce(o.override_value #>> '{}', s.store_name) COLLATE "C", s.store_id
+LIMIT  50 OFFSET :offset;   -- 수정 값을 반영한 상호 가나다순 고정. "가나다순"은 어디서나 COLLATE "C"(유니코드 코드 순서)로 쓴다:
+                            -- 한글 음절은 코드 순서가 가나다순이고, DB 기본 정렬 설정에 따라 영문·숫자·공백 순서가 달라지지 않는다
 --    성능 메모(백엔드 개발 때 측정 후 결정): 검색어 없이 열면 21만 행을 훑어 상위 50건만 남기는 정렬(top-N)이라
 --    관리자 몇 명이 쓰는 화면으로는 충분할 것으로 본다. 1초를 넘으면 ① 수정 값을 반영한 상호를 store에 열로 두고(수정·해제 때 갱신)
 --    (그 열, store_id) 인덱스를 건 뒤 ② 뒤쪽 페이지는 OFFSET 대신 마지막 (상호, store_id) 다음부터 읽는 방식(keyset)으로 바꾼다.
