@@ -48,7 +48,7 @@
 | "○○ 지역으로 보기" | `POST /search` | `skipNameFirst=true`, `inputType=region_view` | P0 |
 | "다른 중구" 시트 | 응답 `interpretation.otherRegions` | 지금 지역(`current`) 포함, `distanceKm` 순, 지역마다 km | P1 |
 | 시트에서 다른 지역 고름 | `POST /search` (+ `region_choice`) | `regionChoice`, `inputType=region_choice`. 지금 지역을 고르면 시트만 닫음 | P1 |
-| 목록 아래로 내림 | `GET /search/{queryId}/page` | 410 → 직전 요청 다시 + 토스트 "결과를 새로 불러왔어요" | P0 |
+| 목록 아래로 내림 | `GET /search/{queryId}/page` | 20곳씩 이어 붙임(앞 카드 유지, 위로 올리면 1위부터, 상세에서 돌아오면 위치 그대로). 410 → 목록은 그대로 두고 더 부르지 않음(다시 검색 안 함) | P0 |
 | '목록 보기' / '지도 보기' | — | 같은 결과 | P0 |
 | '현 지도 재검색' | `POST /search` | `view=map`, `bounds` | P0 |
 | 검색창 × / ← | — | 검색 전 조회 화면(지도·핀·시트·칩)을 그대로 다시 보여 줌 | P0 |
@@ -117,7 +117,7 @@
 | A-01 비밀번호 변경 | 새 비밀번호·확인 | `PUT /admin/me/password`(`mustChangePassword` 세션은 `newPassword`만). 바꾸기 전 다른 관리자 API는 403 `PASSWORD_CHANGE_REQUIRED` | P0 |
 | 공통 틀 | 아이디 표시·로그아웃 | `GET /admin/me`, `POST /admin/auth/logout` | P0 |
 | A-03 목록 | 검색·필터 6개, 50건씩, 상호(수정 값 반영) 가나다순 고정, 시장명·시장유형 열, "수정 N" 표시 | `GET /admin/stores`(정렬은 서버 고정, `marketType`·`editedCount`), 업종 선택지 `GET /meta` | P0 |
-| A-04 상세 | 필드별 원천·수정·마지막 수정, 숨김, 고칠 수 없는 값 | `GET /admin/stores/{id}` | P0 |
+| A-04 상세 | 제목(`name`)·상태·`editedCount`, 필드 7줄(`fields`: 상호·품목·주소·좌표(보기만)·시장명·업종·카드·QR)의 원천·수정·마지막 수정, 숨김(`visibility`), 고칠 수 없는 값 | `GET /admin/stores/{id}` | P0 |
 | A-04 수정 대화상자 | 원천 값·지금 수정 값·새 값·사유 → 저장 | `PUT /admin/stores/{id}/overrides/{field}` | P0 |
 | A-04 해제 | | `DELETE /admin/stores/{id}/overrides/{field}` | P0 |
 | A-04 숨김·보이기(사유) | | `PUT /admin/stores/{id}/visibility` | P0 |
@@ -136,7 +136,7 @@ A-02 홈, A-05 주간 갱신, A-06 원천 변경 알림, A-07 브랜드 별칭, 
 | A-03 정렬 | 상호 가나다순 고정. 페이지를 서버가 나누므로 서버가 정함, 정렬 파라미터 없음 | FR-STO-01, `listAdminStores` |
 | 다른 지역 시트 | 지금 지역 포함 모두 거리순, 거리 km | FR-SRC-06, FR-MAP-10, 정책 4-2, `otherRegions` |
 | 닉네임 변경 | P1 | FR-MBR-10, `updateMe` |
-| 통계 CSV | API 없음, 화면에서 만듦 | FR-STA-03, API_RULES 10-1에서 삭제 |
+| 통계 CSV | API 없음, 화면에서 만듦 | FR-STA-03 |
 | 공유 | 공유 글 형식, 전화 없으면 줄 뺌, 링크 미리보기 | FR-DTL-05 |
 | 검색에서 돌아오기·내 위치 | 이전 조회 그대로 / 지도만 이동 | FR-BRW-06, FR-MAP-01 |
 | 확대 안내 | 화면이 먼저 막고 이전 핀·시트 유지 | FR-MAP-05 |
@@ -146,7 +146,7 @@ A-02 홈, A-05 주간 갱신, A-06 원천 변경 알림, A-07 브랜드 별칭, 
 | 핀 묶음 라벨 | 묶음 안 rank 가장 앞 | FR-MAP-07 |
 | 로그인 상태 | 로그인 없이 열고, 회원 기능 누를 때만 로그인. 첫 화면 안내 문구 없음 | FR-MBR-12 |
 | 관심 가맹점 해제 | 바로 목록에서 뺌, 빈 화면 | FR-MBR-08, `U10-Empty` |
-| 회원 메뉴·탈퇴 확인·오류 | 그림 추가 | 7·8절, `Menu-Member`, `U09-*`, `E01-Offline`, `Dialogs`, `A04-EditDialog` |
+| 회원 메뉴·탈퇴 확인·오류 | 그림 있음 | 7·8절, `Menu-Member`, `U09-*`, `E01-Offline`, `Dialogs`, `A04-EditDialog` |
 
 ### 그 밖의 결정
 

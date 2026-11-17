@@ -11,10 +11,11 @@ info:
     - 공통 규칙(응답·오류 형식, 인증, 요청 제한): [API_RULES.md](https://github.com/Orange1001Project/store-search/blob/main/docs/api/API_RULES.md). 화면 동작별 호출은 그 문서 11절
     - 기능 근거: docs/REQUIREMENTS.md. 각 API의 `x-priority`는 출시 우선순위(P0 출시 핵심, P1 1차 목표, P2 출시 뒤), `x-requirements`는 근거 요구사항 ID
 
-    **인증은 모두 쿠키**다(Authorization 헤더 없음). 브라우저가 쿠키를 붙이고, 쓰기 요청(POST·PUT·PATCH·DELETE)은 csrf_token 쿠키 값을 `X-CSRF-Token` 헤더에 넣는다.
+    **인증은 모두 쿠키**다(Authorization 헤더 없음). 브라우저가 쿠키를 붙이고, 쓰기 요청(POST·PUT·PATCH·DELETE)은 CSRF 쿠키 값(회원 csrf_token, 관리자 admin_csrf_token)을 `X-CSRF-Token` 헤더에 넣는다.
     그래서 이 문서의 Authorize 버튼으로는 로그인할 수 없다. 로그인이 필요한 API는 API 서버와 같은 주소에서 띄운 문서로, 로그인 API를 먼저 부른 뒤 시험한다.
 
     모든 API는 429 RATE_LIMITED(Retry-After)와 500·503(INTERNAL_ERROR, SERVICE_UNAVAILABLE, MAINTENANCE)을 줄 수 있다. 모든 응답 헤더에 X-Trace-Id.
+    화면은 모든 요청에 X-App-Version(화면 빌드 버전) 헤더를 붙인다(선택, 로그 app_version — NFR-OPS-07).
 servers:
   - url: /api/v1
     description: 같은 주소(Nginx 뒤 또는 API 서버가 띄운 문서)
@@ -112,10 +113,12 @@ paths:
         - 지명만 입력(P1): placeOnly를 채우고 그 범위의 검색어 없는 조회 결과를 results·pins에 함께 준다.
         - 로그인한 회원(P1)이면 favorited를 응답 때마다 붙이고, inputType이 typed·recent·place_store·autocomplete일 때만 최근 검색어에 저장한다(FR-MBR-07).
 
-        오류: 400 INVALID_REQUEST(빈 검색어, 50자 초과, view=map인데 bounds 없음, 좌표 범위 밖)
+        - 검색어가 기호·일반어뿐이면 검색하지 않고 200 + 0곳 + message empty_query(FR-SRC-03).
+
+        오류: 400 INVALID_REQUEST(빈 검색어, 50자 초과, view=map인데 bounds 없음, 좌표 범위 밖, bounds 대각선이 limits.mapMaxDiagonalKm 초과)
       x-priority: P0
-      x-requirements: [IR-01, FR-SRC-05, FR-SRC-07, FR-LOC-01, FR-LOC-05, FR-LOC-06, FR-LOC-07, FR-RNK-01, FR-RNK-09, FR-MSG-01, FR-MSG-02, FR-MSG-04, FR-MAP-02, FR-MAP-03, FR-MAP-04, FR-MAP-08, FR-LST-02]
-      security: [{}, { sessionCookie: [] }]
+      x-requirements: [IR-01, FR-SRC-03, FR-SRC-04, FR-SRC-05, FR-SRC-06, FR-SRC-07, FR-MAP-10, FR-LOC-01, FR-LOC-05, FR-LOC-06, FR-LOC-07, FR-RNK-01, FR-RNK-09, FR-MSG-01, FR-MSG-02, FR-MSG-04, FR-MAP-02, FR-MAP-03, FR-MAP-04, FR-MAP-08, FR-LST-02]
+      security: [{}, { sessionCookie: [] }, { sessionCookie: [], memberAccess: [] }]
       requestBody:
         required: true
         content:
@@ -183,7 +186,7 @@ paths:
                       intent: category
                       nameFirst: false
                       otherRegions: []
-                    center: { lat: 36.3518, lng: 127.3786 }
+                    center: { lat: 36.3527, lng: 127.3792 }
                     centerSource: query_region
                     radiusStage: area
                     results:
@@ -262,7 +265,7 @@ paths:
                     corpusVersion: '2026-11-09'
                     pipelineVersion: policy_v1+calib_x1
                 expanded:
-                  summary: 1km 안 3곳, 10km까지 넓혀 12곳 더(문구 ②, 다음 페이지 있음)
+                  summary: 1km 안 3곳, 10km까지 넓혀 40곳 더(문구 ②, 다음 페이지 있음)
                   value:
                     queryId: 2d4f6a8c-0e1b-4c3d-8e5f-7a9b1c3d5e60
                     view: list
@@ -270,7 +273,7 @@ paths:
                     center: { lat: 36.3518, lng: 127.3786 }
                     centerSource: gps
                     radiusStage: 10km
-                    message: { code: expanded_partial, params: { n: 3, m: 12 } }
+                    message: { code: expanded_partial, params: { n: 3, m: 40 } }
                     results:
                       - storeId: 9a1b3c5d-7e8f-4a0b-8c2d-4e6f8a0b2c79
                         name: 둔산치킨
@@ -296,7 +299,7 @@ paths:
                         rank: 1
                         distanceFromCenterM: 140
                         topStore: true
-                    totalCount: 15
+                    totalCount: 43
                     nextCursor: MjA
                     mapFit: { sw: { lat: 36.3301, lng: 127.3512 }, ne: { lat: 36.3735, lng: 127.4060 } }
                     corpusVersion: '2026-11-09'
@@ -320,11 +323,11 @@ paths:
                         name: 가마치통닭 둔산갤러리아점
                         categoryCode: K006
                         categoryName: 음식점
-                        marketName: null
-                        marketType: null
+                        marketName: 둔산2동
+                        marketType: 골목형상점가
                         addressShort: 서구 둔산로 8
                         location: { lat: 36.35163, lng: 127.37842 }
-                        paymentCodes: [card]
+                        paymentCodes: [card, qr]
                         rank: 1
                         distanceFromCenterM: 180
                     pins:
@@ -332,16 +335,108 @@ paths:
                         name: 가마치통닭 둔산갤러리아점
                         categoryCode: K006
                         categoryName: 음식점
-                        marketName: null
-                        marketType: null
+                        marketName: 둔산2동
+                        marketType: 골목형상점가
                         addressShort: 서구 둔산로 8
                         location: { lat: 36.35163, lng: 127.37842 }
-                        paymentCodes: [card]
+                        paymentCodes: [card, qr]
                         rank: 1
                         distanceFromCenterM: 180
                         topStore: true
                     totalCount: 6
                     mapFit: { sw: { lat: 36.3401, lng: 127.3633 }, ne: { lat: 36.3622, lng: 127.3949 } }
+                    corpusVersion: '2026-11-09'
+                    pipelineVersion: policy_v1+calib_x1
+                regionAmbiguous:
+                  summary: 같은 이름 지명이 여러 곳(P1, 작은 줄 region_ambiguous)
+                  value:
+                    queryId: 6f8a0c2e-4b6d-4e8f-9a1c-3e5f7a9c1b24
+                    view: list
+                    interpretation:
+                      region: { regionId: '20117', name: 대전 중구, scope: area }
+                      intent: category
+                      nameFirst: false
+                      otherRegions:
+                        - { regionId: '20117', name: 대전 중구, distanceKm: 4.2, current: true }
+                        - { regionId: '20391', name: 대구 중구, distanceKm: 120.4, current: false }
+                        - { regionId: '20005', name: 서울 중구, distanceKm: 141.0, current: false }
+                    center: { lat: 36.3256, lng: 127.4213 }
+                    centerSource: query_region
+                    radiusStage: area
+                    subMessage: { code: region_ambiguous, params: { region: 대전 중구, name: 중구 } }
+                    results:
+                      - storeId: 1c3e5a7b-9d0f-4b2c-8e4a-6c8e0a2b4d13
+                        name: 중앙시장 칼국수
+                        categoryCode: K006
+                        categoryName: 음식점
+                        marketName: 대전중앙시장
+                        marketType: 전통시장
+                        addressShort: 동구 대전로 783
+                        location: { lat: 36.32901, lng: 127.43005 }
+                        paymentCodes: [card, qr]
+                        rank: 1
+                        distanceFromCenterM: 950
+                    pins:
+                      - storeId: 1c3e5a7b-9d0f-4b2c-8e4a-6c8e0a2b4d13
+                        name: 중앙시장 칼국수
+                        categoryCode: K006
+                        categoryName: 음식점
+                        marketName: 대전중앙시장
+                        marketType: 전통시장
+                        addressShort: 동구 대전로 783
+                        location: { lat: 36.32901, lng: 127.43005 }
+                        paymentCodes: [card, qr]
+                        rank: 1
+                        distanceFromCenterM: 950
+                        topStore: true
+                    totalCount: 1
+                    mapFit: { sw: { lat: 36.3241, lng: 127.4251 }, ne: { lat: 36.3339, lng: 127.4350 } }
+                    corpusVersion: '2026-11-09'
+                    pipelineVersion: policy_v1+calib_x1
+                placeOnly:
+                  summary: 지명만 입력(P1) — 지도를 그 지역으로 옮기고 주변 가게, 이름이 든 가게 제안
+                  value:
+                    queryId: 0e2a4c6e-8b1d-4f3a-9c5e-7b9d1f3a5c68
+                    view: list
+                    interpretation:
+                      region: { regionId: '10412', name: 은행동, scope: point }
+                      intent: null
+                      nameFirst: false
+                      otherRegions: []
+                    center: { lat: 36.3289, lng: 127.4271 }
+                    centerSource: query_region
+                    radiusStage: viewport
+                    placeOnly:
+                      region: 은행동
+                      mapFit: { sw: { lat: 36.3244, lng: 127.4216 }, ne: { lat: 36.3334, lng: 127.4326 } }
+                      storeSuggestion: { name: 은행동 떡볶이 }
+                    results:
+                      - storeId: 4e6a8c0e-2b4d-4f6a-8c0e-2b4d6f8a0c57
+                        name: 으능정이 분식
+                        categoryCode: K006
+                        categoryName: 음식점
+                        marketName: 으능정이거리
+                        marketType: 골목형상점가
+                        addressShort: 중구 중앙로164번길 21
+                        location: { lat: 36.32895, lng: 127.42718 }
+                        paymentCodes: [card]
+                        rank: 1
+                        distanceFromCenterM: 10
+                    pins:
+                      - storeId: 4e6a8c0e-2b4d-4f6a-8c0e-2b4d6f8a0c57
+                        name: 으능정이 분식
+                        categoryCode: K006
+                        categoryName: 음식점
+                        marketName: 으능정이거리
+                        marketType: 골목형상점가
+                        addressShort: 중구 중앙로164번길 21
+                        location: { lat: 36.32895, lng: 127.42718 }
+                        paymentCodes: [card]
+                        rank: 1
+                        distanceFromCenterM: 10
+                        topStore: false
+                    totalCount: 1
+                    mapFit: { sw: { lat: 36.3244, lng: 127.4216 }, ne: { lat: 36.3334, lng: 127.4326 } }
                     corpusVersion: '2026-11-09'
                     pipelineVersion: policy_v1+calib_x1
                 noResult:
@@ -374,10 +469,10 @@ paths:
         - 같은 거리면 상호 가나다순, 그다음 storeId(좌표가 같은 가게가 많다, FR-MAP-11).
         - 겹친 가게 목록: totalCount가 pins 수보다 크면(300 상한으로 잘림) 화면이 그 지점만 bounds로(그 좌표 ±0.00001°, 약 1m) 다시 부른다.
 
-        오류: 400 INVALID_REQUEST(bounds 없음·좌표 범위 밖)
+        오류: 400 INVALID_REQUEST(bounds 없음·좌표 범위 밖·bounds 대각선이 limits.mapMaxDiagonalKm 초과 — 화면은 먼저 재서 부르지 않는다)
       x-priority: P0
       x-requirements: [IR-03, FR-BRW-01, FR-BRW-02, FR-BRW-03, FR-BRW-04, FR-MAP-08, FR-MAP-11]
-      security: [{}, { sessionCookie: [] }]
+      security: [{}, { sessionCookie: [] }, { sessionCookie: [], memberAccess: [] }]
       requestBody:
         required: true
         content:
@@ -449,7 +544,7 @@ paths:
                         rank: 1
                         distanceFromCenterM: 180
                         topStore: false
-                    totalCount: 300
+                    totalCount: 1240
                     nextCursor: MjA
                     corpusVersion: '2026-11-09'
                 chipEmpty:
@@ -471,13 +566,16 @@ paths:
       operationId: getSearchPage
       summary: 다음 20곳
       description: |
-        검색·조회 결과(≤ 300)는 서버 캐시에 10분 보관한다(FR-LST-02). 그 목록에서 다음 20곳을 준다.
+        검색·조회 결과(≤ 300)는 서버 캐시에 보관한다(FR-LST-02). 보관은 마지막 요청부터 10분이고 이 API를 부를 때마다 10분 연장한다. 그 목록에서 다음 20곳을 준다.
+        화면은 받은 20곳을 목록 끝에 이어 붙이고 앞의 카드는 지우지 않는다(API_RULES.md 11절).
         favorited(P1)는 이 응답을 만들 때 다시 붙인다. 페이지를 볼 때마다 같은 queryId로 검색 로그 한 줄(FR-LOG-02).
 
-        오류: 400 INVALID_REQUEST(cursor 형식) · 404 NOT_FOUND(모르는 queryId) · 410 SEARCH_RESULT_EXPIRED(10분 지남 → 직전 요청으로 다시 검색)
+        캐시에 없는 queryId는 10분이 지났는지 처음부터 없었는지 가리지 않고 모두 410이다.
+
+        오류: 400 INVALID_REQUEST(cursor 형식) · 410 SEARCH_RESULT_EXPIRED(10분 동안 안 부름·모르는 queryId → 화면은 보여 준 목록을 그대로 두고 더 부르지 않는다)
       x-priority: P0
       x-requirements: [IR-02, FR-LST-01, FR-LST-02, FR-LOG-02]
-      security: [{}, { sessionCookie: [] }]
+      security: [{}, { sessionCookie: [] }, { sessionCookie: [], memberAccess: [] }]
       parameters:
         - $ref: '#/components/parameters/QueryId'
         - name: cursor
@@ -488,6 +586,9 @@ paths:
       responses:
         '200':
           description: 성공. 마지막 페이지면 nextCursor 없음
+          headers:
+            X-Trace-Id: { $ref: '#/components/headers/TraceId' }
+            Set-Cookie: { $ref: '#/components/headers/SetSessionCookie' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PageResponse' }
@@ -506,7 +607,6 @@ paths:
                     rank: 21
                     distanceFromCenterM: 1480
         '400': { $ref: '#/components/responses/BadRequest' }
-        '404': { $ref: '#/components/responses/NotFound' }
         '410': { $ref: '#/components/responses/Gone' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '5XX': { $ref: '#/components/responses/ServerError' }
@@ -523,7 +623,7 @@ paths:
         오류: 400 INVALID_REQUEST(storeId가 UUID 아님) · 404 STORE_NOT_FOUND(폐업·숨김·없는 ID → U-11, FR-DTL-07)
       x-priority: P0
       x-requirements: [IR-04, FR-DTL-01, FR-DTL-02, FR-DTL-03, FR-DTL-05, FR-DTL-07]
-      security: [{}, { sessionCookie: [] }]
+      security: [{}, { sessionCookie: [] }, { sessionCookie: [], memberAccess: [] }]
       parameters:
         - $ref: '#/components/parameters/StoreId'
       responses:
@@ -556,7 +656,7 @@ paths:
       operationId: adminLogin
       summary: 관리자 로그인
       description: |
-        성공하면 admin_sid 세션 쿠키와 csrf_token 쿠키를 준다. 30분 무활동이면 만료(FR-ADM-02).
+        성공하면 admin_sid 세션 쿠키와 admin_csrf_token 쿠키를 준다(회원의 csrf_token과 따로). 30분 무활동이면 만료(FR-ADM-02).
         mustChangePassword가 true면 화면은 비밀번호 변경으로 보낸다. 바꾸기 전까지는 GET /admin/me, PUT /admin/me/password,
         POST /admin/auth/logout만 되고 다른 관리자 API는 403 PASSWORD_CHANGE_REQUIRED(FR-ADM-04).
 
@@ -577,7 +677,7 @@ paths:
             Set-Cookie:
               description: |
                 `admin_sid=…; Path=/api/v1/admin; HttpOnly; Secure; SameSite=Lax` (서버 세션, 30분 무활동 만료)
-                `csrf_token=…; Path=/; Secure; SameSite=Lax` (화면이 읽어 X-CSRF-Token 헤더에 넣음, HttpOnly 아님)
+                `admin_csrf_token=…; Path=/; Secure; SameSite=Lax` (관리자 화면이 읽어 X-CSRF-Token 헤더에 넣음, HttpOnly 아님. 회원 csrf_token과 이름이 달라 같은 브라우저에서 서로 덮어쓰지 않는다)
                 한 응답에 Set-Cookie 헤더가 두 줄 온다
               schema: { type: string }
           content:
@@ -613,7 +713,7 @@ paths:
           description: 로그아웃
           headers:
             Set-Cookie:
-              description: '`admin_sid=; Path=/api/v1/admin; Max-Age=0`, `csrf_token=; Path=/; Max-Age=0` (두 쿠키를 지움)'
+              description: '`admin_sid=; Path=/api/v1/admin; Max-Age=0`, `admin_csrf_token=; Path=/; Max-Age=0` (두 쿠키를 지움. 회원 쿠키는 건드리지 않음)'
               schema: { type: string }
         '403': { $ref: '#/components/responses/Forbidden' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
@@ -765,39 +865,60 @@ paths:
               schema: { $ref: '#/components/schemas/AdminStoreDetail' }
               example: &adminStoreDetailExample
                 storeId: 3f6c2b1e-8a4d-4c5e-9b7a-2d1e0f9a8b71
+                name: 가마치통닭 둔산갤러리아점
                 businessNo: '3051234567'
                 merchantNo: '2024012345'
                 marketType: 골목형상점가
                 status: active
                 statusChangedAt: '2026-11-09T04:10:00+09:00'
                 hidden: false
-                visibility: null
+                visibility: { reason: 현장 확인 결과 영업 중, changedBy: staff02, changedAt: '2026-11-12T10:20:00+09:00' }
                 coordError: false
                 sourceConflict: false
+                editedCount: 2
                 fields:
                   - field: storeName
                     editable: true
-                    sourceValue: 가마치통닭 둔산점
-                    overrideValue: 가마치통닭 둔산갤러리아점
-                    lastEdit: { adminLoginId: admin01, editedAt: '2026-11-14T10:20:00+09:00', reason: 간판 상호와 맞춤 }
+                    sourceValue: 가마치통닭 둔산갤러리아점
+                    overrideValue: null
+                    lastEdit: null
                     sourceChanged: false
                   - field: items
                     editable: true
-                    sourceValue: 치킨
-                    overrideValue: 치킨, 통닭, 닭강정
-                    lastEdit: { adminLoginId: admin01, editedAt: '2026-11-14T10:22:00+09:00', reason: 가게 요청으로 품목 추가 }
+                    sourceValue: '치킨, 통닭'
+                    overrideValue: '치킨, 통닭, 닭강정'
+                    lastEdit: { adminLoginId: admin01, editedAt: '2026-11-10T14:02:00+09:00', reason: 가게 요청으로 품목 추가 }
                     sourceChanged: false
-                  - field: paymentQr
+                  - field: location
+                    editable: false
+                    sourceValue: { lat: 36.35163, lng: 127.37842, legalDongCode: '3017011200', address: '대전광역시 서구 둔산로 8, 1층' }
+                    overrideValue: null
+                    lastEdit: null
+                    sourceChanged: false
+                  - field: marketName
+                    editable: true
+                    sourceValue: 둔산2동
+                    overrideValue: null
+                    lastEdit: null
+                    sourceChanged: false
+                  - field: category
+                    editable: true
+                    sourceValue: K006
+                    overrideValue: null
+                    lastEdit: null
+                    sourceChanged: false
+                  - field: paymentCard
                     editable: true
                     sourceValue: true
                     overrideValue: null
                     lastEdit: null
                     sourceChanged: false
-                  - field: businessNo
-                    editable: false
-                    sourceValue: '3051234567'
-                    overrideValue: null
-                    lastEdit: null
+                  - field: paymentQr
+                    editable: true
+                    sourceValue: false
+                    overrideValue: true
+                    lastEdit: { adminLoginId: admin03, editedAt: '2026-11-12T09:40:00+09:00', reason: '현장 확인, QR 키트 비치' }
+                    sourceChanged: false
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -906,6 +1027,7 @@ paths:
               schema: { $ref: '#/components/schemas/AdminStoreDetail' }
               example:
                 storeId: 3f6c2b1e-8a4d-4c5e-9b7a-2d1e0f9a8b71
+                name: 가마치통닭 둔산갤러리아점
                 businessNo: '3051234567'
                 merchantNo: '2024012345'
                 marketType: 골목형상점가
@@ -915,7 +1037,50 @@ paths:
                 visibility: { reason: 폐업 확인(현장 방문), changedBy: admin01, changedAt: '2026-11-17T11:00:00+09:00' }
                 coordError: false
                 sourceConflict: false
-                fields: []
+                editedCount: 2
+                fields:
+                  - field: storeName
+                    editable: true
+                    sourceValue: 가마치통닭 둔산갤러리아점
+                    overrideValue: null
+                    lastEdit: null
+                    sourceChanged: false
+                  - field: items
+                    editable: true
+                    sourceValue: '치킨, 통닭'
+                    overrideValue: '치킨, 통닭, 닭강정'
+                    lastEdit: { adminLoginId: admin01, editedAt: '2026-11-10T14:02:00+09:00', reason: 가게 요청으로 품목 추가 }
+                    sourceChanged: false
+                  - field: location
+                    editable: false
+                    sourceValue: { lat: 36.35163, lng: 127.37842, legalDongCode: '3017011200', address: '대전광역시 서구 둔산로 8, 1층' }
+                    overrideValue: null
+                    lastEdit: null
+                    sourceChanged: false
+                  - field: marketName
+                    editable: true
+                    sourceValue: 둔산2동
+                    overrideValue: null
+                    lastEdit: null
+                    sourceChanged: false
+                  - field: category
+                    editable: true
+                    sourceValue: K006
+                    overrideValue: null
+                    lastEdit: null
+                    sourceChanged: false
+                  - field: paymentCard
+                    editable: true
+                    sourceValue: true
+                    overrideValue: null
+                    lastEdit: null
+                    sourceChanged: false
+                  - field: paymentQr
+                    editable: true
+                    sourceValue: false
+                    overrideValue: true
+                    lastEdit: { adminLoginId: admin03, editedAt: '2026-11-12T09:40:00+09:00', reason: '현장 확인, QR 키트 비치' }
+                    sourceChanged: false
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -945,7 +1110,7 @@ paths:
               example:
                 versionName: '2026-11-09'
                 status: active
-                embeddingModel: bge-m3-ft-v1
+                embeddingModel: bge_m3_ft_mj_20261014_0743
                 activatedAt: '2026-11-09T04:20:00+09:00'
                 counts: { total: 214043, new: 812, changed: 1530, pending: 96, closed: 41, coordError: 12 }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -975,6 +1140,10 @@ paths:
       responses:
         '202':
           description: 받음. 작업 상태
+          headers:
+            Location:
+              description: 진행을 볼 주소(/api/v1/admin/refresh-jobs/{jobId})
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RefreshJob' }
@@ -1010,7 +1179,7 @@ paths:
       operationId: getCurrentRefreshJob
       summary: 진행 중인 갱신(없으면 204)
       description: |
-        A-05를 열 때 부른다. 진행 중이면 진행 화면, 없으면 파일 올리기 화면(FR-UPD-08).
+        A-05를 열 때 부른다. 진행 중이면(승인 대기 awaiting_approval 포함, 끝난 상태 succeeded·failed·cancelled 제외) 진행 화면, 없으면 파일 올리기 화면(FR-UPD-08).
 
         오류: 401 AUTH_REQUIRED · 403 PASSWORD_CHANGE_REQUIRED
       x-priority: P2
@@ -1066,7 +1235,7 @@ paths:
                     createdAt: '2026-11-16T09:00:00+09:00'
                     targetVersionName: '2026-11-16'
                     needsApproval: true
-                    preview:
+                    preview: &refreshPreview
                       new: 812
                       changed: 1530
                       toPending: 7020
@@ -1141,7 +1310,7 @@ paths:
                 createdAt: '2026-11-16T09:00:00+09:00'
                 targetVersionName: '2026-11-16'
                 needsApproval: true
-                preview: null
+                preview: *refreshPreview
                 validationErrors: []
                 errorMessage: null
         '400': { $ref: '#/components/responses/BadRequest' }
@@ -1187,7 +1356,7 @@ paths:
                 finishedAt: '2026-11-16T10:12:00+09:00'
                 targetVersionName: null
                 needsApproval: true
-                preview: null
+                preview: *refreshPreview
                 validationErrors: []
                 errorMessage: null
         '400': { $ref: '#/components/responses/BadRequest' }
@@ -1217,8 +1386,10 @@ paths:
         - $ref: '#/components/parameters/Provider'
         - name: returnTo
           in: query
-          description: 우리 서비스 안 경로만. `/`로 시작하고 두 번째 글자가 `/`·`\`가 아니며 역슬래시·제어 문자가 없어야 한다. 서버는 화면 경로 목록(`/`, `/store/…`, `/favorites`, `/me`)으로 다시 검사하고 아니면 `/`로 보낸다
-          schema: { type: string, pattern: '^/(?![/\\])[^\\\s]*$', maxLength: 200, default: / }
+          description: |
+            우리 서비스 안 경로만. `/`로 시작하고 두 번째 글자가 `/`·`\`가 아니며 역슬래시·제어 문자가 없고 200자 이하여야 한다.
+            어기면 오류(400)가 아니라 `/`로 바꾼다(페이지 이동이라 오류 본문을 보여 줄 수 없음). 서버는 화면 경로 목록(`/`, `/store/…`, `/favorites`, `/me`)으로도 검사한다
+          schema: { type: string, default: / }
           example: /store/3f6c2b1e-8a4d-4c5e-9b7a-2d1e0f9a8b71
       responses:
         '302':
@@ -1272,8 +1443,10 @@ paths:
               schema: { type: string }
             Set-Cookie:
               description: |
-                회원: `access_token=…; Path=/api/v1; HttpOnly; Secure; SameSite=Lax; Max-Age=1800`, `refresh_token=…; Path=/api/v1/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=1209600`, `csrf_token=…; Path=/; Secure; SameSite=Lax`
-                가입 대기: `signup_token=…; Path=/api/v1/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=600`, `csrf_token=…`
+                회원: `access_token=…; Path=/api/v1; HttpOnly; Secure; SameSite=Lax; Max-Age=1209600`, `refresh_token=…; Path=/api/v1/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=1209600`, `csrf_token=…; Path=/; Secure; SameSite=Lax; Max-Age=1209600`
+                가입 대기: `signup_token=…; Path=/api/v1/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=600`, `csrf_token=…`(위와 같은 속성)
+                access_token은 토큰 자체(JWT exp)가 30분이고 쿠키는 refresh_token과 같이 14일 둔다. 그래야 만료된 토큰이 서버에 와서 401 TOKEN_EXPIRED → /auth/refresh로 이어진다.
+                csrf_token도 14일이라 브라우저를 다시 열어도 /auth/refresh를 부를 수 있다
                 어느 경우든 `oauth_state`는 지운다(Max-Age=0)
               schema: { type: string }
         '400': { $ref: '#/components/responses/BadRequest' }
@@ -1327,11 +1500,21 @@ paths:
               termsVersion: '2026-11'
               agreements: { service: true, privacy: true, age14: true }
       responses:
-        '201':
-          description: 가입(또는 다시 동의) 완료
+        '200':
+          description: 기존 회원이 바뀐 약관에 다시 동의함(회원은 그대로). 헤더·본문은 201과 같다
           headers:
             Set-Cookie:
-              description: '`access_token`, `refresh_token`, `csrf_token` 발급(콜백과 같은 속성), `signup_token` 삭제(Max-Age=0)'
+              description: '`access_token`, `refresh_token`, `csrf_token` 발급(콜백과 같은 속성), `signup_token=; Path=/api/v1/auth; Max-Age=0`(삭제)'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+              example: { nickname: 둔산동주민, email: user@example.com, providers: [google], createdAt: '2026-06-02T10:00:00+09:00', termsVersion: '2026-11' }
+        '201':
+          description: 새 회원 가입 완료
+          headers:
+            Set-Cookie:
+              description: '`access_token`, `refresh_token`, `csrf_token` 발급(콜백과 같은 속성), `signup_token=; Path=/api/v1/auth; Max-Age=0`(삭제)'
               schema: { type: string }
           content:
             application/json:
@@ -1376,18 +1559,18 @@ paths:
       operationId: logout
       summary: 로그아웃
       description: |
-        refresh_token을 폐기하고 회원 쿠키를 지운다(FR-MBR-06). 접근 토큰이 이미 만료됐어도 204(로그아웃은 실패하지 않는다).
+        refresh_token을 폐기하고 회원 쿠키를 지운다(FR-MBR-06). 접근 토큰은 없거나 만료돼도 된다. 갱신 토큰이 이미 없어도 204(로그아웃은 실패하지 않는다).
 
         오류: 403 CSRF_FAILED
       x-priority: P1
       x-requirements: [FR-MBR-06, FR-MBR-09]
-      security: [{ memberAccess: [], csrfToken: [] }]
+      security: [{ refreshCookie: [], csrfToken: [] }]
       responses:
         '204':
           description: 로그아웃됨
           headers:
             Set-Cookie:
-              description: '`access_token`, `refresh_token`, `csrf_token` 삭제(Max-Age=0)'
+              description: '`access_token=; Path=/api/v1; Max-Age=0`, `refresh_token=; Path=/api/v1/auth; Max-Age=0`, `csrf_token=; Path=/; Max-Age=0` (만들 때와 같은 Path여야 지워진다)'
               schema: { type: string }
         '403': { $ref: '#/components/responses/Forbidden' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
@@ -1450,7 +1633,7 @@ paths:
       operationId: withdraw
       summary: 탈퇴
       description: |
-        화면에서 확인을 받은 뒤 부른다. 회원을 탈퇴 상태로 바꾸고 닉네임·이메일·마지막 로그인을 비운다.
+        화면에서 확인을 받은 뒤 부른다. 회원을 탈퇴 상태로 바꾸고 닉네임·이메일·마지막 로그인·약관 동의(버전·시각)를 비운다(회원 번호와 가입·탈퇴 시각만 남음).
         로그인 수단·최근 검색어·관심 가맹점은 바로 지우고, 갱신 토큰을 폐기하고, 제공자에 연결 끊기를 요청한다(FR-MBR-11).
         연결 끊기 요청이 실패해도 탈퇴는 완료하고 서버가 다시 시도한다.
 
@@ -1463,7 +1646,7 @@ paths:
           description: 탈퇴 완료
           headers:
             Set-Cookie:
-              description: '`access_token`, `refresh_token`, `csrf_token` 삭제(Max-Age=0)'
+              description: '`access_token=; Path=/api/v1; Max-Age=0`, `refresh_token=; Path=/api/v1/auth; Max-Age=0`, `csrf_token=; Path=/; Max-Age=0` (만들 때와 같은 Path여야 지워진다)'
               schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
@@ -1590,7 +1773,7 @@ paths:
       description: |
         같은 가게를 다시 넣으면 그대로 200(두 번 들어가지 않음). 본문 없음.
 
-        오류: 400 INVALID_REQUEST · 401 AUTH_REQUIRED·TOKEN_EXPIRED · 403 CSRF_FAILED · 404 STORE_NOT_FOUND(폐업·숨김·없는 가게) · 409 FAVORITE_LIMIT(500곳 → "즐겨찾기는 500곳까지 저장할 수 있어요")
+        오류: 400 INVALID_REQUEST · 401 AUTH_REQUIRED·TOKEN_EXPIRED · 403 CSRF_FAILED · 404 STORE_NOT_FOUND(폐업·숨김·없는 가게) · 409 FAVORITE_LIMIT(500곳 → "관심 가맹점은 500곳까지 저장할 수 있어요")
       x-priority: P1
       x-requirements: [FR-MBR-08, FR-DTL-06]
       security: [{ memberAccess: [], csrfToken: [] }]
@@ -1836,7 +2019,7 @@ components:
       type: apiKey
       in: cookie
       name: access_token
-      description: 회원 접근 토큰 30분(FR-MBR-06, P1). HttpOnly·Secure·SameSite=Lax
+      description: 회원 접근 토큰(FR-MBR-06, P1). 토큰 유효 30분, 쿠키는 14일(만료된 토큰도 보내 TOKEN_EXPIRED를 받게). HttpOnly·Secure·SameSite=Lax
     signupToken:
       type: apiKey
       in: cookie
@@ -1856,7 +2039,9 @@ components:
       type: apiKey
       in: header
       name: X-CSRF-Token
-      description: 관리자 로그인·회원 로그인 콜백·가입·토큰 갱신 때 받은 csrf_token 쿠키(읽을 수 있음) 값을 그대로 헤더에(NFR-SEC-02). 쿠키 인증을 쓰는 POST·PUT·PATCH·DELETE에 필요(로그인 요청 자체, 검색·조회·이벤트는 제외)
+      description: |
+        CSRF 토큰(NFR-SEC-02). 쿠키 인증을 쓰는 POST·PUT·PATCH·DELETE에 필요(로그인 요청 자체, 검색·조회·이벤트는 제외).
+        관리자 API(/admin/…)는 관리자 로그인 때 받은 admin_csrf_token 쿠키 값, 회원 API는 회원 로그인 콜백·가입·토큰 갱신 때 받은 csrf_token 쿠키 값을 그대로 넣는다(둘 다 화면이 읽을 수 있는 쿠키)
 
   parameters:
     QueryId:
@@ -1940,14 +2125,19 @@ components:
           description: 사람이 읽는 한국어 설명(개발·로그용). 화면 문구는 code로 고른다(요구사항 8절)
         details:
           type: object
-          description: 선택. 필드 오류는 fields, 잠금은 lockedUntil, 점검은 until
+          description: 선택. 코드에 따라 아래 키 중 일부만 온다
           additionalProperties: true
           properties:
             fields:
               type: array
+              description: INVALID_REQUEST — 필드별 오류
               items: { $ref: '#/components/schemas/FieldError' }
-            lockedUntil: { $ref: '#/components/schemas/DateTime' }
-            until: { $ref: '#/components/schemas/DateTime' }
+            lockedUntil: { allOf: [{ $ref: '#/components/schemas/DateTime' }], description: ACCOUNT_LOCKED — 잠금이 풀리는 시각 }
+            until: { allOf: [{ $ref: '#/components/schemas/DateTime' }], description: MAINTENANCE — 점검이 끝나는 시각(선택) }
+            queryId: { type: string, format: uuid, description: SEARCH_RESULT_EXPIRED — 만료된 검색 }
+            jobId: { type: integer, format: int64, description: REFRESH_ALREADY_RUNNING — 진행 중인 작업 }
+            missingColumns: { type: array, items: { type: string }, description: SOURCE_COLUMNS_MISMATCH — 원천에 있어야 하는데 없는 열 }
+            unexpectedColumns: { type: array, items: { type: string }, description: SOURCE_COLUMNS_MISMATCH — 원천에 없는 열 }
         traceId:
           type: string
           description: 응답 헤더 X-Trace-Id와 같은 값
@@ -1967,8 +2157,8 @@ components:
         화면이 분기에 쓰는 고정 코드(API_RULES.md 4절). 새 코드는 이 목록과 API_RULES.md를 함께 고친다.
         400 INVALID_REQUEST·PASSWORD_POLICY·INVALID_FILE·TERMS_REQUIRED /
         401 AUTH_REQUIRED·TOKEN_EXPIRED·INVALID_CREDENTIALS·SIGNUP_EXPIRED·REFRESH_REUSED /
-        403 FORBIDDEN·CSRF_FAILED·ACCOUNT_LOCKED·ACCOUNT_DISABLED·PASSWORD_CHANGE_REQUIRED /
-        404 STORE_NOT_FOUND·NOT_FOUND / 409 REFRESH_ALREADY_RUNNING·SAME_FILE_ALREADY_APPLIED·INVALID_STATE·DUPLICATE·FAVORITE_LIMIT·ALREADY_MEMBER /
+        403 CSRF_FAILED·ACCOUNT_LOCKED·ACCOUNT_DISABLED·PASSWORD_CHANGE_REQUIRED /
+        404 STORE_NOT_FOUND·NOT_FOUND / 409 REFRESH_ALREADY_RUNNING·SAME_FILE_ALREADY_APPLIED·INVALID_STATE·FAVORITE_LIMIT·ALREADY_MEMBER /
         410 SEARCH_RESULT_EXPIRED / 413 FILE_TOO_LARGE / 422 SOURCE_COLUMNS_MISMATCH / 429 RATE_LIMITED /
         500 INTERNAL_ERROR / 503 SERVICE_UNAVAILABLE·MAINTENANCE
       enum:
@@ -1981,7 +2171,6 @@ components:
         - INVALID_CREDENTIALS
         - SIGNUP_EXPIRED
         - REFRESH_REUSED
-        - FORBIDDEN
         - CSRF_FAILED
         - ACCOUNT_LOCKED
         - ACCOUNT_DISABLED
@@ -1991,7 +2180,6 @@ components:
         - REFRESH_ALREADY_RUNNING
         - SAME_FILE_ALREADY_APPLIED
         - INVALID_STATE
-        - DUPLICATE
         - FAVORITE_LIMIT
         - ALREADY_MEMBER
         - SEARCH_RESULT_EXPIRED
@@ -2007,8 +2195,8 @@ components:
       description: WGS84 좌표. 국내 범위(위도 33~39, 경도 124~132)
       required: [lat, lng]
       properties:
-        lat: { type: number, minimum: 33, maximum: 39 }
-        lng: { type: number, minimum: 124, maximum: 132 }
+        lat: { type: number, format: double, minimum: 33, maximum: 39 }
+        lng: { type: number, format: double, minimum: 124, maximum: 132 }
 
     Bounds:
       type: object
@@ -2045,7 +2233,10 @@ components:
 
     MessageCode:
       type: string
-      description: 큰 안내 문구 코드(FR-MSG-02 ①~⑥·⑧·⑩~⑫). ⑪ empty_query는 화면이 띄우고 서버는 검색하지 않는다(FR-SRC-03)
+      description: |
+        큰 안내 문구 코드(FR-MSG-02 ①~⑥·⑧·⑩~⑫).
+        ⑩ zoom_in은 화면이 지도 대각선을 재서 직접 띄우고 API를 부르지 않는다(서버는 같은 기준을 넘는 bounds를 400으로 거절).
+        ⑪ empty_query: 빈 값은 화면이 막고, 기호·일반어만('가게', '곳' 등)인 검색어는 서버가 검색하지 않고 200 + 0곳 + 이 코드로 준다(FR-SRC-03)
       enum: [expanded_none_in_first, expanded_partial, no_result, area_empty, map_empty,
              no_exact_name, weak_result, map_moved, zoom_in, empty_query, chip_empty]
 
@@ -2066,7 +2257,7 @@ components:
         code: { $ref: '#/components/schemas/MessageCode' }
         params:
           type: object
-          description: 'n, m(①②), region(③-2), query(⑤)'
+          description: 'n, m(②), region(③-2), query(⑤)'
           properties:
             n: { type: integer }
             m: { type: integer }
@@ -2222,7 +2413,7 @@ components:
     StoreCardBase:
       type: object
       description: 결과 카드(FR-LST-03). 품목·전화 없음
-      required: [storeId, name, location, paymentCodes]
+      required: [storeId, name, categoryCode, categoryName, marketName, marketType, addressShort, location, paymentCodes]
       properties:
         storeId: { type: string, format: uuid }
         name: { type: string }
@@ -2266,11 +2457,13 @@ components:
     Interpretation:
       type: object
       description: 검색어 해석(FR-SRC-05)
+      required: [region, intent, nameFirst, otherRegions]
       properties:
         region:
           type: object
           nullable: true
           description: 검색어에서 읽은 지역. 상호 우선이면 거르지 않았어도 채운다("○○ 지역으로 보기"의 ○○)
+          required: [regionId, name, scope]
           properties:
             regionId: { type: string, description: '지명 사전 ID(gazetteer.entry_id를 문자열로, regionChoice와 같은 값)' }
             name: { type: string, example: 대전 중구 }
@@ -2295,13 +2488,14 @@ components:
               name: { type: string, example: 대구 중구 }
               distanceKm:
                 type: number
+                format: double
                 minimum: 0
                 description: 사용자 위치(userLocation, 없으면 검색 중심)에서 그 지역 중심까지 km(소수 첫째 자리). 화면 표시는 10km 이상이면 정수
               current: { type: boolean, description: 지금 결과를 보여 주는 지역('지금 보는 곳') }
 
     SearchResponse:
       type: object
-      required: [queryId, view, center, centerSource, radiusStage, results, pins, totalCount, corpusVersion, pipelineVersion]
+      required: [queryId, view, interpretation, center, centerSource, radiusStage, results, pins, totalCount, corpusVersion, pipelineVersion]
       properties:
         queryId: { type: string, format: uuid }
         view: { type: string, enum: [list, map] }
@@ -2329,7 +2523,10 @@ components:
           maxItems: 300
           description: 결과 전체 핀(≤ 300)
           items: { $ref: '#/components/schemas/StorePin' }
-        totalCount: { type: integer, maximum: 300 }
+        totalCount:
+          type: integer
+          minimum: 0
+          description: 조건에 맞는 전체 가게 수. 검색은 300 이하. 지명만 입력(placeOnly)의 조회는 /browse처럼 300을 넘을 수 있고 그때 pins·/page는 앞 300곳까지
         nextCursor: { $ref: '#/components/schemas/Cursor' }
         mapFit:
           description: |
@@ -2341,6 +2538,7 @@ components:
           description: |
             검색어가 지명뿐이면(P1, FR-SRC-04) 가게를 검색하지 않고 지도를 그 지역으로 옮긴다.
             이때 results·pins·totalCount·nextCursor는 placeOnly.mapFit 범위의 검색어 없는 조회 결과(/browse와 같은 규칙·순서)다.
+            radiusStage = viewport, centerSource = query_region, interpretation.region = 그 지명, intent = null.
             message는 그 조회가 0곳이면 map_empty
           allOf:
             - $ref: '#/components/schemas/PlaceOnly'
@@ -2365,8 +2563,12 @@ components:
         pins:
           type: array
           maxItems: 300
+          description: 가까운 순 앞 300곳까지
           items: { $ref: '#/components/schemas/StorePin' }
-        totalCount: { type: integer, maximum: 300 }
+        totalCount:
+          type: integer
+          minimum: 0
+          description: 화면 안 조건에 맞는 전체 가게 수(300을 넘을 수 있다). totalCount가 pins 수보다 크면 300곳에서 잘린 것
         nextCursor: { $ref: '#/components/schemas/Cursor' }
         corpusVersion: { type: string }
 
@@ -2384,7 +2586,7 @@ components:
     StoreDetail:
       type: object
       description: 가게 상세(FR-DTL-02). 관리자 수정 값 반영
-      required: [storeId, name, address, location, paymentCodes]
+      required: [storeId, name, categoryCode, categoryName, marketName, marketType, address, location, paymentCodes]
       properties:
         storeId: { type: string, format: uuid }
         name: { type: string }
@@ -2415,6 +2617,7 @@ components:
       properties:
         currentPassword:
           type: string
+          maxLength: 100
           format: password
           description: 평소 변경에 필수. 첫 로그인 변경(mustChangePassword = true)에는 보내지 않는다
         newPassword: { type: string, minLength: 8, maxLength: 100, format: password }
@@ -2458,13 +2661,13 @@ components:
         value:
           description: |
             field에 따라 JSON 값의 종류가 다르다(타입을 하나로 정할 수 없어 명세에서는 타입을 비워 둠, 서버가 field별로 검사).
-            storeName·items·marketName → 문자열(최대 1000자), paymentCard·paymentQr → true/false, category → CategoryCode 문자열
+            storeName·marketName → 문자열(최대 100자, DB 열 길이), items → 문자열(최대 1000자), paymentCard·paymentQr → true/false, category → CategoryCode 문자열
           example: '치킨, 통닭, 닭강정'
         reason: { type: string, minLength: 1, maxLength: 200 }
 
     AdminStoreRow:
       type: object
-      required: [storeId, name, address, status, hidden, edited, editedCount, coordError]
+      required: [storeId, name, address, marketName, marketType, categoryCode, status, hidden, edited, editedCount, coordError]
       properties:
         storeId: { type: string, format: uuid }
         name: { type: string, description: 수정 값 반영 }
@@ -2481,16 +2684,26 @@ components:
 
     FieldValue:
       type: object
-      description: 필드 하나의 원천 값·수정 값·마지막 수정(FR-STO-02·09)
-      required: [field, editable]
+      description: |
+        A-04 표의 한 줄: 원천 값·수정 값·마지막 수정(FR-STO-02·09). fields는 늘 7줄을 화면 순서대로 준다
+        (storeName, items, location, marketName, category, paymentCard, paymentQr).
+        location(주소·좌표·법정동 코드)은 보기만 한다(editable = false, 1차 수정은 DB 직접, 화면 수정은 P2).
+        고칠 수 없는 값(사업자번호·가맹점번호·시장유형·상태)은 AdminStoreDetail 위쪽 필드다
+      required: [field, editable, sourceValue, overrideValue, lastEdit, sourceChanged]
       properties:
-        field: { type: string, description: 'OverrideField 값 또는 수정 불가 필드(businessNo, merchantNo, marketType)' }
-        editable: { type: boolean }
-        sourceValue: { description: 원천 값(모양은 StoreOverrideRequest.value와 같음) }
-        overrideValue: { description: 수정 값. 없으면 null }
+        field:
+          type: string
+          enum: [storeName, items, location, marketName, category, paymentCard, paymentQr]
+          description: location 말고는 OverrideField와 같은 값
+        editable: { type: boolean, description: '필드 수정 API(PUT·DELETE …/overrides/{field})로 고칠 수 있는지. location만 false' }
+        sourceValue:
+          description: '원천 값. 모양은 StoreOverrideRequest.value와 같고 location은 { lat, lng, legalDongCode, address }. 원천에 값이 없으면 null'
+        overrideValue: { description: '수정 값(모양은 sourceValue와 같음). 없으면 null' }
         lastEdit:
           type: object
           nullable: true
+          description: 지금 수정 값을 저장한 기록. 수정 값이 없으면 null
+          required: [adminLoginId, editedAt, reason]
           properties:
             adminLoginId: { type: string }
             editedAt: { $ref: '#/components/schemas/DateTime' }
@@ -2501,9 +2714,10 @@ components:
 
     AdminStoreDetail:
       type: object
-      required: [storeId, businessNo, status, statusChangedAt, hidden, coordError, sourceConflict, fields]
+      required: [storeId, name, businessNo, merchantNo, marketType, status, statusChangedAt, hidden, visibility, coordError, sourceConflict, editedCount, fields]
       properties:
         storeId: { type: string, format: uuid }
+        name: { type: string, description: 수정 값을 반영한 상호(화면 제목) }
         businessNo: { type: string }
         merchantNo: { type: string, nullable: true }
         marketType: { type: string, nullable: true }
@@ -2521,8 +2735,11 @@ components:
             changedAt: { $ref: '#/components/schemas/DateTime' }
         coordError: { type: boolean }
         sourceConflict: { type: boolean, description: 원천 안 같은 가게 행끼리 값이 다름 }
+        editedCount: { type: integer, minimum: 0, description: '수정 값이 있는 필드 수(제목 옆 "수정 2개 필드")' }
         fields:
           type: array
+          minItems: 7
+          maxItems: 7
           items: { $ref: '#/components/schemas/FieldValue' }
 
     RefreshJobUploadRequest:
@@ -2559,7 +2776,7 @@ components:
 
     RefreshJob:
       type: object
-      required: [jobId, status, steps, fileName, createdAt]
+      required: [jobId, status, steps, fileName, createdAt, targetVersionName, needsApproval, preview, validationErrors, errorMessage]
       properties:
         jobId: { type: integer, format: int64 }
         status:
@@ -2587,7 +2804,7 @@ components:
             toClosed: { type: integer }
             conflicts: { type: integer }
             coordErrors: { type: integer }
-            missingRatePct: { type: number, description: 사라지는 가게 비율 }
+            missingRatePct: { type: number, format: double, description: 사라지는 가게 비율 }
             coordErrorStores:
               type: array
               description: 좌표 오류 가게(최대 500). 운영자가 DB에서 좌표를 고치면 검색에 들어감
@@ -2623,7 +2840,7 @@ components:
           items:
             title: TermsItem
             type: object
-            required: [key, title, required]
+            required: [key, title, required, url]
             properties:
               key: { type: string, enum: [service, privacy, age14] }
               title: { type: string, example: 이용약관 동의 }
@@ -2632,7 +2849,7 @@ components:
 
     Me:
       type: object
-      required: [nickname, providers, createdAt, termsVersion]
+      required: [nickname, email, providers, createdAt, termsVersion]
       properties:
         nickname: { type: string, example: 회원1234 }
         email: { type: string, nullable: true, description: 구글에서 동의한 경우만. 카카오는 늘 null }
@@ -2753,7 +2970,7 @@ components:
     PlaceOnly:
       type: object
       description: 검색어가 지명뿐일 때(FR-SRC-04). 가게를 검색하지 않고 지도를 옮긴다
-      required: [region, mapFit]
+      required: [region, mapFit, storeSuggestion]
       properties:
         region: { type: string, example: 노량진 }
         mapFit: { $ref: '#/components/schemas/Bounds' }
@@ -2767,15 +2984,16 @@ components:
     # ── 관리자 통계 (P1) ──
     StatsKpis:
       type: object
+      required: [searches, noResultRate, expandedRate, reformulateRate, clickRate, avgFirstClickPos, cacheHitRate, fallbackRate, botSearches]
       properties:
         searches: { type: integer }
-        noResultRate: { type: number }
-        expandedRate: { type: number }
-        reformulateRate: { type: number }
-        clickRate: { type: number, description: 클릭이 1번 이상 있었던 검색 비율 }
-        avgFirstClickPos: { type: number, nullable: true }
-        cacheHitRate: { type: number, nullable: true, description: 확장어 캐시 적중률 }
-        fallbackRate: { type: number }
+        noResultRate: { type: number, format: double }
+        expandedRate: { type: number, format: double }
+        reformulateRate: { type: number, format: double }
+        clickRate: { type: number, format: double, description: 클릭이 1번 이상 있었던 검색 비율 }
+        avgFirstClickPos: { type: number, format: double, nullable: true }
+        cacheHitRate: { type: number, format: double, nullable: true, description: 확장어 캐시 적중률 }
+        fallbackRate: { type: number, format: double }
         botSearches: { type: integer, description: 지표에서 뺀 봇 검색 수 }
 
     StatsUnit:
@@ -2831,7 +3049,7 @@ components:
       properties:
         code: { $ref: '#/components/schemas/MessageCode' }
         count: { type: integer }
-        ratio: { type: number, minimum: 0, maximum: 1 }
+        ratio: { type: number, format: double, minimum: 0, maximum: 1 }
 
     StatsSummary:
       type: object
@@ -2849,7 +3067,7 @@ components:
               - type: object
                 required: [period]
                 properties:
-                  period: { type: string, description: '기간 시작 날짜(한국 시간), 예: 2026-11-09' }
+                  period: { type: string, description: '기간 시작 날짜(한국 시간). day는 그날, week는 그 주 월요일, month는 그달 1일. 첫·끝 기간은 from·to로 잘린다. 예: 2026-11-09' }
               - $ref: '#/components/schemas/StatsKpis'
 
   responses:
@@ -2954,7 +3172,7 @@ components:
               summary: INVALID_STATE — 승인 대기가 아님
               value: { code: INVALID_STATE, message: 승인 대기 중인 작업이 아닙니다., traceId: 4bf92f3577b34da6 }
     Gone:
-      description: 검색 결과 보관 10분이 지남
+      description: 검색 결과 보관이 끝남(마지막 요청부터 10분)
       headers: { X-Trace-Id: { $ref: '#/components/headers/TraceId' } }
       content:
         application/json:

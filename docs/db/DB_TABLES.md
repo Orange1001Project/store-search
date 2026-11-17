@@ -131,7 +131,7 @@
 | `subcategory` | 세부 업종 | varchar(40) |  | 세부 업종(표준산업분류 세세분류명) |
 | `payment_codes` | 결제 코드 목록 | varchar(10)[] |  | {card, qr} |
 | `searchable` | 검색 대상 여부 | boolean |  | 영업중 · 숨김 아님 · 좌표 오류 아님 |
-| `doc_text` | 임베딩 원문 | varchar(300) |  | 가맹점명: {상호} / 취급품목: {품목} |
+| `doc_text` | 임베딩 원문 | varchar(300) |  | 가맹점명: {상호} / 취급품목: {품목}. 300자를 넘으면 품목 쪽을 자름 |
 | `embedding` | 임베딩 vector(1024) | vector(1024) |  | fp32, L2 정규화 |
 
 ### `data_version` — 데이터 버전
@@ -174,10 +174,12 @@
 | `file_size` | 파일 크기 | bigint |  | 100MB 이하 |
 | `target_version_id` | 대상 버전 ID | smallint | FK→data_version | 이 작업이 만드는 버전 |
 | `status` | 상태 | varchar(20) |  | 상태값 · 값: uploaded, validating, diffing, awaiting_approval, approved, embedding, switching, succeeded, failed, cancelled |
-| `progress_pct` | 진행률(%) | smallint |  | 진행률 0~100(화면 표시) |
+| `current_step` | 지금 단계 | varchar(10) |  | 검사·차이 계산·임베딩·전환 중 지금(실패면 실패한) 단계 |
+| `progress_pct` | 진행률(%) | smallint |  | 지금 단계의 진행률 0~100(화면 표시) |
 | `needs_approval` | 승인 필요 | boolean |  | 사라지는 가게가 기준 %를 넘음(FR-UPD-05) |
 | `preview` | 미리보기 요약 | jsonb |  | 건수, 좌표 오류·충돌 목록 |
 | `error_message` | 오류 메시지 | text |  | 실패 이유 |
+| `validation_errors` | 검사 오류 목록 | jsonb |  | 파일 검사에 걸린 행·열·이유(최대 100) |
 | `edits_applied_until` | 수정 재적용 기준 시각 | timestamptz |  | 이 시각까지의 관리자 수정·숨김을 새 버전에 반영함(FR-UPD-07) |
 | `started_by` | 실행자 | bigint | FK→admin_user | 실행한 관리자. 스크립트도 실행할 관리자 계정을 인자로 받는다 |
 | `approved_by` | 승인자 | bigint | FK→admin_user | 승인한 관리자 |

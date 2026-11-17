@@ -1,4 +1,4 @@
-# 검색 정책 v1 (2026-11-03 회의 결정, 2026-11-04 범위 정리 — docs/archive/SERVICE_PIPELINE_PLAN.md 11절).
+# 검색 정책 v1 (근거: docs/archive/SERVICE_PIPELINE_PLAN.md 11절).
 # 이 파일은 백엔드(자바)로 넘기는 정책 값의 단일 출처다. 섹션마다 누가 정하는지 적는다.
 #   [실험]   이 저장소의 오프라인 평가(X1·X2·X3·X5)로 값을 정한다 — 검색 품질 지표에 영향
 #   [확정]   팀이 정했다 — 실험 없이 그대로 구현
@@ -17,16 +17,16 @@ location:                     # [확정]
   priority: [query_region, ui_region, map_viewport, gps, default]
   default:
     name: 소상공인시장진흥공단 본부
-    address: 대전광역시 유성구 지족로364번길 92 (지족동) 2층    # 팀 확인(2026-11-03)
-    # 좌표: 팀 확정(2026-11-11, docs/SERVICE_POLICY.md 3-3). 이전 임시값 36.3832, 127.3192(91번지 가맹점 좌표, 약 50m 오차)
+    address: 대전광역시 유성구 지족로364번길 92 (지족동) 2층    # 팀 확인
+    # 좌표: 팀 확정(docs/SERVICE_POLICY.md 3-3)
     lat: 36.383625
     lon: 127.318375
 
 radius:
   first_km: 1                 # [확정] 검색 중심·좁은 지역(동·역·시장)의 첫 반경 = understanding.POINT_KM
   max_km: 10                  # [확정] 한 번에 넓힌다(1 → 10, 중간 단계 없음)
-  expand_if_relevant_below: 10   # [X2 확정 2026-11-04, dev·조정 후] 회의안. '관련 있음'은 relevance.threshold_p 이상. 96% 확장되지만 N=10이 N=3보다 nDCG +0.073(유의)
-  # (삭제 2026-11-09, PR #9 리뷰 5번) no_expand_if_exact_name_within_first — 읽는 코드·실험이 없었다. 상호 쿼리도 같은 규칙으로 넓힌다:
+  expand_if_relevant_below: 10   # [X2 확정, dev·조정 후] 회의안. '관련 있음'은 relevance.threshold_p 이상. 96% 확장되지만 N=10이 N=3보다 nDCG +0.073(유의)
+  # 상호 쿼리도 같은 규칙으로 넓힌다:
   # 상호가 맞는 가게는 맨 위(exact_name_first·브랜드 거리순), 나머지는 brand_others_min_p로 거른다. 최종 test는 이 동작으로 쟀다
 
 region:                       # [확정] 규칙, 수치는 X3에서 확인
@@ -39,23 +39,23 @@ region:                       # [확정] 규칙, 수치는 X3에서 확인
 map_mode:                     # [확정] 지표에 영향이 있는 부분만. 화면(핀 묶음·버튼·상한·문구)은 [백엔드]
   area: viewport_bbox         # 보이는 화면 사각형 = 지역 필터. 1km → 10km 확장 안 함, 화면 밖은 알리지 않음
   show: above_threshold       # 화면 안 관련(relevance.threshold_p 이상) 가게 전부 → 지도 품질 = X1 노출 정밀도
-  max_stores: 300             # [백엔드 확정 2026-11-10] 화면이 아주 넓을 때 상한 — 넘으면 점수순 300곳(평가에서는 상한 없음)
+  max_stores: 300             # [백엔드 확정] 화면이 아주 넓을 때 상한 — 넘으면 점수순 300곳(평가에서는 상한 없음)
 
 ranking:
   sort: similarity            # 회의안 — 1km 안(확장 안 함)과 확장분 각각의 정렬
-  expanded_order: tier        # [X2 확정 2026-11-04, 팀 확정 2026-11-05] 확장하면 1km 관련 가게 먼저, 그다음 10km 관련 가게 유사도순.
-                              # 코드 점검 뒤(2026-11-05) dev: 유사도순 대비 nDCG@10 −0.015(CI −0.026~−0.005), 상위 3개 평균 거리 2.41 → 0.92km.
+  expanded_order: tier        # [X2 확정, 팀 확정] 확장하면 1km 관련 가게 먼저, 그다음 10km 관련 가게 유사도순.
+                              # 코드 점검 뒤 dev: 유사도순 대비 nDCG@10 −0.015(CI −0.026~−0.005), 상위 3개 평균 거리 2.41 → 0.92km.
                               # 판정은 거리를 안 보므로 관련성 조금 ↔ 거리 크게의 맞바꿈 — 팀이 1km 먼저로 확정
-  tier_min_p: 0.5             # [P0 dev 선택 2026-11-05] 확장 목록에서 '1km 먼저'는 관련 확률 이 값 이상인 1km 가게만, 나머지(1km의 약한 가게 + 10km)는 유사도순.
+  tier_min_p: 0.5             # [P0 dev 선택] 확장 목록에서 '1km 먼저'는 관련 확률 이 값 이상인 1km 가게만, 나머지(1km의 약한 가게 + 10km)는 유사도순.
                               # dev(확장+좁은 지역 128): 0.35 대비 nDCG@10 +0.007(CI +0.001~+0.015), 상위 3개 거리 +0.06km(n.s.). 0.6·0.7은 거리 손해가 유의
-  brand_others_min_p: 0.7     # [P0 dev 선택 2026-11-05] 브랜드 쿼리에서 지점이 아닌 가게는 이 확률 이상만(BHC → BYC 같은 이름 닮은 가게 차단). 지점은 늘 거리순 맨 위
-                              # 실제 조건(평가한 동작, 2026-11-09 점검으로 명확히): 목록에 '맨 위 가게'(브랜드 지점 또는 상호 완전 일치, 점수 ≥ 50)가
+  brand_others_min_p: 0.7     # [P0 dev 선택] 브랜드 쿼리에서 지점이 아닌 가게는 이 확률 이상만(BHC → BYC 같은 이름 닮은 가게 차단). 지점은 늘 거리순 맨 위
+                              # 실제 조건(평가한 동작): 목록에 '맨 위 가게'(브랜드 지점 또는 상호 완전 일치, 점수 ≥ 50)가
                               # 하나라도 있으면 나머지 가게는 이 확률 이상만. 그래서 ① 범위 안에 지점이 없는 브랜드 쿼리는 0.35 그대로,
                               # ② 상호 완전 일치가 있는 상호 쿼리도 나머지는 0.7. 의도(intent=brand) 기준으로 바꾸려면 다시 평가해야 한다
-  real_cosine: name           # [P2(a) dev 선택 2026-11-09] 임베딩 상위 밖 후보 중 '상호·브랜드 쿼리의 상호 일치 후보'에도 실제 v1 코사인(상호 검색 경로).
+  real_cosine: name           # [P2(a) dev 선택] 임베딩 상위 밖 후보 중 '상호·브랜드 쿼리의 상호 일치 후보'에도 실제 v1 코사인(상호 검색 경로).
                               # dev: 넓은 지역 헛된 "없음" 23% → 7.7%(정선 새아네그릇·문경 라망화장품), 그 밖 지표 변화 없음.
                               # all(모든 후보)은 10km 목록 nDCG 0.828 → 0.804·상위 3개 실패 3.7% → 5.6%(관련 확률 재학습 포함)라 뺌. off | name | all
-  exact_name_first: true      # [2026-11-09 dev 선택] 상호 쿼리에서 지명을 뺀 말이 상호(정규화)와 완전히 같으면 브랜드 지점처럼 관련·맨 위(거리순).
+  exact_name_first: true      # [dev 선택] 상호 쿼리에서 지명을 뺀 말이 상호(정규화)와 완전히 같으면 브랜드 지점처럼 관련·맨 위(거리순).
                               # 임베딩·BM25 상위에 없어도 이름으로 찾는다. dev: 바뀐 요청 2개(희랑 원주 0건 → 찾음, 태후사랑 첨단3호 nDCG 0.22 → 0.47), 나머지 그대로
                               # 검색 중심에서 50km 안만(점수 = 100 − 거리가 브랜드 기준 50 아래로 내려가지 않게). 이 가게들은 브랜드 지점처럼
                               # 관련 확률 계산(특성의 1위 점수·순위)에서 빠진다
@@ -63,22 +63,24 @@ ranking:
   # 동점 규칙 없음: 10-30 회의의 '점수 차 0.01 이내면 가까운 순'은 평가에 넣지 않았다(체인 지점은 위 브랜드 거리순이 처리).
   # 평가하지 않은 규칙이라 백엔드도 넣지 않는다 — 같은 점수면 1단계 순서(PR #9 리뷰 7번)
   brand_aliases: configs/service/brand_alias_v1.csv   # [X5] 같은 브랜드의 다른 표기(GS25·지에스25) — 상호 일치·지점 찾기에 씀
-  expansion_w: 0.3            # [X8 확정 2026-11-05] 업종 의도 쿼리에 LLM 쿼리 확장(찾는 가게 종류·품목) 문자 BM25 ÷ 최댓값 × w를 더함
+  expansion_w: 0.3            # [X8 확정] 업종 의도 쿼리에 LLM 쿼리 확장(찾는 가게 종류·품목) 문자 BM25 ÷ 최댓값 × w를 더함
                               # (retrieval/expansion.py). dev로 고르고 test 1회: 1km nDCG@10 0.817 → 0.836(+0.019, CI +0.013~+0.026), top1 0.875 → 0.900.
                               # 정책 10km 확장 nDCG 0.757 → 0.770(유의), 지도 0.638 → 0.681(유의, 노출 정밀도 0.742 → 0.726 n.s.). 0이면 끔
   expansion_llm: Qwen2.5-14B-Instruct   # 확장어는 미리 만들어 캐시(results/service_pipeline/x8/expansions_<llm>.csv) — 실시간 호출 없음
 
-relevance:                    # [실험 X1] 2026-11-04 dev — docs/archive/SERVICE_PIPELINE_PLAN.md 11-7
+relevance:                    # [실험 X1] dev — docs/archive/SERVICE_PIPELINE_PLAN.md 11-7
   # P(관련) = 1 / (1 + exp(−(b0 + b1·score + b2·gap + b3·log_rank + b4·bm25_rel))), 의도 묶음(name/category)마다 계수 따로.
   # score = 사례 후보 안 min-max 정규화한 v1 코사인 + 0.5 × 상호 일치. 브랜드 쿼리의 브랜드 지점은 이 확률 없이 관련으로 센다(판정 기준: 지점은 모두 3점).
   # 특성은 반경 안 후보 기준. 계수는 calibrator 파일. 이 값 이상만 '관련'으로 세고 보여 준다(반경 확장 N, "없음", 지도 노출).
   model: logistic_bm25
   calibrator: results/service_pipeline/x1/calibrator.json
+  weak_result_below_p: 0.52   # [팀] 문구 ⑥ weak_result: 맨 위 가게를 뺀 노출 가게가 모두 이 확률 미만이면(요구사항 FR-MSG-02). (미구현) 출시 뒤 ⑥ 비율 보고 조정
   threshold_p: 0.35           # 헛된 "없음" ≤ 5% 중 노출 정밀도 최고(dev 1km: 헛된 없음 3.9%, 노출 정밀도 0.63)
 
-category:                     # [X4 확인 2026-11-04] 임시 업종 v0으로 확인 — 순위·관련 판단에는 쓰지 않는다(11-14), 화면 업종 칩(필터)용으로만
-  taxonomy: configs/category/taxonomy_v0.yaml      # 공식 업종 17개 이름 + 취급품목 키워드. 공식 업종 데이터가 오면 교체
-  store_labels: data/category/store_category_v0.parquet   # doc_id, category(대분류), categories, source, subcategory(세부 업종)
+category:                     # [확정] 순위·관련 판단에는 쓰지 않는다(11-14), 화면 업종 칩(필터)용으로만. 평가(X4)는 임시 v0으로 했다
+  taxonomy: configs/category/taxonomy_v1.yaml      # 공식 업종 v1 = 온누리 중분류 17개(K001~K017, API CategoryCode와 같음)
+  ksic_map: configs/category/ksic_onnuri_v1.csv    # 가게 업종은 원천 온누리중분류 열. 비었으면 표준산업분류코드로 이 표에서 찾고, 없으면 K010 기타
+  store_labels: data/category/store_category_v0.parquet   # 평가 스크립트(scripts/eval_x23.py, boost_gamma > 0일 때)만 읽는 임시 v0 라벨. 서비스는 쓰지 않음
   use: filter                 # 사용자가 고른 업종 칩에만 필터
   boost_gamma: 0.0            # 순위 업종 가산점(retrieval/category_boost.py). 1km 1단계는 dev nDCG +0.0076(CI 0.0035~0.0121)이지만
                               # 정책 전체(임계값·확장 뒤 실제 노출)에서는 −0.001(n.s.)이라 끔 — 공식 업종이 오면 다시 확인(11-15)
@@ -89,7 +91,7 @@ messages:                     # [백엔드] 문구 확정은 화면 개발에서
   no_result: "10km 이내에 맞는 가게가 없어요"
   area_empty: "{region}에 맞는 가게가 없어요"
   map_empty: "이 지역에 맞는 가게가 없어요"
-  no_exact_name: "'{query}'와 정확히 일치하는 가게는 없어요"   # [백엔드 확정 2026-11-10] 의도가 상호·브랜드이고 결과에 상호 일치 가게가 없을 때(docs/SERVICE_POLICY.md 8-3 ⑤)
+  no_exact_name: "'{query}'와 정확히 일치하는 가게는 없어요"   # [백엔드 확정] 의도가 상호·브랜드이고 결과에 상호 일치 가게가 없을 때(docs/SERVICE_POLICY.md 8-3 ⑤)
   weak_result: "꼭 맞는 가게를 찾지 못해 비슷한 가게를 보여 드려요"
   map_moved: "이 화면에는 없어 가까운 곳을 보여 드려요"
   zoom_in: "지도를 확대하면 가게를 볼 수 있어요"

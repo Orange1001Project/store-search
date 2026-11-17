@@ -121,10 +121,12 @@ CREATE TABLE refresh_job (                                       -- 주간 갱�
     status              varchar(20)  NOT NULL DEFAULT 'uploaded'
                         CHECK (status IN ('uploaded', 'validating', 'diffing', 'awaiting_approval', 'approved',
                                           'embedding', 'switching', 'succeeded', 'failed', 'cancelled')),
-    progress_pct        smallint     NOT NULL DEFAULT 0 CHECK (progress_pct BETWEEN 0 AND 100),
+    current_step        varchar(10)  CHECK (current_step IN ('validate', 'diff', 'embed', 'switch')),   -- 지금(실패면 실패한) 단계. 시작 전 NULL(FR-UPD-09)
+    progress_pct        smallint     NOT NULL DEFAULT 0 CHECK (progress_pct BETWEEN 0 AND 100),   -- current_step의 진행률
     needs_approval      boolean      NOT NULL DEFAULT false,     -- 사라지는 가게가 기준 %를 넘음(FR-UPD-05)
     preview             jsonb,                                   -- 건수, 좌표 오류·충돌 목록
     error_message       text,
+    validation_errors   jsonb,                                   -- 파일 검사 실패 행 목록 [{row, column, reason}], 최대 100
     edits_applied_until timestamptz,                             -- 이 시각까지의 관리자 수정·숨김을 새 버전에 반영함(FR-UPD-07)
     started_by          bigint       NOT NULL REFERENCES admin_user (admin_id),   -- 실행한 관리자. 스크립트도 실행할 관리자 계정을 인자로 받는다
     approved_by         bigint       REFERENCES admin_user (admin_id),
@@ -220,7 +222,7 @@ CREATE TABLE store_snapshot (
     subcategory       varchar(40),                               -- 세부 업종(표준산업분류 세세분류명)
     payment_codes     varchar(10)[] NOT NULL DEFAULT '{}',       -- {card, qr}
     searchable        boolean      NOT NULL,                     -- 영업중 · 숨김 아님 · 좌표 오류 아님
-    doc_text          varchar(300) NOT NULL,                     -- 가맹점명: {상호} / 취급품목: {품목}
+    doc_text          varchar(300) NOT NULL,                     -- 가맹점명: {상호} / 취급품목: {품목}. 300자를 넘으면 품목 쪽을 잘라 넣는다
     embedding         vector(1024) NOT NULL,                     -- fp32, L2 정규화
     PRIMARY KEY (version_id, store_id)
 ) PARTITION BY LIST (version_id);
@@ -231,7 +233,7 @@ CREATE TABLE store_snapshot (
 -- =====================================================================
 -- 탈퇴는 행을 지우지 않고 status = 'withdrawn'으로 바꾼다(가입·탈퇴 시각을 남기려고, DR-13).
 -- 같은 트랜잭션에서 닉네임·이메일·마지막 로그인을 비우고, 로그인 수단·최근 검색어·즐겨찾기는 지운다(P9-4).
--- 남는 것은 회원 번호·시각·약관 버전뿐이라 누구인지 알 수 없다. 같은 소셜 계정으로 다시 가입하면 새 회원.
+-- 약관 버전·동의 시각도 비운다. 남는 것은 회원 번호와 가입·탈퇴 시각뿐이라 누구인지 알 수 없다. 같은 소셜 계정으로 다시 가입하면 새 회원.
 CREATE TABLE member (
     member_id        uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     status           varchar(10) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'withdrawn')),

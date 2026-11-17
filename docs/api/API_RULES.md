@@ -1,7 +1,7 @@
 # API 공통 규칙
 
 > 기준: `docs/REQUIREMENTS.md`(5절 IR, 3절 NFR-SEC·PRV) · 명세: [`openapi.yaml`](openapi.yaml)(OpenAPI 3.0.3)
-> 모든 API에 똑같이 적용한다. 개별 API 명세는 `openapi.yaml`에 쓰고, 이 문서와 다르면 이 문서를 먼저 고친다.
+> 모든 API에 똑같이 적용한다. 개별 API 명세의 원본은 `openapi.yaml`이다. 공통 규칙을 바꿀 때는 이 문서와 `openapi.yaml`을 함께 고친다.
 
 ## 1. 결정 요약
 
@@ -28,7 +28,7 @@
 성공은 데이터를 바로 준다(감싸는 `data` 없음).
 
 ```json
-{ "queryId": "8c1f…", "results": [ … ], "nextCursor": "MjA", "totalCount": 15 }
+{ "queryId": "8c1f…", "results": [ … ], "nextCursor": "MjA", "totalCount": 43 }
 ```
 
 | 상태 코드 | 쓰는 때 |
@@ -39,10 +39,10 @@
 | 204 | 본문 없는 성공(삭제, 로그아웃 — 세션이 이미 끝났어도 204) |
 | 400 | 형식 오류(필드 누락·길이·좌표 범위) |
 | 401 | 로그인 필요·토큰 만료 |
-| 403 | 권한 없음(남의 데이터, 관리자 아님, CSRF 실패) |
+| 403 | 권한 없음(CSRF 실패, 계정 잠김·비활성, 첫 비밀번호 변경 전) |
 | 404 | 없는 대상(폐업·숨김 가게도 404, FR-DTL-07) |
 | 409 | 상태 충돌(관심 가맹점 500곳 초과, 갱신이 이미 실행 중 FR-UPD-08) |
-| 410 | 검색 결과 보관 10분이 지남(다음 페이지 요청, FR-LST-02) |
+| 410 | 검색 결과 보관 10분이 지남(다음 페이지 요청, FR-LST-02). 캐시에 없는 queryId는 모두 410(지났는지 처음부터 없었는지 가리지 않음) |
 | 413 | 올린 파일이 너무 큼(100MB) |
 | 422 | 형식은 맞지만 처리할 수 없음(갱신 파일 열 구성이 다름 FR-UPD-02, P2 업로드 API) |
 | 429 | 요청 제한 초과(NFR-SEC-04). **모든 API**가 줄 수 있다. `Retry-After` 헤더 |
@@ -67,7 +67,7 @@
 |---|---|
 | `code` | 화면이 분기에 쓰는 고정 코드. `영역_내용` 대문자(아래 표) |
 | `message` | 사람이 읽는 한국어 설명(개발·로그용). 화면은 `code`로 요구사항 8절의 문구·형태(전체 화면·대화상자·토스트)를 고른다 |
-| `details` | 선택. 필드 오류는 `{ "fields": [{ "field": "q", "reason": "TOO_LONG" }] }` |
+| `details` | 선택. 필드 오류는 `{ "fields": [{ "field": "q", "reason": "TOO_LONG" }] }`. 코드별 키(`lockedUntil`, `until`, `queryId`, `jobId`, `missingColumns` 등)는 `openapi.yaml`의 `ErrorResponse.details` |
 | `traceId` | 서버 로그와 맞춰 보는 요청 ID. 개인정보를 넣지 않는다 |
 
 `details.fields[].reason` 값: `REQUIRED`, `TOO_LONG`, `TOO_SHORT`, `INVALID_FORMAT`, `OUT_OF_RANGE`(좌표·숫자 범위 밖), `NOT_ALLOWED`(바꿀 수 없는 값).
@@ -76,9 +76,9 @@
 |---|---|
 | `INVALID_REQUEST`(필드 오류는 details.fields), `PASSWORD_POLICY`, `INVALID_FILE`(.xlsx 아님), `TERMS_REQUIRED`(필수 약관 미동의) | 400 |
 | `AUTH_REQUIRED`, `TOKEN_EXPIRED`, `INVALID_CREDENTIALS`(아이디·비밀번호 틀림), `SIGNUP_EXPIRED`(가입 대기 10분 지남), `REFRESH_REUSED`(이미 쓴 갱신 토큰) | 401 |
-| `FORBIDDEN`, `CSRF_FAILED`, `ACCOUNT_LOCKED`(details.lockedUntil), `ACCOUNT_DISABLED`, `PASSWORD_CHANGE_REQUIRED`(첫 비밀번호 변경 전 관리자 API) | 403 |
+| `CSRF_FAILED`, `ACCOUNT_LOCKED`(details.lockedUntil), `ACCOUNT_DISABLED`, `PASSWORD_CHANGE_REQUIRED`(첫 비밀번호 변경 전 관리자 API) | 403 |
 | `STORE_NOT_FOUND`, `NOT_FOUND` | 404 |
-| `REFRESH_ALREADY_RUNNING`, `SAME_FILE_ALREADY_APPLIED`, `INVALID_STATE`, `DUPLICATE`, `FAVORITE_LIMIT`(500곳 초과), `ALREADY_MEMBER` | 409 |
+| `REFRESH_ALREADY_RUNNING`, `SAME_FILE_ALREADY_APPLIED`, `INVALID_STATE`, `FAVORITE_LIMIT`(500곳 초과), `ALREADY_MEMBER` | 409 |
 | `SEARCH_RESULT_EXPIRED` | 410 |
 | `FILE_TOO_LARGE` | 413 |
 | `SOURCE_COLUMNS_MISMATCH` | 422 |
@@ -92,10 +92,10 @@
 | 대상 | 방식 | 근거 |
 |---|---|---|
 | 모든 사용자 | 익명 세션 쿠키 `sid`(첫 방문에 발급, 30분 무활동이면 새로). 로그용이고 회원 ID와 잇지 않는다 | FR-LOG-05 |
-| 회원 | 접근 토큰 `access_token` 30분 + 갱신 토큰 `refresh_token` 14일(경로 `/api/v1/auth`), 둘 다 HttpOnly·Secure·SameSite=Lax 쿠키. 갱신 토큰은 쓸 때마다 새로 발급, 이미 쓴 토큰이 오면 그 계열을 모두 폐기. 서버 쪽 저장은 세션 저장소(Redis) | FR-MBR-06, DR-13 |
+| 회원 | 접근 토큰 `access_token` 30분 + 갱신 토큰 `refresh_token` 14일(경로 `/api/v1/auth`), 둘 다 HttpOnly·Secure·SameSite=Lax 쿠키. `access_token` 쿠키 수명은 14일로 두고 토큰 자체(JWT exp)를 30분으로 한다 — 만료된 토큰이 서버에 와야 401 `TOKEN_EXPIRED` → `POST /auth/refresh`로 이어진다. 갱신 토큰은 쓸 때마다 새로 발급, 이미 쓴 토큰이 오면 그 계열을 모두 폐기. 서버 쪽 저장은 세션 저장소(Redis) | FR-MBR-06, DR-13 |
 | 소셜 로그인 | `GET /auth/{provider}/login` → 제공자 화면 → `GET /auth/{provider}/callback`. 위조 방지 state는 `oauth_state` 쿠키(10분). 처음 온 사람·약관이 바뀐 회원은 `signup_token` 쿠키(10분)를 받고 가입 동의(U-08) 뒤 `POST /auth/signup`. 돌아갈 주소(returnTo)는 우리 서비스 안 경로만 | FR-MBR-01·02 |
 | 관리자 | 아이디·비밀번호 로그인 후 서버 세션 쿠키(회원과 다른 이름·경로 `/api/v1/admin`). 30분 무활동 만료, 5회 실패 30분 잠금. 임시 비밀번호로 로그인한 세션(`mustChangePassword`)은 비밀번호를 바꾸기 전까지 `/admin/me`·비밀번호 변경·로그아웃만 되고 나머지는 403 `PASSWORD_CHANGE_REQUIRED` | FR-ADM-01·02·04 |
-| CSRF | 관리자 로그인, 회원 로그인 콜백·가입·토큰 갱신 때 읽을 수 있는 쿠키 `csrf_token`을 주고, 쿠키 인증을 쓰는 `POST·PUT·PATCH·DELETE`는 그 값을 헤더 `X-CSRF-Token`에 넣는다. 검색·이벤트 수집처럼 로그인과 무관한 요청은 제외 | NFR-SEC-02 |
+| CSRF | 화면이 읽을 수 있는 쿠키로 토큰을 주고, 쿠키 인증을 쓰는 `POST·PUT·PATCH·DELETE`는 그 값을 헤더 `X-CSRF-Token`에 넣는다. 회원은 `csrf_token`(로그인 콜백·가입·토큰 갱신 때, 14일), 관리자는 `admin_csrf_token`(관리자 로그인 때, 세션 쿠키). 이름을 나눠 같은 브라우저에서 서로 덮어쓰거나 지우지 않는다. 검색·이벤트 수집처럼 로그인과 무관한 요청은 제외 | NFR-SEC-02 |
 
 비회원도 검색·조회·상세·이벤트 API를 쓴다. 회원 전용 API(최근 검색어, 관심 가맹점, 내 정보, 탈퇴)는 401을 준다. 로그인한 회원이 검색·상세를 부르면 결과 카드에 `favorited`가 붙고, 검색어가 최근 검색어에 저장된다. 이벤트 API는 sendBeacon 때문에 회원 쿠키·CSRF 토큰을 요구하지 않고 익명 세션만 쓴다.
 
@@ -108,6 +108,7 @@
 
 - 검색 응답 본문에 `corpusVersion`(데이터 버전), `pipelineVersion`(정책·계수 버전)을 넣는다(IR-01).
 - 모든 응답 헤더에 `X-Trace-Id`.
+- 화면은 모든 요청에 `X-App-Version`(화면 빌드 버전) 헤더를 붙이고, 서버는 검색 로그 `app_version`에 남긴다(NFR-OPS-07). 없어도 요청은 처리한다.
 
 ## 8. 명세 확장 표시
 
@@ -144,7 +145,7 @@
 | P1 | `GET·DELETE /me/recent-searches`, `DELETE /me/recent-searches/{recentId}` | 최근 검색어 10개, 전체·하나 삭제 | U-02 |
 | P1 | `GET /me/favorites`, `PUT·DELETE /me/favorites/{storeId}` | 관심 가맹점 목록(50곳씩), 추가(최대 500)·해제 | U-10, U-03·U-06 별 버튼 |
 | P1 | `POST /events` | 행동 이벤트 묶음(최대 50개, sendBeacon 가능) | 전 화면 |
-| P1 | `POST /search`의 `placeOnly`(주변 가게 포함), `regionChoice`·`otherRegions`(지금 지역 포함, 거리순·km), 문구 `zoom_in`·`region_ambiguous` | 지명만 입력, 다른 지역 선택, 확대 안내 | U-01·U-04 |
+| P1 | `POST /search`의 `placeOnly`(주변 가게 포함), `regionChoice`·`otherRegions`(지금 지역 포함, 거리순·km), 작은 줄 `region_ambiguous` | 지명만 입력, 다른 지역 선택 | U-01·U-04 |
 | P1 | `GET /admin/stats/summary`, `/top-queries`, `/problem-queries`, `/messages` | 지표 요약·추이, 인기 검색어, 결과 없는 검색어, 문구별 비율. CSV는 화면이 이 응답으로 만든다(CSV API 없음, FR-STA-03) | A-10 |
 | P2 | `GET /admin/data-versions/active` | 지금 검색이 쓰는 데이터 버전 | A-05 |
 | P2 | `POST /admin/refresh-jobs` | 원천 엑셀 올리기 → 갱신 시작(202). 1차는 서버 스크립트 | A-05 |
@@ -177,7 +178,7 @@
 | 처음 열기 | `GET /meta` → (첫 방문이면 U-12 위치 정보 이용 안내) → `POST /browse`, 뒤에서 `GET /me` | U-12는 브라우저에 저장된 동의 버전이 없거나 `policies.locationTerms.version`과 다를 때만. 고른 뒤 지금 지도 범위·GPS(또는 기본 위치)로 조회. 첫 화면 실패는 E-01(연결 안 됨 / 서버 오류·점검). 칩 목록은 `/meta`에서. 로그인 상태는 검색·조회를 막지 않고 뒤에서: `GET /me` → 401이면 `POST /auth/refresh` 한 번 → 다시 `GET /me`, 또 401이면 비회원(FR-MBR-12) | P0 |
 | 내 위치 버튼 | 호출 없음 | 지도만 GPS로 옮기고 '현 지도 재검색' 버튼을 띄운다(FR-MAP-01) | P0 |
 | 검색창 ×·←로 검색 끝내기 | 호출 없음 | 검색 전에 받아 둔 `/browse` 결과(지도 위치·핀·시트·칩)를 그대로 다시 보여 준다(FR-BRW-06) | P0 |
-| 화면 대각선 50km 초과 | 호출 없음 | 화면이 `/meta`의 `limits.mapMaxDiagonalKm`으로 먼저 재고 토스트 ⑩. 이미 보여 준 핀·시트는 그대로(FR-MAP-05) | P1 |
+| 화면 대각선 50km 초과 | 호출 없음 | 화면이 `/meta`의 `limits.mapMaxDiagonalKm`으로 먼저 재고 토스트 ⑩(`zoom_in`은 화면 문구, 서버가 주지 않음). 이미 보여 준 핀·시트는 그대로(FR-MAP-05). 그래도 넘는 `bounds`가 오면 서버는 400 | P1 |
 | 검색창 검색 | `POST /search` | `view=list`, `inputType=typed`. 응답 `mapFit`으로 지도를 맞추고 `pins`·`results`를 함께 표시 | P0 |
 | 지도를 옮기고 '현 지도 재검색' | 검색어 있음 `POST /search`(`view=map`, `bounds`) / 없음 `POST /browse` | `mapFit` 없음(지도 그대로). 0곳이라 옮긴 경우(⑧)만 범위가 온다 | P0 |
 | **칩 변경**(검색어 있음) | `POST /search` | **직전 요청 본문 그대로, `categoryCode`·`paymentCodes`만 바꾸고 `inputType=chip`**. 그사이 지도를 옮겼어도 직전 조건. `view=list`면 `mapFit`으로 다시 맞추고 `view=map`이면 지도 그대로 | P0 |
@@ -185,7 +186,7 @@
 | **핀 누름** | 호출 없음(+ 이벤트 `pin_click`) | `pins[]`에 카드 필드가 다 있어 바로 요약 카드(U-05). `position`은 `rank` | P0 |
 | 핀 묶음 누름 | 호출 없음(+ 이벤트 `cluster_click`, `clusterSize`·`clusterAction`) | 더 확대해서 갈라지면 그 영역으로 확대(`zoom`). 가장 확대한 줌이거나 묶음 안 가게가 모두 30m 안이면 겹친 가게 목록(`list`). 묶음 라벨 "{상호} 외 {n}개"의 상호는 묶음 안 `rank`가 가장 작은 핀(FR-MAP-07) | P1 |
 | **같은 좌표 핀 누름**(겹친 가게 목록) | 보통 호출 없음 | 좌표가 같은 핀들로 "이 위치 가맹점 n곳" 시트(U-05b). 순서는 검색이면 `rank`, 조회면 상호 가나다순. 조회가 300곳에서 잘렸으면(`totalCount` > 핀 수) 그 지점만 `bounds`(그 좌표 ±0.00001°)로 `POST /browse` → 20곳씩 `/page`. 카드 클릭은 `click`(position = rank) | P0 |
-| 목록 아래로 내림 | `GET /search/{queryId}/page` | `nextCursor`. 410이면 직전 요청으로 다시 검색 | P0 |
+| 목록 아래로 내림 | `GET /search/{queryId}/page` | `nextCursor`. 받은 20곳을 목록 끝에 이어 붙이고, 앞의 카드는 지우지 않는다(위로 올리면 1위부터). `nextCursor`가 없으면 더 부르지 않는다. 410이면 보여 준 목록은 그대로 두고 더 부르지 않는다(다시 검색하지 않음) | P0 |
 | 카드·요약 카드 누름 | `GET /stores/{storeId}` | 404면 U-11. 상세에서 보내는 이벤트(`action` 등)의 `queryId`·`position`은 URL이 아니라 화면 상태(history state)로 넘긴다. 공유 링크로 바로 열면 null | P0 |
 | 상세 공유 | 호출 없음(+ 이벤트 `action: share`) | 상세 응답 `name`·`address`로 공유 글을 만든다(FR-DTL-05, 전화 줄 없음) | P1 |
 | **"○○ 지역으로 보기"**(작은 줄 `name_first`) | `POST /search` | 같은 `q`에 `skipNameFirst=true`, `inputType=region_view` | P0 |

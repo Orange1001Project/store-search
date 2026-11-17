@@ -374,10 +374,12 @@ erDiagram
 | file_size | bigint |  | N |  | CHECK file_size > 0 AND file_size <= 104857600 | 100MB 이하 |
 | target_version_id | smallint | FK → data_version(version_id) | Y |  |  | 이 작업이 만드는 버전 |
 | status | varchar(20) |  | N | 'uploaded' | CHECK status IN ('uploaded', 'validating', 'diffing', 'awaiting_approval', 'approved', 'embedding', 'switching', 'succeeded', 'failed', 'cancelled') |  |
-| progress_pct | smallint |  | N | 0 | CHECK progress_pct BETWEEN 0 AND 100 |  |
+| current_step | varchar(10) |  | Y |  | CHECK current_step IN ('validate', 'diff', 'embed', 'switch') | 지금(실패면 실패한) 단계. 시작 전 NULL(FR-UPD-09) |
+| progress_pct | smallint |  | N | 0 | CHECK progress_pct BETWEEN 0 AND 100 | current_step의 진행률 |
 | needs_approval | boolean |  | N | FALSE |  | 사라지는 가게가 기준 %를 넘음(FR-UPD-05) |
 | preview | jsonb |  | Y |  |  | 건수, 좌표 오류·충돌 목록 |
 | error_message | text |  | Y |  |  |  |
+| validation_errors | jsonb |  | Y |  |  | 파일 검사 실패 행 목록 [{row, column, reason}], 최대 100 |
 | edits_applied_until | timestamptz |  | Y |  |  | 이 시각까지의 관리자 수정·숨김을 새 버전에 반영함(FR-UPD-07) |
 | started_by | bigint | FK → admin_user(admin_id) | N |  |  | 실행한 관리자. 스크립트도 실행할 관리자 계정을 인자로 받는다 |
 | approved_by | bigint | FK → admin_user(admin_id) | Y |  |  |  |
@@ -453,7 +455,7 @@ erDiagram
 | subcategory | varchar(40) |  | Y |  |  | 세부 업종(표준산업분류 세세분류명) |
 | payment_codes | varchar(10)[] |  | N | '{}' |  | {card, qr} |
 | searchable | boolean |  | N |  |  | 영업중 · 숨김 아님 · 좌표 오류 아님 |
-| doc_text | varchar(300) |  | N |  |  | 가맹점명: {상호} / 취급품목: {품목} |
+| doc_text | varchar(300) |  | N |  |  | 가맹점명: {상호} / 취급품목: {품목}. 300자를 넘으면 품목 쪽을 잘라 넣는다 |
 | embedding | vector(1024) |  | N |  |  | fp32, L2 정규화 |
 
 #### `member`
