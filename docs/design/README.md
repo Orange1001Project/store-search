@@ -1,6 +1,6 @@
 # 화면설계
 
-> 원본: claude.ai 디자인 캔버스 [가맹점 찾기 화면설계](https://claude.ai/artifact/PRLSNyFnSkW8ema6xMRv7M) (조직 안에서만 열림) · 이 폴더의 그림은 캔버스 버전 `1794817446-e4f7`(2026-11-16)에서 만든 사본이다. 2026-11-16에 회원 메뉴·닉네임 변경·탈퇴 확인·관심 가맹점 빈 목록·E-01 연결 안 됨·공통 대화상자·A-04 수정 대화상자를 더하고 U-01 확대 안내를 고쳤다(요구사항 v0.14). 나머지 그림은 2026-11-13·16 그대로다.
+> 원본: claude.ai 디자인 캔버스 [가맹점 찾기 화면설계](https://claude.ai/artifact/PRLSNyFnSkW8ema6xMRv7M) (조직 안에서만 열림) · 이 폴더의 그림은 캔버스 버전 `1794880601-8539`(2026-11-17)에서 만든 사본이다. 2026-11-17에 U-12 위치 정보 이용 안내·E-01 서버 오류를 더하고, 메뉴에 약관 링크, E-01 고객센터, 내 위치 버튼 위치(시트 위 12px)를 고쳤다(요구사항 v0.15). 2026-11-16에 회원 메뉴·닉네임 변경·탈퇴 확인·관심 가맹점 빈 목록·E-01 연결 안 됨·공통 대화상자·A-04 수정 대화상자를 더하고 U-01 확대 안내를 고쳤다(요구사항 v0.14). 나머지 그림은 2026-11-13·16 그대로다.
 > 화면 ID와 기능은 [`docs/REQUIREMENTS.md`](../REQUIREMENTS.md) 7절(화면 목록·흐름), 우선순위는 1-4절을 따른다. 캔버스와 이 그림이 다르면 캔버스가 맞다.
 > 그림은 캔버스의 화면 원본을 브라우저로 찍은 것이다. 모바일은 390×844, 관리자는 1440 너비. `[N]`·`[상호]`는 실제 데이터로 채울 자리다.
 
@@ -15,12 +15,14 @@
 | **U-01 화면 안 0곳 ④**<br>`U01-Empty.dc.html` | <img src="screens/U01-Empty.png" width="260" alt="U-01 화면 안 0곳 ④"> |
 | **U-02 검색창 열림 (회원)**<br>`U02-Member.dc.html` | <img src="screens/U02-Member.png" width="260" alt="U-02 검색창 열림 (회원)"> |
 | **U-02 검색창 열림 (비회원)**<br>`U02-Guest.dc.html` | <img src="screens/U02-Guest.png" width="260" alt="U-02 검색창 열림 (비회원)"> |
+| **U-12 위치 정보 이용 안내** (첫 진입)<br>`U12-Location.dc.html`<br>동의 줄은 법무 결과에 따라 | <img src="screens/U12-Location.png" width="260" alt="U-12 위치 정보 이용 안내"> |
 | **U-04 검색 결과 – 지도 (시트 중간)**<br>`U04-Map.dc.html` | <img src="screens/U04-Map.png" width="260" alt="U-04 검색 결과 – 지도 (시트 중간)"> |
 | **U-03 검색 결과 – 목록 (시트 전체)**<br>`U03-List.dc.html` | <img src="screens/U03-List.png" width="260" alt="U-03 검색 결과 – 목록 (시트 전체)"> |
 | **U-05 가게 요약 카드**<br>`U05-Card.dc.html` | <img src="screens/U05-Card.png" width="260" alt="U-05 가게 요약 카드"> |
 | **U-04 같은 이름 지명 – 다른 ○○**<br>`U04-OtherRegion.dc.html`<br>지금 지역 포함 모두 거리순 | <img src="screens/U04-OtherRegion.png" width="260" alt="U-04 같은 이름 지명 – 다른 ○○"> |
 | **공통 대화상자·토스트** (요구사항 8절)<br>`Dialogs.dc.html` | <img src="screens/Dialogs.png" width="520" alt="공통 대화상자·토스트"> |
 | **E-01 연결 안 됨** (첫 화면을 못 불러옴)<br>`E01-Offline.dc.html` | <img src="screens/E01-Offline.png" width="260" alt="E-01 연결 안 됨"> |
+| **E-01 서버 오류·응답 없음** (점검이면 문구만 바뀜)<br>`E01-ServerError.dc.html` | <img src="screens/E01-ServerError.png" width="260" alt="E-01 서버 오류"> |
 | **U-06 가게 상세**<br>`U06-Detail.dc.html` | <img src="screens/U06-Detail.png" width="260" alt="U-06 가게 상세"> |
 | **U-11 찾을 수 없음**<br>`U11-NotFound.dc.html` | <img src="screens/U11-NotFound.png" width="260" alt="U-11 찾을 수 없음"> |
 | **메뉴 (☰, 비회원)**<br>`Menu.dc.html` | <img src="screens/Menu.png" width="260" alt="메뉴 (☰, 비회원)"> |

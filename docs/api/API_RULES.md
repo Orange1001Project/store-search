@@ -1,6 +1,6 @@
-# API 공통 규칙 (v0.6)
+# API 공통 규칙 (v0.7)
 
-> 작성 2026-11-13 · 고침 2026-11-16(PR #11 리뷰, 화면 흐름 보완 v0.5, 화면 대응표 검토 v0.6) · 기준: `docs/REQUIREMENTS.md` v0.14(5절 IR, 3절 NFR-SEC·PRV) · 명세: [`openapi.yaml`](openapi.yaml)(OpenAPI 3.1)
+> 작성 2026-11-13 · 고침 2026-11-16(PR #11 리뷰, 화면 흐름 보완 v0.5, 화면 대응표 검토 v0.6, 위치 동의·오류 화면 v0.7) · 기준: `docs/REQUIREMENTS.md` v0.15(5절 IR, 3절 NFR-SEC·PRV) · 명세: [`openapi.yaml`](openapi.yaml)(OpenAPI 3.1)
 > 모든 API에 똑같이 적용한다. 개별 API 명세는 `openapi.yaml`에 쓰고, 이 문서와 다르면 이 문서를 먼저 고친다.
 
 ## 1. 결정 요약
@@ -83,7 +83,7 @@
 | `FILE_TOO_LARGE` | 413 |
 | `SOURCE_COLUMNS_MISMATCH` | 422 |
 | `RATE_LIMITED` | 429 |
-| `INTERNAL_ERROR`, `SERVICE_UNAVAILABLE` | 500, 503 |
+| `INTERNAL_ERROR`, `SERVICE_UNAVAILABLE`, `MAINTENANCE`(계획된 점검, details.until 선택 — 화면 E-01 "서비스 점검 중이에요") | 500, 503 |
 
 ## 5. 인증·세션
 
@@ -118,13 +118,13 @@
 | 관리자 세션을 서버 세션으로 둘지 토큰으로 둘지 세부(지금은 서버 세션) | 백엔드 |
 | 위치 정밀도(격자 크기) 최종 | 법무 |
 
-## 10. API 목록 (명세 v0.7)
+## 10. API 목록 (명세 v0.8)
 
 자세한 요청·응답은 [`openapi.yaml`](openapi.yaml). P1 API(소셜 로그인, 회원, 이벤트, 통계)는 v0.4에서 더했다. 관리자 화면 축소(2026-11-13)로 주간 갱신·별칭·지명 제외·원천 변경 알림·관리자 계정 화면과 그 API는 P2이고, 1차는 서버 스크립트·DB 직접 작업으로 한다.
 
 | 우선 | 메서드·주소 | 하는 일 | 화면 |
 |---|---|---|---|
-| P0 | `GET /meta` | 업종·결제 칩 목록, 기본 위치, 제한 값 | 처음 열 때 |
+| P0 | `GET /meta` | 업종·결제 칩 목록, 기본 위치, 약관·방침 링크·위치기반서비스 약관 버전, 제한 값 | 처음 열 때, 메뉴, U-12 |
 | P0 | `POST /search` | 검색(검색창 = 목록 규칙, '현 지도 재검색' = 지도 규칙), 칩 재검색, "○○ 지역으로 보기". 첫 20곳 + 핀 전부(카드 필드 포함) + 문구 + 지도 맞춤 범위 | U-01·03·04·05 |
 | P0 | `POST /browse` | 검색어 없는 조회(화면 안 가게, 가까운 순), 칩만 고름 | U-01·05 |
 | P0 | `GET /search/{queryId}/page?cursor=` | 다음 20곳. 10분 지나면 410 | U-03 |
@@ -156,6 +156,7 @@
 | 화면·기능 | 예정 API(가안) | 하는 일 | 근거 |
 |---|---|---|---|
 | 자동완성 | `GET /autocomplete?q=` | 상호·지명·브랜드 제안 최대 8개 | FR-SRC-12 |
+| 비회원 위치 동의 기록(법무 결과에 따라, 필요하면 P1) | `POST /consents/location` | 익명 동의 기록(약관 버전·시각, 회원·좌표 없음) | FR-LOC-03 |
 | 로그인 수단 추가·해제 | `GET /auth/{provider}/link`, `DELETE /me/providers/{provider}` | 다른 소셜 계정 연결·해제 | FR-MBR-05 |
 | A-02 관리자 홈 | `GET /admin/home` | 오늘 지표, 최근 갱신 상태, 확인할 알림 | FR-ADM-06 |
 | A-04 주소·좌표 수정 | `PUT /admin/stores/{storeId}/overrides/location` | 지도 핀 이동으로 주소·좌표·법정동 코드 수정 | FR-STO-03 |
@@ -165,13 +166,13 @@
 | A-09 해석 미리보기 | `POST /admin/parse-preview` | 검색어·검색 중심 → 해석 결과 | FR-REF-03 |
 | A-12 관리자 계정 | `GET·POST /admin/accounts`, `PATCH /admin/accounts/{id}`, `POST /admin/accounts/{id}/reset-password` | 생성·비활성화·비밀번호 초기화 | FR-ADM-04 |
 
-## 11. 화면 동작별 호출 (v0.7)
+## 11. 화면 동작별 호출 (v0.8)
 
 화면설계(`docs/design/`)의 동작마다 어느 API를 어떤 값으로 부르는지. 자세한 필드는 `openapi.yaml`, 화면별 전체 대응은 [`docs/design/SCREEN_API_MAP.md`](../design/SCREEN_API_MAP.md).
 
 | 화면 동작 | 호출 | 보내는 값·받은 값 쓰는 법 | 우선 |
 |---|---|---|---|
-| 처음 열기 | `GET /meta` → `POST /browse`, 뒤에서 `GET /me` | 지금 지도 범위·GPS. 칩 목록은 `/meta`에서. 로그인 상태는 검색·조회를 막지 않고 뒤에서: `GET /me` → 401이면 `POST /auth/refresh` 한 번 → 다시 `GET /me`, 또 401이면 비회원(FR-MBR-12) | P0 |
+| 처음 열기 | `GET /meta` → (첫 방문이면 U-12 위치 정보 이용 안내) → `POST /browse`, 뒤에서 `GET /me` | U-12는 브라우저에 저장된 동의 버전이 없거나 `policies.locationTerms.version`과 다를 때만. 고른 뒤 지금 지도 범위·GPS(또는 기본 위치)로 조회. 첫 화면 실패는 E-01(연결 안 됨 / 서버 오류·점검). 칩 목록은 `/meta`에서. 로그인 상태는 검색·조회를 막지 않고 뒤에서: `GET /me` → 401이면 `POST /auth/refresh` 한 번 → 다시 `GET /me`, 또 401이면 비회원(FR-MBR-12) | P0 |
 | 내 위치 버튼 | 호출 없음 | 지도만 GPS로 옮기고 '현 지도 재검색' 버튼을 띄운다(FR-MAP-01) | P0 |
 | 검색창 ×·←로 검색 끝내기 | 호출 없음 | 검색 전에 받아 둔 `/browse` 결과(지도 위치·핀·시트·칩)를 그대로 다시 보여 준다(FR-BRW-06) | P0 |
 | 화면 대각선 50km 초과 | 호출 없음 | 화면이 `/meta`의 `limits.mapMaxDiagonalKm`으로 먼저 재고 토스트 ⑩. 이미 보여 준 핀·시트는 그대로(FR-MAP-05) | P1 |
@@ -191,7 +192,7 @@
 | 최근 검색어 누름 | `POST /search` | `inputType=recent` | P1 |
 | 별(관심 가맹점) 누름 | `PUT`·`DELETE /me/favorites/{storeId}` | 비회원은 "로그인이 필요해요" 대화상자 → 로그인 → 돌아오면 그 가게로 `PUT` 한 번(화면이 storeId만 sessionStorage에 잠깐 기억). 다음 페이지의 `favorited`는 서버가 응답 때마다 새로 계산 | P1 |
 | 관심 가맹점(U-10)에서 별 해제 | `DELETE /me/favorites/{storeId}` | 성공하면 그 줄을 바로 목록에서 뺀다. 비면 빈 화면 | P1 |
-| 메뉴 ☰ | `GET /me`(이미 받았으면 호출 없음) | 회원이면 "{nickname}님, 반가워요!" | P1 |
+| 메뉴 ☰ | `GET /me`(이미 받았으면 호출 없음) | 회원이면 "{nickname}님, 반가워요!". 아래쪽 이용약관·개인정보처리방침 링크는 `/meta`의 `policies` | P1 |
 | 닉네임 변경 / 탈퇴 | `PATCH /me` / `DELETE /me` | 탈퇴는 확인 대화상자 뒤에 | P1 |
 | 관리자 첫 로그인 | `POST /admin/auth/login` → `PUT /admin/me/password` | 응답 `mustChangePassword`면 비밀번호 변경 화면. `newPassword`만 보낸다 | P0 |
 | 관리자 A-10 CSV | 호출 없음 | 화면에 받아 둔 통계 응답으로 CSV(UTF-8 BOM) | P1 |

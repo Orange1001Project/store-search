@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: 가맹점 검색 서비스 API
-  version: 0.7.0
+  version: 0.8.0
   description: |
     공통 규칙은 docs/api/API_RULES.md, 기능 근거는 docs/REQUIREMENTS.md(2절 FR, 5절 IR).
     v0.2: P0 API(사용자 검색·조회·상세, 관리자 로그인·가맹점 수정·숨김).
@@ -16,6 +16,7 @@ info:
     v0.7(2026-11-16): 화면 대응표 검토 반영(요구사항 v0.14). otherRegions에 지금 지역·거리(km), 모두 거리순.
     첫 비밀번호 변경은 currentPassword 없이, 바꾸기 전 다른 관리자 API는 403 PASSWORD_CHANGE_REQUIRED.
     관리자 가맹점 목록 순서 고정(상호 가나다순), 닉네임 변경 P1, 최근 검색어 저장 대상. 통계 CSV API는 두지 않음(화면에서 만듦).
+    v0.8(2026-11-17): /meta에 약관·방침 링크(policies)와 위치기반서비스 약관 버전(U-12 동의 시트), 점검 오류 503 MAINTENANCE.
     모든 API는 요청 제한(NFR-SEC-04)을 넘으면 429 RATE_LIMITED와 Retry-After를 줄 수 있다.
 servers:
   - url: /api/v1
@@ -1355,7 +1356,7 @@ components:
     # ── 사용자 ──
     Meta:
       type: object
-      required: [categories, paymentMethods, defaultLocation, limits, corpusVersion]
+      required: [categories, paymentMethods, defaultLocation, policies, limits, corpusVersion]
       properties:
         categories:
           type: array
@@ -1378,6 +1379,22 @@ components:
         defaultLocation:
           description: 기본 위치(소상공인시장진흥공단 본부, FR-LOC-02)
           $ref: '#/components/schemas/LatLng'
+        policies:
+          type: object
+          description: 메뉴 아래쪽 약관·방침 링크(FR-MBR-13)와 U-12 위치 정보 이용 동의(FR-LOC-03)에 쓴다
+          required: [termsUrl, privacyPolicyUrl, locationTerms]
+          properties:
+            termsUrl: { type: string, description: 이용약관 }
+            privacyPolicyUrl: { type: string, description: 개인정보처리방침(누구나 볼 수 있게 공개) }
+            locationTerms:
+              type: [object, 'null']
+              description: |
+                위치기반서비스 이용약관. 법무 결과 동의가 필요하면 채우고, 필요 없으면 null(U-12는 안내만) ⚠.
+                화면은 동의한 version을 브라우저에 저장하고, 이 값이 바뀌면 U-12를 다시 띄운다
+              required: [version, url]
+              properties:
+                version: { type: string, examples: ['2026-11'] }
+                url: { type: string }
         limits:
           type: object
           required: [queryMaxLength, pageSize, maxResults, mapMaxDiagonalKm]
