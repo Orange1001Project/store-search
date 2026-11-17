@@ -1,6 +1,6 @@
-# 가맹점 검색 서비스 DB 설계 (초안 v0.3.5)
+# 가맹점 검색 서비스 DB 설계 (초안 v0.3.6)
 
-> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장 · v0.3.3 공식 업종 · v0.3.4 PR #11 리뷰 반영 · v0.3.5 API v0.6 코드 값(8절 변경 내역)
+> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장 · v0.3.3 공식 업종 · v0.3.4 PR #11 리뷰 반영 · v0.3.5 API v0.6 코드 값 · v0.3.6 관리자 목록 순서·수정 필드 수(8절 변경 내역)
 > 입력: `docs/REQUIREMENTS.md`(4절 DR-01~19), `docs/SERVICE_POLICY.md`, `docs/SEARCH_LOGGING.md`, `docs/BACKEND_HANDOFF.md`
 > 실행 SQL: [`docs/db/schema.sql`](db/schema.sql) · 3절 컬럼표는 schema.sql에서 자동으로 만들었다(둘이 다르면 SQL이 맞다)
 > ERDCloud 보기용: [`docs/db/erdcloud.sql`](db/erdcloud.sql) · 테이블 설명서: [`docs/db/DB_TABLES.md`](db/DB_TABLES.md) · 설계 이유서: [`docs/db/DB_DESIGN_WHY.md`](db/DB_DESIGN_WHY.md)
@@ -692,7 +692,7 @@ WHERE  member_id = :member ORDER BY searched_at DESC LIMIT 10;
 SELECT s.store_id, coalesce(o.override_value #>> '{}', s.store_name) AS store_name, s.address,
        s.lifecycle_status, s.status_changed_at, s.is_hidden, s.coord_error,
        sn.primary_category, sn.market_name, sn.market_type,
-       EXISTS (SELECT 1 FROM store_override x WHERE x.store_id = s.store_id) AS edited
+       (SELECT count(*) FROM store_override x WHERE x.store_id = s.store_id) AS edited_count   -- edited = edited_count > 0
 FROM   store s
 LEFT   JOIN store_override o ON o.store_id = s.store_id AND o.field_name = 'store_name'
 LEFT   JOIN store_snapshot sn ON sn.version_id = :active_version AND sn.store_id = s.store_id
@@ -703,7 +703,10 @@ WHERE  (:q IS NULL OR s.business_no = :q OR s.store_id::text = :q
   AND  (:coord_error IS NULL OR s.coord_error = :coord_error)
   AND  (:category IS NULL OR sn.primary_category = :category)
   AND  (:edited IS NULL OR EXISTS (SELECT 1 FROM store_override x WHERE x.store_id = s.store_id) = :edited)
-ORDER  BY s.store_name, s.store_id LIMIT 50 OFFSET :offset;
+ORDER  BY 2, s.store_id LIMIT 50 OFFSET :offset;   -- 수정 값을 반영한 상호 가나다순 고정(API v0.7). 한글 음절은 코드 순서가 가나다순이라 기본 정렬로 충분
+--    성능 메모(백엔드 개발 때 측정 후 결정, 2026-11-17): 검색어 없이 열면 21만 행을 훑어 상위 50건만 남기는 정렬(top-N)이라
+--    관리자 몇 명이 쓰는 화면으로는 충분할 것으로 본다. 1초를 넘으면 ① 수정 값을 반영한 상호를 store에 열로 두고(수정·해제 때 갱신)
+--    (그 열, store_id) 인덱스를 건 뒤 ② 뒤쪽 페이지는 OFFSET 대신 마지막 (상호, store_id) 다음부터 읽는 방식(keyset)으로 바꾼다.
 
 -- ⑨ 원천 변경 알림 목록
 SELECT store_id, field_name, override_value, new_source_value
@@ -806,6 +809,10 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | JPA 매핑 | `vector`·`geography`는 Hibernate Spatial + pgvector 라이브러리 또는 네이티브 쿼리. 검색 ①~⑤는 네이티브 쿼리 추천 |
 
 ## 8. 변경 내역
+
+### v0.3.6 (2026-11-17) — API 명세 v0.9 반영
+
+- 관리자 가맹점 조회 ⑧: 순서를 수정 값까지 반영한 상호(`ORDER BY 2`)로 — 전에는 원천 상호라 API "상호(수정 값 반영) 가나다순"과 달랐다. 수정 필드 수(`edited_count`)를 함께 낸다(A-03 "수정 2"). 테이블 변경 없음.
 
 ### v0.3.5 (2026-11-16) — API 명세 v0.6 반영
 - `search_log.input_type`에 region_view(○○ 지역으로 보기)·region_choice(다른 ○○)·place_store(지명만 입력의 가게 보기) 추가.

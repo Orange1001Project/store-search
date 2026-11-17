@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: 가맹점 검색 서비스 API
-  version: 0.8.0
+  version: 0.10.0
   description: |
     공통 규칙은 docs/api/API_RULES.md, 기능 근거는 docs/REQUIREMENTS.md(2절 FR, 5절 IR).
     v0.2: P0 API(사용자 검색·조회·상세, 관리자 로그인·가맹점 수정·숨김).
@@ -17,6 +17,8 @@ info:
     첫 비밀번호 변경은 currentPassword 없이, 바꾸기 전 다른 관리자 API는 403 PASSWORD_CHANGE_REQUIRED.
     관리자 가맹점 목록 순서 고정(상호 가나다순), 닉네임 변경 P1, 최근 검색어 저장 대상. 통계 CSV API는 두지 않음(화면에서 만듦).
     v0.8(2026-11-17): /meta에 약관·방침 링크(policies)와 위치기반서비스 약관 버전(U-12 동의 시트), 점검 오류 503 MAINTENANCE.
+    v0.9(2026-11-17): 약관·방침은 온누리상품권 홈페이지 문서 주소, 관리자 가맹점 목록에 marketType·editedCount.
+    v0.10(2026-11-17): 겹친 가게 목록(FR-MAP-11) — 핀 묶음 규칙, 조회 같은 거리 정렬, cluster_click payload.clusterAction.
     모든 API는 요청 제한(NFR-SEC-04)을 넘으면 429 RATE_LIMITED와 Retry-After를 줄 수 있다.
 servers:
   - url: /api/v1
@@ -54,7 +56,7 @@ paths:
         화면이 처음 열릴 때 한 번 부른다. 업종 칩 17개, 결제 칩, 기본 위치, 검색어 최대 길이 등.
         관리자 화면도 업종 목록(A-03 필터, A-04 업종 수정 선택지)을 이 API에서 받는다. 관리자 전용 업종 API는 두지 않는다.
       x-priority: P0
-      x-requirements: [FR-MSG-01, FR-MSG-04, FR-LOC-02, FR-SRC-01]
+      x-requirements: [FR-MSG-01, FR-MSG-04, FR-LOC-02, FR-SRC-01, FR-LOC-03, FR-MBR-13]
       security: [{}, { sessionCookie: [] }]
       responses:
         '429': { $ref: '#/components/responses/TooManyRequests' }
@@ -159,8 +161,10 @@ paths:
         첫 화면, 칩만 고름, 검색어 없이 '현 지도 재검색'(FR-BRW-01~04). 화면 안 검색 대상 가게를 검색 중심 가까운 순으로 최대 300곳.
         관련 확률·점수 없음. 핀은 전부(결과 카드와 같은 필드), 시트 목록은 첫 20곳(다음은 /search/{queryId}/page).
         칩을 바꾸면 지금 보이는 화면 범위(bounds)에 칩을 적용해 다시 부른다(FR-BRW-02). 지도는 옮기지 않는다.
+        - 같은 거리면 상호 가나다순, 그다음 storeId(좌표가 같은 가게가 많다, FR-MAP-11).
+        - 겹친 가게 목록: totalCount가 pins 수보다 크면(300 상한으로 잘림) 화면이 그 지점만 bounds로(그 좌표 ±0.00001°, 약 1m) 다시 불러 전부 보여 준다.
       x-priority: P0
-      x-requirements: [IR-03, FR-BRW-01, FR-BRW-02, FR-BRW-03, FR-BRW-04, FR-MAP-08]
+      x-requirements: [IR-03, FR-BRW-01, FR-BRW-02, FR-BRW-03, FR-BRW-04, FR-MAP-08, FR-MAP-11]
       security: [{ sessionCookie: [] }]
       requestBody:
         required: true
@@ -1384,8 +1388,8 @@ components:
           description: 메뉴 아래쪽 약관·방침 링크(FR-MBR-13)와 U-12 위치 정보 이용 동의(FR-LOC-03)에 쓴다
           required: [termsUrl, privacyPolicyUrl, locationTerms]
           properties:
-            termsUrl: { type: string, description: 이용약관 }
-            privacyPolicyUrl: { type: string, description: 개인정보처리방침(누구나 볼 수 있게 공개) }
+            termsUrl: { type: string, description: '이용약관. 1차는 온누리상품권 홈페이지 문서(새 탭)', examples: ['https://www.onnuri.gift/terms?tab=0'] }
+            privacyPolicyUrl: { type: string, description: '개인정보처리방침(누구나 볼 수 있게 공개). 1차는 온누리상품권 홈페이지 문서(새 탭)', examples: ['https://www.onnuri.gift/terms?tab=1'] }
             locationTerms:
               type: [object, 'null']
               description: |
@@ -1521,6 +1525,8 @@ components:
       description: |
         지도 핀. 결과 카드(StoreCard)와 같은 필드 + topStore(v0.6). 핀을 누르면 추가 호출 없이 요약 카드(U-05, FR-MAP-08)를 띄우고,
         pin_click 이벤트의 position에 rank를 쓴다. 300곳이면 압축 전 약 75KB.
+        좌표가 같은 핀(location 소수 다섯째 자리까지 같음)은 화면이 핀 하나로 묶어 숫자를 달고, 누르면 그 핀들로 "이 위치 가맹점 n곳" 목록을 만든다
+        (FR-MAP-11, 추가 호출 없음). 순서는 /search면 rank, /browse면 상호 가나다순.
       allOf:
         - $ref: '#/components/schemas/StoreCard'
         - type: object
@@ -1711,7 +1717,7 @@ components:
 
     AdminStoreRow:
       type: object
-      required: [storeId, name, address, status, hidden, edited, coordError]
+      required: [storeId, name, address, status, hidden, edited, editedCount, coordError]
       properties:
         storeId: { type: string, format: uuid }
         name: { type: string, description: 수정 값 반영 }
@@ -1720,8 +1726,10 @@ components:
         categoryCode: { $ref: '#/components/schemas/CategoryCode' }
         status: { $ref: '#/components/schemas/LifecycleStatus' }
         statusChangedAt: { $ref: '#/components/schemas/DateTime' }
+        marketType: { type: [string, 'null'], description: 원천에 값이 있을 때만(골목형상점가 등). A-03 "시장명 · 시장유형" 열 }
         hidden: { type: boolean }
         edited: { type: boolean }
+        editedCount: { type: integer, minimum: 0, description: 수정 값이 있는 필드 수(A-03 "수정 2" 표시) }
         coordError: { type: boolean }
 
     FieldValue:
@@ -1861,7 +1869,7 @@ components:
               key: { type: string, enum: [service, privacy, age14] }
               title: { type: string, examples: [이용약관 동의] }
               required: { type: boolean }
-              url: { type: [string, 'null'], description: 전문 보기 주소(만 14세 확인은 없음) }
+              url: { type: [string, 'null'], description: '전문 보기 주소(만 14세 확인은 없음). service는 /meta의 policies.termsUrl과 같다' }
 
     Me:
       type: object
@@ -1919,7 +1927,8 @@ components:
             dwellSec: { type: integer, minimum: 0, description: dwell(P2) }
             regionId: { type: string, description: region_choice }
             previousQueryId: { type: string, format: uuid, description: reformulate, chip_change, research_here }
-            clusterSize: { type: integer, description: cluster_click }
+            clusterSize: { type: integer, description: cluster_click — 묶음 안 가게 수 }
+            clusterAction: { type: string, enum: [zoom, list], description: 'cluster_click — 확대했는지 겹친 가게 목록을 띄웠는지(FR-MAP-11)' }
 
     # ── 지명만 입력 (P1) ──
     PlaceOnly:

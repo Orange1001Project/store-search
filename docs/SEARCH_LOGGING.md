@@ -46,7 +46,7 @@ query 기록, 그 뒤 행동 = event 기록, `query_id`로 잇는다)와 Algolia
 | `dwell` | store_id, 상세 체류 초 |
 | `region_choice` | 고른 다른 지역(지역 해석이 틀렸다는 신호) |
 | `chip_change`, `research_here` | 업종·결제 칩 변경 / '현 지도 재검색' — 새 query_id |
-| `cluster_click`, `pin_click` | 지도 묶음 / 핀 |
+| `cluster_click`, `pin_click` | 지도 묶음(묶음 크기, 확대했는지 겹친 가게 목록을 띄웠는지) / 핀. 겹친 가게 목록에서 카드를 누르면 `click`(position = rank) |
 | `reformulate` | 30초 안 같은 세션 재검색(이전 → 새 query_id) |
 | `abandon` | 아무 행동 없이 종료 |
 

@@ -1,6 +1,6 @@
-# API 공통 규칙 (v0.7)
+# API 공통 규칙 (v0.9)
 
-> 작성 2026-11-13 · 고침 2026-11-16(PR #11 리뷰, 화면 흐름 보완 v0.5, 화면 대응표 검토 v0.6, 위치 동의·오류 화면 v0.7) · 기준: `docs/REQUIREMENTS.md` v0.15(5절 IR, 3절 NFR-SEC·PRV) · 명세: [`openapi.yaml`](openapi.yaml)(OpenAPI 3.1)
+> 작성 2026-11-13 · 고침 2026-11-16(PR #11 리뷰, 화면 흐름 보완 v0.5, 화면 대응표 검토 v0.6, 위치 동의·오류 화면 v0.7, 문서 점검 v0.8, 겹친 가게 목록 v0.9) · 기준: `docs/REQUIREMENTS.md` v0.17(5절 IR, 3절 NFR-SEC·PRV) · 명세: [`openapi.yaml`](openapi.yaml)(OpenAPI 3.1)
 > 모든 API에 똑같이 적용한다. 개별 API 명세는 `openapi.yaml`에 쓰고, 이 문서와 다르면 이 문서를 먼저 고친다.
 
 ## 1. 결정 요약
@@ -118,7 +118,7 @@
 | 관리자 세션을 서버 세션으로 둘지 토큰으로 둘지 세부(지금은 서버 세션) | 백엔드 |
 | 위치 정밀도(격자 크기) 최종 | 법무 |
 
-## 10. API 목록 (명세 v0.8)
+## 10. API 목록 (명세 v0.10)
 
 자세한 요청·응답은 [`openapi.yaml`](openapi.yaml). P1 API(소셜 로그인, 회원, 이벤트, 통계)는 v0.4에서 더했다. 관리자 화면 축소(2026-11-13)로 주간 갱신·별칭·지명 제외·원천 변경 알림·관리자 계정 화면과 그 API는 P2이고, 1차는 서버 스크립트·DB 직접 작업으로 한다.
 
@@ -131,7 +131,7 @@
 | P0 | `GET /stores/{storeId}` | 가게 상세. 폐업·숨김·없음은 404 | U-06·11 |
 | P0 | `POST /admin/auth/login`, `POST /admin/auth/logout`, `GET /admin/me` | 관리자 로그인·로그아웃·세션 확인 | A-01 |
 | P0 | `PUT /admin/me/password` | 비밀번호 변경(첫 로그인 강제 — 새 비밀번호만, 평소엔 지금 비밀번호도) | A-01 |
-| P0 | `GET /admin/stores` | 가맹점 목록(검색·거르기·50건씩, 상호 가나다순 고정) | A-03 |
+| P0 | `GET /admin/stores` | 가맹점 목록(검색·거르기·50건씩, 상호 가나다순 고정, 시장유형·수정 필드 수 포함) | A-03 |
 | P0 | `GET /admin/stores/{storeId}` | 원천 값·수정 값·마지막 수정 | A-04 |
 | P0 | `PUT·DELETE /admin/stores/{storeId}/overrides/{field}` | 필드 수정(사유 필수)·해제. 주소·좌표는 이 API로 고치지 않음(1차 DB 직접, P2) | A-04 |
 | P0 | `PUT /admin/stores/{storeId}/visibility` | 숨김·해제(사유 필수) | A-04 |
@@ -166,7 +166,7 @@
 | A-09 해석 미리보기 | `POST /admin/parse-preview` | 검색어·검색 중심 → 해석 결과 | FR-REF-03 |
 | A-12 관리자 계정 | `GET·POST /admin/accounts`, `PATCH /admin/accounts/{id}`, `POST /admin/accounts/{id}/reset-password` | 생성·비활성화·비밀번호 초기화 | FR-ADM-04 |
 
-## 11. 화면 동작별 호출 (v0.8)
+## 11. 화면 동작별 호출 (v0.10)
 
 화면설계(`docs/design/`)의 동작마다 어느 API를 어떤 값으로 부르는지. 자세한 필드는 `openapi.yaml`, 화면별 전체 대응은 [`docs/design/SCREEN_API_MAP.md`](../design/SCREEN_API_MAP.md).
 
@@ -181,7 +181,8 @@
 | **칩 변경**(검색어 있음) | `POST /search` | **직전 요청 본문 그대로, `categoryCode`·`paymentCodes`만 바꾸고 `inputType=chip`**. 그사이 지도를 옮겼어도 직전 조건. `view=list`면 `mapFit`으로 다시 맞추고 `view=map`이면 지도 그대로 | P0 |
 | 칩 변경(검색어 없음) | `POST /browse` | 지금 보이는 `bounds`에 칩 적용. 지도 그대로 | P0 |
 | **핀 누름** | 호출 없음(+ 이벤트 `pin_click`) | `pins[]`에 카드 필드가 다 있어 바로 요약 카드(U-05). `position`은 `rank` | P0 |
-| 핀 묶음 누름 | 호출 없음(+ 이벤트 `cluster_click`) | 지도를 그 영역으로 확대만. 묶음 라벨 "{상호} 외 {n}개"의 상호는 묶음 안 `rank`가 가장 작은 핀(FR-MAP-07) | P1 |
+| 핀 묶음 누름 | 호출 없음(+ 이벤트 `cluster_click`, `clusterSize`·`clusterAction`) | 더 확대해서 갈라지면 그 영역으로 확대(`zoom`). 가장 확대한 줌이거나 묶음 안 가게가 모두 30m 안이면 겹친 가게 목록(`list`). 묶음 라벨 "{상호} 외 {n}개"의 상호는 묶음 안 `rank`가 가장 작은 핀(FR-MAP-07) | P1 |
+| **같은 좌표 핀 누름**(겹친 가게 목록) | 보통 호출 없음 | 좌표가 같은 핀들로 "이 위치 가맹점 n곳" 시트(U-05b). 순서는 검색이면 `rank`, 조회면 상호 가나다순. 조회가 300곳에서 잘렸으면(`totalCount` > 핀 수) 그 지점만 `bounds`(그 좌표 ±0.00001°)로 `POST /browse` → 20곳씩 `/page`. 카드 클릭은 `click`(position = rank) | P0 |
 | 목록 아래로 내림 | `GET /search/{queryId}/page` | `nextCursor`. 410이면 직전 요청으로 다시 검색 | P0 |
 | 카드·요약 카드 누름 | `GET /stores/{storeId}` | 404면 U-11. 상세에서 보내는 이벤트(`action` 등)의 `queryId`·`position`은 URL이 아니라 화면 상태(history state)로 넘긴다. 공유 링크로 바로 열면 null | P0 |
 | 상세 공유 | 호출 없음(+ 이벤트 `action: share`) | 상세 응답 `name`·`address`로 공유 글을 만든다(FR-DTL-05, 전화 줄 없음) | P1 |
@@ -192,7 +193,7 @@
 | 최근 검색어 누름 | `POST /search` | `inputType=recent` | P1 |
 | 별(관심 가맹점) 누름 | `PUT`·`DELETE /me/favorites/{storeId}` | 비회원은 "로그인이 필요해요" 대화상자 → 로그인 → 돌아오면 그 가게로 `PUT` 한 번(화면이 storeId만 sessionStorage에 잠깐 기억). 다음 페이지의 `favorited`는 서버가 응답 때마다 새로 계산 | P1 |
 | 관심 가맹점(U-10)에서 별 해제 | `DELETE /me/favorites/{storeId}` | 성공하면 그 줄을 바로 목록에서 뺀다. 비면 빈 화면 | P1 |
-| 메뉴 ☰ | `GET /me`(이미 받았으면 호출 없음) | 회원이면 "{nickname}님, 반가워요!". 아래쪽 이용약관·개인정보처리방침 링크는 `/meta`의 `policies` | P1 |
+| 메뉴 ☰ | `GET /me`(이미 받았으면 호출 없음) | 회원이면 "{nickname}님, 반가워요!". 아래쪽 이용약관·개인정보처리방침 링크는 `/meta`의 `policies`(1차는 온누리상품권 홈페이지 문서, 새 탭) | P1 |
 | 닉네임 변경 / 탈퇴 | `PATCH /me` / `DELETE /me` | 탈퇴는 확인 대화상자 뒤에 | P1 |
 | 관리자 첫 로그인 | `POST /admin/auth/login` → `PUT /admin/me/password` | 응답 `mustChangePassword`면 비밀번호 변경 화면. `newPassword`만 보낸다 | P0 |
 | 관리자 A-10 CSV | 호출 없음 | 화면에 받아 둔 통계 응답으로 CSV(UTF-8 BOM) | P1 |

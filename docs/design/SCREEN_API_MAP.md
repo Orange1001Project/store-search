@@ -1,6 +1,6 @@
 # 화면별 기능·API 대응표 (2026-11-16)
 
-기준: 화면 그림 `docs/design/screens/`(캔버스 `1794880601-8539`), 요구사항 v0.15 7·8절, API 명세 v0.8(`docs/api/openapi.yaml`), API 규칙 v0.7 11절.
+기준: 화면 그림 `docs/design/screens/`(캔버스 `1794882428-8e37`), 요구사항 v0.17 7·8절, API 명세 v0.10(`docs/api/openapi.yaml`), API 규칙 v0.9 11절.
 표시: — 는 API를 부르지 않고 화면 안에서 처리. 우선은 요구사항 1-4 기준.
 
 ## 1. 사용자 화면
@@ -16,7 +16,8 @@
 | 첫 화면을 못 불러옴 | — | E-01 전체 화면: 연결 안 됨 / 서버 오류·응답 없음·지도 로드 실패(503 `MAINTENANCE`면 점검 문구). 고객센터 1670-1600은 화면에 고정 | P0 |
 | 위치 권한 없음 → 작은 줄 ⑨ | `POST /browse` | `centerSource=default` → `subMessage=default_location` | P0 |
 | 핀 묶음 라벨 "○○ 외 N개" | — | 묶음 안 `rank`가 가장 작은 핀의 상호(검색 = 목록 맨 위, 조회 = 가장 가까운 곳) | P1 |
-| 핀 묶음 누름 | — (+ 이벤트 `cluster_click`) | 그 영역으로 확대 | P1 |
+| 핀 묶음 누름 | — (+ 이벤트 `cluster_click`) | 갈라지면 확대, 안 갈라지면(최대 줌·30m 안) 겹친 가게 목록 | P1 |
+| 같은 좌표 핀 누름 | — (조회가 300곳에서 잘렸으면 그 지점만 `POST /browse`) | U-05b "이 위치 가맹점 n곳" 목록. 검색 = rank 순, 조회 = 상호 가나다순 | P0 |
 | 내 위치 버튼 | — | 지도만 이동, '현 지도 재검색' 버튼 표시. 두 버튼은 시트 위 12px에 붙어 시트와 함께 움직이고 시트 전체면 숨김 | P0 |
 | 지도 이동 → '현 지도 재검색' | `POST /browse` (+ `research_here`) | 지금 `bounds` | P0 |
 | 화면 0곳 ④ | `POST /browse` | `message=map_empty` | P0 |
@@ -26,7 +27,7 @@
 | 지명만 입력 / "'노량진수산' 가게 보기" | `POST /search` | `placeOnly.mapFit` / `q=storeSuggestion.name`, `inputType=place_store` | P1 |
 | 시트 카드 누름 | `GET /stores/{id}` | U-06 | P0 |
 | 별 | `PUT`·`DELETE /me/favorites/{id}` | 비회원 → "로그인이 필요해요" → U-07 → 돌아오면 그 가게 `PUT` 한 번 | P1 |
-| 메뉴 ☰ | `GET /me`(받아 둔 값), `/meta`의 `policies` | 비회원 `Menu` / 회원 `Menu-Member` "{닉네임}님, 반가워요!" · 내 정보 > · 관심 가맹점 >. 아래쪽 이용약관 · 개인정보처리방침(P0) | P1 |
+| 메뉴 ☰ | `GET /me`(받아 둔 값), `/meta`의 `policies` | 비회원 `Menu` / 회원 `Menu-Member` "{닉네임}님, 반가워요!" · 내 정보 > · 관심 가맹점 >. 아래쪽 이용약관 · 개인정보처리방침(P0) — 온누리상품권 홈페이지 `terms?tab=0`·`tab=1`, 새 탭 | P1 |
 
 ### U-02 검색창 열림 (`U02-Member`, `U02-Guest`)
 
@@ -53,12 +54,13 @@
 | 검색창 × / ← | — | 검색 전 조회 화면(지도·핀·시트·칩)을 그대로 다시 보여 줌 | P0 |
 | 노출·클릭 | `POST /events` | `impression`, `click` | P1 |
 
-### U-05 요약 카드 (`U05-Card`)
+### U-05 요약 카드 · U-05b 겹친 가게 목록 (`U05-Card`, `U05-SameSpot`)
 
 | 화면 요소·동작 | API | 보내는 값 / 쓰는 응답 | 우선 |
 |---|---|---|---|
 | 핀 누름 | — (+ `pin_click`) | `pins[]`의 카드 필드 | P0 |
 | 카드 누름 / 별 | `GET /stores/{id}` / `PUT`·`DELETE /me/favorites/{id}` | | P0 / P1 |
+| 같은 좌표 핀 누름 → 목록 | 보통 호출 없음 | 받아 둔 핀으로 목록, 카드 클릭은 `click`(position = rank) | P0 |
 
 ### U-06 상세 (`U06-Detail`)
 
@@ -114,7 +116,7 @@
 | A-01 로그인 | 로그인, 잠김 "24분 뒤" | `POST /admin/auth/login`(403 `ACCOUNT_LOCKED`, `details.lockedUntil`) | P0 |
 | A-01 비밀번호 변경 | 새 비밀번호·확인 | `PUT /admin/me/password`(`mustChangePassword` 세션은 `newPassword`만). 바꾸기 전 다른 관리자 API는 403 `PASSWORD_CHANGE_REQUIRED` | P0 |
 | 공통 틀 | 아이디 표시·로그아웃 | `GET /admin/me`, `POST /admin/auth/logout` | P0 |
-| A-03 목록 | 검색·필터 6개, 50건씩, 상호 가나다순 고정 | `GET /admin/stores`(정렬은 서버 고정), 업종 선택지 `GET /meta` | P0 |
+| A-03 목록 | 검색·필터 6개, 50건씩, 상호(수정 값 반영) 가나다순 고정, 시장명·시장유형 열, "수정 N" 표시 | `GET /admin/stores`(정렬은 서버 고정, `marketType`·`editedCount`), 업종 선택지 `GET /meta` | P0 |
 | A-04 상세 | 필드별 원천·수정·마지막 수정, 숨김, 고칠 수 없는 값 | `GET /admin/stores/{id}` | P0 |
 | A-04 수정 대화상자 | 원천 값·지금 수정 값·새 값·사유 → 저장 | `PUT /admin/stores/{id}/overrides/{field}` | P0 |
 | A-04 해제 | | `DELETE /admin/stores/{id}/overrides/{field}` | P0 |
@@ -151,9 +153,10 @@ A-02 홈, A-05 주간 갱신, A-06 원천 변경 알림, A-07 브랜드 별칭, 
 | 항목 | 결정 | 반영 |
 |---|---|---|
 | 위치 정보 이용 안내 | 첫 진입에 U-12 시트(동의 줄은 법무 결과에 따라) | FR-LOC-03, 정책 3-5, `/meta.policies.locationTerms` |
-| 약관 동의 내역 메뉴 | 두지 않음(바꿀 선택 동의가 없음). 대신 메뉴에 이용약관·개인정보처리방침 링크 | FR-MBR-13, `/meta.policies` |
+| 약관 동의 내역 메뉴 | 두지 않음(바꿀 선택 동의가 없음). 대신 메뉴에 이용약관·개인정보처리방침 링크 → 온누리상품권 홈페이지 문서 | FR-MBR-13, `/meta.policies` |
 | E-01 | 연결 안 됨 / 서버 오류·점검 두 가지, 고객센터 1670-1600 | 7-1, 8절, `MAINTENANCE` |
 | 내 위치 버튼 | 시트 위 12px, 시트와 함께 움직임 | FR-MAP-01 |
 | 이메일 | 보기만 | FR-MBR-09 |
+| 겹친 가게 목록 | 같은 좌표 핀·안 갈라지는 묶음을 누르면 "이 위치 가맹점 n곳" 목록(원천 66%가 좌표 공유) | FR-MAP-11, 정책 6-5, U-05b |
 
 남은 확인: 위치기반서비스 약관 동의·비회원 동의 기록 필요 여부(법무, 요구사항 9절).
