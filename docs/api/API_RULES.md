@@ -14,7 +14,7 @@
 | 좌표 | `{ "lat": 36.3504, "lng": 127.3845 }`, WGS84. 지도 범위는 `{ "sw": {…}, "ne": {…} }` |
 | 위치 전송 | GPS 원 좌표는 **요청 본문**으로만 보내고 서버는 저장하지 않는다. 로그는 100m 격자. 좌표·세션을 URL에 넣지 않는다(NFR-PRV-02) |
 | 다음 페이지 | 사용자 검색·조회는 커서 방식. 응답의 `nextCursor`를 다음 요청에 그대로 보낸다. 없으면 마지막 페이지(FR-LST-01·02). 관리자 표는 페이지 번호 방식(`page`, `size`, 응답 `totalCount`) — 화면에 페이지 번호가 있어서 |
-| 문서 형식 | OpenAPI 3.0.3 YAML(Spring 코드 생성기가 안정적으로 지원하는 버전). **명세를 먼저 쓴다**: `openapi.yaml`이 원본이고, 백엔드는 openapi-generator로 컨트롤러 인터페이스·DTO를, 화면은 타입을 만든다. API를 바꿀 때는 이 파일부터 고친다. springdoc은 API 서버와 같은 주소에 이 문서를 띄우는 용도로만 쓴다. 개발 전에는 `docs/api/swagger.html`로 본다(`python -m http.server 8081 --directory docs/api`) |
+| 문서 형식 | OpenAPI 3.0.3 YAML(Spring 코드 생성기가 안정적으로 지원하는 버전). **명세를 먼저 쓴다**: `openapi.yaml`이 원본이고, 백엔드는 openapi-generator로 컨트롤러 인터페이스·DTO를, 화면은 타입을 만든다. API를 바꿀 때는 이 파일부터 고친다. springdoc은 API 서버와 같은 주소에 이 문서를 띄우는 용도로만 쓴다. 검사: `npx -y @stoplight/spectral-cli@6.15.0 lint docs/api/openapi.yaml --ruleset docs/api/.spectral.yaml`(12절) |
 
 ## 2. 요청
 
@@ -201,3 +201,10 @@
 | 관리자 첫 로그인 | `POST /admin/auth/login` → `PUT /admin/me/password` | 응답 `mustChangePassword`면 비밀번호 변경 화면. `newPassword`만 보낸다 | P0 |
 | 관리자 A-10 CSV | 호출 없음 | 화면에 받아 둔 통계 응답으로 CSV(UTF-8 BOM) | P1 |
 | 관리자 A-03 필터·A-04 업종 선택지 | `GET /meta` | 업종 17개를 여기서 받는다(관리자 전용 업종 API 없음) | P0 |
+
+## 12. 코드 생성
+
+- openapi-generator `-g spring --library spring-boot`, 옵션 `interfaceOnly=true, useSpringBoot3=true, useTags=true, openApiNullable=false, skipDefaultInterface=true, useBeanValidation=true`. 7.10.0으로 오류 없이 생성됨(컴파일은 백엔드 저장소에서).
+- 경로·쿼리의 enum(`OverrideField`, `LifecycleStatus`, 통계 `view`·`intent`, `provider`)은 값이 소문자·camelCase라 Spring 기본 변환과 다르다. 각 enum의 `fromValue`를 쓰는 `Converter`를 등록한다.
+- 인증 쿠키는 메서드 파라미터로 나오지 않는다(보안 설정에서 읽음). `StoreOverrideRequest.value`, `FieldValue.sourceValue`·`overrideValue`는 field에 따라 모양이 달라 `Object`로 나온다(서버가 field별로 검사).
+- YAML 한 줄 객체(`{ … }`) 안 값에 쉼표가 있으면 따옴표로 묶는다. 안 묶으면 값이 잘려 키가 생긴다.
