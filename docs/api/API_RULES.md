@@ -1,26 +1,26 @@
-# API 공통 규칙 (v0.9)
+# API 공통 규칙
 
-> 작성 2026-11-13 · 고침 2026-11-16(PR #11 리뷰, 화면 흐름 보완 v0.5, 화면 대응표 검토 v0.6, 위치 동의·오류 화면 v0.7, 문서 점검 v0.8, 겹친 가게 목록 v0.9) · 기준: `docs/REQUIREMENTS.md` v0.17(5절 IR, 3절 NFR-SEC·PRV) · 명세: [`openapi.yaml`](openapi.yaml)(OpenAPI 3.1)
+> 기준: `docs/REQUIREMENTS.md`(5절 IR, 3절 NFR-SEC·PRV) · 명세: [`openapi.yaml`](openapi.yaml)(OpenAPI 3.0.3)
 > 모든 API에 똑같이 적용한다. 개별 API 명세는 `openapi.yaml`에 쓰고, 이 문서와 다르면 이 문서를 먼저 고친다.
 
 ## 1. 결정 요약
 
-| 항목 | 규칙 | 결정 |
-|---|---|---|
-| 주소 | 사용자 `/api/v1/...`, 관리자 `/api/v1/admin/...`. 형식을 깨는 변경은 `/api/v2` | 2026-11-13 |
-| 필드 이름 | JSON은 **camelCase**(`storeId`, `queryId`). DB·로그 문서는 snake_case 그대로, 변환은 백엔드가 한다. 이름이 다른 것: API `centerSource` = 로그 `location_source`, API `bounds` = 로그 `viewport_cells`(격자로 바꿔 저장), API `userLocation` = 로그 `user_cell`(격자). 요구사항 5절 IR 표는 API 이름을 쓴다 | 2026-11-13 |
-| 시각 | **KST 오프셋을 붙인 ISO 8601**(`2026-11-13T14:30:00+09:00`). DB 저장은 UTC(NFR-QLT-05) | 2026-11-13 |
-| 날짜만 | `2026-11-13`(한국 날짜). 데이터 버전 이름도 같은 형식(`2026-11-13`, 같은 날 두 번째는 `2026-11-13.2`) | |
-| 좌표 | `{ "lat": 36.3504, "lng": 127.3845 }`, WGS84. 지도 범위는 `{ "sw": {…}, "ne": {…} }` | |
-| 위치 전송 | GPS 원 좌표는 **요청 본문**으로만 보내고 서버는 저장하지 않는다. 로그는 100m 격자. 좌표·세션을 URL에 넣지 않는다(NFR-PRV-02) | 2026-11-13 |
-| 다음 페이지 | 사용자 검색·조회는 커서 방식. 응답의 `nextCursor`를 다음 요청에 그대로 보낸다. 없으면 마지막 페이지(FR-LST-01·02). 관리자 표는 페이지 번호 방식(`page`, `size`, 응답 `totalCount`) — 화면에 페이지 번호가 있어서 | |
-| 문서 형식 | OpenAPI 3.1 YAML. 백엔드는 springdoc으로 같은 문서를 내보내 대조한다 | 2026-11-13 |
+| 항목 | 규칙 |
+|---|---|
+| 주소 | 사용자 `/api/v1/...`, 관리자 `/api/v1/admin/...`. 형식을 깨는 변경은 `/api/v2` |
+| 필드 이름 | JSON은 **camelCase**(`storeId`, `queryId`). DB·로그 문서는 snake_case 그대로, 변환은 백엔드가 한다. 이름이 다른 것: API `centerSource` = 로그 `location_source`, API `bounds` = 로그 `viewport_cells`(격자로 바꿔 저장), API `userLocation` = 로그 `user_cell`(격자). 요구사항 5절 IR 표는 API 이름을 쓴다 |
+| 시각 | **KST 오프셋을 붙인 ISO 8601**(`2026-11-13T14:30:00+09:00`). DB 저장은 UTC(NFR-QLT-05) |
+| 날짜만 | `2026-11-13`(한국 날짜). 데이터 버전 이름도 같은 형식(`2026-11-13`, 같은 날 두 번째는 `2026-11-13.2`) |
+| 좌표 | `{ "lat": 36.3504, "lng": 127.3845 }`, WGS84. 지도 범위는 `{ "sw": {…}, "ne": {…} }` |
+| 위치 전송 | GPS 원 좌표는 **요청 본문**으로만 보내고 서버는 저장하지 않는다. 로그는 100m 격자. 좌표·세션을 URL에 넣지 않는다(NFR-PRV-02) |
+| 다음 페이지 | 사용자 검색·조회는 커서 방식. 응답의 `nextCursor`를 다음 요청에 그대로 보낸다. 없으면 마지막 페이지(FR-LST-01·02). 관리자 표는 페이지 번호 방식(`page`, `size`, 응답 `totalCount`) — 화면에 페이지 번호가 있어서 |
+| 문서 형식 | OpenAPI 3.0.3 YAML(Spring 코드 생성기가 안정적으로 지원하는 버전). **명세를 먼저 쓴다**: `openapi.yaml`이 원본이고, 백엔드는 openapi-generator로 컨트롤러 인터페이스·DTO를, 화면은 타입을 만든다. API를 바꿀 때는 이 파일부터 고친다. springdoc은 API 서버와 같은 주소에 이 문서를 띄우는 용도로만 쓴다. 개발 전에는 `docs/api/swagger.html`로 본다(`python -m http.server 8081 --directory docs/api`) |
 
 ## 2. 요청
 
 - 본문은 `application/json; charset=utf-8`. 파일 올리기(주간 갱신)만 `multipart/form-data`.
 - 조회는 `GET`, 만들기·실행 `POST`, 값 하나를 통째로 정하기 `PUT`(필드 수정, 숨김), 일부 바꾸기 `PATCH`, 지우기 `DELETE`. 검색·조회처럼 좌표를 보내야 하는 읽기는 `POST`(좌표를 URL에 넣지 않기 위해).
-- 빈 값: 없는 값은 필드를 빼거나 `null`. 목록은 빈 배열 `[]`(예: `paymentCodes: []` = 전체).
+- 빈 값: 명세에 `nullable: true`인 필드는 `null`, 아닌 필드는 뺀다(예: `message`, `mapFit`, `placeOnly`, 요청의 `categoryCode`). 목록은 빈 배열 `[]`(예: `paymentCodes: []` = 전체).
 - 코드 값은 소문자 영어(`list`, `map`, `qr`, `card`). 화면 글자는 응답에 넣지 않고 코드로 내려 준다(문구는 코드 + 치환값, FR-MSG-02).
 
 ## 3. 응답
@@ -36,7 +36,7 @@
 | 200 | 조회·처리 성공 |
 | 201 | 만들기 성공(관심 가맹점 추가, 가입) |
 | 202 | 받아서 나중에 처리(이벤트 수집 IR-05, 갱신 실행) |
-| 204 | 본문 없는 성공(삭제, 로그아웃) |
+| 204 | 본문 없는 성공(삭제, 로그아웃 — 세션이 이미 끝났어도 204) |
 | 400 | 형식 오류(필드 누락·길이·좌표 범위) |
 | 401 | 로그인 필요·토큰 만료 |
 | 403 | 권한 없음(남의 데이터, 관리자 아님, CSRF 실패) |
@@ -85,6 +85,8 @@
 | `RATE_LIMITED` | 429 |
 | `INTERNAL_ERROR`, `SERVICE_UNAVAILABLE`, `MAINTENANCE`(계획된 점검, details.until 선택 — 화면 E-01 "서비스 점검 중이에요") | 500, 503 |
 
+이 표는 `openapi.yaml`의 `ErrorCode` 목록과 같다. 코드를 더하면 둘 다 고친다. 각 API에서 나올 수 있는 코드는 `openapi.yaml`의 API 설명 끝 "오류:" 줄에 적는다(429·5xx는 모든 API 공통이라 적지 않는다).
+
 ## 5. 인증·세션
 
 | 대상 | 방식 | 근거 |
@@ -118,9 +120,9 @@
 | 관리자 세션을 서버 세션으로 둘지 토큰으로 둘지 세부(지금은 서버 세션) | 백엔드 |
 | 위치 정밀도(격자 크기) 최종 | 법무 |
 
-## 10. API 목록 (명세 v0.10)
+## 10. API 목록
 
-자세한 요청·응답은 [`openapi.yaml`](openapi.yaml). P1 API(소셜 로그인, 회원, 이벤트, 통계)는 v0.4에서 더했다. 관리자 화면 축소(2026-11-13)로 주간 갱신·별칭·지명 제외·원천 변경 알림·관리자 계정 화면과 그 API는 P2이고, 1차는 서버 스크립트·DB 직접 작업으로 한다.
+자세한 요청·응답은 [`openapi.yaml`](openapi.yaml). 관리자 화면 축소로 주간 갱신·별칭·지명 제외·원천 변경 알림·관리자 계정 화면과 그 API는 P2이고, 1차는 서버 스크립트·DB 직접 작업으로 한다.
 
 | 우선 | 메서드·주소 | 하는 일 | 화면 |
 |---|---|---|---|
@@ -138,7 +140,7 @@
 | P1 | `GET /auth/{provider}/login`, `GET /auth/{provider}/callback` | 카카오·구글 로그인 시작·콜백(302) | U-07 |
 | P1 | `GET /auth/terms`, `POST /auth/signup` | 약관 묶음, 가입(또는 바뀐 약관 다시 동의) | U-08 |
 | P1 | `POST /auth/refresh`, `POST /auth/logout` | 토큰 다시 받기, 로그아웃 | 공통 |
-| P1 | `GET /me`, `PATCH /me`, `DELETE /me` | 내 정보, 닉네임 변경(v0.7에 P1), 탈퇴 | U-09, 메뉴 |
+| P1 | `GET /me`, `PATCH /me`, `DELETE /me` | 내 정보, 닉네임 변경, 탈퇴 | U-09, 메뉴 |
 | P1 | `GET·DELETE /me/recent-searches`, `DELETE /me/recent-searches/{recentId}` | 최근 검색어 10개, 전체·하나 삭제 | U-02 |
 | P1 | `GET /me/favorites`, `PUT·DELETE /me/favorites/{storeId}` | 관심 가맹점 목록(50곳씩), 추가(최대 500)·해제 | U-10, U-03·U-06 별 버튼 |
 | P1 | `POST /events` | 행동 이벤트 묶음(최대 50개, sendBeacon 가능) | 전 화면 |
@@ -166,7 +168,7 @@
 | A-09 해석 미리보기 | `POST /admin/parse-preview` | 검색어·검색 중심 → 해석 결과 | FR-REF-03 |
 | A-12 관리자 계정 | `GET·POST /admin/accounts`, `PATCH /admin/accounts/{id}`, `POST /admin/accounts/{id}/reset-password` | 생성·비활성화·비밀번호 초기화 | FR-ADM-04 |
 
-## 11. 화면 동작별 호출 (v0.10)
+## 11. 화면 동작별 호출
 
 화면설계(`docs/design/`)의 동작마다 어느 API를 어떤 값으로 부르는지. 자세한 필드는 `openapi.yaml`, 화면별 전체 대응은 [`docs/design/SCREEN_API_MAP.md`](../design/SCREEN_API_MAP.md).
 
@@ -177,7 +179,7 @@
 | 검색창 ×·←로 검색 끝내기 | 호출 없음 | 검색 전에 받아 둔 `/browse` 결과(지도 위치·핀·시트·칩)를 그대로 다시 보여 준다(FR-BRW-06) | P0 |
 | 화면 대각선 50km 초과 | 호출 없음 | 화면이 `/meta`의 `limits.mapMaxDiagonalKm`으로 먼저 재고 토스트 ⑩. 이미 보여 준 핀·시트는 그대로(FR-MAP-05) | P1 |
 | 검색창 검색 | `POST /search` | `view=list`, `inputType=typed`. 응답 `mapFit`으로 지도를 맞추고 `pins`·`results`를 함께 표시 | P0 |
-| 지도를 옮기고 '현 지도 재검색' | 검색어 있음 `POST /search`(`view=map`, `bounds`) / 없음 `POST /browse` | `mapFit`은 null(지도 그대로). 0곳이라 옮긴 경우(⑧)만 범위가 온다 | P0 |
+| 지도를 옮기고 '현 지도 재검색' | 검색어 있음 `POST /search`(`view=map`, `bounds`) / 없음 `POST /browse` | `mapFit` 없음(지도 그대로). 0곳이라 옮긴 경우(⑧)만 범위가 온다 | P0 |
 | **칩 변경**(검색어 있음) | `POST /search` | **직전 요청 본문 그대로, `categoryCode`·`paymentCodes`만 바꾸고 `inputType=chip`**. 그사이 지도를 옮겼어도 직전 조건. `view=list`면 `mapFit`으로 다시 맞추고 `view=map`이면 지도 그대로 | P0 |
 | 칩 변경(검색어 없음) | `POST /browse` | 지금 보이는 `bounds`에 칩 적용. 지도 그대로 | P0 |
 | **핀 누름** | 호출 없음(+ 이벤트 `pin_click`) | `pins[]`에 카드 필드가 다 있어 바로 요약 카드(U-05). `position`은 `rank` | P0 |

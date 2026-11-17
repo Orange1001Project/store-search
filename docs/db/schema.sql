@@ -1,4 +1,4 @@
--- 가맹점 검색 서비스 DB 스키마 (초안 v0.3.5, 2026-11-16) — 필수 테이블 19개
+-- 가맹점 검색 서비스 DB 스키마 (초안) — 필수 테이블 19개
 -- 대상: PostgreSQL 16 + PostGIS 3.4 + pgvector 0.8 이상
 -- 설계 설명: docs/DB_DESIGN.md · 입력: docs/REQUIREMENTS.md 4절(DR-01~19)
 --

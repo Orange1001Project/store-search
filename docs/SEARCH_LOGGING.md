@@ -33,7 +33,7 @@ query 기록, 그 뒤 행동 = event 기록, `query_id`로 잇는다)와 Algolia
 
 ## 3. 노출 결과 (search_result)
 
-검색 로그 한 줄의 `results` 목록에 저장한다(DB 설계 v0.3, 2026-11-13) — 첫 페이지 줄에 1~20위, 다음 페이지를 보면 같은 `query_id`·`page = 2`인 새 줄에 21~40위. 가게마다 `query_id`, `store_id`, `position`(1부터, 절대 순위), `distance_m`(**검색 중심 기준**, 정렬·반경과 같은 기준), `score`.
+검색 로그 한 줄의 `results` 목록에 저장한다 — 첫 페이지 줄에 1~20위, 다음 페이지를 보면 같은 `query_id`·`page = 2`인 새 줄에 21~40위. 가게마다 `query_id`, `store_id`, `position`(1부터, 절대 순위), `distance_m`(**검색 중심 기준**, 정렬·반경과 같은 기준), `score`.
 위치 편향 보정·임계값 재조정에는 노출 순위가 꼭 있어야 한다(Joachims et al., WSDM 2017).
 
 ## 4. 행동 이벤트 (모두 `query_id` 포함)

@@ -85,8 +85,8 @@ category:                     # [X4 확인 2026-11-04] 임시 업종 v0으로 �
 
 messages:                     # [백엔드] 문구 확정은 화면 개발에서. 조건(언제 어느 문구)은 radius·map_mode 규칙을 따른다
   expanded_none_in_first: "1km 안에 없어 10km까지 찾았어요"
-  expanded_partial: "1km 안에 {n_first}곳, 10km까지 넓혀 {n_more}곳 더 찾았어요"   # 보완안(팀 확인)
-  no_result: "10km 이내에 맞는 가게가 없어요"            # 2026-11-17 키 이름을 API MessageCode에 맞춤(이전 none)
+  expanded_partial: "1km 안에 {n}곳, 10km까지 넓혀 {m}곳 더 찾았어요"   # 보완안(팀 확인). 치환 이름은 API Message.params(n, m)와 같게
+  no_result: "10km 이내에 맞는 가게가 없어요"
   area_empty: "{region}에 맞는 가게가 없어요"
   map_empty: "이 지역에 맞는 가게가 없어요"
   no_exact_name: "'{query}'와 정확히 일치하는 가게는 없어요"   # [백엔드 확정 2026-11-10] 의도가 상호·브랜드이고 결과에 상호 일치 가게가 없을 때(docs/SERVICE_POLICY.md 8-3 ⑤)
@@ -96,6 +96,6 @@ messages:                     # [백엔드] 문구 확정은 화면 개발에서
   empty_query: "검색어를 입력해 주세요"
   chip_empty: "선택한 조건(업종·결제)에 맞는 가게가 없어요"
 sub_messages:                 # 검색창 아래 작은 줄(요구사항 FR-MSG-02 ⑦·⑨). 키는 API SubMessageCode와 같다
-  name_first: "'{name}' 가게를 먼저 보여 드려요"
+  name_first: "'{storeName}' 가게를 먼저 보여 드려요"   # 치환 이름은 API SubMessage.params와 같게
   region_ambiguous: "{region}에서 찾았어요"
   default_location: "위치 정보가 없어 기본 위치 기준으로 찾았어요"
