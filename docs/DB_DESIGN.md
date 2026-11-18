@@ -1,6 +1,5 @@
-# 가맹점 검색 서비스 DB 설계 (초안 v0.3.4)
+# 가맹점 검색 서비스 DB 설계 (초안)
 
-> 작성 2026-11-12 · v0.2(2026-11-13) 탈퇴를 상태로 관리 · **v0.3(2026-11-13) 필수 테이블 19개로 줄임** · v0.3.1 바코드결제 제외 · v0.3.2 숨김 해제 사유 저장 · v0.3.3 공식 업종 · v0.3.4 PR #11 리뷰 반영(8절 변경 내역)
 > 입력: `docs/REQUIREMENTS.md`(4절 DR-01~19), `docs/SERVICE_POLICY.md`, `docs/SEARCH_LOGGING.md`, `docs/BACKEND_HANDOFF.md`
 > 실행 SQL: [`docs/db/schema.sql`](db/schema.sql) · 3절 컬럼표는 schema.sql에서 자동으로 만들었다(둘이 다르면 SQL이 맞다)
 > ERDCloud 보기용: [`docs/db/erdcloud.sql`](db/erdcloud.sql) · 테이블 설명서: [`docs/db/DB_TABLES.md`](db/DB_TABLES.md) · 설계 이유서: [`docs/db/DB_DESIGN_WHY.md`](db/DB_DESIGN_WHY.md)
@@ -90,7 +89,7 @@
 ```
 
 - `missing_count`: 연속으로 원천에 없던 주 수. 다시 나타나면 0. 2가 되면 closed. 상태가 바뀌면 `status_changed_at`을 갱신한다.
-- 상태 변화의 **지난 이력은 남기지 않는다**(v0.3). 지금 상태와 바뀐 시각만 있다. 주마다 몇 곳이 바뀌었는지는 `data_version`의 건수로 본다.
+- 상태 변화의 **지난 이력은 남기지 않는다**. 지금 상태와 바뀐 시각만 있다. 주마다 몇 곳이 바뀌었는지는 `data_version`의 건수로 본다.
 
 ### 1-4. 가정
 
@@ -152,7 +151,7 @@
 | `store_snapshot`이 상호·주소를 다시 가짐 | `store` + `store_override`를 검색 때마다 합침 | 검색은 버전별로 고정된 값을 읽어야 하고, 합치는 계산을 검색마다 할 수 없다 | 유효 값 계산을 서비스 한 곳에서만. 매일 일치 검사 |
 | `store_snapshot`에 FK 없음 | version_id·store_id에 FK | FK가 있으면 파티션을 붙일 때 21만 행을 다시 검사해 전환이 느려진다 | 전환 전 검증 쿼리(없는 store_id 0건) |
 | 업종·결제를 배열로 | 버전 × 가게 × 업종 연결 표 | 범위로 먼저 거르면 수백~수천 곳이라 배열 검사가 가볍다 | 갱신 작업이 코드 표에 있는 값만 넣는다 |
-| `search_log.results`(JSON 목록) | 가게마다 한 줄인 노출 결과 표 | 검색 한 번에 한 줄이라 쓰기·보관이 단순하다(v0.3) | 순위별 분석은 `jsonb_array_elements`로 펼쳐서 |
+| `search_log.results`(JSON 목록) | 가게마다 한 줄인 노출 결과 표 | 검색 한 번에 한 줄이라 쓰기·보관이 단순하다 | 순위별 분석은 `jsonb_array_elements`로 펼쳐서 |
 | `brand_alias`에 대표 이름 반복 | 대표 이름 표 + 표기 표 | 브랜드 수십 개라 반복이 작고, 표 하나로 관리 화면이 단순하다 | 대표 이름을 바꿀 때는 그 이름의 행을 한 번에 UPDATE |
 | 로그에 FK 없음 | query_id, store_id에 FK | 쓰기 비용, 파티션 삭제, 폐업 가게를 가리켜도 로그는 남아야 함 | 통계가 조인할 때 없는 값은 버린다 |
 
@@ -375,10 +374,12 @@ erDiagram
 | file_size | bigint |  | N |  | CHECK file_size > 0 AND file_size <= 104857600 | 100MB 이하 |
 | target_version_id | smallint | FK → data_version(version_id) | Y |  |  | 이 작업이 만드는 버전 |
 | status | varchar(20) |  | N | 'uploaded' | CHECK status IN ('uploaded', 'validating', 'diffing', 'awaiting_approval', 'approved', 'embedding', 'switching', 'succeeded', 'failed', 'cancelled') |  |
-| progress_pct | smallint |  | N | 0 | CHECK progress_pct BETWEEN 0 AND 100 |  |
+| current_step | varchar(10) |  | Y |  | CHECK current_step IN ('validate', 'diff', 'embed', 'switch') | 지금(실패면 실패한) 단계. 시작 전 NULL(FR-UPD-09) |
+| progress_pct | smallint |  | N | 0 | CHECK progress_pct BETWEEN 0 AND 100 | current_step의 진행률 |
 | needs_approval | boolean |  | N | FALSE |  | 사라지는 가게가 기준 %를 넘음(FR-UPD-05) |
 | preview | jsonb |  | Y |  |  | 건수, 좌표 오류·충돌 목록 |
 | error_message | text |  | Y |  |  |  |
+| validation_errors | jsonb |  | Y |  |  | 파일 검사 실패 행 목록 [{row, column, reason}], 최대 100 |
 | edits_applied_until | timestamptz |  | Y |  |  | 이 시각까지의 관리자 수정·숨김을 새 버전에 반영함(FR-UPD-07) |
 | started_by | bigint | FK → admin_user(admin_id) | N |  |  | 실행한 관리자. 스크립트도 실행할 관리자 계정을 인자로 받는다 |
 | approved_by | bigint | FK → admin_user(admin_id) | Y |  |  |  |
@@ -454,7 +455,7 @@ erDiagram
 | subcategory | varchar(40) |  | Y |  |  | 세부 업종(표준산업분류 세세분류명) |
 | payment_codes | varchar(10)[] |  | N | '{}' |  | {card, qr} |
 | searchable | boolean |  | N |  |  | 영업중 · 숨김 아님 · 좌표 오류 아님 |
-| doc_text | varchar(300) |  | N |  |  | 가맹점명: {상호} / 취급품목: {품목} |
+| doc_text | varchar(300) |  | N |  |  | 가맹점명: {상호} / 취급품목: {품목}. 300자를 넘으면 품목 쪽을 잘라 넣는다 |
 | embedding | vector(1024) |  | N |  |  | fp32, L2 정규화 |
 
 #### `member`
@@ -513,7 +514,7 @@ erDiagram
 | pipeline_version | varchar(20) |  | N |  |  | 검색 정책·계수 버전 |
 | corpus_version_id | smallint |  | N |  |  | 검색한 데이터 버전(FK 없음) |
 | query_text | varchar(50) |  | Y |  |  | 검색어 없는 조회는 NULL |
-| input_type | varchar(15) |  | N |  | CHECK input_type IN ('typed', 'recent', 'autocomplete', 'chip', 'browse', 'place') |  |
+| input_type | varchar(15) |  | N |  | CHECK input_type IN ('typed', 'recent', 'chip', 'region_view', 'region_choice', 'place_store', 'autocomplete', 'browse', 'place') |  |
 | category_code | varchar(4) |  | Y |  |  | 고른 업종 칩 |
 | payment_codes | varchar(10)[] |  | N | '{}' |  | 고른 결제 칩(여러 개, 빈 목록 = 전체) |
 | view | varchar(4) |  | N |  | CHECK view IN ('list', 'map') |  |
@@ -526,7 +527,7 @@ erDiagram
 | n_relevant_first | smallint |  | Y |  |  | 첫 범위(1km 등)의 관련 결과 수(확장 판단 근거) |
 | n_relevant_final | smallint |  | Y |  |  | 최종 관련 결과 수 |
 | message | varchar(25) |  | Y |  |  | 화면에 띄운 안내 문구 |
-| sub_message | varchar(20) |  | Y |  | CHECK sub_message IN ('region_info', 'default_location') | 작은 줄 문구 |
+| sub_message | varchar(20) |  | Y |  | CHECK sub_message IN ('name_first', 'region_ambiguous', 'default_location') | 작은 줄 문구 |
 | expansion_cache_hit | boolean |  | Y |  |  | 업종 의도일 때만 |
 | results | jsonb |  | N | '[]' |  | 보여 준 가게: [{store_id, position, distance_m, score}] |
 | latency_ms | jsonb |  | Y |  |  | 단계별 지연(ms) |
@@ -610,7 +611,7 @@ erDiagram
 | 관리자 | 논리(비활성) | 수정·작업 기록이 관리자를 가리킨다 |
 | 로그·스냅샷 | 물리(파티션째) | 1년 보관 / 언제든 다시 만들 수 있음 |
 
-**남지 않는 기록(v0.3에서 뺌)**: 관리자 수정의 지난 값, 가게 상태 전이 이력, 관리자 접속 기록. 지금 값과 마지막으로 바꾼 사람·시각·사유만 남는다. 필요해지면 이력 표를 다시 추가한다(구조를 바꾸지 않고 표만 더하면 된다).
+**남지 않는 기록**: 관리자 수정의 지난 값, 가게 상태 전이 이력, 관리자 접속 기록. 지금 값과 마지막으로 바꾼 사람·시각·사유만 남는다. 필요해지면 이력 표를 다시 추가한다(구조를 바꾸지 않고 표만 더하면 된다).
 
 ### 4-3. 동시에 요청이 들어올 때
 
@@ -672,8 +673,22 @@ WHERE  s.version_id = :v AND s.searchable
   AND  s.geom && ST_MakeEnvelope(:west, :south, :east, :north, 4326)::geography
   AND  (:cat IS NULL OR :cat = ANY(s.category_codes))
   AND  (cardinality(:pays) = 0 OR s.payment_codes && :pays)   -- && = 목록이 하나라도 겹침
-ORDER  BY s.geom <-> ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
+ORDER  BY s.geom <-> ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
+          s.store_name COLLATE "C", s.store_id                     -- 같은 거리면 상호 가나다순, 그다음 store_id(API와 같은 순서)
 LIMIT  300;
+
+-- ⑤-2 겹친 가게 목록(spot, FR-MAP-11): 좌표를 소수 다섯째 자리로 반올림해 같은 가게 전부(상한 없음), 상호 가나다순
+--      geom && 작은 상자로 먼저 좁혀 공간 색인을 쓰고, 반올림 비교로 옆 좌표를 뺀다
+SELECT s.store_id, s.store_name, s.primary_category, s.market_type, s.market_name, s.payment_codes,
+       ST_Y(s.geom::geometry) AS lat, ST_X(s.geom::geometry) AS lng
+FROM   store_snapshot s
+WHERE  s.version_id = :v AND s.searchable
+  AND  s.geom && ST_MakeEnvelope(:lng - 0.00001, :lat - 0.00001, :lng + 0.00001, :lat + 0.00001, 4326)::geography
+  AND  round(ST_Y(s.geom::geometry)::numeric, 5) = round(:lat, 5)
+  AND  round(ST_X(s.geom::geometry)::numeric, 5) = round(:lng, 5)
+  AND  (:cat IS NULL OR :cat = ANY(s.category_codes))
+  AND  (cardinality(:pays) = 0 OR s.payment_codes && :pays)
+ORDER  BY s.store_name COLLATE "C", s.store_id;
 
 -- ⑥ 즐겨찾기 목록(확인 대기는 숨김)
 SELECT f.store_id, s.store_name, s.market_type, s.market_name, s.address_short
@@ -692,7 +707,7 @@ WHERE  member_id = :member ORDER BY searched_at DESC LIMIT 10;
 SELECT s.store_id, coalesce(o.override_value #>> '{}', s.store_name) AS store_name, s.address,
        s.lifecycle_status, s.status_changed_at, s.is_hidden, s.coord_error,
        sn.primary_category, sn.market_name, sn.market_type,
-       EXISTS (SELECT 1 FROM store_override x WHERE x.store_id = s.store_id) AS edited
+       (SELECT count(*) FROM store_override x WHERE x.store_id = s.store_id) AS edited_count   -- edited = edited_count > 0
 FROM   store s
 LEFT   JOIN store_override o ON o.store_id = s.store_id AND o.field_name = 'store_name'
 LEFT   JOIN store_snapshot sn ON sn.version_id = :active_version AND sn.store_id = s.store_id
@@ -703,7 +718,12 @@ WHERE  (:q IS NULL OR s.business_no = :q OR s.store_id::text = :q
   AND  (:coord_error IS NULL OR s.coord_error = :coord_error)
   AND  (:category IS NULL OR sn.primary_category = :category)
   AND  (:edited IS NULL OR EXISTS (SELECT 1 FROM store_override x WHERE x.store_id = s.store_id) = :edited)
-ORDER  BY s.store_name, s.store_id LIMIT 50 OFFSET :offset;
+ORDER  BY coalesce(o.override_value #>> '{}', s.store_name) COLLATE "C", s.store_id
+LIMIT  50 OFFSET :offset;   -- 수정 값을 반영한 상호 가나다순 고정. "가나다순"은 어디서나 COLLATE "C"(유니코드 코드 순서)로 쓴다:
+                            -- 한글 음절은 코드 순서가 가나다순이고, DB 기본 정렬 설정에 따라 영문·숫자·공백 순서가 달라지지 않는다
+--    성능 메모(백엔드 개발 때 측정 후 결정): 검색어 없이 열면 21만 행을 훑어 상위 50건만 남기는 정렬(top-N)이라
+--    관리자 몇 명이 쓰는 화면으로는 충분할 것으로 본다. 1초를 넘으면 ① 수정 값을 반영한 상호를 store에 열로 두고(수정·해제 때 갱신)
+--    (그 열, store_id) 인덱스를 건 뒤 ② 뒤쪽 페이지는 OFFSET 대신 마지막 (상호, store_id) 다음부터 읽는 방식(keyset)으로 바꾼다.
 
 -- ⑨ 원천 변경 알림 목록
 SELECT store_id, field_name, override_value, new_source_value
@@ -784,13 +804,13 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 
 | ID | 내용 | 결정 |
 |---|---|---|
-| DR-13 | 가입·탈퇴 시각 | 회원 행을 `withdrawn` 상태로 남기고 개인정보는 즉시 비움(2026-11-13) |
-| DR-03 | 수정·상태 이력 | **v0.3에서 뺌**(2026-11-13). 지금 값과 마지막 수정자·시각·사유, 상태 바뀐 시각만 |
-| DR-15 | 관리자 접속 기록 | **v0.3에서 뺌**(2026-11-13). 관리자 계정만. 법무 검토에서 필요하다고 하면 다시 추가 |
+| DR-13 | 가입·탈퇴 시각 | 회원 행을 `withdrawn` 상태로 남기고 개인정보는 즉시 비움 |
+| DR-03 | 수정·상태 이력 | **두지 않음**. 지금 값과 마지막 수정자·시각·사유, 상태 바뀐 시각만 |
+| DR-15 | 관리자 접속 기록 | **두지 않음**. 관리자 계정만. 법무 검토에서 필요하다고 하면 다시 추가 |
 | DR-08 | 브랜드 별칭 변경 이력 | 별도 이력 없음(접속 기록도 뺐으므로 마지막 수정자·시각만) |
 | DR-11 | 지점 접미사 | 표 없이 검색 서버가 스냅샷 상호에서 계산 |
 | DR-16 | 노출 결과 | 가게마다 한 줄 대신 `search_log.results` 목록으로 |
-| DR-18 | 설정값 | 앱 설정 파일(2026-11-13) |
+| DR-18 | 설정값 | 앱 설정 파일 |
 | DR-19 | 약관 동의 | 약관 표 없이 `member`에 약관 버전·동의 시각(가정 A7) |
 | FR-LST-02 | 결과 10분 보관 | 캐시(서버 여러 대면 Redis 등) |
 
@@ -804,57 +824,3 @@ WHERE  l.logged_at >= :from AND l.logged_at < :to;
 | 100m 격자 ID 형식 | `user_cell`·`viewport_cells`(가정 A4) |
 | 갱신 토큰 저장소 | 토큰 표를 뺐으므로 Redis 등 세션 저장소가 필요(결과 캐시와 같이 쓸 수 있음) |
 | JPA 매핑 | `vector`·`geography`는 Hibernate Spatial + pgvector 라이브러리 또는 네이티브 쿼리. 검색 ①~⑤는 네이티브 쿼리 추천 |
-
-## 8. 변경 내역
-
-### v0.3.4 (2026-11-16) — PR #11 리뷰 반영
-- 같은 가게 판단(지문)을 도로명 주소(시군구 + 도로명 + 건물번호, 시도·상세 주소 제외)로. 9월 → 11월 원천에서 사라짐 31,838곳(14.9%) → 11,943곳(5.6%).
-- 탈퇴하면 `member.terms_version`·`terms_agreed_at`도 비움(NULL 허용, `ck_member_status`가 강제). 남는 것은 회원 번호와 가입·탈퇴 시각뿐.
-- 업종 코드 길이를 `varchar(4)`로 맞춤(`category`, 스냅샷, 검색 로그). 스냅샷 `primary_category`·`category_source`는 NOT NULL(못 찾으면 K010).
-- `event_log.schema_version` 추가(FR-LOG-04), `action_type`에서 call·pay 삭제(FR-LOG-03 범위 밖).
-- `gazetteer.dict_version` 추가(DR-09). `refresh_job.started_by`는 스크립트도 실행 관리자 계정을 받는다. 1년 지난 갱신 작업 삭제 규칙(DR-06).
-- 갱신 중 들어온 숨김·해제도 전환 직전에 다시 적용(`store.visibility_changed_at` 인덱스).
-- 수정 값 위치 JSON의 경도 키를 API와 같은 `lng`로.
-- `schema.sql`의 갱신 예시(v7 파티션)를 주석으로 바꿔 실행되지 않게 하고, 이전 파티션 떼기는 `DETACH … CONCURRENTLY`. 로그 DEFAULT 파티션은 없앰(다음 달 파티션 생성을 막음) → 두 달 앞까지 미리 생성.
-- 관리자 가맹점 조회 ⑧을 A-03 거르기 조건에 맞게 다시 씀. 상호 앞부분 인덱스 삭제.
-
-### v0.3.3 (2026-11-13) — 공식 업종 반영
-- 원천 파일(2026-11-13)에 `표준산업분류코드`·`온누리중분류`가 들어옴: `store.ksic_code`·`onnuri_category` 추가, `mobile_payment` → `qr_payment`(원천 열 이름이 QR결제로 바뀜), 좌표 열은 X좌표(경도)·Y좌표(위도).
-- `category`는 공식 온누리 중분류 17개(K001~K017) 기본 데이터. 스냅샷 `category_source`는 `official`(원천 온누리중분류) / `ksic`(비어 있으면 산업분류 대응표로 보충, `configs/category/ksic_onnuri_v1.csv`) / `admin`. 임시 v0(품목 키워드)의 item·name·none은 없앰. `subcategory` = 산업분류 세세분류명.
-
-### v0.3.2 (2026-11-13)
-- `store`의 `hidden_reason`·`hidden_by` → `visibility_reason`·`visibility_changed_by`·`visibility_changed_at`. 숨김과 해제 모두 사유·처리자·시각을 남긴다(FR-STO-07, 마지막 한 번만). CHECK `ck_store_hidden_reason` → `ck_store_visibility`.
-
-### v0.3.1 (2026-11-13)
-- 조회 ⑪(결과 없는 검색어)에 문구 ⑤ `no_exact_name`·⑥ `weak_result`도 포함(FR-STA-02).
-- 결제 수단은 카드결제·QR결제 두 가지로 확정(요구사항 v0.7): `payment_method` 기본 데이터에서 바코드 행 삭제, 관련 설명·7-2절 FR-MSG-05 행 삭제.
-
-### v0.3 (2026-11-13) — 36개 → 19개
-
-| 뺀 테이블 | 대신 |
-|---|---|
-| `admin_access_log` | 삭제(사용자 결정) |
-| `store_source` | `store`에 원천 값 컬럼으로 합침 |
-| `store_override_alert` | `store_override.source_changed`, `new_source_value` |
-| `store_edit_history`, `store_status_history` | 뺌. `store_override`의 수정자·시각·사유, `store.status_changed_at` |
-| `source_file` | `refresh_job`의 `file_name`·`file_path`·`file_sha256`·`file_size` |
-| `refresh_staging_row` | 갱신 작업 메모리 |
-| `branch_suffix` | 검색 서버가 계산 |
-| `brand_alias_group` | `brand_alias.canonical_name` |
-| `gazetteer_version`, `gazetteer_entry` | `gazetteer` 한 표 |
-| `reference_revision` | 표마다 `updated_at` + 행 수를 1분마다 확인 |
-| `member_refresh_token` | 세션 저장소(Redis 등) |
-| `terms`, `member_terms_agreement` | `member.terms_version`, `terms_agreed_at` |
-| `search_result_log` | `search_log.results`(검색 결과 한 페이지 = 한 줄) |
-| `event_dedup` | 통계 때 같은 `event_id`는 한 번만 셈 |
-| `stats_daily_query` | `search_log`에서 바로 계산(⑪) |
-
-그 밖에 덜 쓰는 컬럼을 줄였다: `store.first_version_id`, 원천 충돌 표시 3개 → `source_conflict` 1개. 스냅샷에서는 품목을 화면에 안 쓰지만 임베딩·BM25 원문이라 그대로 둠, 로그 `bot_rule`, 이벤트 `distance_m`·`impressed_ids`(→ `payload`), 통계 `message_counts`.
-
-화면설계 2차(요구사항 v0.5) 반영: 결제 칩 여러 개 선택(OR) → `search_log.payment_codes` 목록, 조회 ⑤는 `&&`(겹침). 결과 카드·상세에 시장유형 → 스냅샷 `market_type`.
-
-### v0.2 (2026-11-13)
-- 회원 탈퇴를 상태(`member.status`, `withdrawn_at`)로 관리, DR-08·DR-18 결정.
-
-### v0.1 (2026-11-12)
-- 첫 설계(36개 테이블).

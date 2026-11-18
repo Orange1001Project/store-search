@@ -1,0 +1,88 @@
+# OpenAPI 검사 규칙 (Spectral)
+# 실행: npx -y @stoplight/spectral-cli@6.15.0 lint docs/api/openapi.yaml --ruleset docs/api/.spectral.yaml
+# 기본 규칙(spectral:oas)에 개발자·코드 생성기를 위한 규칙을 더한다.
+extends: [[spectral:oas, recommended]]
+
+rules:
+  # 1. 요청·응답 본문마다 통째 예시가 있어야 한다(목 서버·문서용)
+  response-body-example:
+    description: 2xx 응답 본문에 example 또는 examples가 있어야 한다
+    severity: warn
+    given: "$.paths[*][*].responses[?(@property.match(/^2/))].content[*]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: [example]
+            - required: [examples]
+  request-body-example:
+    description: 요청 본문에 example 또는 examples가 있어야 한다
+    severity: warn
+    given: "$.paths[*][*].requestBody.content[*]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: [example]
+            - required: [examples]
+
+  # 2. 코드 생성기가 이름 없는 클래스(InlineObject…)를 만들지 않도록 본문 스키마는 components로
+  no-inline-body-object:
+    description: 요청·응답 본문 스키마는 components/schemas를 $ref로 가리켜야 한다
+    resolved: false   # $ref를 펼치지 않고 원본에 직접 적은 것만 센다
+    severity: warn
+    given:
+      - "$.paths[*][*].requestBody.content[*].schema"
+      - "$.paths[*][*].responses[*].content[*].schema"
+    then:
+      field: properties
+      function: falsy
+
+  # 3. API 안에 직접 적은 enum은 components로 빼서 이름을 붙인다
+  no-inline-enum-in-paths:
+    description: paths 안의 enum은 components/schemas로 빼야 한다(생성 코드의 enum 이름)
+    resolved: false   # $ref를 펼치지 않고 원본에 직접 적은 것만 센다
+    severity: info
+    given: "$.paths..schema..enum"
+    then:
+      function: falsy
+
+  # 4. 모든 API에 오류 응답이 하나 이상
+  operation-has-error-response:
+    description: 4xx 응답이 하나 이상 있어야 한다
+    severity: warn
+    given: "$.paths[*][get,post,put,patch,delete].responses"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          patternProperties:
+            "^4": {}
+          minProperties: 1
+          anyOf:
+            - required: ['400']
+            - required: ['401']
+            - required: ['403']
+            - required: ['404']
+            - required: ['409']
+            - required: ['422']
+            - required: ['429']
+
+  # 5. 우리 확장 필드
+  operation-x-priority:
+    description: 모든 API에 x-priority(P0/P1/P2)
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      field: x-priority
+      function: pattern
+      functionOptions: { match: '^P[0-2]$' }
+  operation-x-requirements:
+    description: 모든 API에 x-requirements
+    severity: warn
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      field: x-requirements
+      function: truthy

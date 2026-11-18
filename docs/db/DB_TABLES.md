@@ -1,6 +1,6 @@
 # DB 테이블 설명서
 
-> 기준: `docs/DB_DESIGN.md` v0.3.4(테이블 19개) · 실행 SQL `docs/db/schema.sql` · ERDCloud 그림 `docs/db/erdcloud.sql`
+> 기준: `docs/DB_DESIGN.md`(테이블 19개) · 실행 SQL `docs/db/schema.sql` · ERDCloud 그림 `docs/db/erdcloud.sql`
 > 각 테이블의 역할·주요 규칙과 모든 컬럼의 역할을 적는다. 컬럼표는 `schema.sql`에서 자동으로 만들었다(둘이 다르면 SQL이 맞다).
 > 왜 이렇게 설계했는지(관계·키·줄인 테이블)는 [`DB_DESIGN_WHY.md`](DB_DESIGN_WHY.md).
 > 표기: **PK** = 기본 키(행 하나를 집어내는 값), **FK** = 다른 테이블에 꼭 있어야 하는 값(연결선). 자료형은 PostgreSQL 기준.
@@ -131,7 +131,7 @@
 | `subcategory` | 세부 업종 | varchar(40) |  | 세부 업종(표준산업분류 세세분류명) |
 | `payment_codes` | 결제 코드 목록 | varchar(10)[] |  | {card, qr} |
 | `searchable` | 검색 대상 여부 | boolean |  | 영업중 · 숨김 아님 · 좌표 오류 아님 |
-| `doc_text` | 임베딩 원문 | varchar(300) |  | 가맹점명: {상호} / 취급품목: {품목} |
+| `doc_text` | 임베딩 원문 | varchar(300) |  | 가맹점명: {상호} / 취급품목: {품목}. 300자를 넘으면 품목 쪽을 자름 |
 | `embedding` | 임베딩 vector(1024) | vector(1024) |  | fp32, L2 정규화 |
 
 ### `data_version` — 데이터 버전
@@ -174,10 +174,12 @@
 | `file_size` | 파일 크기 | bigint |  | 100MB 이하 |
 | `target_version_id` | 대상 버전 ID | smallint | FK→data_version | 이 작업이 만드는 버전 |
 | `status` | 상태 | varchar(20) |  | 상태값 · 값: uploaded, validating, diffing, awaiting_approval, approved, embedding, switching, succeeded, failed, cancelled |
-| `progress_pct` | 진행률(%) | smallint |  | 진행률 0~100(화면 표시) |
+| `current_step` | 지금 단계 | varchar(10) |  | 검사·차이 계산·임베딩·전환 중 지금(실패면 실패한) 단계 |
+| `progress_pct` | 진행률(%) | smallint |  | 지금 단계의 진행률 0~100(화면 표시) |
 | `needs_approval` | 승인 필요 | boolean |  | 사라지는 가게가 기준 %를 넘음(FR-UPD-05) |
 | `preview` | 미리보기 요약 | jsonb |  | 건수, 좌표 오류·충돌 목록 |
 | `error_message` | 오류 메시지 | text |  | 실패 이유 |
+| `validation_errors` | 검사 오류 목록 | jsonb |  | 파일 검사에 걸린 행·열·이유(최대 100) |
 | `edits_applied_until` | 수정 재적용 기준 시각 | timestamptz |  | 이 시각까지의 관리자 수정·숨김을 새 버전에 반영함(FR-UPD-07) |
 | `started_by` | 실행자 | bigint | FK→admin_user | 실행한 관리자. 스크립트도 실행할 관리자 계정을 인자로 받는다 |
 | `approved_by` | 승인자 | bigint | FK→admin_user | 승인한 관리자 |
@@ -370,7 +372,7 @@
 | `pipeline_version` | 검색 정책 버전 | varchar(20) |  | 검색 정책·계수 버전 |
 | `corpus_version_id` | 데이터 버전 ID | smallint |  | 검색한 데이터 버전(FK 없음) |
 | `query_text` | 검색어 | varchar(50) |  | 검색어 없는 조회는 NULL |
-| `input_type` | 입력 방식 | varchar(15) |  | 값: typed, recent, autocomplete, chip, browse, place |
+| `input_type` | 입력 방식 | varchar(15) |  | 값: typed, recent, chip, region_view, region_choice, place_store, autocomplete, browse, place |
 | `category_code` | 업종 코드 | varchar(4) |  | 고른 업종 칩 |
 | `payment_codes` | 결제 코드 목록 | varchar(10)[] |  | 고른 결제 칩(여러 개, 빈 목록 = 전체) |
 | `view` | 화면 종류 | varchar(4) |  | 목록 / 지도 · 값: list, map |
@@ -383,7 +385,7 @@
 | `n_relevant_first` | 첫 범위 관련 수 | smallint |  | 첫 범위(1km 등)의 관련 결과 수(확장 판단 근거) |
 | `n_relevant_final` | 최종 관련 수 | smallint |  | 최종 관련 결과 수 |
 | `message` | 안내 문구 | varchar(25) |  | 화면에 띄운 안내 문구 |
-| `sub_message` | 보조 문구 | varchar(20) |  | 작은 줄 문구 · 값: region_info, default_location |
+| `sub_message` | 보조 문구 | varchar(20) |  | 작은 줄 문구 · 값: name_first, region_ambiguous, default_location |
 | `expansion_cache_hit` | 확장어 캐시 적중 | boolean |  | 업종 의도일 때만 |
 | `results` | 보여 준 가게 목록 | jsonb |  | 보여 준 가게: [{store_id, position, distance_m, score}] |
 | `latency_ms` | 단계별 지연(ms) | jsonb |  | 단계별 지연(ms) |
